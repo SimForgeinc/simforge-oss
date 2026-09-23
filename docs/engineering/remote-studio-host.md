@@ -70,9 +70,9 @@ Pairing, on the host machine:
 
 ```bash
 simforge host pair                          # single-interface bind
-simforge host pair --origin http://100.72.252.40:5421   # loopback or 0.0.0.0 bind
-# {"code":"ABCD-EFGH","expiresAt":"...","origin":"http://100.72.252.40:5421",
-#  "connect":"simforge://connect?origin=http%3A%2F%2F100.72.252.40%3A5421&code=ABCD-EFGH"}
+simforge host pair --origin http://100.64.0.10:5421   # loopback or 0.0.0.0 bind
+# {"code":"ABCD-EFGH","expiresAt":"...","origin":"http://100.64.0.10:5421",
+#  "connect":"simforge://connect?origin=http%3A%2F%2F100.64.0.10%3A5421&code=ABCD-EFGH"}
 ```
 
 The code is 40 bits from an unambiguous alphabet, lives five minutes, dies on
@@ -139,7 +139,7 @@ one target and remember nothing (`studio/desktop/remote-host.mjs`). They
 bypass the chooser and disable switching for that launch:
 
 ```bash
-SIMFORGE_REMOTE_HOST=http://100.72.252.40:5421 \
+SIMFORGE_REMOTE_HOST=http://100.64.0.10:5421 \
 SIMFORGE_REMOTE_HOST_TOKEN=<controlToken from the host machine> \
 SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1 \
   pnpm --filter @simforge-oss/studio desktop      # or the installed application
@@ -168,10 +168,10 @@ on** (`HostOrigin.fromReceivedRequest`,
 receives a URL it can actually resolve:
 
 ```bash
-curl -s -X POST http://100.72.252.40:5421/api/simforge/host/session \
+curl -s -X POST http://100.64.0.10:5421/api/simforge/host/session \
   -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
   -d '{"next":"/dashboard/scenario"}'
-# {"url":"http://100.72.252.40:5421/api/simforge/host/session?ticket=..."}
+# {"url":"http://100.64.0.10:5421/api/simforge/host/session?ticket=..."}
 ```
 
 `next` must stay a same-origin absolute path, the ticket is single-use and
@@ -201,13 +201,13 @@ So one of these is required:
 
 **Recommended for a browser over a tailnet: terminate HTTPS.** A private
 WireGuard link protects transport, but Chromium still treats a plaintext
-non-loopback origin such as `http://100.72.252.40:5455` as an insecure context.
+non-loopback origin such as `http://100.64.0.10:5455` as an insecure context.
 Cache Storage and service workers are unavailable there. `localhost` is a
 browser-policy exception, so a localhost test does not exercise that setup.
 Where Tailscale HTTPS is enabled for the tailnet, for example:
 
 ```bash
-tailscale serve --bg --https 8443 http://100.72.252.40:5455
+tailscale serve --bg --https 8443 http://100.64.0.10:5455
 ```
 
 Open the HTTPS `*.ts.net:8443` URL reported by Tailscale. For another TLS

@@ -603,7 +603,7 @@ jq -r .controlToken ~/.simforge/cloud/host.json   # the per-start control token
 
 # On the GUI machine. The desktop shell becomes a guest: it starts,
 # supervises and stops nothing, and quitting leaves the host running.
-SIMFORGE_REMOTE_HOST=http://100.72.252.40:5421 \
+SIMFORGE_REMOTE_HOST=http://100.64.0.10:5421 \
 SIMFORGE_REMOTE_HOST_TOKEN=<that control token> \
 SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1 simforge-studio
 ```
@@ -660,7 +660,7 @@ flags, the request bodies and the decoded responses are identical:
 simforge render submit --scenario uscn_... --engine carla --seconds 20
 
 # The same invocation against a dev host elsewhere.
-SIMFORGE_API_BASE_URL=http://100.72.252.40:5421 \
+SIMFORGE_API_BASE_URL=http://100.64.0.10:5421 \
 SIMFORGE_REMOTE_HOST_TOKEN=<that host's control token> \
 SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1 \
   simforge render submit --scenario uscn_... --engine carla --seconds 20

@@ -207,7 +207,7 @@ export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig 
    * worker are told to use for absolute self-URLs (`SIMFORGE_API_BASE_URL`).
    *
    * The worker used to be handed `http://127.0.0.1:${port}` instead. A host
-   * bound to a network address — `--hostname 100.72.252.40`, which is how a
+   * bound to a network address — `--hostname 100.64.0.10`, which is how a
    * daemon reachable from another machine is started — is not listening on
    * loopback at all, so that spelling made every worker fetch fail.
    */

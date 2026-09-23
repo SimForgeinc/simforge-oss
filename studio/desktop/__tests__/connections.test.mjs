@@ -43,19 +43,19 @@ function fakeStorage({ available = true, backend = "gnome_libsecret" } = {}) {
 
 describe("host origin rules", () => {
   it("accepts an exact http(s) origin and tells loopback from the network", () => {
-    assert.deepEqual(parseHostOrigin("http://100.72.252.40:5421"), { origin: "http://100.72.252.40:5421", plaintextNetwork: true });
+    assert.deepEqual(parseHostOrigin("http://100.64.0.10:5421"), { origin: "http://100.64.0.10:5421", plaintextNetwork: true });
     assert.deepEqual(parseHostOrigin("https://gpu.example.net"), { origin: "https://gpu.example.net", plaintextNetwork: false });
     assert.deepEqual(parseHostOrigin("http://127.0.0.1:5199/"), { origin: "http://127.0.0.1:5199", plaintextNetwork: false });
   });
   it("refuses anything that is not a bare origin", () => {
-    for (const bad of ["100.72.252.40:5421", "ftp://x", "http://user:pw@h:1", "http://h:1/dashboard", "http://h:1/?x", "http://h:1/#f", ""]) {
+    for (const bad of ["100.64.0.10:5421", "ftp://x", "http://user:pw@h:1", "http://h:1/dashboard", "http://h:1/?x", "http://h:1/#f", ""]) {
       assert.throws(() => parseHostOrigin(bad), Error, bad);
     }
   });
   it("reads a connect link and never expects a token in it", () => {
-    const link = connectLink("http://100.72.252.40:5421", "ABCD-EFGH");
-    assert.equal(link, "simforge://connect?origin=http%3A%2F%2F100.72.252.40%3A5421&code=ABCD-EFGH");
-    assert.deepEqual(parseConnectLink(link), { origin: "http://100.72.252.40:5421", code: "ABCDEFGH" });
+    const link = connectLink("http://100.64.0.10:5421", "ABCD-EFGH");
+    assert.equal(link, "simforge://connect?origin=http%3A%2F%2F100.64.0.10%3A5421&code=ABCD-EFGH");
+    assert.deepEqual(parseConnectLink(link), { origin: "http://100.64.0.10:5421", code: "ABCDEFGH" });
     assert.throws(() => parseConnectLink("https://simforge.ai/connect?origin=x&code=y"));
     assert.throws(() => parseConnectLink("simforge://connect?origin=http://h:1"));
   });
@@ -197,7 +197,7 @@ describe("saved targets and their tokens", () => {
   it("refuses a plain-HTTP network origin before any request is made", async () => {
     const before = claims.length;
     await assert.rejects(
-      pairRemoteHost({ store, vault, origin: "http://100.72.252.40:5421", code: "ABCDEFGH", plaintextAcknowledged: false }),
+      pairRemoteHost({ store, vault, origin: "http://100.64.0.10:5421", code: "ABCDEFGH", plaintextAcknowledged: false }),
       (error) => error.name === "PlaintextRefused" && /private tailnet/.test(error.message),
     );
     assert.equal(claims.length, before, "no pairing request may leave before the acknowledgement");
@@ -205,10 +205,10 @@ describe("saved targets and their tokens", () => {
 
   it("stores the acknowledgement with the target and re-checks it on every resolve", async () => {
     const reopened = await openConnectionStore(dir);
-    const remote = await reopened.add({ origin: "http://100.72.252.40:5421", plaintextAcknowledged: true });
+    const remote = await reopened.add({ origin: "http://100.64.0.10:5421", plaintextAcknowledged: true });
     await vault.set(remote.origin, "tok");
     assert.equal((await resolveRemoteTarget({ store: reopened, vault, id: remote.id })).kind, "ready");
-    const silent = await reopened.add({ origin: "http://100.72.252.41:5421", plaintextAcknowledged: false });
+    const silent = await reopened.add({ origin: "http://100.64.0.11:5421", plaintextAcknowledged: false });
     await vault.set(silent.origin, "tok");
     const refused = await resolveRemoteTarget({ store: reopened, vault, id: silent.id });
     assert.equal(refused.kind, "refused");

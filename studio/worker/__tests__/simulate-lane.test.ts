@@ -180,11 +180,11 @@ describe("local worker simulate lane", () => {
     xodr.downloadUrl = "http://127.0.0.1:5199/api/local-objects/map.xodr?sig";
     const presigned = claim.map.members.find((member) => member.relativePath !== "map.xodr")!;
     presigned.downloadUrl = "https://bucket.s3.amazonaws.com/member?X-Amz-Signature=x";
-    const fetcher = claimMemberFetcher(claim, base, new URL("http://100.72.252.40:5199"), (async (target: URL) => { seen.push(String(target)); return new Response("ok"); }) as never);
+    const fetcher = claimMemberFetcher(claim, base, new URL("http://100.64.0.10:5199"), (async (target: URL) => { seen.push(String(target)); return new Response("ok"); }) as never);
     await fetcher(`${base}map.xodr`);
     await fetcher(`${base}${presigned.relativePath}`).catch(() => undefined);
     assert.deepEqual(seen, [
-      "http://100.72.252.40:5199/api/local-objects/map.xodr?sig",
+      "http://100.64.0.10:5199/api/local-objects/map.xodr?sig",
       "https://bucket.s3.amazonaws.com/member?X-Amz-Signature=x",
     ]);
   });

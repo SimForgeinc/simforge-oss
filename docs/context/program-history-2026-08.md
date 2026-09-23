@@ -109,7 +109,7 @@ cars, lit world) → simulation preview → Create Render with an authored Basic
 Dash Camera → local worker claims/renders/encodes → gallery mp4 (H.264
 1280×720, 24 fps, 5.0 s) → OpenSCENARIO 1.4 export compiles and downloads
 (local compiler worker lane). Everything merged to main; the running services
-serve from the canonical checkout on :5199 (tailnet 100.72.252.40:5199).
+serve from the canonical checkout on :5199 (tailnet 100.64.0.10:5199).
 
 ## Wave 5 — Video-model bake-off (2026-08-23)
 

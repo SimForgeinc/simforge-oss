@@ -14,7 +14,7 @@ goldens/<gpuFingerprint>/<scene>.json
   `docs/native-golden-ci.md`). Gates read `passHashes` + `timings.avgFrameMs`.
 
 - `0c79cc9fe7b267f4` = NVIDIA GeForce RTX 3080, driver 595.91.07 (the dev
-  Bevy worker box, 100.81.232.25): render-timeline actor scenes
+  Bevy worker box): render-timeline actor scenes
   (`richmond-06-timeline`, `yale-05-timeline`), recorded with a debug-profile
   `scen-play` from `ws-b/bevy-timeline` (binary sha in each file).
 

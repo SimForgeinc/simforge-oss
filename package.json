@@ -45,7 +45,6 @@
     "release:desktop-licenses": "node scripts/release/audit-bundled-licenses.mjs",
     "release:desktop-gates": "node scripts/release/stable-gates.mjs",
     "test:release": "node --test scripts/release/*.test.mjs",
-    "integration:audit": "node scripts/integration/audit-simcloud-divergence.mjs",
     "integration:compare-engine": "tsx scripts/integration/compare-engine-behavior.ts",
     "test:integration": "node --test scripts/integration/*.test.mjs",
     "e2e:smoke": "playwright test -c e2e/playwright.config.ts --project=smoke",

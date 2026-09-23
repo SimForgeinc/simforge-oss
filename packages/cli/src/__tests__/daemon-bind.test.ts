@@ -18,7 +18,7 @@ describe('the worker calls the host on an address the host is listening on', () 
     // The regression: a tailnet-bound host does not serve 127.0.0.1, so a
     // worker pointed at loopback logs `claim.retry: fetch failed` forever
     // while the server looks healthy.
-    expect(workerBaseUrl('100.72.252.40', 5421)).toBe('http://100.72.252.40:5421');
+    expect(workerBaseUrl('100.64.0.10', 5421)).toBe('http://100.64.0.10:5421');
   });
 
   it('keeps loopback working when loopback is what was asked for', () => {

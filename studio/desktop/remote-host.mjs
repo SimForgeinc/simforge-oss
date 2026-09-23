@@ -9,7 +9,7 @@
 // or a script reaches it with three environment variables, which name one
 // target for this launch and remember nothing:
 //
-//   SIMFORGE_REMOTE_HOST=http://100.72.252.40:5421   the host's origin
+//   SIMFORGE_REMOTE_HOST=http://100.64.0.10:5421   the host's origin
 //   SIMFORGE_REMOTE_HOST_TOKEN=<controlToken>        from that box's host.json
 //   SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1           see below
 //

@@ -4,7 +4,6 @@
   "image": "ghcr.io/simforgeinc/carla-rr-maps:0.10.0-prod-graphics",
   "imageId": "sha256:a2d11ebd7bca598e1d7117a23c221e3f8f79b44131041a6a56bdd3e4b80a64af",
   "repoDigests": [
-   "435362779479.dkr.ecr.us-east-1.amazonaws.com/simcloud-carla-worker-dev@sha256:a2d11ebd7bca598e1d7117a23c221e3f8f79b44131041a6a56bdd3e4b80a64af",
    "ghcr.io/simforgeinc/carla-rr-maps@sha256:a2d11ebd7bca598e1d7117a23c221e3f8f79b44131041a6a56bdd3e4b80a64af"
   ],
   "version": {

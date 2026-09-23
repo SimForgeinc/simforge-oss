@@ -436,13 +436,13 @@ describe("local map cache service", () => {
     const policy = fakeAccess(origin.origin);
     policy.registry.set(`${MAP}/net.bin`, { sha256: digest, sizeBytes: bytes.length });
     const service = await open(root, policy.access);
-    const network = HostOrigin.fromReceivedRequest(new Request("http://100.72.252.40:5432/api/simforge/map-cache/ensure", { headers: { host: "100.72.252.40:5432" } }));
+    const network = HostOrigin.fromReceivedRequest(new Request("http://100.64.0.10:5432/api/simforge/map-cache/ensure", { headers: { host: "100.64.0.10:5432" } }));
     const loopback = HostOrigin.fromReceivedRequest(new Request("http://127.0.0.1:5199/api/simforge/map-cache/ensure", { headers: { host: "127.0.0.1:5199" } }));
 
     // The same asset, named by each machine's own view of the host.
-    const remote = await service.ensure({ requestId: "n1", url: `http://100.72.252.40:5432${MAP}/net.bin`, sha256: digest }, undefined, network);
+    const remote = await service.ensure({ requestId: "n1", url: `http://100.64.0.10:5432${MAP}/net.bin`, sha256: digest }, undefined, network);
     assert.ok(remote.url.length > 0);
-    assert.equal(await service.has({ url: `http://100.72.252.40:5432${MAP}/net.bin`, sha256: digest }, network), true);
+    assert.equal(await service.has({ url: `http://100.64.0.10:5432${MAP}/net.bin`, sha256: digest }, network), true);
     assert.equal(await service.has({ url: `http://127.0.0.1:5199${MAP}/net.bin`, sha256: digest }, loopback), true, "one cache entry, not one per authority");
 
     // Another origin is still refused, and the refusal names what it compared against.
@@ -452,7 +452,7 @@ describe("local map cache service", () => {
     );
     // Without an authority, only a root-relative path is a local asset.
     await assert.rejects(
-      service.ensure({ requestId: "n3", url: `http://100.72.252.40:5432${MAP}/net.bin`, sha256: digest }),
+      service.ensure({ requestId: "n3", url: `http://100.64.0.10:5432${MAP}/net.bin`, sha256: digest }),
       /root-relative/,
     );
   });

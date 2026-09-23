@@ -9,9 +9,9 @@ describe("HostOrigin.fromReceivedRequest", () => {
   it("answers in the caller's authority, not the server's bound interface", () => {
     // A host bound to 0.0.0.0 sees `localhost:5199`; the client reached it
     // over the tailnet and must be handed URLs it can resolve.
-    const origin = HostOrigin.fromReceivedRequest(received({ host: "100.72.252.40:5421" }));
-    expect(origin.toURL(hostPath("/dashboard")).href).toBe("http://100.72.252.40:5421/dashboard");
-    expect(origin.owns("http://100.72.252.40:5421")).toBe(true);
+    const origin = HostOrigin.fromReceivedRequest(received({ host: "100.64.0.10:5421" }));
+    expect(origin.toURL(hostPath("/dashboard")).href).toBe("http://100.64.0.10:5421/dashboard");
+    expect(origin.owns("http://100.64.0.10:5421")).toBe(true);
     expect(origin.owns("http://localhost:5199")).toBe(false);
   });
 
@@ -51,12 +51,12 @@ describe("HostOrigin.fromConfigured", () => {
   });
 
   it("refuses plaintext on a network address in a packaged shell unless acknowledged", () => {
-    expect(() => HostOrigin.fromConfigured("http://100.72.252.40:5421", "packaged"))
+    expect(() => HostOrigin.fromConfigured("http://100.64.0.10:5421", "packaged"))
       .toThrow(expect.objectContaining({ code: "host_origin_plaintext_network" }));
-    expect(HostOrigin.fromConfigured("http://100.72.252.40:5421", "packaged", { plaintextNetworkAcknowledged: true }).hrefForCookie())
-      .toBe("http://100.72.252.40:5421");
+    expect(HostOrigin.fromConfigured("http://100.64.0.10:5421", "packaged", { plaintextNetworkAcknowledged: true }).hrefForCookie())
+      .toBe("http://100.64.0.10:5421");
     expect(HostOrigin.fromConfigured("http://127.0.0.1:5421", "packaged").hrefForCookie()).toBe("http://127.0.0.1:5421");
-    expect(HostOrigin.fromConfigured("http://100.72.252.40:5421", "dev").hrefForCookie()).toBe("http://100.72.252.40:5421");
+    expect(HostOrigin.fromConfigured("http://100.64.0.10:5421", "dev").hrefForCookie()).toBe("http://100.64.0.10:5421");
   });
 });
 

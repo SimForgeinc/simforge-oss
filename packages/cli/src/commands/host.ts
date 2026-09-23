@@ -24,7 +24,7 @@ export function advertisedPairingOrigin(baseUrl: string, explicit: string | unde
     try {
       url = new URL(explicit);
     } catch {
-      throw new CliError('bad_value', `--origin must be the host's base URL as the other machine reaches it, for example http://100.72.252.40:5421.`, { path: '--origin' });
+      throw new CliError('bad_value', `--origin must be the host's base URL as the other machine reaches it, for example http://100.64.0.10:5421.`, { path: '--origin' });
     }
     if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
       throw new CliError('bad_value', `--origin must be a bare http:// or https:// origin.`, { path: '--origin' });

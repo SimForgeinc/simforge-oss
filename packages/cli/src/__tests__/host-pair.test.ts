@@ -8,7 +8,7 @@ import { advertisedPairingOrigin } from '../commands/host.js';
  */
 describe('the pairing link advertises a dialable origin', () => {
   it('uses a single-interface bind as-is', () => {
-    expect(advertisedPairingOrigin('http://100.72.252.40:5421', undefined)).toBe('http://100.72.252.40:5421');
+    expect(advertisedPairingOrigin('http://100.64.0.10:5421', undefined)).toBe('http://100.64.0.10:5421');
   });
   it('refuses to guess for loopback and wildcard binds', () => {
     for (const bound of ['http://127.0.0.1:5199', 'http://localhost:5199', 'http://0.0.0.0:5421', 'http://[::]:5421']) {

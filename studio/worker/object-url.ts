@@ -13,7 +13,7 @@ const LOCAL_OBJECTS = "/api/local-objects/";
  * env knob (`SIMFORGE_WORKER_OBJECT_BASE_URL`) that re-based local-object URLs
  * onto a configured origin; the compiler client fetched whatever origin the
  * server had invented, with no knob and no fallback. A host bound to a network
- * address (`simforge daemon --hostname 100.72.252.40`) mints its object URLs
+ * address (`simforge daemon --hostname 100.64.0.10`) mints its object URLs
  * from `SIMFORGE_API_BASE_URL`, whose default is `http://127.0.0.1:<port>` —
  * an address such a host is not listening on. The compiler's map downloads then
  * failed with a bare `TypeError: fetch failed`, which surfaced as an export
