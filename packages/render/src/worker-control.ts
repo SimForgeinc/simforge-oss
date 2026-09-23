@@ -75,9 +75,15 @@ export const CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK = 'native-evidence.capture-clo
  * not report them.
  */
 export const CONTROL_FEATURE_RENDER_SUBSTITUTIONS = 'render-evidence.substitutions' as const;
+/**
+ * `encoder` in the native render manifest: the ffmpeg that encoded the
+ * videos (resolved path, how it was found, its `-version` banner) and each
+ * video's codec and encoder arguments.
+ */
+export const CONTROL_FEATURE_NATIVE_ENCODER = 'native-evidence.encoder' as const;
 export const CONTROL_FEATURES_V1 = [
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK,
-  CONTROL_FEATURE_RENDER_SUBSTITUTIONS,
+  CONTROL_FEATURE_RENDER_SUBSTITUTIONS, CONTROL_FEATURE_NATIVE_ENCODER,
 ] as const;
 
 export const JobInputTransferSchema = z.strictObject({

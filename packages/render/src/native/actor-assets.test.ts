@@ -4,10 +4,16 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { defaultCatalogIdForActorKind } from '@simforge-oss/playback';
+
 import {
+  assertActorAnimationsBound,
   assertActorAppearanceGrounded,
   ensureActorAssets,
+  parseActorClosureCatalog,
+  type ActorClosureModel,
 } from './actor-assets.js';
+import { NATIVE_KIND_DEFAULT_CATALOG_IDS, nativeActorCatalogId, nativeActorClass, type NativeSceneState } from './lowering.js';
 
 function digest(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
@@ -46,7 +52,7 @@ async function registry(members: Record<string, Buffer>) {
 
 const sedanGlb = Buffer.from('glb:vehicle.sedan');
 const catalog = Buffer.from(JSON.stringify({
-  'vehicle.sedan': { model: { glbPath: 'models/vehicle.sedan/model.glb' } },
+  'vehicle.sedan': { model: { glbPath: 'models/vehicle.sedan/model.glb' }, tintable: true, scaleToDims: false },
 }));
 
 
@@ -96,37 +102,102 @@ describe('ensureActorAssets', () => {
 
   it('refuses a catalog that binds an id to a path outside the closure', async () => {
     const fixture = await registry({
-      'catalog-models.json': Buffer.from(JSON.stringify({ 'vehicle.sedan': { model: { glbPath: 'models/elsewhere.glb' } } })),
+      'catalog-models.json': Buffer.from(JSON.stringify({ 'vehicle.sedan': { model: { glbPath: 'models/elsewhere.glb' }, tintable: true, scaleToDims: false } })),
     });
     await expect(ensureActorAssets(fixture)).rejects.toThrow(/not a closure member/);
   });
 });
 
+describe('parseActorClosureCatalog', () => {
+  const members = new Map([
+    ['models/pedestrian.adult/model.glb', { sha256: 'a'.repeat(64), bytes: 1 }],
+    ['models/pedestrian.adult/walk.glb', { sha256: 'b'.repeat(64), bytes: 1 }],
+  ]);
+  const parse = (table: unknown) => parseActorClosureCatalog(Buffer.from(JSON.stringify(table)), members);
+  const entry = { model: { glbPath: 'models/pedestrian.adult/model.glb' }, tintable: false, scaleToDims: false };
+
+  it('binds animations and in-model clips by motion, as the service does', () => {
+    const models = parse({
+      version: 3,
+      'pedestrian.adult': { ...entry, animations: { walk: { glbPath: 'models/pedestrian.adult/walk.glb', clip: 'Walk' } } },
+      'pedestrian.child': { ...entry, model: { glbPath: 'models/pedestrian.adult/model.glb', clips: { idle: 'Idle', locomotion: 'Run' } } },
+    });
+    expect(models.get('pedestrian.adult')!.animations.get('walk')).toEqual({ glbPath: 'models/pedestrian.adult/walk.glb', clip: 'Walk' });
+    expect([...models.get('pedestrian.child')!.animations]).toEqual([
+      ['idle', { glbPath: 'models/pedestrian.adult/model.glb', clip: 'Idle' }],
+      ['walk', { glbPath: 'models/pedestrian.adult/model.glb', clip: 'Run' }],
+    ]);
+  });
+
+  it('refuses every malformed entry by name instead of skipping it', () => {
+    for (const [table, message] of [
+      [{ 'pedestrian.adult': 'model.glb' }, /entry pedestrian.adult is not an object/],
+      [{ 'pedestrian.adult': { ...entry, model: { glbPath: 7 } } }, /pedestrian.adult model has no glbPath/],
+      [{ 'pedestrian.adult': { model: entry.model, scaleToDims: false } }, /does not declare tintable/],
+      [{ 'pedestrian.adult': { ...entry, uniformScale: 'big' } }, /uniformScale is not a finite number/],
+      [{ 'pedestrian.adult': { ...entry, animations: { walk: { glbPath: 'models/pedestrian.adult/walk.glb' } } } }, /animation walk names no clip/],
+      [{ 'pedestrian.adult': { ...entry, animations: [] } }, /animations is not an object/],
+      [{ 'pedestrian.adult': { ...entry, model: { ...entry.model, clips: { sprint: 'Run' } } } }, /model.clips.sprint is not a known motion/],
+      [{ 'pedestrian.adult': { ...entry, model: { ...entry.model, animated: true } } }, /is animated but binds no animation clips/],
+      [[], /expected an object/],
+    ] as const) {
+      expect(() => parse(table), JSON.stringify(table)).toThrow(expect.objectContaining({ code: 'native_actor_catalog_invalid', message: expect.stringMatching(message) }));
+    }
+  });
+});
+
+const model = (catalogId: string, animations: Record<string, string> = {}): ActorClosureModel => ({
+  catalogId, glbPath: `models/${catalogId}/model.glb`,
+  animations: new Map(Object.entries(animations).map(([motion, clip]) => [motion, { glbPath: `models/${catalogId}/model.glb`, clip }])),
+});
+
 describe('assertActorAppearanceGrounded', () => {
-  const assets = { digest: 'a'.repeat(64), models: new Map([['vehicle.sedan', { catalogId: 'vehicle.sedan', glbPath: 'x', animationPaths: [] }]]) };
+  const assets = { digest: 'a'.repeat(64), models: new Map([['vehicle.sedan', model('vehicle.sedan')]]) };
   const host = { sourceId: 'cam1', actorId: 'ego', vehicleAsset: { catalogAssetId: 'vehicle.sedan' } };
 
 
   it('refuses an authored identity the closure cannot model', () => {
     expect(() => assertActorAppearanceGrounded([
-      { actorId: 'ego', catalogId: 'vehicle.sedan', authored: false },
-      { actorId: 'parked', catalogId: 'vehicle.hatchback', authored: true },
-    ], [host], assets)).toThrow(/parked requires catalog model vehicle.hatchback/);
+      { actorId: 'ego', kind: 'car', catalogId: 'vehicle.sedan', authored: false },
+      { actorId: 'parked', kind: 'car', catalogId: 'vehicle.hatchback', authored: true },
+    ], [host], assets)).toThrow(expect.objectContaining({
+      code: 'native_actor_model_missing', message: expect.stringMatching(/parked requires catalog model vehicle.hatchback/),
+    }));
+  });
+
+  it('refuses an unauthored actor whose kind default the closure cannot model: no class primitive stands in', () => {
+    expect(() => assertActorAppearanceGrounded([
+      { actorId: 'truck-1', kind: 'truck', catalogId: 'vehicle.box_truck', authored: false },
+    ], [], assets)).toThrow(expect.objectContaining({
+      code: 'native_actor_model_missing', message: expect.stringMatching(/truck-1 requires catalog model vehicle.box_truck \(truck default\)/),
+    }));
+  });
+
+  it('refuses an unauthored actor of an unknown kind, or rendered as another kind\'s default', () => {
+    expect(() => assertActorAppearanceGrounded([
+      { actorId: 'thing', kind: 'hovercraft', catalogId: 'vehicle.sedan', authored: false },
+    ], [], assets)).toThrow(expect.objectContaining({ code: 'native_actor_kind_unmapped' }));
+    // The Rust scene-state table sends an unauthored van to the sedan.
+    expect(() => assertActorAppearanceGrounded([
+      { actorId: 'van-1', kind: 'van', catalogId: 'vehicle.sedan', authored: false },
+    ], [], assets)).toThrow(expect.objectContaining({
+      code: 'native_actor_default_mismatch', message: expect.stringMatching(/documented default for van is vehicle.van/),
+    }));
   });
 
   it('accepts declared procedural identity but refuses an absent model of the same vehicle', () => {
     const empty = { digest: assets.digest, models: new Map() };
     expect(() => assertActorAppearanceGrounded([
-      { actorId: 'parked', catalogId: 'vehicle.hatchback.low_poly', authored: true },
+      { actorId: 'parked', kind: 'car', catalogId: 'vehicle.hatchback.low_poly', authored: true },
     ], [], empty)).not.toThrow();
     expect(() => assertActorAppearanceGrounded([
-      { actorId: 'parked', catalogId: 'vehicle.hatchback', authored: true },
+      { actorId: 'parked', kind: 'car', catalogId: 'vehicle.hatchback', authored: true },
     ], [], empty)).toThrow(/parked requires catalog model vehicle.hatchback/);
   });
 
   it('refuses a sensor host whose contract identity is not what the scenario renders', () => {
     expect(() => assertActorAppearanceGrounded(
-      [{ actorId: 'ego', catalogId: 'vehicle.sedan', authored: false }],
+      [{ actorId: 'ego', kind: 'car', catalogId: 'vehicle.sedan', authored: false }],
       [{ ...host, vehicleAsset: { catalogAssetId: 'vehicle.kia.carnival' } }],
       assets,
     )).toThrow(/identifies actor ego as vehicle.kia.carnival, but the scenario renders it as vehicle.sedan/);
@@ -134,6 +205,55 @@ describe('assertActorAppearanceGrounded', () => {
 
   it('refuses a sensor host riding an actor that is never present', () => {
     expect(() => assertActorAppearanceGrounded([], [host], assets)).toThrow(/never present/);
+  });
+});
+
+describe('native actor kind tables', () => {
+  it('are the playback kind defaults, one table for browser and native', () => {
+    for (const kind of ['vehicle', 'car', 'truck', 'bus', 'van', 'motorcycle', 'bicycle', 'pedestrian', 'scooter', 'sidewalk_robot', 'drone', 'animal', 'static_object'] as const) {
+      expect(NATIVE_KIND_DEFAULT_CATALOG_IDS[kind], kind).toBe(defaultCatalogIdForActorKind(kind));
+      expect(() => nativeActorClass(kind)).not.toThrow();
+    }
+  });
+
+  it('refuse a kind they do not map instead of a sedan or a prop', () => {
+    expect(() => nativeActorCatalogId('hovercraft', [], 'actor h')).toThrow(expect.objectContaining({ code: 'native_actor_kind_unmapped' }));
+    expect(() => nativeActorClass('hovercraft', 'actor h')).toThrow(expect.objectContaining({ code: 'native_actor_kind_unmapped' }));
+    expect(nativeActorCatalogId('hovercraft', ['catalog:vehicle.suv'])).toBe('vehicle.suv');
+    expect(nativeActorClass('vehicle')).toBe('car');
+  });
+});
+
+describe('assertActorAnimationsBound', () => {
+  const frame = (tick: number, actors: { id: string; catalogId: string; speed: number }[]): NativeSceneState => ({
+    version: 'simforge.scene-state.v1', mapId: 'm', tick, tickHz: 24, weather: { preset: 'clear' }, timeOfDay: 12, groundY: 0,
+    actors: actors.map((actor) => ({
+      id: actor.id, kind: tick === 0 ? 'spawn' : 'update', catalogId: actor.catalogId, actorClass: 'pedestrian',
+      transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1] }, velocity: [actor.speed, 0, 0],
+    })),
+  });
+  const walker = { actorId: 'walker', kind: 'pedestrian', catalogId: 'pedestrian.adult', authored: true };
+
+  it('accepts a pedestrian whose model binds the clips its motion needs', () => {
+    const assets = { digest: 'c'.repeat(64), models: new Map([['pedestrian.adult', model('pedestrian.adult', { walk: 'walk', idle: 'idle' })]]) };
+    expect(() => assertActorAnimationsBound([walker], [
+      frame(0, [{ id: 'walker', catalogId: 'pedestrian.adult', speed: 0 }]),
+      frame(1, [{ id: 'walker', catalogId: 'pedestrian.adult', speed: 1.4 }]),
+    ], assets)).not.toThrow();
+  });
+
+  it('refuses a moving pedestrian whose model has no walk clip: it would slide in a static pose', () => {
+    const assets = { digest: 'c'.repeat(64), models: new Map([['pedestrian.adult', model('pedestrian.adult', { idle: 'idle' })]]) };
+    expect(() => assertActorAnimationsBound([walker], [frame(0, [{ id: 'walker', catalogId: 'pedestrian.adult', speed: 1.4 }])], assets))
+      .toThrow(expect.objectContaining({ code: 'native_actor_animation_missing', message: expect.stringMatching(/pedestrian walker moves but its catalog model pedestrian.adult binds no walk clip/) }));
+  });
+
+  it('refuses a moving animal without a walk clip, and ignores a standing one', () => {
+    const dog = { actorId: 'dog', kind: 'animal', catalogId: 'animal.dog', authored: false };
+    const assets = { digest: 'c'.repeat(64), models: new Map([['animal.dog', model('animal.dog')]]) };
+    expect(() => assertActorAnimationsBound([dog], [frame(0, [{ id: 'dog', catalogId: 'animal.dog', speed: 0 }])], assets)).not.toThrow();
+    expect(() => assertActorAnimationsBound([dog], [frame(0, [{ id: 'dog', catalogId: 'animal.dog', speed: 3 }])], assets))
+      .toThrow(expect.objectContaining({ code: 'native_actor_animation_missing' }));
   });
 });
 

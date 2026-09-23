@@ -69,6 +69,25 @@ export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
     antiAlias: z.string().min(1).max(32),
     samplesPerFrame: z.number().int().min(1).max(16),
   }).optional(),
+  /**
+   * The ffmpeg that encoded every video and how each was encoded; gated by
+   * `native-evidence.encoder`. `source` says how the binary was found
+   * (`option`: the worker's engine option; `path`: a PATH lookup, recorded
+   * as such). `codec` is what encoded the file; `startedAs` is present when
+   * an NVENC session could not open and the source re-encoded on libx264.
+   */
+  encoder: z.strictObject({
+    path: IdentifierSchema,
+    source: z.enum(['option', 'env', 'runtime-manifest', 'runtime-root', 'path']),
+    version: z.string().trim().min(1).max(512),
+    videos: z.array(z.strictObject({
+      actorId: IdentifierSchema,
+      sensorId: IdentifierSchema,
+      codec: z.enum(['libx264', 'h264_nvenc']),
+      startedAs: z.literal('h264_nvenc').optional(),
+      args: z.array(z.string().min(1).max(256)).min(1).max(64),
+    })).min(1),
+  }).optional(),
   videos: z.array(z.strictObject({
     actorId: IdentifierSchema,
     sensorId: IdentifierSchema,
@@ -263,6 +282,9 @@ export interface NativeReservedArtifact {
   readonly sizeBytes: number;
 }
 
+/** The intent asset id of the render timeline (`RENDER_TIMELINE_INPUT_ID`; kept local so hosts need no WASM import). */
+export const NATIVE_RENDER_TIMELINE_ASSET_ID = 'render.timeline';
+
 export interface NativeRunExpectations {
   readonly intentSha256: string;
   readonly executionPackageControlSha256: string;
@@ -273,8 +295,20 @@ export interface NativeRunExpectations {
   readonly nativeVramCapacityBytes?: number;
   /** Union tick count of every RGB schedule (`unionFrameMicros`). */
   readonly frameCount: number;
-  /** Per RGB source, keyed by `${actorId}\0${sensorId}`. */
-  readonly videos: ReadonlyMap<string, { width: number; height: number; framesPerSecond: number; frameCount: number }>;
+  /** Per source, keyed by `${actorId}\0${sensorId}`. */
+  readonly videos: ReadonlyMap<string, NativeExpectedVideo>;
+  /** Digest of the intent's `render.timeline` asset: the run must render from it and pass parity. */
+  readonly timelineSha256?: string;
+  /** Lidar/radar sources that must each carry one `sensorArchive` (the intent asked for it), keyed like `videos`. */
+  readonly sensorArchives: ReadonlySet<string>;
+}
+
+export interface NativeExpectedVideo {
+  readonly width: number;
+  readonly height: number;
+  readonly framesPerSecond: number;
+  readonly frameCount: number;
+  readonly modality: 'rgb' | 'lidar' | 'radar';
 }
 
 export type NativeEvidenceFailure = 'native_artifact_evidence_incomplete' | 'native_diagnostics_evidence_mismatch';
@@ -318,16 +352,19 @@ export function nativeRunExpectations(
   if (!actorAssets) throw new Error('native_actor_assets_undeclared');
   const scheduleBySource = new Map(createFixedSchedules(intent).map((schedule) => [schedule.sourceId, schedule]));
   const schedules: FixedSchedule[] = [];
-  const videos = new Map<string, { width: number; height: number; framesPerSecond: number; frameCount: number }>();
+  const videos = new Map<string, NativeExpectedVideo>();
+  const sensorArchives = new Set<string>();
+  const wantsArchive = intent.renderSpec.artifacts.includes('sensorArchive');
   const sensorVideo = intent.renderSpec.sources.some((source) => source.modality === 'lidar' || source.modality === 'radar')
     ? nativeSensorVideoFormat(intent)
     : null;
   for (const source of intent.renderSpec.sources) {
     if (source.modality === 'lidar' || source.modality === 'radar') {
-      videos.set(videoKey(source), sensorVideo!);
+      videos.set(videoKey(source), { ...sensorVideo!, modality: source.modality });
+      if (wantsArchive) sensorArchives.add(videoKey(source));
       continue;
     }
-    if (source.modality !== 'rgb') continue;
+    if (source.modality !== 'rgb') throw new Error(`native render cannot produce ${source.modality} source ${source.outputName}`);
     const schedule = scheduleBySource.get(source.outputName);
     if (!schedule) throw new Error(`native render source ${source.outputName} has no fixed schedule`);
     schedules.push(schedule);
@@ -336,8 +373,10 @@ export function nativeRunExpectations(
       height: source.attributes.height,
       framesPerSecond: schedule.framesPerSecond,
       frameCount: schedule.frameCount,
+      modality: 'rgb',
     });
   }
+  const timeline = intent.assets.find((asset) => asset.assetId === NATIVE_RENDER_TIMELINE_ASSET_ID);
   return {
     intentSha256: lease.intentSha256,
     executionPackageControlSha256: lease.executionPackageControlSha256,
@@ -348,6 +387,8 @@ export function nativeRunExpectations(
     nativeVramCapacityBytes: intent.nativeVramCapacityBytes,
     frameCount: unionFrameMicros(schedules).length,
     videos,
+    ...(timeline ? { timelineSha256: timeline.sha256 } : {}),
+    sensorArchives,
   };
 }
 
@@ -380,6 +421,14 @@ export function nativeEvidenceFailure(
   ) {
     return 'native_artifact_evidence_incomplete';
   }
+  const archives = reservations.filter((item) => item.role === 'sensorArchive');
+  if (
+    archives.length !== expectations.sensorArchives.size
+    || archives.some((item) => item.mediaType !== 'application/zip' || !expectations.sensorArchives.has(videoKey(item)))
+    || new Set(archives.map(videoKey)).size !== archives.length
+  ) {
+    return 'native_artifact_evidence_incomplete';
+  }
   const reservedVideos = new Map(videos.map((video) => [videoKey(video), video]));
   const lineageMismatch = (document: NativeRenderManifest | NativeRunDiagnostics): boolean =>
     document.intentSha256 !== expectations.intentSha256
@@ -390,8 +439,19 @@ export function nativeEvidenceFailure(
     || (expectations.nativeVramBudgetBytes !== undefined && (document.textureProfile?.budgetBytes !== expectations.nativeVramBudgetBytes || document.textureProfile.estimatedBytes > expectations.nativeVramBudgetBytes))
     || (expectations.nativeVramCapacityBytes !== undefined && (document.textureProfile?.capacityBytes !== (expectations.nativeVramBudgetBytes ?? expectations.nativeVramCapacityBytes) || document.textureProfile.estimatedBytes > document.textureProfile.capacityBytes))
     || document.frameCount !== expectations.frameCount;
+  // A declared timeline is the render contract: the run must say it rendered
+  // from exactly that timeline and that its observed poses passed parity.
+  const timelineMismatch = expectations.timelineSha256 !== undefined && (
+    manifest.sceneSource !== 'render-timeline'
+    || diagnostics.sceneSource !== 'render-timeline'
+    || manifest.timelineSha256 !== expectations.timelineSha256
+    || diagnostics.timelineSha256 !== expectations.timelineSha256
+    || diagnostics.parity?.pass !== true
+    || diagnostics.parity.comparedPoses === 0
+  );
   const mismatch =
-    lineageMismatch(manifest)
+    timelineMismatch
+    || lineageMismatch(manifest)
     || lineageMismatch(diagnostics)
     || manifest.loweringSha256 !== diagnostics.loweringSha256
     || diagnostics.traceSha256 !== trace.sha256
@@ -408,7 +468,8 @@ export function nativeEvidenceFailure(
         || video.frameCount !== expected.frameCount
         || video.width !== expected.width
         || video.height !== expected.height
-        || video.framesPerSecond !== expected.framesPerSecond;
+        || video.framesPerSecond !== expected.framesPerSecond
+        || video.sensor?.modality !== expected.modality;
     })
     || diagnostics.videos.some((video) => {
       const reserved = reservedVideos.get(videoKey(video));

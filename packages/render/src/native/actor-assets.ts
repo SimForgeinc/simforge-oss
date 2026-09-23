@@ -9,7 +9,8 @@ import type { RenderSensorSourceHost } from '@simforge-oss/scenario';
 import { getEntry, isCatalogId } from '@simforge-oss/asset-catalog/metadata';
 
 import { markBlobVerified, verifyCachedBlob } from '../blob-cache.js';
-import type { NativeActorAppearance } from './lowering.js';
+import { RenderInputError } from '../render-input-error.js';
+import { nativeKindDefaultCatalogId, type NativeActorAppearance, type NativeSceneState } from './lowering.js';
 
 /**
  * The native actor closure travels on every native intent as one explicit
@@ -102,11 +103,18 @@ export function nativeActorAssetsCacheDir(fallback: string, env: NodeJS.ProcessE
 
 export interface ActorClosureMember { readonly sha256: string; readonly bytes: number }
 
+/** One named motion clip (`walk`, `idle`) a catalog model binds: a GLB and the clip inside it. */
+export interface ActorClosureAnimation {
+  readonly glbPath: string;
+  readonly clip: string;
+}
+
 /** A catalog id's model as `catalog-models.json` declares it, every path a closure member. */
 export interface ActorClosureModel {
   readonly catalogId: string;
   readonly glbPath: string;
-  readonly animationPaths: readonly string[];
+  /** Motion name → clip, as the service binds them (`animations` and `model.clips`). */
+  readonly animations: ReadonlyMap<string, ActorClosureAnimation>;
 }
 
 export interface ActorAssetsClosure {
@@ -179,53 +187,100 @@ export function parseActorAssetsClosure(
   return { digest, sizeBytes: bytes.byteLength, members };
 }
 
+function catalogError(message: string): RenderInputError {
+  return new RenderInputError('native_actor_catalog_invalid', `${NATIVE_ACTOR_ASSETS_CATALOG_PATH}: ${message}`);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 /**
  * `catalog-models.json` as the retained service reads it (`vehicle_model.rs`
- * `from_sidecar`): `{ "<catalogId>": { model: { glbPath }, animations?: {
- * <name>: { glbPath } } } }`, flat `{ glbPath }` entries accepted, keys
- * without a dot being wrapper metadata. Every referenced path must be a
- * closure member, otherwise the service would retain a proxy for an id the
- * catalog claims to model.
+ * `from_sidecar`): `{ "<catalogId>": { model: { glbPath, clips? }, tintable,
+ * scaleToDims, animations?: { <motion>: { glbPath, clip } } } }`, optionally
+ * under a `models`/`entries`/`vehicles` wrapper; keys without a dot are
+ * wrapper metadata (`version`). Strict like the service: a malformed entry
+ * is refused by name (`native_actor_catalog_invalid`), never skipped, since a
+ * skipped id would later render as something else. Every referenced path
+ * must be a closure member.
  */
 export function parseActorClosureCatalog(
   bytes: Uint8Array,
   members: ReadonlyMap<string, ActorClosureMember>,
 ): ReadonlyMap<string, ActorClosureModel> {
-  const raw = JSON.parse(Buffer.from(bytes).toString('utf8')) as Record<string, unknown>;
-  const table = (raw.models ?? raw.entries ?? raw) as Record<string, unknown>;
-  if (!table || typeof table !== 'object' || Array.isArray(table)) {
-    throw new Error(`${NATIVE_ACTOR_ASSETS_CATALOG_PATH}: expected an object`);
+  let raw: unknown;
+  try {
+    raw = JSON.parse(Buffer.from(bytes).toString('utf8'));
+  } catch (error) {
+    throw catalogError(`not JSON (${(error as Error).message})`);
   }
+  if (!isRecord(raw)) throw catalogError('expected an object');
+  const wrapper = (['models', 'entries', 'vehicles'] as const).map((key) => raw[key]).find(isRecord);
+  const table = wrapper ?? raw;
+  const member = (catalogId: string, what: string, memberPath: unknown): string => {
+    if (typeof memberPath !== 'string' || memberPath.length === 0) throw catalogError(`${catalogId} ${what} has no glbPath`);
+    if (!members.has(memberPath)) throw catalogError(`binds ${catalogId} ${what} to ${memberPath}, which is not a closure member`);
+    return memberPath;
+  };
   const models = new Map<string, ActorClosureModel>();
   for (const [catalogId, value] of Object.entries(table)) {
-    if (!catalogId.includes('.') || !value || typeof value !== 'object') continue;
-    const entry = value as { model?: { glbPath?: unknown }; glbPath?: unknown; animations?: Record<string, { glbPath?: unknown }> };
-    const glbPath = entry.model?.glbPath ?? entry.glbPath;
-    if (typeof glbPath !== 'string') continue;
-    if (!members.has(glbPath)) {
-      throw new Error(`${NATIVE_ACTOR_ASSETS_CATALOG_PATH} binds ${catalogId} to ${glbPath}, which is not a closure member`);
+    if (!catalogId.includes('.')) continue; // wrapper metadata, e.g. `version`
+    if (!isRecord(value)) throw catalogError(`entry ${catalogId} is not an object`);
+    const model = value.model === undefined ? value : value.model;
+    if (!isRecord(model)) throw catalogError(`entry ${catalogId} model is not an object`);
+    const glbPath = member(catalogId, 'model', model.glbPath);
+    for (const key of ['tintable', 'scaleToDims'] as const) {
+      if (typeof value[key] !== 'boolean') throw catalogError(`entry ${catalogId} does not declare ${key} as a boolean`);
     }
-    const animationPaths: string[] = [];
-    for (const [name, animation] of Object.entries(entry.animations ?? {})) {
-      if (typeof animation?.glbPath !== 'string') {
-        throw new Error(`${NATIVE_ACTOR_ASSETS_CATALOG_PATH} animation ${catalogId}/${name} lacks a glbPath`);
+    for (const key of ['uniformScale', 'yawOffsetRad', 'groundOffsetM'] as const) {
+      if (value[key] !== undefined && !(typeof value[key] === 'number' && Number.isFinite(value[key]))) {
+        throw catalogError(`entry ${catalogId} ${key} is not a finite number`);
       }
-      if (!members.has(animation.glbPath)) {
-        throw new Error(`${NATIVE_ACTOR_ASSETS_CATALOG_PATH} binds ${catalogId}/${name} to ${animation.glbPath}, which is not a closure member`);
-      }
-      animationPaths.push(animation.glbPath);
     }
-    models.set(catalogId, { catalogId, glbPath, animationPaths });
+    const animations = new Map<string, ActorClosureAnimation>();
+    if (value.animations !== undefined) {
+      if (!isRecord(value.animations)) throw catalogError(`entry ${catalogId} animations is not an object`);
+      for (const [name, animation] of Object.entries(value.animations)) {
+        if (!isRecord(animation)) throw catalogError(`entry ${catalogId} animation ${name} is not an object`);
+        const animationPath = member(catalogId, `animation ${name}`, animation.glbPath);
+        if (typeof animation.clip !== 'string' || animation.clip.length === 0) {
+          throw catalogError(`entry ${catalogId} animation ${name} names no clip`);
+        }
+        animations.set(name, { glbPath: animationPath, clip: animation.clip });
+      }
+    }
+    if (model.clips !== undefined) {
+      if (!isRecord(model.clips)) throw catalogError(`entry ${catalogId} model.clips is not an object`);
+      for (const [key, clip] of Object.entries(model.clips)) {
+        const motion = key === 'idle' ? 'idle' : key === 'locomotion' ? 'walk' : undefined;
+        if (!motion) throw catalogError(`entry ${catalogId} model.clips.${key} is not a known motion (idle, locomotion)`);
+        if (typeof clip !== 'string' || clip.length === 0) throw catalogError(`entry ${catalogId} model.clips.${key} is not a clip name`);
+        if (animations.has(motion)) throw catalogError(`entry ${catalogId} binds the ${motion} clip twice (animations and model.clips)`);
+        animations.set(motion, { glbPath, clip });
+      }
+    }
+    if (model.animated === true && animations.size === 0) {
+      throw catalogError(`entry ${catalogId} is animated but binds no animation clips`);
+    }
+    models.set(catalogId, { catalogId, glbPath, animations });
   }
   return models;
 }
 
+function isProcedural(catalogId: string): boolean {
+  return isCatalogId(catalogId) && Boolean(getEntry(catalogId).proceduralBuilder);
+}
+
 /**
- * Refuses a render whose appearance would silently downgrade to a proxy:
- * every authored identity must declare a procedural builder or bind a verified
- * closure model. A missing model alone never declares procedural intent.
- * Every sensor host's contract identity must match the identity rendered for
- * that actor. Unauthored semantic defaults keep the documented class primitive.
+ * Refuses a render whose appearance would not be the scenario's: every
+ * rendered actor, authored or not, must declare a procedural builder or bind
+ * a verified closure model (`native_actor_model_missing`); nothing is drawn
+ * as a class primitive. An actor without an authored `catalog:` tag must
+ * carry its kind's documented default (`native_actor_kind_unmapped` for an
+ * unknown kind, `native_actor_default_mismatch` when the scene source chose
+ * another id). Every sensor host's contract identity must match the identity
+ * rendered for that actor.
  */
 export function assertActorAppearanceGrounded(
   appearances: readonly NativeActorAppearance[],
@@ -236,19 +291,86 @@ export function assertActorAppearanceGrounded(
   for (const host of sensorHosts) {
     const appearance = byActor.get(host.actorId);
     if (!appearance) {
-      throw new Error(`sensor host ${host.sourceId} rides actor ${host.actorId}, which is never present in the lowered scenario`);
+      throw new RenderInputError('native_sensor_host_absent', `sensor host ${host.sourceId} rides actor ${host.actorId}, which is never present in the lowered scenario`);
     }
     if (appearance.catalogId !== host.vehicleAsset.catalogAssetId) {
-      throw new Error(`sensor host ${host.sourceId} identifies actor ${host.actorId} as ${host.vehicleAsset.catalogAssetId}, but the scenario renders it as ${appearance.catalogId}`);
+      throw new RenderInputError('native_sensor_host_identity_mismatch', `sensor host ${host.sourceId} identifies actor ${host.actorId} as ${host.vehicleAsset.catalogAssetId}, but the scenario renders it as ${appearance.catalogId}`);
     }
   }
-  const hostActorIds = new Set(sensorHosts.map((host) => host.actorId));
   for (const appearance of appearances) {
-    if (!(appearance.authored || hostActorIds.has(appearance.actorId))) continue;
-    const procedural = isCatalogId(appearance.catalogId)
-      && Boolean(getEntry(appearance.catalogId).proceduralBuilder);
-    if (procedural || assets.models.has(appearance.catalogId)) continue;
-    throw new Error(`actor ${appearance.actorId} requires catalog model ${appearance.catalogId}, which actor closure ${assets.digest} does not provide`);
+    if (!appearance.authored) {
+      if (appearance.kind === undefined) {
+        throw new RenderInputError('native_actor_kind_unmapped', `actor ${appearance.actorId} has no authored catalog id and no kind to take a default from`);
+      }
+      const expected = nativeKindDefaultCatalogId(appearance.kind, `actor ${appearance.actorId}`);
+      if (appearance.catalogId !== expected) {
+        throw new RenderInputError(
+          'native_actor_default_mismatch',
+          `actor ${appearance.actorId} (kind ${appearance.kind}) has no authored catalog id; the scene source renders it as ${appearance.catalogId}, but the documented default for ${appearance.kind} is ${expected}`,
+          { actorId: appearance.actorId, kind: appearance.kind, catalogId: appearance.catalogId, expected },
+        );
+      }
+    }
+    if (isProcedural(appearance.catalogId) || assets.models.has(appearance.catalogId)) continue;
+    throw new RenderInputError(
+      'native_actor_model_missing',
+      `actor ${appearance.actorId} requires catalog model ${appearance.catalogId} (${appearance.authored ? 'authored' : `${appearance.kind} default`}), which actor closure ${assets.digest} does not provide`,
+      { actorId: appearance.actorId, catalogId: appearance.catalogId, closure: assets.digest },
+    );
+  }
+}
+
+/** Actor classes whose catalog model must animate while the actor moves. */
+const ANIMATED_KINDS: ReadonlySet<string> = new Set(['pedestrian', 'animal']);
+/** The service plays `walk` above this speed (`renderer/service` `apply_scene_tick`). */
+export const NATIVE_WALK_SPEED_MPS = 0.2;
+
+function isMoving(actor: NativeSceneState['actors'][number]): boolean {
+  const [x, y, z] = actor.velocity;
+  return Math.sqrt(x * x + y * y + z * z) > NATIVE_WALK_SPEED_MPS || actor.catalogId.endsWith('_walking');
+}
+
+/**
+ * Refuses a render in which a moving pedestrian or animal would slide in a
+ * static pose: the service binds the model's `walk` clip while the actor
+ * moves (and `idle` while a pedestrian stands), so each motion state the
+ * scene reaches must have its clip in the closure
+ * (`native_actor_animation_missing`). Procedural models carry their own
+ * motion and are exempt.
+ */
+export function assertActorAnimationsBound(
+  appearances: readonly NativeActorAppearance[],
+  states: readonly NativeSceneState[],
+  assets: Pick<VerifiedActorAssets, 'digest' | 'models'>,
+): void {
+  const animated = new Map(appearances
+    .filter((appearance) => appearance.kind !== undefined && ANIMATED_KINDS.has(appearance.kind) && !isProcedural(appearance.catalogId))
+    .map((appearance) => [appearance.actorId, appearance]));
+  if (animated.size === 0) return;
+  const needs = new Map<string, Set<'walk' | 'idle'>>();
+  for (const state of states) {
+    for (const actor of state.actors) {
+      const appearance = animated.get(actor.id);
+      if (!appearance || actor.kind === 'despawn') continue;
+      const motion = isMoving(actor) ? 'walk' : appearance.kind === 'pedestrian' ? 'idle' : null;
+      if (!motion) continue;
+      const set = needs.get(actor.id) ?? new Set();
+      set.add(motion);
+      needs.set(actor.id, set);
+    }
+  }
+  for (const [actorId, motions] of [...needs].sort(([left], [right]) => left.localeCompare(right))) {
+    const appearance = animated.get(actorId)!;
+    const model = assets.models.get(appearance.catalogId);
+    if (!model) continue; // assertActorAppearanceGrounded refuses it by name
+    for (const motion of [...motions].sort()) {
+      if (model.animations.has(motion)) continue;
+      throw new RenderInputError(
+        'native_actor_animation_missing',
+        `${appearance.kind} ${actorId} ${motion === 'walk' ? 'moves' : 'stands'} but its catalog model ${appearance.catalogId} binds no ${motion} clip in actor closure ${assets.digest}`,
+        { actorId, catalogId: appearance.catalogId, motion, closure: assets.digest },
+      );
+    }
   }
 }
 
