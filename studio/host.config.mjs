@@ -35,6 +35,7 @@ import {
   readdirSync,
   readFileSync,
   readlinkSync,
+  rmSync,
   symlinkSync,
   unlinkSync,
   writeFileSync,
@@ -120,14 +121,57 @@ function syncLinks(target, source, { skip = [], extra = {} } = {}) {
 }
 
 /**
+ * Mirror `source` into `target` as real directories holding per-file links,
+ * plus `extra` (name -> directory, mirrored the same way). Route discovery in
+ * `next dev` does not follow directory symlinks, so the app trees are mirrored
+ * rather than linked; module code still resolves to the real files. Stale
+ * links and directories this function made are removed; nothing else is.
+ */
+function mirrorTree(target, source, mounts = {}) {
+  mkdirSync(target, { recursive: true });
+  const wanted = new Map();
+  if (source) {
+    for (const entry of readdirSync(source, { withFileTypes: true })) {
+      if (entry.name === "node_modules" || entry.name.startsWith(".next")) continue;
+      wanted.set(entry.name, { path: join(source, entry.name), dir: entry.isDirectory() });
+    }
+  }
+  // Mounts: "name" adds a mirrored directory here; "a/b" is passed down to "a".
+  const below = {};
+  for (const [key, path] of Object.entries(mounts)) {
+    if (!path) continue;
+    const [head, ...rest] = key.split("/");
+    if (rest.length === 0) wanted.set(head, { path, dir: true });
+    else {
+      below[head] = { ...below[head], [rest.join("/")]: path };
+      if (!wanted.has(head)) wanted.set(head, { path: null, dir: true });
+    }
+  }
+  for (const entry of readdirSync(target, { withFileTypes: true })) {
+    const path = join(target, entry.name);
+    const want = wanted.get(entry.name);
+    if (entry.isSymbolicLink()) {
+      if (!want || want.dir || readlinkSync(path) !== relative(target, want.path)) unlinkSync(path);
+    } else if (entry.isDirectory() && (!want || !want.dir)) {
+      rmSync(path, { recursive: true, force: true });
+    }
+  }
+  for (const [name, want] of wanted) {
+    const at = join(target, name);
+    if (want.dir) mirrorTree(at, want.path, below[name] ?? {});
+    else if (!existsSync(at)) symlinkSync(relative(target, want.path), at);
+  }
+}
+
+/**
  * Assemble the hosted build's project directory without touching this one:
- * `<host>/.studio/root` links every entry of this app, with the host's route
- * trees added as the route groups `app/(host)` and `app/dashboard/(host)`
- * (so its dashboard pages share the dashboard layout) and its public assets
- * as `public/_host`. The local build and a hosted build can therefore run in
- * the same checkout at the same time. Idempotent and cheap: run by
- * next.config.ts, by the host's scripts, and by its dev watcher when an
- * entry is added here.
+ * `<host>/.studio/root` links every entry of this app, with the app trees
+ * mirrored (see mirrorTree) and the host's route trees added as the route
+ * groups `app/(host)` and `app/dashboard/(host)` (so its dashboard pages share
+ * the dashboard layout), and its public assets linked as `public/_host`. The
+ * local build and a hosted build can therefore run in the same checkout at the
+ * same time. Idempotent: run by next.config.ts, by the host's scripts, and by
+ * its dev watcher when files are added or removed.
  */
 export function linkStudioHost(host) {
   // Mounts written into this tree by earlier versions are removed.
@@ -142,8 +186,16 @@ export function linkStudioHost(host) {
   if (!host) return;
   const root = hostRootDir(host);
   syncLinks(root, studioDir, { skip: ["app", "public"], extra: { node_modules: join(studioDir, "node_modules") } });
-  syncLinks(join(root, "app"), join(studioDir, "app"), { skip: ["dashboard"], extra: { "(host)": host.routes.root } });
-  syncLinks(join(root, "app", "dashboard"), join(studioDir, "app", "dashboard"), { extra: { "(host)": host.routes.dashboard } });
+  // An older layout linked app/ itself; replace it with the mirror.
+  try {
+    if (lstatSync(join(root, "app")).isSymbolicLink()) unlinkSync(join(root, "app"));
+  } catch {
+    // absent
+  }
+  mirrorTree(join(root, "app"), join(studioDir, "app"), {
+    "(host)": host.routes.root,
+    "dashboard/(host)": host.routes.dashboard,
+  });
   syncLinks(join(root, "public"), join(studioDir, "public"), { extra: { _host: host.publicDir } });
   writeHostTsconfig(host);
 }
