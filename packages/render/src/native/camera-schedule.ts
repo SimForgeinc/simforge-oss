@@ -20,10 +20,9 @@ export interface NativeSensorAttach {
   readonly pitchDeg: number;
   /**
    * Mount roll, degrees: the service composes `Ry(yaw)·Rz(pitch)·Rx(roll)`
-   * exactly as the browser capture does with the authored angles. Lidar and
-   * radar honour it; cameras are refused when rolled
-   * (`assertNativeSourcesSupported`), since the service aims them with a
-   * world-up vector.
+   * exactly as the browser capture does with the authored angles. Cameras,
+   * lidar and radar all honour it: a rigid camera mount is posed by its full
+   * rotation, so authored +roll turns the imaged horizon counter-clockwise.
    */
   readonly rollDeg: number;
   /**

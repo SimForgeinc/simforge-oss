@@ -1786,15 +1786,19 @@ fn actor_color(actor: &ActorState, class: &str) -> Result<[f32; 3], String> {
     Ok([color.red, color.green, color.blue])
 }
 
+fn camera_rotation(mount_rotation: Quat) -> Quat {
+    mount_rotation * Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)
+}
 
 /// Resolve a camera pose: explicit eye/target, or rigid attachment against
-/// the current scene frame.
+/// the current scene frame. A rigid mount also yields its full camera
+/// rotation (roll included); eye/target alone would re-level it to world-up.
 fn resolve_pose(
     state: &ServiceState,
     cam: &ServiceCamera,
-) -> Result<([f32; 3], [f32; 3]), String> {
+) -> Result<([f32; 3], [f32; 3], Option<Quat>), String> {
     let Some(attach) = &cam.attach else {
-        return Ok((cam.eye, cam.target));
+        return Ok((cam.eye, cam.target, None));
     };
     let mount=resolve_sensor_mount(state,attach)?;
     let target=if attach.look_at_actor {
@@ -1802,7 +1806,8 @@ fn resolve_pose(
     } else {
         mount.origin+50.0*(mount.rotation*Vec3::X)
     };
-    Ok((mount.origin.to_array(),target.to_array()))
+    let rotation=(!attach.look_at_actor).then(|| camera_rotation(mount.rotation));
+    Ok((mount.origin.to_array(),target.to_array(),rotation))
 }
 
 struct ResolvedSensorMount {
@@ -1973,11 +1978,12 @@ fn sync_rig(state: &mut ServiceState, cameras: &[ServiceCamera], hdr: bool) -> R
             .app
             .set_camera_host(&cam.sensor_id, host)
             .map_err(|error| format!("set host: {error:#}"))?;
-        let (eye, target) = resolve_pose(state, cam)?;
-        state
-            .app
-            .set_pose(&cam.sensor_id, &eye, &target)
-            .map_err(|error| format!("set pose: {error:#}"))?;
+        let (eye, target, rotation) = resolve_pose(state, cam)?;
+        match rotation {
+            Some(rotation) => state.app.set_camera_pose(&cam.sensor_id, &eye, rotation),
+            None => state.app.set_pose(&cam.sensor_id, &eye, &target),
+        }
+        .map_err(|error| format!("set pose: {error:#}"))?;
         if index == 0 {
             auto_meter(state, cam, &eye, &target)?;
         }
@@ -3132,7 +3138,7 @@ fn async_export_pngs(dir: &str, tick_id: u64, payloads: &[(String, String, u32, 
 #[cfg(test)]
 mod tests {
     use super::{
-        base_y_precedence, actor_color, rider_clip_time, build_map_sensor_scenes, build_sensor_scene, capture_keys,
+        base_y_precedence, actor_color, camera_rotation, rider_clip_time, build_map_sensor_scenes, build_sensor_scene, capture_keys,
         instance_coverage, on_road, parse_bundle_passes, row_stride, CombinedSensorScene,
     };
     use render_core::engine::SensorTriangle;
@@ -3165,6 +3171,29 @@ mod tests {
 
     fn static_scene(triangles: Vec<SensorTriangle>) -> sensors::bvh::InstancedScene {
         build_map_sensor_scenes(&static_input(triangles), &HashMap::new()).static_scene
+    }
+
+    #[test]
+    fn camera_attach_roll_reaches_the_full_camera_pose() {
+        use render_core::coordinates::{source_to_bevy, FrameBasis, LengthWidthHeight, SourceRotation};
+        let mount_rotation = source_to_bevy(
+            LengthWidthHeight::UNIT,
+            SourceRotation::MountYawPitchRoll {
+                parent_rotation: Quat::IDENTITY,
+                yaw: 0.0,
+                pitch: 0.0,
+                roll: 10_f32.to_radians(),
+            },
+            FrameBasis::Rig,
+        )
+        .rotation;
+        let camera_pose_rotation = camera_rotation(mount_rotation);
+        let up = camera_pose_rotation * Vec3::Y;
+        assert!(up.abs_diff_eq(
+            Vec3::new(0.0, 10_f32.to_radians().cos(), 10_f32.to_radians().sin()),
+            1e-6,
+        ));
+        assert!((camera_pose_rotation * -Vec3::Z).abs_diff_eq(Vec3::X, 1e-6));
     }
 
     #[test]

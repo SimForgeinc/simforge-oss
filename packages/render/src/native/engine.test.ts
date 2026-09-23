@@ -82,9 +82,8 @@ describe('native engine input policy', () => {
       .toThrow(expect.objectContaining({ code: 'native_camera_clip_planes_conflict' }));
   });
 
-  it('refuses a rolled camera and a camera larger than the engine renders', () => {
-    expect(() => assertNativeSourcesSupported([camera('front', { rollRad: 0.05 })]))
-      .toThrow(expect.objectContaining({ code: 'native_sensor_roll_unsupported' }));
+  it('accepts a rolled camera and refuses a camera larger than the engine renders', () => {
+    expect(() => assertNativeSourcesSupported([camera('front', { rollRad: 0.05 })])).not.toThrow();
     expect(() => assertNativeSourcesSupported([camera('front', { width: 8192 })]))
       .toThrow(expect.objectContaining({ code: 'native_camera_size_unsupported' }));
     expect(() => assertNativeSourcesSupported([camera('front'), radar])).not.toThrow();

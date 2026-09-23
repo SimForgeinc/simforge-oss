@@ -341,15 +341,9 @@ export function nativeCameraClipPlanes(sources: readonly RenderSourceV3[]): { ne
   return { nearM: lead.attributes.nearM, farM: lead.attributes.farM };
 }
 
-/** Largest mount roll, radians, the native cameras treat as level. */
-export const NATIVE_ROLL_TOLERANCE_RAD = 1e-6;
-
 /**
  * Refuses sources the service would render other than authored:
  * - a camera whose frame exceeds the engine's limits;
- * - a rolled camera mount: the service aims cameras by eye/target with a
- *   world-up vector, so camera roll would be dropped (lidar and radar mounts
- *   carry their full rotation, roll included);
  * - an asymmetric lidar vertical band: the service's lidar fan is symmetric
  *   about the mount, and tilting the rig to fake it would tilt the scan plane.
  */
@@ -375,9 +369,6 @@ export function assertNativeSourcesSupported(sources: readonly RenderSourceV3[])
       const { width, height } = source.attributes;
       if (width > CAPABILITIES.limits.maxWidth || height > CAPABILITIES.limits.maxHeight) {
         throw new RenderInputError('native_camera_size_unsupported', `camera ${source.outputName} asks for ${width}x${height}; the native engine renders at most ${CAPABILITIES.limits.maxWidth}x${CAPABILITIES.limits.maxHeight}`);
-      }
-      if (Math.abs(source.transform.rotation.rollRad) > NATIVE_ROLL_TOLERANCE_RAD) {
-        throw new RenderInputError('native_sensor_roll_unsupported', `camera ${source.outputName} is mounted with roll ${source.transform.rotation.rollRad} rad; the native service aims cameras without roll`);
       }
     }
     if (source.modality === 'lidar') {
