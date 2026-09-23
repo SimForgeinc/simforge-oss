@@ -394,6 +394,142 @@ export type ScenarioRevisionDto = {
   createdAt: string;
 };
 
+// ── Simulation history (Versions panel) ──────────────────────────────────────
+
+/**
+ * `simforge.motion-diff/v1`: two authoritative simulations of one scenario compared tick by tick
+ * over the whole clip (`diffSimulationTraces`, packages/openscenario trace-diff), with the
+ * strict-trajectory-v1 comparator's verdict. `summary` is the chip text ("Motion identical" or
+ * "max 1.2 m · 2 actors · 1 event changed").
+ */
+export type SimulationMotionDiffDto = {
+  format: "simforge.motion-diff/v1";
+  baseSimKey: string;
+  candidateSimKey: string;
+  identical: boolean;
+  summary: string;
+  maxPositionErrorM: number;
+  maxHeadingErrorDeg: number;
+  worst: { actorId: string; tS: number; positionErrorM: number } | null;
+  actors: { compared: number; changedCount: number; changed: string[]; added: string[]; removed: string[] };
+  eventsChanged: number;
+  collisionsChanged: number;
+  signalsChanged: number;
+  durationS: { base: number; candidate: number };
+  strict: {
+    profile: "strict-trajectory-v1";
+    verdict: "pass" | "fail" | "not-run";
+    reportHash: string | null;
+    errorFindings: number;
+    reason: string | null;
+  };
+};
+
+/** Why a simulation is in a revision's history. */
+export type RevisionSimulationReason = "commit" | "engine_upgrade" | "resimulate" | "import" | "backfill";
+/** Why a revision (a user-visible Version) exists. */
+export type ScenarioVersionCreatedFor = "render" | "save" | "engine_upgrade" | "import";
+
+export type ScenarioVersionActorDto = { id: string; name: string | null } | null;
+
+/** One simulation in a version's history. Users see its engine; the digests sit behind Details. */
+export type ScenarioVersionSimulationDto = {
+  simKey: string;
+  engineSemVer: string;
+  reason: RevisionSimulationReason;
+  createdAt: string;
+  createdBy: ScenarioVersionActorDto;
+  active: boolean;
+  previousSimKey: string | null;
+  /** Against `previousSimKey`; null when there is none, or for a backfilled row not compared yet. */
+  motionDiff: SimulationMotionDiffDto | null;
+  details: {
+    traceSha256: string;
+    timelineSha256: string | null;
+    mapClosureDigest: string;
+    resolvedInputDigest: string;
+    engineBuild: Record<string, unknown>;
+    producer: string;
+  };
+};
+
+/** One immutable revision, shown to users as "Version N". */
+export type ScenarioVersionDto = {
+  revisionId: string;
+  revisionNumber: number;
+  label: string | null;
+  createdFor: ScenarioVersionCreatedFor;
+  createdAt: string;
+  createdBy: ScenarioVersionActorDto;
+  sourceDraftVersion: number;
+  contentSha256: string;
+  /** "Map name · date": the map version the revision is pinned to. */
+  map: { mapVersionId: string; name: string; publishedAt: string } | null;
+  /** The result its renders replay (`revision_active_simulation`); null when it has none. */
+  active: { simKey: string; setAt: string; setBy: ScenarioVersionActorDto } | null;
+  /** Newest first. */
+  simulations: ScenarioVersionSimulationDto[];
+  /** True when the draft currently holds exactly this version's content on the same map. */
+  matchesDraft: boolean;
+};
+
+export type ScenarioVersionsDto = {
+  documentId: string;
+  draftVersion: number;
+  /** The engine this host simulates with now. */
+  currentEngineSemVer: string;
+  draft: { lastSimKey: string | null; lastSimEngineSemVer: string | null; lastSimDraftVersion: number | null };
+  /** Newest first. */
+  versions: ScenarioVersionDto[];
+};
+
+/**
+ * The draft's authoritative result changed under an unchanged draft: the engine (or the simulation
+ * pipeline) moved. `previous` is what the author last saw (`drafts.last_sim_key`); keeping it
+ * freezes the draft into a version bound to that result.
+ */
+export type ScenarioEngineChangeDto = {
+  previous: { simKey: string; engineSemVer: string };
+  current: { simKey: string; engineSemVer: string };
+  motionDiff: SimulationMotionDiffDto;
+};
+
+/** Both simulations side by side (frames in the `DualTracePlaybackData` shape: base = canonical). */
+export type SimulationComparisonDto = {
+  base: { simKey: string; engineSemVer: string };
+  candidate: { simKey: string; engineSemVer: string };
+  diff: SimulationMotionDiffDto;
+  playback: {
+    sampleHz: number;
+    durationS: number;
+    frames: Array<{
+      t: number;
+      actors: Record<string, {
+        canonical: { x: number; y: number; z: number; headingRad: number; present: boolean } | null;
+        external: { x: number; y: number; z: number; headingRad: number; present: boolean } | null;
+        positionErrorM: number | null;
+      }>;
+    }>;
+  };
+};
+
+/** The draft's map pin and whether a newer publication of the same map exists. */
+export type ScenarioMapPinStatusDto = {
+  pinned: { mapVersionId: string; name: string; publishedAt: string; retired: boolean } | null;
+  /** A newer publication the author may explicitly move to (never automatic). */
+  newer: { mapVersionId: string; name: string; publishedAt: string } | null;
+  /** Why moving is not offered even though a newer publication exists (e.g. the road geometry differs). */
+  newerUnavailable: { code: string; message: string } | null;
+};
+
+/** The draft simulated on another map version, compared with what it shows now. */
+export type ScenarioMapRepinPreviewDto = {
+  target: { mapVersionId: string; name: string; publishedAt: string };
+  status: ScenarioSimulationStatusDto;
+  /** Against the draft's current result; null until the target simulation succeeds. */
+  motionDiff: SimulationMotionDiffDto | null;
+};
+
 export type CreateScenarioRevisionResultDto = {
   revisionId: string;
   exportId: string;
