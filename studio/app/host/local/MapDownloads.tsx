@@ -6,8 +6,7 @@ import {
   MapLibraryScreen,
   type MapLibraryMap,
 } from "@simforge-oss/studio-ui/onboarding";
-import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
-import { AppStage } from "@/app/components/AppStage";
+import type { MapDownloadsProps } from "@/app/host/contract";
 import { CloudAccountPanel } from "./cloud/CloudAccountPanel";
 import { useMapPreparation } from "@/app/components/map-preparation/useMapPreparation";
 import { useStudioCloudStatus } from "@/app/lib/host/cloud";
@@ -37,8 +36,10 @@ const CacheStatusSchema = z.object({ availableBytes: z.number().nullable() });
 type CatalogMap = z.infer<typeof CatalogSchema>["maps"][number];
 
 /**
- * The map library: the persistent surface for installing maps, over the same
- * hero and in the same column as first-run setup.
+ * Map Downloads on a local installation: the map library, shown inline in the
+ * app switcher (it used to be the `/dashboard/map-library` page, which now
+ * opens this view). The persistent surface for installing maps on this
+ * computer's disk, in the same column as first-run setup.
  *
  * It shares the host plumbing with that step rather than repeating it — one
  * catalog endpoint, one install endpoint, one {@link useMapPreparation} loop —
@@ -47,7 +48,7 @@ type CatalogMap = z.infer<typeof CatalogSchema>["maps"][number];
  * finishing installs nothing else. Setup completion belongs to onboarding; a
  * user who adds a map two months later is not being onboarded.
  */
-export function MapLibrarySurface() {
+export function MapDownloads(_props: MapDownloadsProps) {
   const cloud = useStudioCloudStatus();
   const [catalog, setCatalog] = useState<CatalogMap[]>([]);
   const [freeBytes, setFreeBytes] = useState<number | null>(null);
@@ -134,28 +135,25 @@ export function MapLibrarySurface() {
   });
 
   return (
-    <AppStage fill title="Maps on this computer" eyebrow="Map library" testId="map-library-stage">
-      {loading && catalog.length === 0 ? <CloudLoadingSurface scope="screen" title="Loading the map catalog" /> : null}
-      <MapLibraryScreen
-        catalogError={catalogError}
-        onRetry={() => { setLoading(true); setRetry((value) => value + 1); }}
-        // The revealed flow reports its own failures, so only this page's
-        // catalog errors go to the screen while it is open.
-        error={error ?? (signingIn ? null : cloud.error)}
-        freeBytes={freeBytes}
-        loading={loading}
-        maps={maps}
-        onCancelSignIn={cloudState === "connecting" ? undefined : () => setRevealSignIn(false)}
-        onInstall={(mapVersionId) => {
-          setRequested((current) =>
-            current.includes(mapVersionId) ? current : [...current, mapVersionId],
-          );
-          preparation.install(mapVersionId);
-        }}
-        onSignIn={() => setRevealSignIn(true)}
-        signedIn={signedIn}
-        signIn={signingIn ? <CloudAccountPanel xstyle={inlineSignIn.panel} /> : undefined}
-      />
-    </AppStage>
+    <MapLibraryScreen
+      catalogError={catalogError}
+      onRetry={() => { setLoading(true); setRetry((value) => value + 1); }}
+      // The revealed flow reports its own failures, so only this page's
+      // catalog errors go to the screen while it is open.
+      error={error ?? (signingIn ? null : cloud.error)}
+      freeBytes={freeBytes}
+      loading={loading}
+      maps={maps}
+      onCancelSignIn={cloudState === "connecting" ? undefined : () => setRevealSignIn(false)}
+      onInstall={(mapVersionId) => {
+        setRequested((current) =>
+          current.includes(mapVersionId) ? current : [...current, mapVersionId],
+        );
+        preparation.install(mapVersionId);
+      }}
+      onSignIn={() => setRevealSignIn(true)}
+      signedIn={signedIn}
+      signIn={signingIn ? <CloudAccountPanel xstyle={inlineSignIn.panel} /> : undefined}
+    />
   );
 }

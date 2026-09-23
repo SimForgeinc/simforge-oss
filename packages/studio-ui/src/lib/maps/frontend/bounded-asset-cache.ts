@@ -267,6 +267,25 @@ export class BoundedAssetCache {
     return evicted;
   }
 
+  /** Remove exactly these entries (an explicit per-map delete); returns the bytes freed. */
+  async delete(digests: readonly string[]): Promise<number> {
+    const entries = this.#load();
+    const cache = await this.#open();
+    let freed = 0;
+    for (const digest of new Set(digests)) {
+      const entry = entries.get(digest);
+      if (!entry) continue;
+      await cache?.delete(new Request(this.#keyUrl(digest))).catch(() => false);
+      entries.delete(digest);
+      freed += entry.bytes;
+    }
+    if (freed > 0) {
+      this.#recount();
+      this.#persistSoon();
+    }
+    return freed;
+  }
+
   async clear(): Promise<void> {
     this.#entries = new Map();
     this.#usedBytes = 0;
