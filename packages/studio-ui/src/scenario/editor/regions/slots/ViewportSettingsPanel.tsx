@@ -30,7 +30,7 @@ import {
 } from "./viewport-settings";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ViewportSettingsPanel.stylex";
-import { useRenderingPreference } from "../../../../components/rendering-preference";
+import { DEFAULT_RENDERING_PREFERENCE, useRenderingPreference } from "../../../../components/rendering-preference";
 import { a11y, focus, motionRecipe, typography } from "../../../../stylex/recipes.stylex";
 
 /**
@@ -65,7 +65,7 @@ export function ViewportSettingsPanel({
   // briefly runs on defaults.
   const [settings, setSettings] = useState<ViewportSettings>(() => loadViewportSettings());
   const preference = useRenderingPreference();
-  const foliageDisabled = preference === null || preference === "low-no-foliage";
+  const foliageDisabled = (preference ?? DEFAULT_RENDERING_PREFERENCE) === "low-no-foliage";
   const panelId = useId();
 
   const update = useCallback((next: ViewportSettings) => {

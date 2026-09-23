@@ -419,38 +419,40 @@ export function ScenarioDatasetDetailClient({
             >
               <Tags />
             </IconButton>
-            {datasetEditable ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    size="iconSm"
-                    variant="ghost"
-                    xstyle={styles.headerAdd}
-                    aria-label="Add scenario"
-                    data-testid="scenario-add-scenario"
-                  >
-                    {addBusy ? (
-                      <CloudActivityIndicator />
-                    ) : (
-                      <Plus {...stylex.props(styles.plusIcon)} aria-hidden="true" />
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                {addScenarioMenu}
-              </DropdownMenu>
-            ) : null}
           </div>
         </div>
-        <p
-          {...stylex.props(
-            styles.description,
-            dataset.description ? null : styles.descriptionEmpty,
-          )}
-          data-testid="scenario-dataset-description"
-        >
-          {dataset.description || "No description"}
-        </p>
+        <div {...stylex.props(styles.descriptionRow)}>
+          <p
+            {...stylex.props(
+              styles.description,
+              dataset.description ? null : styles.descriptionEmpty,
+            )}
+            data-testid="scenario-dataset-description"
+          >
+            {dataset.description || "No description"}
+          </p>
+          {/* The primary action of a dataset, so it is a labelled button that is always on screen —
+              not an icon among the filters, and not only the row at the foot of a list that can be
+              long. Import stays in the "Add scenario" menu at the foot. */}
+          {datasetEditable ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="accent"
+              xstyle={styles.headerNew}
+              disabled={actions.creatingDocument}
+              onClick={() => actions.setMapPickerOpen(true)}
+              data-testid="scenario-new-scenario"
+            >
+              {actions.creatingDocument ? (
+                <CloudActivityIndicator />
+              ) : (
+                <Plus {...stylex.props(styles.plusIcon)} aria-hidden="true" />
+              )}
+              New scenario
+            </Button>
+          ) : null}
+        </div>
         {searchOpen ? (
           <div {...stylex.props(styles.toolbar)}>
             <div {...stylex.props(styles.searchField)}>

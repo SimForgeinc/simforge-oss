@@ -57,6 +57,9 @@ const FULL_DOCUMENT = {
   draftVersion: 4,
   schemaVersion: "2",
   content: { meta: { name: "Original title" }, roles: [], props: [], variants: [] },
+  // Every document response carries the digest of its canonical content (the
+  // parser rejects one without it); the actions never recompute it.
+  contentSha256: "c".repeat(64),
   mapVersionId: "usmap_1",
   datasetId: "usds_1",
   authoringQualityId: "low",
