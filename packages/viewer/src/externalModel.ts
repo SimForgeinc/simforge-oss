@@ -188,9 +188,11 @@ function normaliseScene(
  */
 function assertRider(binding: ExternalGlbModelBinding, scene: Group, clips: readonly AnimationClip[]): void {
   if (!binding.rider) return;
+  // GLTFLoader keeps node extras on the node's object; a multi-primitive
+  // node becomes a Group whose child meshes carry no extras of their own.
   let riders = 0;
   scene.traverse((object) => {
-    if (object.userData?.semanticClass === 'rider' && (object as Mesh).isMesh) riders++;
+    if ((object as Mesh).isMesh && isRiderSubtree(object)) riders++;
   });
   if (riders === 0) throw new Error('ridden model has no mesh tagged semanticClass "rider"');
   if (!clips.some((clip) => clip.name === binding.rider!.clip)) {
