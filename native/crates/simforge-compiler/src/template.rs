@@ -3747,16 +3747,11 @@ pub struct TemplateIssue {
 /// expressions and running the cheap universal cross-field checks (unique ids,
 /// clip bounds, `modifiedAt >= createdAt`).
 pub fn parse_template(value: &Value) -> CompileResult<ScenarioTemplate> {
-    let version = value.get("scenarioVersion").and_then(Value::as_u64);
-    if version != Some(u64::from(SCENARIO_TEMPLATE_VERSION)) {
-        return Err(CompileError::at(
-            "template_invalid",
-            "scenarioVersion",
-            format!("expected scenarioVersion {SCENARIO_TEMPLATE_VERSION}"),
-        )
-        .as_findings());
-    }
-    let template: ScenarioTemplate = serde_json::from_value(value.clone()).map_err(|e| {
+    // Stored documents keep the version they were written with; the upgrader
+    // chain brings them to SCENARIO_TEMPLATE_VERSION (or refuses loudly: a v1
+    // scene, a newer document, an unknown version) before the strict parse.
+    let upgraded = crate::template_upgrade::upgrade_template_document(value.clone())?;
+    let template: ScenarioTemplate = serde_json::from_value(upgraded).map_err(|e| {
         CompileError::new("template_invalid", "the template failed the v2 contract")
             .detail_entry("reason", Value::String(e.to_string()))
             .as_findings()

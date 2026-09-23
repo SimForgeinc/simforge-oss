@@ -36,7 +36,7 @@ import {
   validateOpenScenarioXml14,
   type OpenScenarioXml14Validation,
 } from '@simforge-oss/openscenario/node';
-import { parseTemplate, serializeTemplate, type ScenarioTemplateV2 } from '@simforge-oss/scenario';
+import { readScenarioDocument, serializeTemplate, type ScenarioTemplateV2 } from '@simforge-oss/scenario';
 
 import type { MapControlPlan } from './map-signals.js';
 import { compileTemplateWith, materializationSemanticLosses, type MaterializeOptions } from './materialize.js';
@@ -201,7 +201,7 @@ export function resolutionFromSimulation(canonicalContent: unknown, simulation: 
     throw new Error(`simulation_resolution_mismatch: record ${resolution.resolvedInputDigest}, input ${digest}, trace ${trace.header.inputHash}`);
   }
   return {
-    template: parseTemplate(canonicalContent),
+    template: readScenarioDocument(canonicalContent),
     axisUntilClamps: resolution.axisUntilClamps,
     concrete: {
       input: resolution.resolvedInput,
@@ -313,7 +313,8 @@ export function resolveExecutionInput(
   ambientMode: AmbientExecutionMode,
   catalogEntries?: MaterializeOptions['catalogEntries'],
 ): ResolvedExecutionInput {
-  const template = parseTemplate(canonicalContent);
+  // Stored content keeps the scenarioVersion it was written with: upgrade on read.
+  const template = readScenarioDocument(canonicalContent);
   const { template: normalizedTemplate, clamps: axisUntilClamps, report: validation } = clampDeclaredAxisHolds(template);
   if (!validation.ok) throw new Error(`template_invalid:${JSON.stringify(validation.issues)}`);
   const concrete = concreteInput(normalizedTemplate, map, ambientMode, catalogEntries);

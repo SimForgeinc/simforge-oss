@@ -2,7 +2,7 @@ import type { AppContext } from "@/app/lib/db/app-context";
 import { queryOne } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import {
-  parseTemplate,
+  readScenarioDocument,
   type ScenarioTemplateV2,
 } from "@simforge-oss/scenario";
 
@@ -59,7 +59,8 @@ export async function getScenarioRecordingRevisionInput(
     sourceDraftVersion: Number(row.source_draft_version),
     contentSha256: row.content_sha256,
     mapVersionId: row.map_version_id,
-    content: parseTemplate(parseJsonObject(row.canonical_content)),
+    // Immutable revision content, read through the upgrader chain.
+    content: readScenarioDocument(parseJsonObject(row.canonical_content)),
     createdAt: row.created_at,
   };
 }

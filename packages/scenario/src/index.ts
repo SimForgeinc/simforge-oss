@@ -191,6 +191,10 @@ export {
   type TemplateMigrationResult,
 } from './migrate-v2.js';
 
+// --- document upgrader chain (applied on read) ------------------------------
+
+export * from './upgrade/index.js';
+
 export {
   ISSUE_CODES,
   axisTimeline,
@@ -268,6 +272,7 @@ export {
   ScenarioValidationError,
   ScenarioFormatError,
   ScenarioOperationError,
+  type ScenarioFormatErrorCode,
   ScenarioNotFoundError,
   toScenarioIssues,
   type ScenarioIssue,
