@@ -4741,7 +4741,12 @@ impl SceneApp {
             }
             legend.push(LegendEntry { id, name });
         }
+        let static_ids = legend.len() as u32;
         world.resource_mut::<Legend>().0 = legend;
+        // Dynamic actors (and riders) number above the static legend, as
+        // `upsert_actor` documents: an actor id equal to a static id would
+        // make the ID pass, semantic output and lidar labels ambiguous.
+        self.next_instance_id = self.next_instance_id.max(static_ids);
 
         // One update so the newly spawned ID clones are extracted before the
         // first real render request.
