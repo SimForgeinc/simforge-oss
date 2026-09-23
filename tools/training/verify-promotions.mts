@@ -7,14 +7,16 @@ if (!out || !directories.length) throw new Error('usage: verify-promotions.mts O
 const runs = new Set<string>();
 for (const directory of directories) {
   const report = JSON.parse(await readFile(path.join(directory, 'promotion.json'), 'utf8')) as PromotionReport;
+  // Frozen panels pin their grid size through the entry digest; only newer documents declare expectedEpisodes.
+  const expectedEpisodes = report.panel.expectedEpisodes ?? report.panel.entries.length;
   for (const policy of report.comparison) {
-    if (!policy.health.healthy || policy.episodes.length !== report.panel.expectedEpisodes) throw new Error(`${directory}: incomplete model-health prerequisite for ${policy.policy}`);
+    if (!policy.health.healthy || policy.episodes.length !== expectedEpisodes) throw new Error(`${directory}: incomplete model-health prerequisite for ${policy.policy}`);
     for (const episode of policy.episodes) {
       if (!episode.runDir) throw new Error('promotion omitted an expected source run');
       runs.add(episode.runDir);
     }
   }
-  if (report.determinism.length !== report.panel.expectedEpisodes) throw new Error('incomplete model re-inference rerun coverage');
+  if (report.determinism.length !== expectedEpisodes) throw new Error('incomplete model re-inference rerun coverage');
   for (const rerun of report.determinism) {
     if (!rerun.rerunDir || rerun.error) throw new Error(`rerun infrastructure did not complete: ${rerun.entryId}`);
     runs.add(rerun.rerunDir);
