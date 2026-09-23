@@ -363,7 +363,7 @@
     "label": "Motorcycle",
     "class": "vehicle",
     "actorClass": "motorcycle",
-    "description": "Standard motorcycle, no rider. Narrow silhouette used for lane-filtering, late-detection and misclassification cases.",
+    "description": "Standard motorcycle with a helmeted rider. Narrow silhouette used for lane-filtering, late-detection and misclassification cases.",
     "dims": {
       "l": 2.1,
       "w": 0.75,
@@ -381,20 +381,200 @@
     },
     "model": {
       "kind": "glb",
-      "url": "/catalog/vehicles-carla/models/vehicle_motorcycle_harley.glb",
-      "contentHash": "3a62ab86449571a6399673657db2a5679729b0b253b2e59636c17b5ee20b3eb9",
-      "nodes": {
-        "wheelsFront": [
-          "wheel_f"
+      "url": "/catalog/vehicles-carla/models/vehicle_motorcycle_harley_rider.glb",
+      "contentHash": "7ad95dfac3db2f749af1f425860d1ea1e81ca78a85c9d448dae9eb8ec6707a88",
+      "paint": "body_paint",
+      "animated": true,
+      "rider": {
+        "clip": "ride",
+        "clipDurationS": 1,
+        "metersPerCycle": 2.401076,
+        "slots": [
+          "rider_bottom",
+          "rider_helmet",
+          "rider_shoes",
+          "rider_top"
         ],
-        "wheelsRear": [
-          "wheel_r"
-        ],
-        "steered": [
-          "handlebar"
+        "palettes": [
+          null,
+          {
+            "rider_top": [
+              0.03,
+              0.045,
+              0.11
+            ],
+            "rider_bottom": [
+              0.04,
+              0.05,
+              0.08
+            ],
+            "rider_shoes": [
+              0.02,
+              0.02,
+              0.02
+            ],
+            "rider_helmet": [
+              0.015,
+              0.015,
+              0.017
+            ]
+          },
+          {
+            "rider_top": [
+              0.45,
+              0.03,
+              0.025
+            ],
+            "rider_bottom": [
+              0.025,
+              0.025,
+              0.028
+            ],
+            "rider_shoes": [
+              0.7,
+              0.7,
+              0.68
+            ],
+            "rider_helmet": [
+              0.75,
+              0.75,
+              0.74
+            ]
+          },
+          {
+            "rider_top": [
+              0.11,
+              0.13,
+              0.05
+            ],
+            "rider_bottom": [
+              0.3,
+              0.24,
+              0.14
+            ],
+            "rider_shoes": [
+              0.12,
+              0.06,
+              0.025
+            ],
+            "rider_helmet": [
+              0.09,
+              0.095,
+              0.1
+            ]
+          },
+          {
+            "rider_top": [
+              0.18,
+              0.18,
+              0.19
+            ],
+            "rider_bottom": [
+              0.06,
+              0.09,
+              0.18
+            ],
+            "rider_shoes": [
+              0.8,
+              0.8,
+              0.8
+            ],
+            "rider_helmet": [
+              0.5,
+              0.02,
+              0.02
+            ]
+          },
+          {
+            "rider_top": [
+              0.012,
+              0.012,
+              0.012
+            ],
+            "rider_bottom": [
+              0.015,
+              0.015,
+              0.018
+            ],
+            "rider_shoes": [
+              0.01,
+              0.01,
+              0.01
+            ],
+            "rider_helmet": [
+              0.01,
+              0.01,
+              0.01
+            ]
+          },
+          {
+            "rider_top": [
+              0.8,
+              0.62,
+              0.02
+            ],
+            "rider_bottom": [
+              0.05,
+              0.05,
+              0.055
+            ],
+            "rider_shoes": [
+              0.03,
+              0.03,
+              0.03
+            ],
+            "rider_helmet": [
+              0.85,
+              0.65,
+              0.03
+            ]
+          },
+          {
+            "rider_top": [
+              0.72,
+              0.72,
+              0.7
+            ],
+            "rider_bottom": [
+              0.38,
+              0.3,
+              0.2
+            ],
+            "rider_shoes": [
+              0.15,
+              0.08,
+              0.035
+            ],
+            "rider_helmet": [
+              0.42,
+              0.43,
+              0.44
+            ]
+          },
+          {
+            "rider_top": [
+              0.02,
+              0.2,
+              0.22
+            ],
+            "rider_bottom": [
+              0.07,
+              0.07,
+              0.075
+            ],
+            "rider_shoes": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "rider_helmet": [
+              0.02,
+              0.09,
+              0.35
+            ]
+          }
         ]
-      },
-      "paint": "body_paint"
+      }
     }
   },
   {
@@ -419,20 +599,159 @@
     },
     "model": {
       "kind": "glb",
-      "url": "/catalog/vehicles-carla/models/vehicle_bicycle_gazelle_omafiets.glb",
-      "contentHash": "8c07c8fcee87fb3b0acf622cc790f92cfcd848d5b72269d757fe6b2d27d494a2",
-      "nodes": {
-        "wheelsFront": [
-          "wheel_f"
+      "url": "/catalog/vehicles-carla/models/vehicle_bicycle_gazelle_omafiets_rider.glb",
+      "contentHash": "332c526bb5d8dd8f3b99f1fedce1ddc8d3f14a5401003216e68187a527ae365f",
+      "paint": "body_paint",
+      "animated": true,
+      "rider": {
+        "clip": "ride",
+        "clipDurationS": 1,
+        "metersPerCycle": 4.687472,
+        "slots": [
+          "rider_bottom",
+          "rider_shoes",
+          "rider_top"
         ],
-        "wheelsRear": [
-          "wheel_r"
-        ],
-        "steered": [
-          "handlebar"
+        "palettes": [
+          null,
+          {
+            "rider_top": [
+              0.03,
+              0.045,
+              0.11
+            ],
+            "rider_bottom": [
+              0.04,
+              0.05,
+              0.08
+            ],
+            "rider_shoes": [
+              0.02,
+              0.02,
+              0.02
+            ]
+          },
+          {
+            "rider_top": [
+              0.45,
+              0.03,
+              0.025
+            ],
+            "rider_bottom": [
+              0.025,
+              0.025,
+              0.028
+            ],
+            "rider_shoes": [
+              0.7,
+              0.7,
+              0.68
+            ]
+          },
+          {
+            "rider_top": [
+              0.11,
+              0.13,
+              0.05
+            ],
+            "rider_bottom": [
+              0.3,
+              0.24,
+              0.14
+            ],
+            "rider_shoes": [
+              0.12,
+              0.06,
+              0.025
+            ]
+          },
+          {
+            "rider_top": [
+              0.18,
+              0.18,
+              0.19
+            ],
+            "rider_bottom": [
+              0.06,
+              0.09,
+              0.18
+            ],
+            "rider_shoes": [
+              0.8,
+              0.8,
+              0.8
+            ]
+          },
+          {
+            "rider_top": [
+              0.012,
+              0.012,
+              0.012
+            ],
+            "rider_bottom": [
+              0.015,
+              0.015,
+              0.018
+            ],
+            "rider_shoes": [
+              0.01,
+              0.01,
+              0.01
+            ]
+          },
+          {
+            "rider_top": [
+              0.8,
+              0.62,
+              0.02
+            ],
+            "rider_bottom": [
+              0.05,
+              0.05,
+              0.055
+            ],
+            "rider_shoes": [
+              0.03,
+              0.03,
+              0.03
+            ]
+          },
+          {
+            "rider_top": [
+              0.72,
+              0.72,
+              0.7
+            ],
+            "rider_bottom": [
+              0.38,
+              0.3,
+              0.2
+            ],
+            "rider_shoes": [
+              0.15,
+              0.08,
+              0.035
+            ]
+          },
+          {
+            "rider_top": [
+              0.02,
+              0.2,
+              0.22
+            ],
+            "rider_bottom": [
+              0.07,
+              0.07,
+              0.075
+            ],
+            "rider_shoes": [
+              0.3,
+              0.3,
+              0.3
+            ]
+          }
         ]
-      },
-      "paint": "body_paint"
+      }
     }
   },
   {
@@ -3863,7 +4182,7 @@
     "label": "Motorcycle (low-poly)",
     "class": "vehicle",
     "actorClass": "motorcycle",
-    "description": "Standard motorcycle, no rider. Narrow silhouette used for lane-filtering, late-detection and misclassification cases.",
+    "description": "Standard motorcycle with a helmeted rider. Narrow silhouette used for lane-filtering, late-detection and misclassification cases.",
     "dims": {
       "l": 2.1,
       "w": 0.75,

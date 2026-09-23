@@ -182,6 +182,30 @@ export interface ExternalAnimationAsset {
   readonly scale?: number;
 }
 
+/** Linear-RGB colour written into a `rider_*` material's base colour. */
+export type RiderColor = readonly [number, number, number];
+
+/**
+ * Two-wheeler rider posing and appearance (catalog/vehicles-carla/CONVENTIONS.md).
+ *
+ * The single looping `clip` covers one pedal (bicycles) or wheel (motor)
+ * cycle; its time is a function of distance travelled, never wall time:
+ * `t = frac(odometerM / metersPerCycle) * clipDurationS`, with the odometer
+ * taken from the render timeline (`wheelSpinRad * 0.35`).
+ */
+export interface RiderBinding {
+  readonly clip: string;
+  readonly clipDurationS: number;
+  readonly metersPerCycle: number;
+  /** Material names the variant palette writes. */
+  readonly slots: readonly string[];
+  /**
+   * Variant `fnv1a32(actorId) % palettes.length`; `null` keeps the authored
+   * colours, otherwise every listed slot takes its colour.
+   */
+  readonly palettes: readonly (Readonly<Record<string, RiderColor>> | null)[];
+}
+
 /** A model that is not procedurally built. */
 export type ExternalModelBinding =
   | {
@@ -222,6 +246,13 @@ export type ExternalModelBinding =
       readonly animated?: boolean;
       /** Clip names, when animated. */
       readonly clips?: { readonly idle?: string; readonly locomotion?: string };
+      /**
+       * The rider of a two-wheeler, part of this model (`rider` subtree, its
+       * meshes tagged `semanticClass: 'rider'` in glTF node extras). Present
+       * means the model must render with its rider; a renderer that cannot
+       * pose it fails instead of drawing the bike alone.
+       */
+      readonly rider?: RiderBinding;
       /**
        * Standalone GLBs carrying deterministic named clips. Meshy animation
        * exports include the rigged scene as well as the clip, so renderers may

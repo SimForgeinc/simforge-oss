@@ -139,7 +139,7 @@ const BUNDLED_CATALOG = [
     class: 'vehicle',
     actorClass: 'motorcycle',
     description:
-      'Standard motorcycle, no rider. Narrow silhouette used for lane-filtering, late-detection and misclassification cases.',
+      'Standard motorcycle with a helmeted rider. Narrow silhouette used for lane-filtering, late-detection and misclassification cases.',
     dims: { l: 2.1, w: 0.75, h: 1.23 },
     tags: ['occlusion:low', 'mobile', 'vru', 'parkable', 'roadway'],
     defaultParams: { color: '#25282c' },
