@@ -51,24 +51,26 @@ pub struct VehicleModelCatalog {
     fallback: Vec<(String, VehicleModelEntry)>,
 }
 
-// Shared editorial assignments also generate the browser bindings and sidecar.
-include!("vehicle_assignments.generated.rs");
+// Shared editorial assignments also generate the browser bindings and the
+// sidecar; the sidecar is the only runtime source (see `load`).
+mod assignments {
+    #![allow(dead_code)]
+    include!("vehicle_assignments.generated.rs");
+}
 
 impl VehicleModelCatalog {
-    /// Load the model table from a vehicles-carla style directory.
+    /// Load the model table from a catalog directory's `catalog-models.json`.
+    ///
+    /// Strict: a malformed entry is an error naming it, never a silently
+    /// skipped id (which would later render as something else). The
+    /// optional `manifest.json` beside it supplies model lengths; if present
+    /// it must parse.
     pub fn load(dir: &Path) -> Result<Self> {
         let sidecar = dir.join("catalog-models.json");
-        if sidecar.is_file() {
-            return Self::from_sidecar(dir, &sidecar);
+        if !sidecar.is_file() {
+            bail!("actor model catalog {} has no catalog-models.json", dir.display());
         }
-        let manifest = dir.join("manifest.json");
-        if manifest.is_file() {
-            return Self::from_manifest(dir, &manifest);
-        }
-        bail!(
-            "no catalog-models.json or manifest.json under {}",
-            dir.display()
-        );
+        Self::from_sidecar(dir, &sidecar)
     }
 
     pub fn resolve(&self, catalog_id: &str) -> Option<&VehicleModelEntry> {
@@ -77,6 +79,8 @@ impl VehicleModelCatalog {
 
     /// Select one entry deterministically for an actor whose generic catalog id
     /// has no exact blueprint model. Uses a process-independent FNV-1a hash.
+    /// Only for callers that record the substitution (scen-play's
+    /// `actor-visuals.json`); the render service never substitutes.
     pub fn resolve_deterministic(&self, actor_id: &str) -> Option<(&str, &VehicleModelEntry)> {
         if self.fallback.is_empty() {
             return None;
@@ -99,13 +103,20 @@ impl VehicleModelCatalog {
     }
 
     /// `catalog-models.json`: `{ "<catalogId>": { "model": {glbPath,
-    /// attribution, source}, "tintable"?, "scaleToDims"? }, ... }`.
-    /// Flat entries (`{glbPath, ...}` without the `model` wrapper) are
-    /// accepted too, as is a top-level `"models"`/`"entries"` wrapper.
+    /// attribution, source, clips?}, "tintable", "scaleToDims",
+    /// "animations"? }, ... }`, optionally under a top-level
+    /// `"models"`/`"entries"`/`"vehicles"` wrapper. Keys without a dot are
+    /// wrapper metadata (`version`).
+    ///
+    /// Animation clips come from `animations` (`{<motion>: {glbPath, clip}}`,
+    /// separate animation GLBs) or `model.clips` (`{idle, locomotion}` clips
+    /// inside the model GLB, bound as `idle` / `walk`). An entry marked
+    /// `model.animated` without either is an error: it would render frozen.
     fn from_sidecar(dir: &Path, path: &Path) -> Result<Self> {
         let raw: serde_json::Value = serde_json::from_slice(
             &std::fs::read(path).with_context(|| format!("read {}", path.display()))?,
-        )?;
+        )
+        .with_context(|| format!("parse {}", path.display()))?;
         let map = ["models", "entries", "vehicles"]
             .iter()
             .find_map(|k| raw.get(*k).and_then(|v| v.as_object()))
@@ -113,22 +124,73 @@ impl VehicleModelCatalog {
             .context("catalog-models.json: expected an object")?;
 
         // Model lengths come from the manifest when it is available.
-        let lengths = manifest_lengths(&dir.join("manifest.json"));
+        let lengths = manifest_lengths(&dir.join("manifest.json"))?;
 
         let mut by_catalog_id = HashMap::new();
         for (catalog_id, value) in map {
             if !catalog_id.contains('.') {
                 continue; // wrapper metadata like "version"
             }
-            let model = value.get("model").unwrap_or(value);
-            let Some(glb) = model.get("glbPath").and_then(|v| v.as_str()) else {
-                continue;
+            let entry = || format!("{}: entry {catalog_id}", path.display());
+            let value = value.as_object().with_context(|| format!("{} is not an object", entry()))?;
+            let model = match value.get("model") {
+                Some(model) => model.as_object().with_context(|| format!("{} model is not an object", entry()))?,
+                None => value,
             };
+            let glb = model
+                .get("glbPath")
+                .and_then(|v| v.as_str())
+                .with_context(|| format!("{} has no model.glbPath", entry()))?;
             let glb_path = resolve_glb_path(dir, glb);
             let file_stem = glb_path
                 .file_stem()
                 .map(|s| s.to_string_lossy().into_owned())
-                .unwrap_or_default();
+                .with_context(|| format!("{} glbPath {glb:?} has no file name", entry()))?;
+            let bool_field = |key: &str| -> Result<bool> {
+                value
+                    .get(key)
+                    .map(|v| v.as_bool().with_context(|| format!("{} {key} is not a boolean", entry())))
+                    .transpose()?
+                    .with_context(|| format!("{} does not declare {key}", entry()))
+            };
+            let number_field = |key: &str| -> Result<Option<f64>> {
+                value
+                    .get(key)
+                    .map(|v| v.as_f64().filter(|v| v.is_finite()).with_context(|| format!("{} {key} is not a finite number", entry())))
+                    .transpose()
+            };
+            let mut animations = HashMap::new();
+            if let Some(table) = value.get("animations") {
+                let table = table.as_object().with_context(|| format!("{} animations is not an object", entry()))?;
+                for (name, animation) in table {
+                    let path = animation
+                        .get("glbPath")
+                        .and_then(|v| v.as_str())
+                        .with_context(|| format!("{} animation {name} has no glbPath", entry()))?;
+                    let clip = animation
+                        .get("clip")
+                        .and_then(|v| v.as_str())
+                        .with_context(|| format!("{} animation {name} has no clip", entry()))?;
+                    animations.insert(name.clone(), (resolve_glb_path(dir, path), clip.to_string()));
+                }
+            }
+            if let Some(clips) = model.get("clips") {
+                let clips = clips.as_object().with_context(|| format!("{} model.clips is not an object", entry()))?;
+                for (key, motion) in [("idle", "idle"), ("locomotion", "walk")] {
+                    if let Some(clip) = clips.get(key) {
+                        let clip = clip.as_str().with_context(|| format!("{} model.clips.{key} is not a string", entry()))?;
+                        if animations.insert(motion.to_string(), (glb_path.clone(), clip.to_string())).is_some() {
+                            bail!("{} binds the {motion} clip twice (animations and model.clips)", entry());
+                        }
+                    }
+                }
+                if let Some(unknown) = clips.keys().find(|key| !matches!(key.as_str(), "idle" | "locomotion")) {
+                    bail!("{} model.clips.{unknown} is not a known motion (idle, locomotion)", entry());
+                }
+            }
+            if model.get("animated").and_then(|v| v.as_bool()) == Some(true) && animations.is_empty() {
+                bail!("{} is animated but binds no animation clips", entry());
+            }
             by_catalog_id.insert(
                 catalog_id.clone(),
                 VehicleModelEntry {
@@ -143,107 +205,13 @@ impl VehicleModelCatalog {
                         .and_then(|v| v.as_str())
                         .unwrap_or("")
                         .to_string(),
-                    tintable: value
-                        .get("tintable")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(true),
-                    scale_to_dims: value
-                        .get("scaleToDims")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false),
+                    tintable: bool_field("tintable")?,
+                    scale_to_dims: bool_field("scaleToDims")?,
                     model_length_m: lengths.get(&file_stem).copied(),
-                    uniform_scale: value
-                        .get("uniformScale")
-                        .and_then(|v| v.as_f64())
-                        .map(|v| v as f32),
-                    yaw_offset_rad: value
-                        .get("yawOffsetRad")
-                        .and_then(|v| v.as_f64())
-                        .unwrap_or(0.0) as f32,
-                    ground_offset_m: value
-                        .get("groundOffsetM")
-                        .and_then(|v| v.as_f64())
-                        .unwrap_or(0.0) as f32,
-                    animations: value
-                        .get("animations")
-                        .and_then(|v| v.as_object())
-                        .into_iter()
-                        .flatten()
-                        .filter_map(|(name, value)| {
-                            let path = value.get("glbPath")?.as_str()?;
-                            let clip = value.get("clip")?.as_str()?;
-                            Some((
-                                name.clone(),
-                                (resolve_glb_path(dir, path), clip.to_string()),
-                            ))
-                        })
-                        .collect(),
-                },
-            );
-        }
-        let mut fallback: Vec<_> = by_catalog_id
-            .iter()
-            .map(|(id, entry)| (id.clone(), entry.clone()))
-            .collect();
-        fallback.sort_by(|a, b| a.0.cmp(&b.0));
-        Ok(Self {
-            by_catalog_id,
-            fallback,
-        })
-    }
-
-    /// `manifest.json` fallback: map catalog ids through the built-in
-    /// assignment table onto manifest entries.
-    fn from_manifest(dir: &Path, path: &Path) -> Result<Self> {
-        let raw: serde_json::Value = serde_json::from_slice(
-            &std::fs::read(path).with_context(|| format!("read {}", path.display()))?,
-        )?;
-        let vehicles = raw
-            .get("vehicles")
-            .and_then(|v| v.as_object())
-            .context("manifest.json: expected {vehicles: {...}}")?;
-
-        let mut by_catalog_id = HashMap::new();
-        for (catalog_id, manifest_key) in FALLBACK_ASSIGNMENTS {
-            let Some(entry) = vehicles.get(*manifest_key) else {
-                continue;
-            };
-            let Some(file) = entry.get("file").and_then(|v| v.as_str()) else {
-                continue;
-            };
-            let glb_path = resolve_glb_path(dir, file);
-            if !glb_path.is_file() {
-                continue;
-            }
-            let display = entry
-                .get("display")
-                .and_then(|v| v.as_str())
-                .unwrap_or(manifest_key);
-            by_catalog_id.insert(
-                (*catalog_id).to_string(),
-                VehicleModelEntry {
-                    glb_path,
-                    attribution: format!(
-                        "\"{display}\" vehicle model \u{a9} CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge."
-                    ),
-                    source: "carla-0.10.0-ue5".to_string(),
-                    tintable: entry
-                        .get("tintable")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false),
-                    // vehicle.semi_truck: catalog length includes a trailer
-                    // but the GLB is the tractor unit only — length scaling
-                    // would squash it (sidecar ships scaleToDims=false too).
-                    scale_to_dims: *catalog_id != "vehicle.semi_truck",
-                    model_length_m: entry
-                        .get("dims_lwh_m")
-                        .and_then(|v| v.as_array())
-                        .and_then(|a| a.first())
-                        .and_then(|v| v.as_f64()),
-                    uniform_scale: None,
-                    yaw_offset_rad: 0.0,
-                    ground_offset_m: 0.0,
-                    animations: HashMap::new(),
+                    uniform_scale: number_field("uniformScale")?.map(|v| v as f32),
+                    yaw_offset_rad: number_field("yawOffsetRad")?.unwrap_or(0.0) as f32,
+                    ground_offset_m: number_field("groundOffsetM")?.unwrap_or(0.0) as f32,
+                    animations,
                 },
             );
         }
@@ -285,14 +253,18 @@ fn resolve_glb_path(dir: &Path, glb: &str) -> PathBuf {
     local
 }
 
-fn manifest_lengths(manifest: &Path) -> HashMap<String, f64> {
+/// Model lengths (`dims_lwh_m[0]`) keyed by GLB stem from an optional
+/// `manifest.json`. Absent is fine (no length-scaled entries can then
+/// resolve a scale, which the renderer reports); present but unreadable is
+/// an error, not an empty table.
+fn manifest_lengths(manifest: &Path) -> Result<HashMap<String, f64>> {
     let mut out = HashMap::new();
-    let Ok(bytes) = std::fs::read(manifest) else {
-        return out;
-    };
-    let Ok(raw) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
-        return out;
-    };
+    if !manifest.is_file() {
+        return Ok(out);
+    }
+    let bytes = std::fs::read(manifest).with_context(|| format!("read {}", manifest.display()))?;
+    let raw: serde_json::Value =
+        serde_json::from_slice(&bytes).with_context(|| format!("parse {}", manifest.display()))?;
     if let Some(vehicles) = raw.get("vehicles").and_then(|v| v.as_object()) {
         for (key, entry) in vehicles {
             if let Some(l) = entry
@@ -305,7 +277,7 @@ fn manifest_lengths(manifest: &Path) -> HashMap<String, f64> {
             }
         }
     }
-    out
+    Ok(out)
 }
 
 #[cfg(test)]

@@ -1,6 +1,10 @@
+import type { RenderSourceV3 } from '@simforge-oss/scenario';
 import { describe, expect, it } from 'vitest';
 
-import { createRenderEngine, nativeTextureEvidence, nativeVramCapacity, resolveBinary } from './engine.js';
+import {
+  assertNativeSourcesSupported, assertNativeVideoProfileSupported, createRenderEngine, nativeCameraClipPlanes, nativeEncoderVersion,
+  nativeTextureEvidence, nativeVramCapacity, resolveBinary, resolveNativeEncoder,
+} from './engine.js';
 import { stripRgbaPadding } from './service-client.js';
 
 describe('native retained engine adapter', () => {
@@ -54,5 +58,51 @@ describe('native VRAM capacity', () => {
     expect(nativeTextureEvidence(staged, vram, false, new Set()))
       .toMatchObject({ capacityBytes: 16 * 2 ** 30, capacitySource: 'assumed' });
     expect(nativeTextureEvidence({ ...staged, capacitySource: 'explicit' as const }, vram, true, new Set(['native-evidence.vram-detected'])).capacitySource).toBe('explicit');
+  });
+});
+
+describe('native engine input policy', () => {
+  const camera = (outputName: string, { nearM = 0.1, farM = 800, width = 1280, rollRad = 0 }: Partial<{ nearM: number; farM: number; width: number; rollRad: number }> = {}): RenderSourceV3 => ({
+    actorId: 'ego', sensorId: outputName, outputName, modality: 'rgb',
+    transform: { position: { x: 1, y: 1.4, z: 0 }, rotation: { yawRad: 0, pitchRad: 0, rollRad } },
+    attributes: { width, height: 720, fps: 24, horizontalFovDeg: 90, nearM, farM },
+  });
+  const radar: RenderSourceV3 = {
+    actorId: 'ego', sensorId: 'radar', outputName: 'radar', modality: 'radar',
+    transform: { position: { x: 2, y: 0.5, z: 0 }, rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 } },
+    attributes: { horizontalFovDeg: 60, verticalFovDeg: 10, rangeM: 150, pointsPerSecond: 1500 },
+  };
+
+  it('takes the clip planes from the RGB cameras alone: a radar never moves them', () => {
+    expect(nativeCameraClipPlanes([camera('front'), radar, camera('rear')])).toEqual({ nearM: 0.1, farM: 800 });
+  });
+
+  it('refuses cameras that ask for different clip planes (the service renders one pair)', () => {
+    expect(() => nativeCameraClipPlanes([camera('front'), camera('rear', { nearM: 0.5 })]))
+      .toThrow(expect.objectContaining({ code: 'native_camera_clip_planes_conflict' }));
+  });
+
+  it('refuses a rolled camera and a camera larger than the engine renders', () => {
+    expect(() => assertNativeSourcesSupported([camera('front', { rollRad: 0.05 })]))
+      .toThrow(expect.objectContaining({ code: 'native_sensor_roll_unsupported' }));
+    expect(() => assertNativeSourcesSupported([camera('front', { width: 8192 })]))
+      .toThrow(expect.objectContaining({ code: 'native_camera_size_unsupported' }));
+    expect(() => assertNativeSourcesSupported([camera('front'), radar])).not.toThrow();
+  });
+
+  it('never spawns a bare ffmpeg: no resolvable encoder fails the job', () => {
+    expect(() => resolveNativeEncoder({}, { PATH: '', SIMFORGE_NATIVE_RUNTIME_ROOT: '/nonexistent-simforge-runtime' }))
+      .toThrow(expect.objectContaining({ code: 'native_encoder_missing' }));
+    expect(resolveNativeEncoder({ ffmpegBinary: '/opt/ffmpeg' }, {})).toEqual({ path: '/opt/ffmpeg', source: 'option' });
+    expect(() => nativeEncoderVersion('/nonexistent/ffmpeg')).toThrow(expect.objectContaining({ code: 'native_encoder_missing' }));
+  });
+
+  it('encodes only the video profile it can make: mp4+h264 up to high quality', () => {
+    const video = { width: 1280, height: 720, fps: 24, container: 'mp4', codec: 'h264', quality: 'high' } as const;
+    expect(() => assertNativeVideoProfileSupported(video)).not.toThrow();
+    expect(() => assertNativeVideoProfileSupported({ ...video, container: 'webm', codec: 'vp9' }))
+      .toThrow(expect.objectContaining({ code: 'native_video_profile_unsupported' }));
+    expect(() => assertNativeVideoProfileSupported({ ...video, quality: 'lossless' }))
+      .toThrow(expect.objectContaining({ code: 'native_video_quality_unsupported' }));
   });
 });

@@ -80,7 +80,10 @@ impl Profile {
 /// Scene lighting configuration, resolved through the shared lighting spec
 /// (docs/lighting-calibration.md) at rung ≥ 2. `sun_lux`/`ambient` are the
 /// spike-calibrated legacy values consumed only at rung < 2.
+/// Unknown keys are refused: a misspelt or camelCase key would otherwise be
+/// dropped and its default rendered instead.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Lighting {
     #[serde(default = "default_sun_elev")]
     pub sun_elev_deg: f32,
@@ -331,6 +334,41 @@ pub struct ResolvedLighting {
 }
 
 impl Lighting {
+    /// What SceneApp cannot render as declared fails here, before any
+    /// relight, instead of being clamped (docs/engineering/no-silent-fallbacks.md).
+    pub fn validate_for_scene_app(&self) -> Result<()> {
+        if self.rung > 3 {
+            bail!("[native_lighting_unsupported] lighting rung {} (4 = PCSS) is not deterministic in SceneApp; use rung <= 3", self.rung);
+        }
+        let night = &self.night;
+        if night.fixture_budget > 12 {
+            bail!("[native_lighting_unsupported] night fixture budget {} exceeds the renderer's 12 lights", night.fixture_budget);
+        }
+        if night.fixture_shadow_budget > 2 {
+            bail!("[native_lighting_unsupported] night fixture shadow budget {} exceeds the renderer's 2 shadowed lights", night.fixture_shadow_budget);
+        }
+        if !(0.0..=0.5).contains(&night.urban_skyglow_lux) {
+            bail!("[native_lighting_unsupported] urban skyglow {} lux is outside the calibrated 0..0.5", night.urban_skyglow_lux);
+        }
+        if !(0.001..=0.003).contains(&night.natural_ambient_lux) {
+            bail!("[native_lighting_unsupported] natural night ambient {} lux is outside the calibrated 0.001..0.003", night.natural_ambient_lux);
+        }
+        for (index, fixture) in night.fixtures.iter().enumerate() {
+            let out = |what: &str, value: f32, lo: f32, hi: f32| -> Result<()> {
+                if (lo..=hi).contains(&value) {
+                    Ok(())
+                } else {
+                    bail!("[native_lighting_unsupported] night fixture {index} {what} {value} is outside the calibrated {lo}..{hi}")
+                }
+            };
+            out("lumens", fixture.lumens, 2_000.0, 8_000.0)?;
+            out("range_m", fixture.range_m, 15.0, 90.0)?;
+            out("cct_k", fixture.cct_k, 2_200.0, 4_000.0)?;
+            out("outer_angle_deg", fixture.outer_angle_deg, 1.0, 89.0)?;
+        }
+        Ok(())
+    }
+
     /// The physical atmosphere state this lighting authors, weather label
     /// seeding anything the caller left unset.
     ///
@@ -347,11 +385,11 @@ impl Lighting {
         let haze = self.haze.clamp(0.0, 1.0);
         crate::atmosphere::AtmosphereInputs {
             sun_elevation_deg: self.sun_elev_deg,
-            turbidity: self.turbidity.unwrap_or(seed.turbidity) + 6.0 * haze,
+            turbidity: self.turbidity.unwrap_or(seed.turbidity) + 6.0 * haze, // fallback-ok: optional atmosphere overrides; None means the documented weather-preset value
             ozone_du: self.ozone_du.unwrap_or(crate::atmosphere::REFERENCE_OZONE_DU),
-            air_density: self.air_density.unwrap_or(1.0),
+            air_density: self.air_density.unwrap_or(1.0), // fallback-ok: optional override; None is the documented standard density
             visibility_m: self.visibility_m.unwrap_or(seed.visibility_m),
-            deck: self.cloud_deck.unwrap_or(seed.deck),
+            deck: self.cloud_deck.unwrap_or(seed.deck), // fallback-ok: optional override of the weather preset
             cloud_cover: self.cloud_cover.unwrap_or(seed.cloud_cover),
             cloud_base_m: self.night.cloud_base_m,
             cloud_beam_transmittance,
@@ -368,7 +406,7 @@ impl Lighting {
     pub fn cloud_params(&self, time_s: f32) -> crate::clouds::CloudParams {
         let cover = self
             .cloud_cover
-            .unwrap_or_else(|| self.weather.atmosphere().cloud_cover)
+            .unwrap_or_else(|| self.weather.atmosphere().cloud_cover) // fallback-ok: optional override of the weather preset
             .clamp(0.0, 1.0);
         let night = &self.night;
         crate::clouds::CloudParams {
@@ -436,7 +474,7 @@ impl Lighting {
         // above it.
         let night_lx = night_ledger_illuminance_lx(self);
         let (incident_ev, highlight_ev) = meter_readings(&readback, night_lx);
-        let ev100 = (incident_ev.max(highlight_ev.unwrap_or(f32::NEG_INFINITY))
+        let ev100 = (incident_ev.max(highlight_ev.unwrap_or(f32::NEG_INFINITY)) // fallback-ok: no highlight reading means the incident meter alone (max identity)
             + self.night.exposure_offset_stops.clamp(-6.0, 12.0)
             + self.ev100_bias)
             .clamp(CAMERA_EV100_FLOOR, 20.0);
@@ -516,14 +554,14 @@ impl Lighting {
             return self.resolve_atmosphere(far_plane_m, cloud_beam_transmittance);
         }
         let base = self.weather.lighting_plan(None, self.sun_elev_deg);
-        let cloud = self.cloud_cover.unwrap_or(0.0).clamp(0.0, 1.0);
+        let cloud = self.cloud_cover.unwrap_or(0.0).clamp(0.0, 1.0); // fallback-ok: legacy cubemap path: absent cover is clear sky by definition
         let sun_color = match self.sun_temperature_k {
             Some(k) if k > 0.0 => crate::lighting::kelvin_to_rgb(k.clamp(1000.0, 20000.0)),
             _ => base.sun_color,
         };
         let ev100 = base
             .ev100_fixed
-            .unwrap_or_else(|| self.weather.sensor_ev100(self.sun_elev_deg))
+            .unwrap_or_else(|| self.weather.sensor_ev100(self.sun_elev_deg)) // fallback-ok: optional fixed exposure; None is the documented weather-derived EV
             + self.ev100_bias;
         let plan = crate::lighting::LightingPlan {
             sun_lux: base.sun_lux * self.sun_scale.max(0.0) * (1.0 - 0.85 * cloud),
@@ -583,7 +621,7 @@ impl Lighting {
         let color = match self.fog_color {
             Some([r, g, b]) => Color::linear_rgb(r, g, b),
             None => {
-                let ev100 = plan.ev100_fixed.unwrap_or(15.0);
+                let ev100 = plan.ev100_fixed.unwrap_or(15.0); // fallback-ok: fog tint reference exposure constant, not scene data
                 let exposure = 1.0 / (2.0f32.powf(ev100) * 1.2);
                 // Aerial perspective is slightly cooler than the sky disc.
                 let level = (plan.skybox_brightness * exposure).clamp(0.0, 1.6);
@@ -1502,11 +1540,12 @@ fn spawn_night_sources(
             let head_mesh = meshes.add(
                 SphereMeshBuilder::new(0.16, SphereKind::Uv { sectors: 12, stacks: 8 }).build(),
             );
-            let _ = &lighting;
+            let _ = &lighting; // fallback-ok: borrow marker only
             let mut commands = world.commands();
             for (idx, fixture) in fixtures.iter().enumerate() {
                 let position = Vec3::from_array(fixture.position);
-                let color = lighting::kelvin_to_rgb(fixture.cct_k.clamp(2200.0, 4000.0));
+                // Values are validated to the calibrated ranges up front.
+                let color = lighting::kelvin_to_rgb(fixture.cct_k);
                 let head_material = materials.add(StandardMaterial {
                     base_color: color,
                     emissive: color.to_linear() * (45.0 * internal_scale.sqrt()),
@@ -1523,11 +1562,13 @@ fn spawn_night_sources(
                     commands.spawn((
                         SpotLight {
                             color,
-                            intensity: fixture.lumens.clamp(2_000.0, 8_000.0) * internal_scale,
-                            range: fixture.range_m.clamp(15.0, 90.0),
+                            intensity: fixture.lumens * internal_scale,
+                            range: fixture.range_m,
                             radius: 0.12,
-                            inner_angle: 46.0_f32.to_radians(),
-                            outer_angle: 80.0_f32.to_radians(),
+                            // The authored cone, with the qualified 46/80
+                            // inner/outer falloff ratio.
+                            inner_angle: (fixture.outer_angle_deg * 46.0 / 80.0).to_radians(),
+                            outer_angle: fixture.outer_angle_deg.to_radians(),
                             shadow_maps_enabled: idx < shadow_budget,
                             ..default()
                         },
@@ -1540,7 +1581,7 @@ fn spawn_night_sources(
     });
     world.flush();
 }
-fn update_physical_windows(world: &mut World, enabled: bool, internal_scale: f32) -> u32 {
+fn update_physical_windows(world: &mut World, enabled: bool, internal_scale: f32) -> Result<u32> {
     let restores: Vec<(Entity, Handle<StandardMaterial>)> = {
         let mut q = world.query::<(Entity, &NightWindowOriginal)>();
         q.iter(world).map(|(e, o)| (e, o.0.clone())).collect()
@@ -1551,34 +1592,45 @@ fn update_physical_windows(world: &mut World, enabled: bool, internal_scale: f32
             .remove::<NightWindowOriginal>();
     }
     if !enabled {
-        return 0;
+        return Ok(0);
     }
-    let targets: Vec<(Entity, Handle<StandardMaterial>, String)> = {
+    // Occupancy must not depend on entity allocation (async load order):
+    // targets are ordered by material name, material asset path and world
+    // position, and occupancy is a function of that order alone.
+    let mut targets: Vec<(Entity, Handle<StandardMaterial>, String, String, [u32; 3])> = {
         let mut q = world.query::<(
             Entity,
             &GltfMaterialName,
             &MeshMaterial3d<StandardMaterial>,
+            Option<&GlobalTransform>,
         )>();
         q.iter(world)
-            .filter_map(|(entity, name, material)| {
+            .filter_map(|(entity, name, material, global)| {
                 let label = (&**name).to_lowercase();
                 let positive = label.contains("window")
                     || (label.contains("glass")
                         && !["bulb", "signal", "streetlight", "train", "hydrant"]
                             .iter().any(|token| label.contains(token)));
-                positive.then(|| (entity, material.0.clone(), label))
+                let path = material.0.path().map(|p| p.to_string()).unwrap_or_default(); // fallback-ok: sort key only; an unlabelled material sorts first, deterministically
+                let position = global.map(|g| g.translation().to_array().map(f32::to_bits)).unwrap_or([0; 3]); // fallback-ok: sort key only
+                positive.then(|| (entity, material.0.clone(), label, path, position))
             })
             .collect()
     };
+    targets.sort_by(|a, b| (&a.2, &a.3, a.4).cmp(&(&b.2, &b.3, b.4)));
     let mut applied = 0u32;
+    let mut missing: Option<String> = None;
     world.resource_scope(|world, mut materials: Mut<Assets<StandardMaterial>>| {
-        for (ordinal, (entity, source, _)) in targets.into_iter().enumerate() {
+        for (ordinal, (entity, source, label, _, _)) in targets.into_iter().enumerate() {
             // 30% deterministic occupancy at primitive granularity: a
             // residential street around 22:00, not an office block.
-            if (ordinal * 73 + entity.to_bits() as usize * 17) % 100 >= 30 {
+            if (ordinal * 73) % 100 >= 30 {
                 continue;
             }
-            let Some(mut material) = materials.get(&source).cloned() else { continue };
+            let Some(mut material) = materials.get(&source).cloned() else {
+                missing.get_or_insert(label);
+                continue;
+            };
             let cct = 2_200.0 + ((ordinal * 317) % 1_800) as f32;
             // Same street-side luminance model as the synthetic façades.
             let roll = ((ordinal * 47) % 100) as f32 / 100.0;
@@ -1597,7 +1649,10 @@ fn update_physical_windows(world: &mut World, enabled: bool, internal_scale: f32
             applied += 1;
         }
     });
-    applied
+    if let Some(label) = missing {
+        bail!("night windows: window material {label:?} is not loaded");
+    }
+    Ok(applied)
 }
 
 
@@ -1626,9 +1681,9 @@ struct NightWindowOriginal(Handle<StandardMaterial>);
 #[derive(Component)]
 struct SceneSpawned;
 #[derive(Component)]
-struct IdClone;
+pub(crate) struct IdClone;
 #[derive(Component, Clone, Copy)]
-struct InstanceId(u32);
+pub(crate) struct InstanceId(pub(crate) u32);
 #[derive(Component)]
 struct ActorModelRoot;
 #[derive(Clone)]
@@ -1652,6 +1707,189 @@ pub struct SensorTriangle {
     pub b: [f32; 3],
     pub c: [f32; 3],
     pub instance_id: u32,
+}
+
+/// One visible actor mesh for the ray sensors (see
+/// [`SceneApp::actor_sensor_meshes`]).
+#[derive(Clone, Debug)]
+pub struct ActorSensorMesh {
+    pub actor_id: String,
+    /// `<actor id>/<glTF node name>` for error messages and diagnostics.
+    pub label: String,
+    /// The actor's instance id: every mesh of one actor reports it.
+    pub instance_id: u32,
+    pub geometry: ActorSensorGeometry,
+}
+
+/// One static map mesh as the lidar/radar scene instances it (see
+/// [`SceneApp::static_sensor_meshes`]).
+#[derive(Clone, Debug)]
+pub struct StaticSensorMesh {
+    pub mesh: Handle<Mesh>,
+    pub world: Mat4,
+    pub instance_id: u32,
+    /// Asset label of the mesh (`<gltf>#Mesh<N>/Primitive<M>`), or its
+    /// entity name for generated meshes; errors and ordering use it.
+    pub label: String,
+}
+
+#[derive(Clone, Debug)]
+pub enum ActorSensorGeometry {
+    /// A rigid mesh: model-local triangles (see
+    /// [`SceneApp::mesh_asset_triangles`], cacheable per asset) placed by
+    /// the world matrix the camera draws it with this tick.
+    Rigid { mesh: Handle<Mesh>, world: Mat4 },
+    /// A skinned mesh posed this tick in world space.
+    Skinned { mesh: AssetId<Mesh>, triangles: Vec<[Vec3; 3]> },
+}
+
+/// Triangle-list triangles of a mesh in its local space. Any layout the
+/// ray sensors cannot reproduce exactly is an error naming the mesh, never
+/// a silent skip or a reinterpretation.
+pub fn mesh_local_triangles(mesh: &Mesh, label: &str) -> Result<Vec<[Vec3; 3]>> {
+    use bevy::render::render_resource::PrimitiveTopology;
+    if mesh.primitive_topology() != PrimitiveTopology::TriangleList {
+        bail!("mesh {label} uses {:?}; the lidar/radar scene supports triangle lists only", mesh.primitive_topology());
+    }
+    if mesh.has_morph_targets() {
+        bail!("mesh {label} has morph targets, which the lidar/radar scene cannot pose");
+    }
+    let Some(attribute) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else {
+        bail!("mesh {label} has no POSITION attribute");
+    };
+    let bevy::mesh::VertexAttributeValues::Float32x3(vertices) = attribute else {
+        bail!("mesh {label} POSITION is not Float32x3");
+    };
+    let vertex = |index: usize| -> Result<Vec3> {
+        vertices.get(index).map(|v| Vec3::from(*v)).ok_or_else(|| anyhow::anyhow!(
+            "mesh {label} index {index} is out of range ({} vertices)", vertices.len()
+        ))
+    };
+    let indices: Vec<usize> = match mesh.indices() {
+        Some(bevy::mesh::Indices::U16(indices)) => indices.iter().map(|i| *i as usize).collect(),
+        Some(bevy::mesh::Indices::U32(indices)) => indices.iter().map(|i| *i as usize).collect(),
+        None => (0..vertices.len()).collect(),
+    };
+    if indices.len() % 3 != 0 {
+        bail!("mesh {label} has {} indices, not a whole number of triangles", indices.len());
+    }
+    indices
+        .chunks_exact(3)
+        .map(|tri| Ok([vertex(tri[0])?, vertex(tri[1])?, vertex(tri[2])?]))
+        .collect()
+}
+
+/// World-space triangles of a skinned mesh under `joints` (joint world
+/// matrix x inverse bindpose, as the skin extraction uploads them), blended
+/// the way `skinning.wgsl` blends: the weighted sum of joint matrices
+/// applied to the bind-pose position.
+pub fn skinned_world_triangles(mesh: &Mesh, joints: &[Mat4], label: &str) -> Result<Vec<[Vec3; 3]>> {
+    use bevy::mesh::VertexAttributeValues;
+    let local = mesh_local_triangles(mesh, label)?;
+    let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else {
+        bail!("mesh {label} POSITION is not Float32x3");
+    };
+    let joint_indices: Vec<[u16; 4]> = match mesh.attribute(Mesh::ATTRIBUTE_JOINT_INDEX) {
+        Some(VertexAttributeValues::Uint16x4(values)) => values.clone(),
+        Some(other) => bail!("skinned mesh {label} JOINTS_0 has unsupported format {:?}", bevy::mesh::VertexFormat::from(other)),
+        None => bail!("skinned mesh {label} has no JOINTS_0 attribute"),
+    };
+    let Some(VertexAttributeValues::Float32x4(weights)) = mesh.attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT) else {
+        bail!("skinned mesh {label} has no Float32x4 WEIGHTS_0 attribute");
+    };
+    if joint_indices.len() != positions.len() || weights.len() != positions.len() {
+        bail!("skinned mesh {label} joint attributes do not match its {} vertices", positions.len());
+    }
+    let mut posed = Vec::with_capacity(positions.len());
+    for ((position, index), weight) in positions.iter().zip(&joint_indices).zip(weights) {
+        let mut model = Mat4::ZERO;
+        for k in 0..4 {
+            let joint = joints.get(index[k] as usize).ok_or_else(|| anyhow::anyhow!(
+                "skinned mesh {label} references joint {} of {}", index[k], joints.len()
+            ))?;
+            model += *joint * weight[k];
+        }
+        posed.push(model.transform_point3(Vec3::from(*position)));
+    }
+    // Map each local triangle back onto posed vertices through the indices.
+    let indices: Vec<usize> = match mesh.indices() {
+        Some(bevy::mesh::Indices::U16(indices)) => indices.iter().map(|i| *i as usize).collect(),
+        Some(bevy::mesh::Indices::U32(indices)) => indices.iter().map(|i| *i as usize).collect(),
+        None => (0..positions.len()).collect(),
+    };
+    debug_assert_eq!(indices.len(), local.len() * 3);
+    Ok(indices.chunks_exact(3).map(|tri| [posed[tri[0]], posed[tri[1]], posed[tri[2]]]).collect())
+}
+
+#[cfg(test)]
+mod sensor_mesh_tests {
+    use super::*;
+    use bevy::asset::RenderAssetUsages;
+    use bevy::mesh::{Indices, VertexAttributeValues};
+    use bevy::render::render_resource::PrimitiveTopology;
+
+    fn quad(topology: PrimitiveTopology) -> Mesh {
+        let mut mesh = Mesh::new(topology, RenderAssetUsages::default());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]);
+        mesh.insert_indices(Indices::U16(vec![0, 1, 2, 0, 2, 3]));
+        mesh
+    }
+
+    #[test]
+    fn triangle_list_meshes_yield_their_triangles() {
+        let tris = mesh_local_triangles(&quad(PrimitiveTopology::TriangleList), "quad").unwrap();
+        assert_eq!(tris.len(), 2);
+        assert_eq!(tris[1], [Vec3::ZERO, Vec3::new(1.0, 1.0, 0.0), Vec3::new(0.0, 1.0, 0.0)]);
+    }
+
+    #[test]
+    fn unreadable_meshes_fail_instead_of_disappearing_from_lidar() {
+        let strip = mesh_local_triangles(&quad(PrimitiveTopology::TriangleStrip), "car/body").unwrap_err();
+        assert!(format!("{strip}").contains("car/body"), "{strip}");
+        let mut bad = quad(PrimitiveTopology::TriangleList);
+        bad.insert_indices(Indices::U16(vec![0, 1, 9]));
+        assert!(format!("{}", mesh_local_triangles(&bad, "car/wheel").unwrap_err()).contains("out of range"));
+        let mut partial = quad(PrimitiveTopology::TriangleList);
+        partial.insert_indices(Indices::U16(vec![0, 1]));
+        assert!(mesh_local_triangles(&partial, "x").is_err());
+        let mut no_position = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
+        no_position.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 1.0, 0.0]; 3]);
+        assert!(mesh_local_triangles(&no_position, "x").is_err());
+    }
+
+    fn skinned_quad() -> Mesh {
+        let mut mesh = quad(PrimitiveTopology::TriangleList);
+        // Bottom edge on joint 0, top edge on joint 1.
+        mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_INDEX, VertexAttributeValues::Uint16x4(vec![[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0]]));
+        mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, vec![[1.0f32, 0.0, 0.0, 0.0]; 4]);
+        mesh
+    }
+
+    #[test]
+    fn skinned_meshes_are_posed_by_their_joints() {
+        let mesh = skinned_quad();
+        let rest = skinned_world_triangles(&mesh, &[Mat4::IDENTITY, Mat4::IDENTITY], "ped").unwrap();
+        assert_eq!(rest, mesh_local_triangles(&mesh, "ped").unwrap());
+        // Lift joint 1 (the top edge) by 2 m and move the whole skin 5 m in x.
+        let base = Mat4::from_translation(Vec3::new(5.0, 0.0, 0.0));
+        let posed = skinned_world_triangles(&mesh, &[base, base * Mat4::from_translation(Vec3::Y * 2.0)], "ped").unwrap();
+        assert_eq!(posed[0], [Vec3::new(5.0, 0.0, 0.0), Vec3::new(6.0, 0.0, 0.0), Vec3::new(6.0, 3.0, 0.0)]);
+        // Blended weights interpolate the joint matrices.
+        let mut blended = mesh.clone();
+        blended.insert_attribute(Mesh::ATTRIBUTE_JOINT_INDEX, VertexAttributeValues::Uint16x4(vec![[0, 1, 0, 0]; 4]));
+        blended.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, vec![[0.5f32, 0.5, 0.0, 0.0]; 4]);
+        let half = skinned_world_triangles(&blended, &[Mat4::IDENTITY, Mat4::from_translation(Vec3::Y * 2.0)], "ped").unwrap();
+        assert_eq!(half[0][0], Vec3::new(0.0, 1.0, 0.0));
+    }
+
+    #[test]
+    fn skins_that_reference_missing_joints_fail() {
+        let error = skinned_world_triangles(&skinned_quad(), &[Mat4::IDENTITY], "ped/body").unwrap_err();
+        assert!(format!("{error}").contains("joint 1 of 1"), "{error}");
+        let mut unskinned = quad(PrimitiveTopology::TriangleList);
+        unskinned.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, vec![[1.0f32, 0.0, 0.0, 0.0]; 4]);
+        assert!(skinned_world_triangles(&unskinned, &[Mat4::IDENTITY], "x").is_err());
+    }
 }
 
 #[derive(Resource, Default)]
@@ -1858,9 +2096,15 @@ impl GroundField {
     /// Cells outside the mesh coverage use the nearest populated cell within
     /// 20 m, then the scene median, then 0.0 for an entirely empty scene.
     pub(crate) fn sample(&self, x: f32, z: f32) -> f32 {
+        self.sample_covered(x, z).or(self.median).unwrap_or(0.0)
+    }
+
+    /// [`Self::sample`] without the off-map median/zero: `None` when no
+    /// populated cell lies within 20 m.
+    pub(crate) fn sample_covered(&self, x: f32, z: f32) -> Option<f32> {
         let (cx, cz) = ((x / self.cell_m).floor() as i64, (z / self.cell_m).floor() as i64);
         if let Some(y) = self.min_y.get(&(cx, cz)) {
-            return *y;
+            return Some(*y);
         }
         for ring in 1..=10i64 {
             let mut best: Option<(i64, f32)> = None;
@@ -1878,10 +2122,10 @@ impl GroundField {
                 }
             }
             if let Some((_, y)) = best {
-                return y;
+                return Some(y);
             }
         }
-        self.median.unwrap_or(0.0)
+        None
     }
 
     /// Median per-cell ground height across the whole scene, or `None` for
@@ -2039,6 +2283,13 @@ pub struct SceneApp {
     /// Atmosphere IBL gain the last relight resolved, reused for views
     /// registered afterwards.
     env_gain: f32,
+    /// Fit one directional cascade set to the whole RGB rig and render it
+    /// once per frame ([`crate::shared_shadows`]).
+    shared_shadows: bool,
+    /// Distance LODs of the static map ([`crate::geometry_lod`]).
+    geometry_lods: Option<crate::geometry_lod::GeometryLods>,
+    /// Static master mesh entity -> its ID-pass clone and ID material.
+    id_clone_of: HashMap<Entity, (Entity, Handle<StandardMaterial>)>,
 }
 
 impl SceneApp {
@@ -2068,7 +2319,8 @@ impl SceneApp {
         // sensor RGB hashes differ between identical replays, so mixed
         // SceneApp lighting is capped at deterministic hard cascades.
         // The standalone cinematic CLI still exposes rung-4 PCSS.
-        let rung = LightingRung(lighting.rung.min(3));
+        lighting.validate_for_scene_app()?;
+        let rung = LightingRung(lighting.rung);
         let (plan, _resolved) = lighting.resolve();
         let sun_dir = sun_direction(lighting.sun_elev_deg, lighting.sun_azim_deg);
         // Black, not a sky colour: under the physical atmosphere the sky
@@ -2112,6 +2364,7 @@ impl SceneApp {
                 crate::road_detail::RoadDetailPlugin,
                 crate::sky_pass::SkyPassPlugin { assets: sky_assets },
                 crate::readiness::GpuReadinessPlugin,
+                crate::shared_shadows::SharedShadowsPlugin,
             ))
             .add_systems(
                 Update,
@@ -2214,6 +2467,16 @@ impl SceneApp {
                 .before(RenderGraphSystems::Submit),
         );
 
+        // Opt-in GPU pass timing (timestamp queries + pipeline statistics per
+        // Bevy render pass, plus a whole-frame timer), read back through
+        // [`Self::take_gpu_pass_times`] / [`Self::take_gpu_frame_times`].
+        // Profiling only: the queries add encoder work, so production never
+        // sets the variable.
+        if crate::gpu_diagnostics::enabled() {
+            app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin);
+            crate::gpu_diagnostics::install_frame_timer(&mut app);
+        }
+
         // Drive the plugin lifecycle to completion manually (we never call
         // app.run()): pump updates until plugins are built, then finish so the
         // render world has its RenderDevice before cameras register readbacks.
@@ -2222,6 +2485,27 @@ impl SceneApp {
         }
         app.finish();
         app.cleanup();
+        // A CPU or virtual adapter (lavapipe, llvmpipe, SwiftShader) renders a
+        // different image than the qualified GPU: never silently. It is an
+        // explicit, logged opt-in for tests and tooling.
+        if let Some(info) = app.world().get_resource::<bevy::render::renderer::RenderAdapterInfo>() {
+            let info = &info.0;
+            eprintln!(
+                "render-adapter: {} ({:?}, {:?}, driver {} {})",
+                info.name, info.device_type, info.backend, info.driver, info.driver_info
+            );
+            let device_type = format!("{:?}", info.device_type);
+            if matches!(device_type.as_str(), "Cpu" | "VirtualGpu")
+                && std::env::var("SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER").as_deref() != Ok("1")
+            {
+                bail!(
+                    "[native_gpu_adapter_software] adapter {} is a {:?} device; set SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1 to render on it explicitly",
+                    info.name, info.device_type
+                );
+            }
+        } else {
+            bail!("[native_gpu_adapter_unknown] the render device reported no adapter information");
+        }
         Ok(Self {
             app,
             receiver: rx,
@@ -2283,7 +2567,68 @@ impl SceneApp {
             sun_cookie: None,
             probe_cubemap: None,
             env_gain: 1.0,
+            shared_shadows: false,
+            geometry_lods: None,
+            id_clone_of: HashMap::new(),
         })
+    }
+
+    /// Share one directional cascade set across every RGB camera
+    /// ([`crate::shared_shadows`]). Applies to registered and future views.
+    pub fn set_shared_shadows(&mut self, enabled: bool) {
+        self.shared_shadows = enabled;
+        let entities: Vec<Entity> = self.groups.iter().map(|g| g.rgb_entity).collect();
+        let world = self.app.world_mut();
+        world.resource_mut::<DirectionalLightShadowMap>().size = if enabled {
+            crate::shared_shadows::SHARED_SHADOW_MAP_SIZE
+        } else {
+            2048
+        };
+        for entity in entities {
+            let mut e = world.entity_mut(entity);
+            if enabled {
+                e.insert(crate::shared_shadows::SharedShadowView);
+            } else {
+                e.remove::<crate::shared_shadows::SharedShadowView>();
+            }
+        }
+    }
+
+    /// Take one camera in or out of the shared cascade set (for example a
+    /// narrow presentation camera that should keep its own tight fit).
+    /// No-op unless shared shadows are enabled.
+    pub fn set_camera_shared_shadows(&mut self, sensor_id: &str, shared: bool) {
+        if !self.shared_shadows {
+            return;
+        }
+        let Some(entity) = self.groups.iter().find(|g| g.spec.sensor_id == sensor_id).map(|g| g.rgb_entity) else {
+            return;
+        };
+        let mut e = self.app.world_mut().entity_mut(entity);
+        let marked = e.contains::<crate::shared_shadows::SharedShadowView>();
+        if shared && !marked {
+            e.insert(crate::shared_shadows::SharedShadowView);
+        } else if !shared && marked {
+            e.remove::<crate::shared_shadows::SharedShadowView>();
+        }
+    }
+
+    /// Whole-frame GPU times (ms) completed since the last call; empty unless
+    /// [`crate::gpu_diagnostics::enabled`].
+    pub fn take_gpu_frame_times(&mut self) -> Vec<f64> {
+        crate::gpu_diagnostics::take_frame_times(self.app.world())
+    }
+
+    /// Direct world access for profiling tools and ablation experiments
+    /// (`render-bench`). Production paths go through the typed methods.
+    pub fn world_mut(&mut self) -> &mut World {
+        self.app.world_mut()
+    }
+
+    /// Drain the GPU pass timings recorded since the last call (see
+    /// [`crate::gpu_diagnostics`]). Empty unless diagnostics are enabled.
+    pub fn take_gpu_pass_times(&mut self) -> Vec<crate::gpu_diagnostics::PassTotal> {
+        crate::gpu_diagnostics::drain(self.app.world_mut())
     }
 
     /// Spawn (or re-point) the planet entity and its scattering medium.
@@ -2582,8 +2927,9 @@ impl SceneApp {
         profile_config: RenderProfileConfig,
     ) -> Result<ResolvedLighting> {
         profile_config.cinematic.validate()?;
+        lighting.validate_for_scene_app()?;
         self.scene_revision += 1;
-        let rung = LightingRung(lighting.rung.min(3));
+        let rung = LightingRung(lighting.rung);
         let Relight {
             plan,
             mut resolved,
@@ -2726,7 +3072,7 @@ impl SceneApp {
             lighting.sun_elev_deg <= NIGHT_SOURCES_ELEVATION_DEG
                 && night_controls.window_mode != crate::night::WindowMode::Off,
             internal_scale,
-        );
+        )?;
         if physical_window_primitives > 0 {
             night_environment.source_ledger.push(crate::night::SourceLedgerEntry {
                 id: "selective-windows".into(),
@@ -2919,6 +3265,7 @@ impl SceneApp {
         lighting: &Lighting,
         profile_config: RenderProfileConfig,
     ) -> Result<(ResolvedLighting, bool)> {
+        lighting.validate_for_scene_app()?;
         let tier = ladder_tier(lighting.sun_elev_deg);
         self.scene_revision += 1;
         let same_ladder = {
@@ -3253,6 +3600,12 @@ impl SceneApp {
         ));
         let rgb_entity = e.id();
         self.next_camera_order += 10;
+        if self.shared_shadows {
+            self.app
+                .world_mut()
+                .entity_mut(rgb_entity)
+                .insert(crate::shared_shadows::SharedShadowView);
+        }
 
         // Sensor views retain the deterministic contract. Cinematic views use
         // the configured temporal/reflection/filmic stack and can coexist in
@@ -3351,6 +3704,7 @@ impl SceneApp {
         self.groups.push(GroupEntities { spec, profile, rgb_entity, id_entity, host });
         self.rig_revision += 1;
         self.sync_host_layers();
+        self.refresh_lod_ranges();
         if self.ready {
             // Post-ready registration: pump updates so extraction and
             // pipeline compilation happen before the next capture. Two
@@ -3450,7 +3804,7 @@ impl SceneApp {
                 if let Some(children) = world.get::<Children>(entity) {
                     stack.extend(children.iter());
                 }
-                if world.get::<Mesh3d>(entity).is_some() {
+                if world.get::<Mesh3d>(entity).is_some() && world.get::<IdClone>(entity).is_none() {
                     targets.push(entity);
                 }
             }
@@ -3477,8 +3831,36 @@ impl SceneApp {
     }
 
     /// Ground height under (x, z) from the readiness height field.
+    ///
+    /// Outside mesh coverage this is the scene median (or 0.0 for an empty
+    /// scene): fine for an atmosphere reference height, never for placing
+    /// geometry. Placement uses [`Self::ground_at_covered`].
     pub fn ground_at(&self, x: f32, z: f32) -> f32 {
         self.ground.sample(x, z)
+    }
+
+    /// Ground height under (x, z) when the map covers it: the cell itself or
+    /// the nearest populated cell within 20 m (cell-edge gaps). `None` off
+    /// the map, where a height would be invented.
+    pub fn ground_at_covered(&self, x: f32, z: f32) -> Option<f32> {
+        self.ground.sample_covered(x, z)
+    }
+
+    /// Remove an actor's catalog model (and its ID clones), keeping the
+    /// actor. Used to rebind a different model or animation GLB.
+    pub fn detach_actor_asset(&mut self, actor_id: &str) -> Result<()> {
+        let (model, _, _) = self
+            .actor_models
+            .remove(actor_id)
+            .ok_or_else(|| anyhow::anyhow!("actor {actor_id} has no attached catalog asset"))?;
+        self.actor_tint_materials.remove(actor_id);
+        self.actor_animations.remove(actor_id);
+        let world = self.app.world_mut();
+        world.despawn(model);
+        // The cuboid (and its ID clone) stay hidden: an actor is never shown
+        // as its proxy; the caller attaches the replacement in the same tick.
+        self.scene_revision += 1;
+        Ok(())
     }
 
     /// Apply a `simforge.road-detail/v1` sidecar (splat-blended asphalt
@@ -3812,6 +4194,48 @@ impl SceneApp {
         if model_mesh_count == 0 {
             bail!("actor model instantiated without mesh nodes: {}", glb_path.display());
         }
+        // The instance-ID pass must draw the model the RGB camera draws, not
+        // the canonical cuboid: every model mesh gets a layer-1 child clone
+        // under the actor's ID material (skinned meshes keep their skin so
+        // the clone follows the animated pose), and the cuboid's own ID
+        // clone is hidden.
+        {
+            let clone = *self
+                .actor_id_clones
+                .get(actor_id)
+                .ok_or_else(|| anyhow::anyhow!("actor {actor_id} has no instance-ID clone"))?;
+            let world = self.app.world_mut();
+            let id_material = world
+                .get::<MeshMaterial3d<StandardMaterial>>(clone)
+                .ok_or_else(|| anyhow::anyhow!("actor {actor_id} instance-ID clone has no material"))?
+                .0
+                .clone();
+            let mut stack = vec![model_root];
+            let mut sources = Vec::new();
+            while let Some(entity) = stack.pop() {
+                if let Some(children) = world.get::<Children>(entity) {
+                    stack.extend(children.iter());
+                }
+                if let Some(mesh) = world.get::<Mesh3d>(entity) {
+                    sources.push((entity, mesh.0.clone(), world.get::<SkinnedMesh>(entity).cloned()));
+                }
+            }
+            for (entity, mesh, skin) in sources {
+                let mut cmd = world.spawn((
+                    IdClone,
+                    Name::new(format!("actor-id:{actor_id}")),
+                    Mesh3d(mesh),
+                    MeshMaterial3d(id_material.clone()),
+                    RenderLayers::layer(1),
+                    Transform::IDENTITY,
+                    ChildOf(entity),
+                ));
+                if let Some(skin) = skin {
+                    cmd.insert(skin);
+                }
+            }
+            world.entity_mut(clone).insert(Visibility::Hidden);
+        }
         self.actor_models.insert(
             actor_id.to_string(),
             (model_root, uniform_scale, model_mesh_count),
@@ -3923,11 +4347,17 @@ impl SceneApp {
         self.actors.get(actor_id).map(|(_, instance_id)| *instance_id)
     }
 
-    /// Snapshot either static map geometry or dynamic actor geometry.
+    /// The static map geometry as instances of mesh assets: every
+    /// instance-ID'd mesh that is not a dynamic actor, with the world matrix
+    /// the cameras draw it with. The static layer of the lidar/radar scene
+    /// is built from this (one tree per mesh asset, 2.2M unique triangles on
+    /// Belmont instead of 266M world-space copies).
     ///
-    /// Static geometry is captured once by the long-lived service; only the
-    /// small actor snapshot is rebuilt after each applied scene tick.
-    pub fn sensor_triangles(&mut self, dynamic_actors: bool) -> Vec<SensorTriangle> {
+    /// Order is deterministic and part of the sensor contract (it is the
+    /// last tie-break between coincident instances): by instance id, then
+    /// the mesh's asset label, then the world matrix bits. Every mesh must
+    /// have main-world data; a missing one is an error naming it.
+    pub fn static_sensor_meshes(&mut self) -> Result<Vec<StaticSensorMesh>> {
         let world = self.app.world_mut();
         let mut query = world.query_filtered::<
             (&Mesh3d, &GlobalTransform, &InstanceId, Option<&Name>),
@@ -3936,44 +4366,173 @@ impl SceneApp {
         let meshes = world.resource::<Assets<Mesh>>();
         let mut out = Vec::new();
         for (mesh3d, transform, instance_id, name) in query.iter(world) {
-            let is_actor = name.is_some_and(|name| name.as_str().starts_with("actor:"));
-            if is_actor != dynamic_actors {
+            if name.is_some_and(|name| name.as_str().starts_with("actor:")) {
                 continue;
             }
-            let Some(mesh) = meshes.get(&mesh3d.0) else { continue };
-            let Some(attribute) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { continue };
-            let bevy::mesh::VertexAttributeValues::Float32x3(vertices) = attribute else { continue };
+            let label = match mesh3d.0.path() {
+                Some(path) => path.to_string(),
+                None => format!("{}#{:?}", name.map(|name| name.as_str()).unwrap_or("unnamed static mesh"), mesh3d.0.id()),
+            };
+            if meshes.get(&mesh3d.0).is_none() {
+                bail!(
+                    "static mesh {label} (instance {}) has no main-world mesh data for the lidar/radar scene",
+                    instance_id.0
+                );
+            }
+            out.push(StaticSensorMesh {
+                mesh: mesh3d.0.clone(),
+                world: transform.to_matrix(),
+                instance_id: instance_id.0,
+                label,
+            });
+        }
+        out.sort_by(|a, b| {
+            a.instance_id
+                .cmp(&b.instance_id)
+                .then_with(|| a.label.cmp(&b.label))
+                .then_with(|| a.world.to_cols_array().map(f32::to_bits).cmp(&b.world.to_cols_array().map(f32::to_bits)))
+        });
+        Ok(out)
+    }
+
+    /// Snapshot the static map geometry (every instance-ID'd mesh that is not
+    /// a dynamic actor) as world-space triangles.
+    ///
+    /// Static geometry is captured once by the long-lived service. Actor
+    /// geometry is never snapshotted as triangles: see
+    /// [`Self::actor_sensor_meshes`]. A mesh the snapshot cannot read is an
+    /// error naming it; it is never silently left out of the sensor world.
+    pub fn static_sensor_triangles(&mut self) -> Result<Vec<SensorTriangle>> {
+        let world = self.app.world_mut();
+        let mut query = world.query_filtered::<
+            (&Mesh3d, &GlobalTransform, &InstanceId, Option<&Name>),
+            Without<IdClone>,
+        >();
+        let meshes = world.resource::<Assets<Mesh>>();
+        let mut out = Vec::new();
+        for (mesh3d, transform, instance_id, name) in query.iter(world) {
+            if name.is_some_and(|name| name.as_str().starts_with("actor:")) {
+                continue;
+            }
+            let label = name.map(|name| name.as_str()).unwrap_or("unnamed static mesh");
+            let mesh = meshes.get(&mesh3d.0).ok_or_else(|| anyhow::anyhow!(
+                "static mesh {label} (instance {}) has no main-world mesh data for the lidar/radar scene",
+                instance_id.0
+            ))?;
             let matrix = transform.to_matrix();
-            let mut push = |indices: [usize; 3]| {
-                let point = |index: usize| matrix.transform_point3(Vec3::from(vertices[index])).to_array();
+            for [a, b, c] in mesh_local_triangles(mesh, label)? {
                 out.push(SensorTriangle {
-                    a: point(indices[0]),
-                    b: point(indices[1]),
-                    c: point(indices[2]),
+                    a: matrix.transform_point3(a).to_array(),
+                    b: matrix.transform_point3(b).to_array(),
+                    c: matrix.transform_point3(c).to_array(),
                     instance_id: instance_id.0,
                 });
-            };
-            match mesh.indices() {
-                Some(bevy::mesh::Indices::U16(indices)) => {
-                    for tri in indices.chunks_exact(3) {
-                        push([tri[0] as usize, tri[1] as usize, tri[2] as usize]);
-                    }
-                }
-                Some(bevy::mesh::Indices::U32(indices)) => {
-                    for tri in indices.chunks_exact(3) {
-                        push([tri[0] as usize, tri[1] as usize, tri[2] as usize]);
-                    }
-                }
-                None => {
-                    for first in (0..vertices.len()).step_by(3) {
-                        if first + 2 < vertices.len() {
-                            push([first, first + 1, first + 2]);
-                        }
-                    }
-                }
             }
         }
-        out
+        Ok(out)
+    }
+
+    /// The model-local triangles of one mesh asset, for the caller's
+    /// per-mesh BLAS cache (built once per asset, not per tick).
+    pub fn mesh_asset_triangles(&self, mesh: &Handle<Mesh>, label: &str) -> Result<Vec<[Vec3; 3]>> {
+        let meshes = self.app.world().resource::<Assets<Mesh>>();
+        let data = meshes.get(mesh).ok_or_else(|| anyhow::anyhow!(
+            "mesh {label} has no main-world mesh data for the lidar/radar scene"
+        ))?;
+        mesh_local_triangles(data, label)
+    }
+
+    /// Every visible actor mesh as the ray sensors must see it this tick:
+    /// exactly the geometry the RGB cameras draw. An actor with a catalog
+    /// model contributes each visible mesh node of that model (wheels and
+    /// other articulated nodes at their current world pose; skinned meshes
+    /// posed on the CPU the way the skinning shader poses them). An actor
+    /// without a model contributes the cuboid the cameras draw for it.
+    ///
+    /// Order is deterministic: actors by id, then model nodes in hierarchy
+    /// order. Reads propagated `GlobalTransform`s, so call it after the
+    /// tick's readiness/capture update (the same world the cameras drew).
+    pub fn actor_sensor_meshes(&mut self) -> Result<Vec<ActorSensorMesh>> {
+        let mut actor_ids: Vec<&String> = self.actors.keys().collect();
+        actor_ids.sort();
+        let world = self.app.world();
+        let meshes = world.resource::<Assets<Mesh>>();
+        let bindposes = world.resource::<Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>>();
+        let mut out = Vec::new();
+        for actor_id in actor_ids {
+            let (cuboid, instance_id) = self.actors[actor_id];
+            let mut entities = Vec::new();
+            match self.actor_models.get(actor_id) {
+                Some(&(root, _, _)) => {
+                    let mut stack = vec![root];
+                    while let Some(entity) = stack.pop() {
+                        if let Some(children) = world.get::<Children>(entity) {
+                            // Reverse so the depth-first walk visits children
+                            // in their declared order.
+                            stack.extend(children.iter().rev());
+                        }
+                        if world.get::<IdClone>(entity).is_none() && world.get::<Mesh3d>(entity).is_some() {
+                            entities.push(entity);
+                        }
+                    }
+                    if entities.is_empty() {
+                        bail!("actor {actor_id} has a catalog model with no mesh nodes for the lidar/radar scene");
+                    }
+                }
+                None => entities.push(cuboid),
+            }
+            let mut contributed = 0usize;
+            for entity in entities {
+                let visible = world
+                    .get::<InheritedVisibility>(entity)
+                    .ok_or_else(|| anyhow::anyhow!("actor {actor_id} mesh {entity:?} has no visibility state"))?
+                    .get();
+                if !visible {
+                    continue;
+                }
+                let label = world
+                    .get::<Name>(entity)
+                    .map(|name| format!("{actor_id}/{}", name.as_str()))
+                    .unwrap_or_else(|| format!("{actor_id}/{entity:?}"));
+                let handle = world.get::<Mesh3d>(entity).expect("filtered on Mesh3d").0.clone();
+                let world_matrix = world
+                    .get::<GlobalTransform>(entity)
+                    .ok_or_else(|| anyhow::anyhow!("actor mesh {label} has no world transform"))?
+                    .to_matrix();
+                let geometry = match world.get::<SkinnedMesh>(entity) {
+                    None => ActorSensorGeometry::Rigid { mesh: handle, world: world_matrix },
+                    Some(skin) => {
+                        let mesh = meshes.get(&handle).ok_or_else(|| anyhow::anyhow!(
+                            "skinned actor mesh {label} has no main-world mesh data for the lidar/radar scene"
+                        ))?;
+                        let inverse = bindposes.get(&skin.inverse_bindposes).ok_or_else(|| anyhow::anyhow!(
+                            "skinned actor mesh {label} has no inverse bindposes loaded"
+                        ))?;
+                        if inverse.len() < skin.joints.len() {
+                            bail!("skinned actor mesh {label} has {} joints but {} inverse bindposes", skin.joints.len(), inverse.len());
+                        }
+                        let mut joints = Vec::with_capacity(skin.joints.len());
+                        for (joint, inverse_bindpose) in skin.joints.iter().zip(inverse.iter()) {
+                            let global = world.get::<GlobalTransform>(*joint).ok_or_else(|| anyhow::anyhow!(
+                                "skinned actor mesh {label} joint {joint:?} has no world transform"
+                            ))?;
+                            // Same product the skin extraction uploads.
+                            joints.push(Mat4::from(global.affine()) * *inverse_bindpose);
+                        }
+                        ActorSensorGeometry::Skinned {
+                            mesh: handle.id(),
+                            triangles: skinned_world_triangles(mesh, &joints, &label)?,
+                        }
+                    }
+                };
+                out.push(ActorSensorMesh { actor_id: actor_id.clone(), label, instance_id, geometry });
+                contributed += 1;
+            }
+            if contributed == 0 {
+                bail!("actor {actor_id} has no visible geometry for the lidar/radar scene");
+            }
+        }
+        Ok(out)
     }
 
     /// Drop every registered camera group (respawn-on-view-change primitive:
@@ -4033,6 +4592,11 @@ impl SceneApp {
             self.app.update();
             updates += 1;
             let world = self.app.world_mut();
+            if let Some(errors) = world.get_resource::<crate::veg::VegErrors>() {
+                if !errors.0.is_empty() {
+                    bail!("vegetation failed to load: {}", errors.0.join("; "));
+                }
+            }
             let pending_loads = {
                 let mut q = world.query_filtered::<&TileLoad, Without<SceneSpawned>>();
                 q.iter(world).count()
@@ -4054,7 +4618,18 @@ impl SceneApp {
                 >();
                 q.iter(world).count()
             };
-            if pending_loads == 0 && pending_vegetation == 0 && pending_instances == 0 {
+            let pending_lods = match &self.geometry_lods {
+                Some(lods) => {
+                    use bevy::asset::RecursiveDependencyLoadState as State;
+                    match world.resource::<AssetServer>().recursive_dependency_load_state(&lods.lod_gltf) {
+                        State::Loaded => 0,
+                        State::Failed(error) => bail!("geometry LOD derivative {} failed to load: {error}", lods.lod_path),
+                        _ => 1,
+                    }
+                }
+                None => 0,
+            };
+            if pending_loads == 0 && pending_vegetation == 0 && pending_instances == 0 && pending_lods == 0 {
                 // Collect instance entities under the query's mutable borrow,
                 // then re-check readiness through plain world access.
                 let roots: Vec<Entity> = {
@@ -4231,12 +4806,13 @@ impl SceneApp {
                 .collect()
         };
         let mut legend = Vec::with_capacity(prepared.len());
+        let mut id_clone_of = HashMap::with_capacity(prepared.len());
         for (id, name, entity, mesh_h, mat, parent, transform, skin) in prepared {
             world.entity_mut(entity).insert(InstanceId(id));
             let mut cmd = world.spawn((
                 IdClone,
                 Mesh3d(mesh_h),
-                MeshMaterial3d(mat),
+                MeshMaterial3d(mat.clone()),
                 RenderLayers::layer(1),
                 transform,
             ));
@@ -4246,14 +4822,72 @@ impl SceneApp {
             if let Some(skin) = skin {
                 cmd.insert(skin);
             }
+            id_clone_of.insert(entity, (cmd.id(), mat));
             legend.push(LegendEntry { id, name });
         }
+        // Dynamic actors take ids above the static legend: before this, the
+        // first actors reused ids 1..N of static meshes, so the ID/semantic
+        // passes, lidar/radar classes and radar velocities confused an actor
+        // with a static mesh.
+        let static_max = legend.iter().map(|entry| entry.id).max().unwrap_or(0); // fallback-ok: an empty legend has no ids to stay above
         world.resource_mut::<Legend>().0 = legend;
+        if !self.actors.is_empty() {
+            bail!("actors were spawned before the static instance-ID legend was frozen");
+        }
+        self.next_instance_id = static_max;
+        self.id_clone_of = id_clone_of;
+        if let Some(lods) = &self.geometry_lods {
+            let (masters, levels) = crate::geometry_lod::spawn_levels(self.app.world_mut(), lods, &self.id_clone_of)?;
+            eprintln!("geometry-lod: {masters} master primitives, {levels} level entities");
+        }
 
-        // One update so the newly spawned ID clones are extracted before the
-        // first real render request.
+        // One update so the newly spawned ID clones (and LOD levels, whose
+        // ranges need propagated transforms) are extracted before the first
+        // real render request.
         self.app.update();
+        self.refresh_lod_ranges();
         Ok(())
+    }
+
+    /// Load the map's geometry LOD derivative (`manifest.json` beside its
+    /// `lod.gltf`) for the master glTF `master`. Call after
+    /// [`Self::load_tiles`] and before readiness; the levels are spawned
+    /// when the scene is finalized.
+    pub fn load_geometry_lods(&mut self, manifest: &std::path::Path, master: &str) -> Result<()> {
+        let parsed = crate::geometry_lod::Manifest::load(manifest)?;
+        let dir = manifest.parent().ok_or_else(|| anyhow::anyhow!("geometry LOD manifest has no directory"))?;
+        let lod_path = crate::platform::asset_path(&dir.join("lod.gltf")).map_err(|e| anyhow::anyhow!("lod.gltf {e}"))?;
+        let master_path = crate::platform::asset_path(std::path::Path::new(master)).map_err(|e| anyhow::anyhow!("master {e}"))?;
+        let lod_gltf = self.app.world().resource::<AssetServer>().load(lod_path.clone());
+        self.geometry_lods = Some(crate::geometry_lod::GeometryLods {
+            manifest: parsed,
+            lod_path,
+            master_path,
+            lod_gltf,
+            pixel_error_px: crate::geometry_lod::DEFAULT_PIXEL_ERROR_PX,
+            applied_f_px: None,
+        });
+        Ok(())
+    }
+
+    /// Recompute LOD ranges for the most demanding RGB camera of the rig
+    /// (largest focal length in pixels). No-op without LODs or cameras, or
+    /// when the rig's focal length did not change.
+    fn refresh_lod_ranges(&mut self) {
+        let Some(lods) = &self.geometry_lods else { return };
+        let f_px = self
+            .groups
+            .iter()
+            .map(|g| crate::geometry_lod::focal_px(g.spec.fov_y_deg.to_radians(), g.spec.height))
+            .fold(0.0f32, f32::max);
+        if f_px <= 0.0 || lods.applied_f_px == Some(f_px) {
+            return;
+        }
+        let pixel_error = lods.pixel_error_px;
+        crate::geometry_lod::apply_ranges(self.app.world_mut(), f_px, pixel_error);
+        if let Some(lods) = &mut self.geometry_lods {
+            lods.applied_f_px = Some(f_px);
+        }
     }
 
     /// Set the pose of a registered camera group (applies to RGB + ID cams).
@@ -4316,6 +4950,7 @@ impl SceneApp {
         world.flush();
         self.rig_revision += 1;
         self.sync_host_layers();
+        self.refresh_lod_ranges();
         true
     }
 
@@ -5711,6 +6346,100 @@ mod tests {
         // Bevy's async asset tasks can still hold the test-only wgpu device
         // when the process tears down; the production service intentionally
         // lives for the process lifetime.
+        std::mem::forget(app);
+    }
+
+    /// The ray sensors see the meshes the camera draws: every visible GLB
+    /// node (never the hidden cuboid), CPU-posed skins that follow the
+    /// animation clock, and an instance-ID pass drawn from the model.
+    /// Runs on a GPU, or on lavapipe with
+    /// `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1`.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn actor_sensor_meshes_are_the_drawn_catalog_meshes() {
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let pedestrian = repo.join("catalog/pedestrians-carla/models/pedestrian_0015.glb");
+        let mut app = SceneApp::new(&Lighting::default()).unwrap();
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+        app.add_camera(
+            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera("cam", 128, 96) },
+            Profile::Sensor,
+        );
+        app.wait_until_ready().unwrap();
+
+        let body = [0.0, 0.8, -20.0];
+        app.upsert_actor("car", "car", body, Quat::IDENTITY, [4.5, 1.6, 1.8], [0.5, 0.5, 0.5], false);
+        let legend_max = app.legend().iter().map(|entry| entry.id).max().unwrap();
+        assert!(app.actor_instance_id("car").unwrap() > legend_max, "actor ids never reuse static legend ids");
+        // Before a model is attached the cuboid is what the camera draws.
+        let cuboid = app.actor_sensor_meshes().unwrap();
+        assert_eq!(cuboid.len(), 1);
+        let ActorSensorGeometry::Rigid { mesh, .. } = &cuboid[0].geometry else { panic!("cuboid is rigid") };
+        assert_eq!(app.mesh_asset_triangles(mesh, "cuboid").unwrap().len(), 12);
+
+        app.attach_actor_asset("car", &vehicle, 1.0, None, None, 0.0).unwrap();
+        app.set_actor_asset_pose("car", [0.0, 0.0, -20.0], Quat::IDENTITY).unwrap();
+        app.warmup(2);
+        let meshes = app.actor_sensor_meshes().unwrap();
+        assert_eq!(meshes.len(), app.actor_model_mesh_count("car"), "one sensor mesh per drawn model node");
+        let mut triangles = 0;
+        for mesh in &meshes {
+            assert_eq!(mesh.actor_id, "car");
+            let ActorSensorGeometry::Rigid { mesh: handle, world } = &mesh.geometry else { panic!("vehicle meshes are rigid") };
+            triangles += app.mesh_asset_triangles(handle, &mesh.label).unwrap().len();
+            // Every node sits on the actor (world translation within the body).
+            let t = world.w_axis.truncate();
+            assert!((t - Vec3::new(0.0, 0.0, -20.0)).length() < 4.0, "{} at {t}", mesh.label);
+        }
+        assert!(triangles > 1_000, "the sedan GLB, not a 12-triangle box ({triangles})");
+
+        // The ID pass draws the model: the silhouette differs from the box
+        // (the box also fills the space above the hood and under the body).
+        app.set_pose("cam", &[6.0, 1.2, -20.0], &[0.0, 0.9, -20.0]).unwrap();
+        let frame = app.render_once(1).unwrap();
+        let id = &frame.passes["cam:id"].bytes;
+        let actor_id = app.actor_instance_id("car").unwrap().to_le_bytes();
+        let hits = id.chunks_exact(4).filter(|px| px[..3] == actor_id[..3]).count();
+        assert!(hits > 200, "the actor is visible in the ID pass ({hits} px)");
+        let box_px = {
+            let cols = 128usize;
+            // Projected cuboid footprint is a solid rectangle; the car's is
+            // not: some pixels inside the actor's ID bounding box are not the actor.
+            let rows: Vec<usize> = id.chunks_exact(4).enumerate().filter(|(_, px)| px[..3] == actor_id[..3]).map(|(i, _)| i).collect();
+            let (x0, x1) = rows.iter().fold((usize::MAX, 0), |(a, b), i| (a.min(i % cols), b.max(i % cols)));
+            let (y0, y1) = rows.iter().fold((usize::MAX, 0), |(a, b), i| (a.min(i / cols), b.max(i / cols)));
+            (x1 - x0 + 1) * (y1 - y0 + 1)
+        };
+        assert!(hits < box_px * 95 / 100, "ID silhouette is the car, not a filled box ({hits} of {box_px})");
+
+        // A walking pedestrian's skin is posed on the CPU and follows the clip.
+        app.upsert_actor("ped", "pedestrian", [3.0, 0.9, -20.0], Quat::IDENTITY, [0.5, 1.8, 0.5], [0.5, 0.5, 0.5], false);
+        app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("walk"), 0.0).unwrap();
+        app.set_actor_asset_pose("ped", [3.0, 0.0, -20.0], Quat::IDENTITY).unwrap();
+        app.warmup(2);
+        let posed = |app: &mut SceneApp| -> Vec<[Vec3; 3]> {
+            app.actor_sensor_meshes().unwrap().into_iter()
+                .filter(|mesh| mesh.actor_id == "ped")
+                .flat_map(|mesh| match mesh.geometry {
+                    ActorSensorGeometry::Skinned { triangles, .. } => triangles,
+                    ActorSensorGeometry::Rigid { .. } => Vec::new(),
+                })
+                .collect()
+        };
+        let at_zero = posed(&mut app);
+        assert!(!at_zero.is_empty(), "the walker is skinned geometry");
+        app.set_actor_animation_time("ped", 0.4).unwrap();
+        app.warmup(2);
+        let at_later = posed(&mut app);
+        assert_eq!(at_zero.len(), at_later.len());
+        assert!(at_zero.iter().zip(&at_later).any(|(a, b)| (a[0] - b[0]).length() > 0.01), "the skin follows the walk clip");
+
+        // Rebinding the model (idle <-> walk GLB) keeps one ID clone set.
+        app.detach_actor_asset("ped").unwrap();
+        assert!(app.actor_sensor_meshes().is_err(), "an actor whose model was detached has no visible geometry");
+        app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("idle"), 0.0).unwrap();
+        assert!(!posed(&mut app).is_empty());
         std::mem::forget(app);
     }
 

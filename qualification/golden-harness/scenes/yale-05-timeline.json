@@ -23,6 +23,11 @@
     "360",
     "--warmup",
     "20",
+    "--vehicle-models",
+    "{repo}/catalog/vehicles-carla",
+    "--pedestrian-models",
+    "{repo}/catalog/pedestrians-carla",
+    "--allow-pedestrian-substitution",
     "--out-dir",
     "{out}"
   ],

@@ -57,7 +57,7 @@ pub fn baseline_backends() -> Backends {
 /// Linux path is exactly what was qualified before this restriction.
 pub fn wgpu_settings() -> WgpuSettings {
     let mut settings = WgpuSettings::default();
-    settings.backends = Some(Backends::from_env().unwrap_or_else(baseline_backends));
+    settings.backends = Some(Backends::from_env().unwrap_or_else(baseline_backends)); // fallback-ok: WGPU_BACKEND diagnostic override; the adapter is logged and software adapters are refused
     settings
 }
 

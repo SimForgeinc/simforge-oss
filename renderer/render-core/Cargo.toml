@@ -49,9 +49,11 @@ walkdir = "2"
 
 sha2 = "0.10"
 
-# `gpu-interop` only (Linux): raw Vulkan handles for exportable output memory
-# and semaphores (see src/gpu_interop.rs). `ash` must track wgpu-hal's 0.38.
-wgpu = { version = "29.0.4", default-features = false, features = ["vulkan"], optional = true }
+# Raw wgpu types (query sets for `gpu_diagnostics`); Bevy enables the
+# backends. `gpu-interop` (Linux) adds the Vulkan HAL for raw handles to
+# exportable output memory and semaphores (see src/gpu_interop.rs). `ash`
+# must track wgpu-hal's 0.38.
+wgpu = { version = "29.0.4", default-features = false }
 ash = { version = "0.38", default-features = false, optional = true }
 libc = { version = "0.2", optional = true }
 
@@ -63,4 +65,4 @@ pcss = ["bevy/experimental_pbr_pcss"]
 solari = ["bevy/bevy_solari"]
 # Exportable Vulkan/CUDA output path (`render_core::gpu_interop`). Linux
 # only; enabling it for another target is a compile error (src/lib.rs).
-gpu-interop = ["bevy/raw_vulkan_init", "dep:wgpu", "dep:ash", "dep:libc"]
+gpu-interop = ["bevy/raw_vulkan_init", "wgpu/vulkan", "dep:ash", "dep:libc"]

@@ -1,4 +1,64 @@
+import { DEFAULT_ACTOR_DIMS } from '../schema/input.js';
 import type { ResolvedAmbientTrafficProfile } from './profile.js';
+import { sumoIdHash } from './sumo-runtime.js';
+
+/** The ambient profile's vehicle classes, in the order the mix is drawn (the native ambient generator's order). */
+export const SUMO_VEHICLE_CLASSES = ['car', 'van', 'truck', 'bus', 'motorcycle'] as const;
+export type SumoVehicleClass = typeof SUMO_VEHICLE_CLASSES[number];
+
+/** One class's rendered body, shared by SUMO car following and every renderer. */
+export interface SumoVehicleBody {
+  readonly kind: SumoVehicleClass;
+  readonly catalogId: string;
+  readonly dims: { readonly l: number; readonly w: number; readonly h: number };
+}
+
+/**
+ * The body of each SUMO vehicle class. The catalog ids are the documented kind
+ * defaults (`defaultCatalogIdForActorKind`, the native ambient generator's
+ * `ambient_catalog_id`); the non-car bodies are the engine's kind dimensions
+ * (`DEFAULT_ACTOR_DIMS`). The car keeps the body SUMO traffic has always used.
+ */
+export const SUMO_VEHICLE_BODIES: Readonly<Record<SumoVehicleClass, SumoVehicleBody>> = Object.freeze({
+  car: Object.freeze({ kind: 'car', catalogId: 'vehicle.sedan', dims: Object.freeze({ l: 4.55, w: 1.82, h: 1.48 }) }),
+  van: Object.freeze({ kind: 'van', catalogId: 'vehicle.van', dims: Object.freeze({ ...DEFAULT_ACTOR_DIMS.van }) }),
+  truck: Object.freeze({ kind: 'truck', catalogId: 'vehicle.box_truck', dims: Object.freeze({ ...DEFAULT_ACTOR_DIMS.truck }) }),
+  bus: Object.freeze({ kind: 'bus', catalogId: 'vehicle.bus', dims: Object.freeze({ ...DEFAULT_ACTOR_DIMS.bus }) }),
+  motorcycle: Object.freeze({ kind: 'motorcycle', catalogId: 'vehicle.motorcycle', dims: Object.freeze({ ...DEFAULT_ACTOR_DIMS.motorcycle }) }),
+}) as Readonly<Record<SumoVehicleClass, SumoVehicleBody>>;
+
+/** SUMO vType id of a class: the car keeps the historical `ambient`, so an all-car demand is byte-identical. */
+export function sumoVehicleTypeId(vehicleClass: SumoVehicleClass): string {
+  return vehicleClass === 'car' ? 'ambient' : `ambient-${vehicleClass}`;
+}
+
+/**
+ * The class of one route slot, drawn from the profile's `vehicleMix`: a
+ * deterministic function of the profile seed and the slot's SUMO id (FNV-1a,
+ * no platform RNG), so a slot keeps its class whatever else the demand holds.
+ * An all-zero mix names no vehicle and is refused.
+ */
+export function sumoVehicleClassFor(
+  seed: string | number,
+  slotId: string,
+  mix: Readonly<Record<SumoVehicleClass, number>>,
+): SumoVehicleClass {
+  const weights = SUMO_VEHICLE_CLASSES.map((vehicleClass) => mix[vehicleClass]);
+  if (weights.some((weight) => !Number.isFinite(weight) || weight < 0)) {
+    throw new Error(`sumo_vehicle_mix_invalid: ${JSON.stringify(mix)}`);
+  }
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  if (!(total > 0)) throw new Error('sumo_vehicle_mix_empty: the ambient vehicle mix gives every class zero weight');
+  let draw = mix32(sumoNumericSeed(`${String(seed)}:vtype:${slotId}`)) / 2 ** 32 * total;
+  for (let index = 0; index < SUMO_VEHICLE_CLASSES.length; index += 1) {
+    draw -= weights[index]!;
+    if (draw < 0) return SUMO_VEHICLE_CLASSES[index]!;
+  }
+  // Rounding can leave `draw` at 0 after the last positive weight: that class.
+  let last = SUMO_VEHICLE_CLASSES.length - 1;
+  while (weights[last] === 0) last -= 1;
+  return SUMO_VEHICLE_CLASSES[last]!;
+}
 
 /** Browser/CLI-neutral transform published by a generated SUMO map sidecar. */
 export interface SumoNetworkWorldTransform {
@@ -117,6 +177,13 @@ export interface SumoRouteDocumentOptions {
    */
   readonly vehicleDimensions?: { readonly lengthM: number; readonly widthM: number; readonly heightM: number };
   /**
+   * Draw each route slot's class from the profile's `vehicleMix` and declare
+   * one vType per class drawn, each with its class body
+   * (`SUMO_VEHICLE_BODIES`). Omitted, every vehicle shares the single
+   * `ambient` vType (the editor preview's legacy demand).
+   */
+  readonly vehicleMix?: boolean;
+  /**
    * Route the bridge assigns to externally owned proxies. A proxy SUMO could
    * not place stays *pending* on this route, and SUMO may later insert it at
    * the route's start; the worker therefore points it at an edge no ambient
@@ -125,11 +192,37 @@ export interface SumoRouteDocumentOptions {
   readonly proxyRouteEdges?: readonly string[];
 }
 
+/** One vehicle or flow of a route document. */
+export interface SumoRouteSlot {
+  readonly id: string;
+  readonly element: 'vehicle' | 'flow';
+  readonly vehicleClass: SumoVehicleClass;
+}
+
+export interface SumoRouteDemand {
+  readonly document: string;
+  readonly slots: readonly SumoRouteSlot[];
+  /**
+   * Every SUMO vehicle id the document can insert (flow members are
+   * `<flowId>.<n>`), by the bridge's id hash, with its class. Present with
+   * `vehicleMix`.
+   */
+  readonly classesByIdHash?: ReadonlyMap<number, SumoVehicleClass>;
+}
+
 export function buildSumoRouteDocument(
   candidates: readonly (readonly string[])[],
   profile: ResolvedAmbientTrafficProfile,
   options: SumoRouteDocumentOptions = {},
 ): string {
+  return buildSumoRouteDemand(candidates, profile, options).document;
+}
+
+export function buildSumoRouteDemand(
+  candidates: readonly (readonly string[])[],
+  profile: ResolvedAmbientTrafficProfile,
+  options: SumoRouteDocumentOptions = {},
+): SumoRouteDemand {
   if (candidates.length === 0) throw new Error('SUMO map has no usable traffic routes');
   const shuffled = deterministicShuffle(candidates, sumoNumericSeed(profile.seed));
   const count = Math.max(0, Math.min(profile.maxActors, shuffled.length));
@@ -143,23 +236,57 @@ export function buildSumoRouteDocument(
   const replenishmentPeriodSeconds = options.replenishmentPeriodSeconds;
   const replenishmentStride = Math.max(1, Math.trunc(options.replenishmentStride ?? 4));
   const flowEndSeconds = Math.max(departureWindowSeconds, options.flowEndSeconds ?? 3600);
+  const slots: SumoRouteSlot[] = [];
   const vehicles = shuffled.slice(0, count).map((edges, index) => {
     const depart = count <= 1 ? 0 : index / (count - 1) * departureWindowSeconds;
     const id = sumoVehicleId(profile.seed, index);
+    const vehicleClass = options.vehicleMix ? sumoVehicleClassFor(profile.seed, id, profile.vehicleMix) : 'car';
+    const type = sumoVehicleTypeId(vehicleClass);
     const route = edges.map(xml).join(' ');
-    return replenishmentPeriodSeconds !== undefined && replenishmentPeriodSeconds > 0 && index % replenishmentStride === 0
-      ? `  <flow id="${id}" type="ambient" begin="${depart.toFixed(2)}" end="${flowEndSeconds}" period="${replenishmentPeriodSeconds}" departLane="best" departPos="random_free" departSpeed="max"><route edges="${route}"/></flow>`
-      : `  <vehicle id="${id}" type="ambient" depart="${departureWindowSeconds > 0 ? depart.toFixed(2) : '0'}" departLane="best" departPos="random_free" departSpeed="max"><route edges="${route}"/></vehicle>`;
+    const flow = replenishmentPeriodSeconds !== undefined && replenishmentPeriodSeconds > 0 && index % replenishmentStride === 0;
+    slots.push({ id, element: flow ? 'flow' : 'vehicle', vehicleClass });
+    return flow
+      ? `  <flow id="${id}" type="${type}" begin="${depart.toFixed(2)}" end="${flowEndSeconds}" period="${replenishmentPeriodSeconds}" departLane="best" departPos="random_free" departSpeed="max"><route edges="${route}"/></flow>`
+      : `  <vehicle id="${id}" type="${type}" depart="${departureWindowSeconds > 0 ? depart.toFixed(2) : '0'}" departLane="best" departPos="random_free" departSpeed="max"><route edges="${route}"/></vehicle>`;
   }).join('\n');
-  const body = options.vehicleDimensions
-    ? ` length="${options.vehicleDimensions.lengthM}" width="${options.vehicleDimensions.widthM}" height="${options.vehicleDimensions.heightM}"`
-    : '';
-  return `<?xml version="1.0" encoding="UTF-8"?>
+  const vTypeLine = (vehicleClass: SumoVehicleClass): string => {
+    const body = options.vehicleMix
+      ? { lengthM: SUMO_VEHICLE_BODIES[vehicleClass].dims.l, widthM: SUMO_VEHICLE_BODIES[vehicleClass].dims.w, heightM: SUMO_VEHICLE_BODIES[vehicleClass].dims.h }
+      : options.vehicleDimensions;
+    const dimensions = body ? ` length="${body.lengthM}" width="${body.widthM}" height="${body.heightM}"` : '';
+    return `  <vType id="${sumoVehicleTypeId(vehicleClass)}" carFollowModel="EIDM" laneChangeModel="SL2015" accel="${accel}" decel="4.5" emergencyDecel="9" sigma="${sigma}" tau="${tau}" speedFactor="1" speedDev="${speedDev}"${dimensions}/>`;
+  };
+  // `ambient` is always declared (the proxies' route needs none, but an
+  // all-car document stays byte-identical); other classes only when drawn.
+  const used = new Set(slots.map((slot) => slot.vehicleClass));
+  const vTypes = SUMO_VEHICLE_CLASSES.filter((vehicleClass) => vehicleClass === 'car' || used.has(vehicleClass)).map(vTypeLine).join('\n');
+  const document = `<?xml version="1.0" encoding="UTF-8"?>
 <routes>
-  <vType id="ambient" carFollowModel="EIDM" laneChangeModel="SL2015" accel="${accel}" decel="4.5" emergencyDecel="9" sigma="${sigma}" tau="${tau}" speedFactor="1" speedDev="${speedDev}"${body}/>
+${vTypes}
   <route id="proxy-route" edges="${proxyEdges}"/>
 ${vehicles}
 </routes>`;
+  if (!options.vehicleMix) return { document, slots };
+  const classesByIdHash = new Map<number, SumoVehicleClass>();
+  const owners = new Map<number, string>();
+  const bind = (vehicleId: string, vehicleClass: SumoVehicleClass): void => {
+    const hash = sumoIdHash(vehicleId);
+    const owner = owners.get(hash);
+    if (owner !== undefined && owner !== vehicleId) throw new Error(`sumo_id_hash_collision: ${owner} and ${vehicleId}`);
+    owners.set(hash, vehicleId);
+    classesByIdHash.set(hash, vehicleClass);
+  };
+  slots.forEach((slot, index) => {
+    if (slot.element === 'vehicle') {
+      bind(slot.id, slot.vehicleClass);
+      return;
+    }
+    // SUMO names a flow's vehicles `<flowId>.<n>` from 0, one per period until `end`.
+    const begin = count <= 1 ? 0 : Number((index / (count - 1) * departureWindowSeconds).toFixed(2));
+    const inserted = Math.ceil((flowEndSeconds - begin) / replenishmentPeriodSeconds!) + 1;
+    for (let member = 0; member < inserted; member += 1) bind(`${slot.id}.${member}`, slot.vehicleClass);
+  });
+  return { document, slots, classesByIdHash };
 }
 
 export function sumoNumericSeed(seed: string | number): number {
@@ -201,6 +328,21 @@ export function validateSumoRuntimeManifest(manifest: SumoRuntimeManifest): void
   if (!manifest.licenseNotice || !manifest.sourceOffer || !(manifest.wasmBytes > 0)) {
     throw new Error('SUMO runtime compliance metadata is incomplete');
   }
+}
+
+/**
+ * MurmurHash3's 32-bit finalizer: FNV-1a leaves its high bits nearly equal for
+ * ids that differ only in a trailing digit, and the class draw reads the high
+ * bits. Integer-only (`Math.imul`), identical on every engine.
+ */
+function mix32(value: number): number {
+  let hash = value >>> 0;
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x85ebca6b);
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 0xc2b2ae35);
+  hash ^= hash >>> 16;
+  return hash >>> 0;
 }
 
 function deterministicShuffle<T>(items: readonly T[], seed: number): T[] {

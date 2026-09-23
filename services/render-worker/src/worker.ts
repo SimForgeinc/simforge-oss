@@ -17,6 +17,7 @@ import {
   loadRenderEngine,
   type CompletedArtifact,
   type JobLeasedResponse,
+  type RenderArtifactManifest,
   type RenderEngineAdapter,
   type RenderProgressRecord,
   WORKER_CONTROL_FEATURES_LABEL,
@@ -82,12 +83,80 @@ export function boundedProgressRecord(record: RenderProgressRecord): RenderProgr
   return record;
 }
 
+/**
+ * A completion the control plane refused because the render's evidence
+ * records a degradation (docs/engineering/no-silent-fallbacks.md). Final:
+ * the same evidence is refused on every retry and by every worker.
+ */
+export interface CompletionRefusal {
+  /** The control plane's evidence code, e.g. `carla_actors_dropped`. */
+  readonly code: string;
+  /** The job failure code, e.g. `render.carla_actors_dropped`. */
+  readonly failureCode: string;
+  /** What is degraded, naming the actor, field or value. */
+  readonly message: string;
+  /** The control plane already failed the job, so the worker must not report it again. */
+  readonly jobFailed: boolean;
+}
+
+export class CompletionRefusedError extends Error {
+  constructor(readonly refusal: CompletionRefusal) {
+    super(`control plane refused the render (${refusal.code}): ${refusal.message}`);
+    this.name = 'CompletionRefusedError';
+  }
+}
+
+type RefusalBody = {
+  error?: unknown;
+  details?: { retryable?: unknown; jobFailed?: unknown; failureCode?: unknown; message?: unknown };
+};
+
+const FAILURE_CODE = /^[a-z][a-z0-9_.-]{0,99}$/;
+const EVIDENCE_CODE = /^(?:native|carla|render)_[a-z0-9_]+$/;
+
+/**
+ * Recognises a final evidence refusal in a completion error: a 409 whose
+ * body names an evidence code and says it is not retryable. Every other
+ * completion error (a lost lease, storage verification) keeps the bounded
+ * retry. Both the OSS HTTP transport and the SimCloud adapter put the
+ * response body after `returned 409: `.
+ */
+export function completionRefusal(error: unknown): CompletionRefusal | null {
+  let current: unknown = error;
+  for (let depth = 0; current instanceof Error && depth < 4; depth += 1, current = current.cause) {
+    const match = /returned 409: (\{[\s\S]*\})\s*$/.exec(current.message);
+    if (!match) continue;
+    let body: RefusalBody | null;
+    try {
+      body = JSON.parse(match[1]!) as RefusalBody | null;
+    } catch {
+      // A truncated or non-JSON body is not a refusal this worker can read.
+      body = null;
+    }
+    const details = body?.details;
+    if (!body || typeof body.error !== 'string' || !EVIDENCE_CODE.test(body.error) || !details || details.retryable !== false) continue;
+    const failureCode = typeof details.failureCode === 'string' && FAILURE_CODE.test(details.failureCode)
+      ? details.failureCode
+      : `render.${body.error}`.slice(0, CONTROL_FAILURE_CODE_MAX);
+    return {
+      code: body.error,
+      failureCode,
+      message: typeof details.message === 'string' && details.message.trim() ? details.message : body.error,
+      jobFailed: details.jobFailed === true,
+    };
+  }
+  return null;
+}
+
 function uncappedFailureOf(error: unknown): { code: string; message: string; retryable: boolean } {
+  if (error instanceof CompletionRefusedError) {
+    return { code: error.refusal.failureCode, message: boundedFailureMessage(error.refusal.message), retryable: false };
+  }
   const message = boundedFailureMessage(error instanceof Error ? error.message : String(error));
   // Engine errors that carry their own machine code and retry verdict (e.g.
   // native_gpu_memory_insufficient) report them as-is.
   const coded = error as { code?: unknown; retryable?: unknown };
-  if (error instanceof Error && typeof coded.code === 'string' && /^native_[a-z0-9_]+$/.test(coded.code) && typeof coded.retryable === 'boolean') {
+  if (error instanceof Error && typeof coded.code === 'string' && /^(?:native|carla|render)_[a-z0-9_]+$/.test(coded.code) && typeof coded.retryable === 'boolean') {
     return { code: `render.${coded.code}`, message, retryable: coded.retryable };
   }
   if (error instanceof RenderCanceledError) return { code: 'render.canceled', message, retryable: false };
@@ -140,13 +209,22 @@ export function validateClaimedInputs(job: Pick<JobLeasedResponse, 'intent' | 'i
  * failing the job or blocking the caller. Records are sent one at a time in
  * order; a queued `stage.progress` snapshot is replaced by a newer one of the
  * same stage instead of piling up behind a slow or failing control plane.
+ *
+ * Warnings are the exception: an engine warning is never silently lost. A
+ * warning that could not be delivered is kept (`undeliveredWarnings`) and the
+ * worker resends it before completing, failing the job if it still cannot.
  */
 export function createProgressForwarder(
   send: (record: RenderProgressRecord) => Promise<void>,
   stopped: () => boolean,
   log: (event: Record<string, unknown>) => void,
-): { forward: (record: RenderProgressRecord) => Promise<void>; flush: () => Promise<void> } {
+): {
+  forward: (record: RenderProgressRecord) => Promise<void>;
+  flush: () => Promise<void>;
+  undeliveredWarnings: () => RenderProgressRecord[];
+} {
   const pending: RenderProgressRecord[] = [];
+  const undelivered: RenderProgressRecord[] = [];
   let sender: Promise<void> | undefined;
   const drain = async (): Promise<void> => {
     while (pending.length > 0 && !stopped()) {
@@ -154,6 +232,7 @@ export function createProgressForwarder(
       try {
         await send(record);
       } catch (error) {
+        if (record.event === 'warning') undelivered.push(record);
         if (stopped()) return;
         log({ event: 'progress.dropped', progressEvent: record.event, error: error instanceof Error ? error.message : String(error) });
       }
@@ -174,7 +253,35 @@ export function createProgressForwarder(
     async flush() {
       while (sender) await sender;
     },
+    undeliveredWarnings() {
+      return [...undelivered, ...pending.filter((record) => record.event === 'warning')];
+    },
   };
+}
+
+/**
+ * The warnings an engine returned in its manifest, as progress records. The
+ * baseline `warning` progress event carries them to the control plane, which
+ * persists them per attempt and shows them with the job; no newer output
+ * field is needed. Render-affecting conditions are failures in the engines
+ * (docs/engineering/no-silent-fallbacks.md), so what arrives here is
+ * informational, but it is still never dropped.
+ */
+export function engineWarningRecords(
+  manifest: Pick<RenderArtifactManifest, 'warnings'>,
+  job: Pick<JobLeasedResponse, 'jobId' | 'attempt'>,
+  now = new Date(),
+): RenderProgressRecord[] {
+  return manifest.warnings.map((warning) => ({
+    schema: 'simforge.render-progress/v1',
+    event: 'warning',
+    code: warning.code,
+    message: warning.message,
+    jobId: job.jobId,
+    attempt: job.attempt,
+    sequence: 0,
+    timestamp: now.toISOString(),
+  }));
 }
 
 /**
@@ -290,6 +397,8 @@ async function executeClaim(
   const progress = createProgressForwarder(sendProgress, () => state.controller.signal.aborted, (event) => console.error(JSON.stringify({ ...event, jobId: job.jobId })));
   const forward = progress.forward;
   const flushProgress = progress.flush;
+  // Set once the control plane has itself failed the job over its evidence.
+  let failedByControlPlane = false;
   const stageStarted = (stage: 'preparing' | 'uploading' | 'finalizing') => forward({
     schema: 'simforge.render-progress/v1', event: 'stage.started', stage,
     jobId: job.jobId, attempt: job.attempt, sequence: 0, timestamp: new Date().toISOString(),
@@ -370,6 +479,7 @@ async function executeClaim(
       controlFeatures: new Set(job.controlFeatures ?? []),
     }));
     if (manifest.intentSha256 !== job.intentSha256) throw new Error('engine manifest intentSha256 does not match claimed intent');
+    for (const warning of engineWarningRecords(manifest, job)) await forward(warning);
 
     // Hash + reserve + upload artifacts through a small worker pool: large
     // sensor archives and videos otherwise serialize behind one another. The
@@ -433,17 +543,33 @@ async function executeClaim(
     if (completed.length === 0) throw new Error('engine produced no artifacts');
     await stageStarted('finalizing');
     await flushProgress();
+    // No engine warning is silently discarded: resend any the best-effort
+    // forwarder could not deliver, and fail the job if they still cannot be.
+    for (const warning of progress.undeliveredWarnings()) {
+      try {
+        await sendProgress(warning);
+      } catch (error) {
+        throw new Error(`engine warning ${(warning as { code: string }).code} could not be delivered to the control plane: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+      }
+    }
     state.heartbeatController.abort(new Error('render complete; stop heartbeats before fencing completion'));
     await heartbeat;
     if (state.heartbeatError) throw state.heartbeatError;
-    await withBoundedRetry('fenced completion', config.retries, state.controller.signal, () => transport.complete({
-      schema: RENDER_WORKER_CONTROL_V2_SCHEMA,
-      type: 'job.complete',
-      leaseId: job.lease.leaseId,
-      fenceToken: job.lease.fenceToken,
-      intentSha256: job.intentSha256,
-      manifest: { artifacts: completed },
-    }, state.controller.signal));
+    try {
+      await withBoundedRetry('fenced completion', config.retries, state.controller.signal, () => transport.complete({
+        schema: RENDER_WORKER_CONTROL_V2_SCHEMA,
+        type: 'job.complete',
+        leaseId: job.lease.leaseId,
+        fenceToken: job.lease.fenceToken,
+        intentSha256: job.intentSha256,
+        manifest: { artifacts: completed },
+      }, state.controller.signal), { retryable: (error) => completionRefusal(error) === null });
+    } catch (error) {
+      const refusal = completionRefusal(error);
+      if (!refusal) throw error;
+      failedByControlPlane = refusal.jobFailed;
+      throw new CompletionRefusedError(refusal);
+    }
     outcome = 'succeeded';
   } catch (error) {
     state.heartbeatController.abort(new Error('render failed; stop heartbeats before fenced failure'));
@@ -470,24 +596,30 @@ async function executeClaim(
         records: [canceled],
       }, reportingSignal)).catch(() => undefined);
     }
-    try {
-      await withBoundedRetry('fenced failure', config.retries, reportingSignal, () => transport.fail({
-        schema: RENDER_WORKER_CONTROL_V2_SCHEMA,
-        type: 'job.fail',
-        leaseId: job.lease.leaseId,
-        fenceToken: job.lease.fenceToken,
-        intentSha256: job.intentSha256,
-        failure,
-      }, reportingSignal));
-    } catch (reportError) {
-      // The lease expires and the control plane requeues the job; exiting the
-      // worker would only add a restart on top.
-      console.error(JSON.stringify({
-        event: 'job.fail_report_failed',
-        jobId: job.jobId,
-        failure,
-        error: reportError instanceof Error ? reportError.message : String(reportError),
-      }));
+    if (failedByControlPlane) {
+      // The control plane recorded this failure itself when it refused the
+      // evidence, and released the lease: a second report would only 409.
+      console.error(JSON.stringify({ event: 'job.failed_by_control_plane', jobId: job.jobId, failure }));
+    } else {
+      try {
+        await withBoundedRetry('fenced failure', config.retries, reportingSignal, () => transport.fail({
+          schema: RENDER_WORKER_CONTROL_V2_SCHEMA,
+          type: 'job.fail',
+          leaseId: job.lease.leaseId,
+          fenceToken: job.lease.fenceToken,
+          intentSha256: job.intentSha256,
+          failure,
+        }, reportingSignal));
+      } catch (reportError) {
+        // The lease expires and the control plane requeues the job; exiting the
+        // worker would only add a restart on top.
+        console.error(JSON.stringify({
+          event: 'job.fail_report_failed',
+          jobId: job.jobId,
+          failure,
+          error: reportError instanceof Error ? reportError.message : String(reportError),
+        }));
+      }
     }
   } finally {
     clearTimeout(budgetTimer);

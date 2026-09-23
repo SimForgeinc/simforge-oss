@@ -3,7 +3,10 @@ import { promises as fs } from 'node:fs';
 import net from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 
+import { crc32 } from 'node:zlib';
+
 import { decode, encode } from '@msgpack/msgpack';
+import { RenderInputError, renderInputErrorFromServiceMessage } from '../render-input-error.js';
 
 const HEADER_BYTES = 4;
 const RECORD_HEADER_BYTES = 128;
@@ -197,7 +200,10 @@ export class NativeServiceClient {
     } finally {
       clearTimeout(timer);
     }
-    if (!value.ok) throw new Error(value.error ?? `native service ${value.op} failed`);
+    if (!value.ok) {
+      const message = value.error ?? `native service ${value.op} failed`;
+      throw renderInputErrorFromServiceMessage(message) ?? new Error(message);
+    }
     return value;
   }
 
@@ -228,6 +234,12 @@ export class NativeServiceClient {
     const bytes = Buffer.allocUnsafe(frame.len);
     const { bytesRead } = await handle.read(bytes, 0, frame.len, frame.offset + RECORD_HEADER_BYTES);
     if (bytesRead !== frame.len) throw new Error(`short shared-memory read: ${bytesRead}/${frame.len}`);
+    // The service stamps every published payload with its CRC32: bytes that
+    // differ were overwritten in the ring (or torn) before this read.
+    const digest = crc32(bytes).toString(16).padStart(8, '0');
+    if (digest !== frame.digest) {
+      throw new RenderInputError('native_frame_digest_mismatch', `${frame.pass} frame of ${frame.sensorId} (tick ${frame.tickId}) reads CRC32 ${digest}; the service published ${frame.digest}`);
+    }
     return bytes;
   }
 

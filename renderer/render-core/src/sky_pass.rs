@@ -341,7 +341,7 @@ fn select_dir(
 
 impl SkyAssetPaths {
     pub fn resolve() -> anyhow::Result<Self> {
-        let executable = std::env::current_exe().ok();
+        let executable = std::env::current_exe().ok(); // fallback-ok: search-path candidate only; a missing asset panics below
         let (dir, selection) = select_dir(
             env_path("SIMFORGE_SKY_ASSETS"),
             env_path("SIMFORGE_NATIVE_RUNTIME_ROOT"),
@@ -447,7 +447,7 @@ impl Plugin for SkyPassPlugin {
         for path in [star_path, moon_path] {
             provenance.entries.push((
                 path.display().to_string(),
-                crate::night::sha256_file(path).unwrap_or_else(|_| "unreadable".into()),
+                crate::night::sha256_file(path).unwrap_or_else(|_| "unreadable".into()), // fallback-ok: provenance record of an asset that already loaded
                 std::fs::metadata(path).map(|m| m.len()).unwrap_or(0),
             ));
         }

@@ -24,16 +24,18 @@ pub const CARLA_DEPTH_MAX_M: f32 = 1000.0;
 /// Convert one row-padded Depth32Float readback (reverse-Z) into the CARLA
 /// packed-depth RGBA8 layout (same row stride as the input).
 ///
-/// `near_m`/`far_m` must match the camera projection that produced the depth
-/// buffer. The reverse-Z linearization is the standard perspective inverse:
-/// `z_view = near*far / (far - d*(far-near))`, clamped to `[near, far]`.
+/// `near_m` must match the camera projection that produced the depth
+/// buffer. Bevy's perspective projection is infinite reverse-Z
+/// (`Mat4::perspective_infinite_reverse_rh`), so `d = near / z_view` and
+/// `z_view = near / d`; `d = 0` is the cleared background (infinitely far).
+/// Distances beyond CARLA's 1000 m depth range saturate at 1000 m, exactly
+/// as CARLA's own depth camera does.
 pub fn depth_to_carla(
     data: &[u8],
     width: u32,
     height: u32,
     stride: usize,
     near_m: f32,
-    far_m: f32,
 ) -> Vec<u8> {
     let h = height as usize;
     let w = width as usize;
@@ -49,17 +51,8 @@ pub fn depth_to_carla(
                 src[col * 4 + 3],
             ]);
             let d = f32::from_bits(bits);
-            // Background (cleared far plane under reverse-Z) stays background.
-            let meters = if d >= 1.0 {
-                CARLA_DEPTH_MAX_M
-            } else {
-                let denom = far_m - d * (far_m - near_m);
-                if denom <= 0.0 {
-                    far_m
-                } else {
-                    (near_m * far_m / denom).clamp(near_m, far_m)
-                }
-            };
+            // Background (reverse-Z clears to 0) is beyond every range.
+            let meters = if d > 0.0 { near_m / d } else { f32::INFINITY };
             let v = (meters.min(CARLA_DEPTH_MAX_M) / CARLA_DEPTH_MAX_M
                 * 16_777_215.0)
                 .round() as u32;
@@ -116,11 +109,13 @@ pub fn static_class_of(name: &str) -> u8 {
 /// own class (9) but the rider as pedestrian — the legacy fusion tracks
 /// riders, so they map to pedestrian. Trucks/buses fold into vehicle exactly
 /// like the legacy `SEM_CLASSES` consumer treats them ("vehicle").
-pub fn actor_class_of(class: &str) -> u8 {
+pub fn actor_class_of(class: &str) -> Result<u8, String> {
     match class {
-        "car" | "truck" | "bus" | "motorcycle" => classes::VEHICLE,
-        "pedestrian" | "cyclist" => classes::PEDESTRIAN,
-        _ => classes::UNLABELED,
+        "car" | "van" | "suv" | "pickup" | "truck" | "bus" | "motorcycle" => Ok(classes::VEHICLE),
+        "pedestrian" | "cyclist" => Ok(classes::PEDESTRIAN),
+        // Props have no CARLA CityScapes class of their own in this subset.
+        "prop" => Ok(classes::UNLABELED),
+        other => Err(format!("[native_actor_class_unmapped] actor class {other:?} has no CARLA semantic class")),
     }
 }
 
@@ -130,9 +125,9 @@ pub fn actor_class_of(class: &str) -> u8 {
 /// instance id to a CARLA class id (lookup order: dynamic actors, then static
 /// legend names). Output keeps the same row stride; byte 2 carries the class,
 /// all other bytes are 0 except alpha = 255.
-pub fn semantic_from_ids<F>(id_data: &[u8], width: u32, height: u32, stride: usize, class_of: F) -> Vec<u8>
+pub fn semantic_from_ids<F>(id_data: &[u8], width: u32, height: u32, stride: usize, mut class_of: F) -> Vec<u8>
 where
-    F: Fn(u32) -> u8,
+    F: FnMut(u32) -> u8,
 {
     let h = height as usize;
     let w = width as usize;
@@ -189,13 +184,15 @@ mod tests {
     fn carla_depth_round_trip() {
         // One pixel per row-stride trick: build a 2x1 image, stride = 8.
         let near = 0.5f32;
-        let far = 900.0f32;
         let z = 42.0f32;
-        // Reverse-Z depth value whose linearization returns exactly z.
-        let d = (far - near * far / z) / (far - near);
+        // The depth Bevy's infinite reverse-Z projection writes for view
+        // distance z (clip-space z/w of `perspective_infinite_reverse_rh`).
+        let clip = bevy::math::Mat4::perspective_infinite_reverse_rh(1.0, 1.0, near)
+            * bevy::math::Vec4::new(0.0, 0.0, -z, 1.0);
+        let d = clip.z / clip.w;
         let mut data = vec![0u8; 8];
         data[..4].copy_from_slice(&d.to_bits().to_le_bytes());
-        let out = depth_to_carla(&data, 2, 1, 8, near, far);
+        let out = depth_to_carla(&data, 2, 1, 8, near);
         let v = u32::from(out[0]) << 16 | u32::from(out[1]) << 8 | u32::from(out[2]);
         let meters = v as f32 / 16_777_215.0 * CARLA_DEPTH_MAX_M;
         assert!((meters - z).abs() < 0.01, "meters={meters}");
@@ -204,12 +201,19 @@ mod tests {
     }
     #[test]
     fn depth_background_is_far() {
+        // Reverse-Z clears to 0.0: the background is CARLA's saturated far.
         let mut data = vec![0u8; 4];
-        data.copy_from_slice(&1.0f32.to_bits().to_le_bytes());
-        let out = depth_to_carla(&data, 1, 1, 4, 0.5, 900.0);
+        data.copy_from_slice(&0.0f32.to_bits().to_le_bytes());
+        let out = depth_to_carla(&data, 1, 1, 4, 0.5);
         let v = u32::from(out[0]) << 16 | u32::from(out[1]) << 8 | u32::from(out[2]);
         let meters = v as f32 / 16_777_215.0 * CARLA_DEPTH_MAX_M;
         assert!(meters > 999.0);
+        // d = 1.0 is the near plane, not the background.
+        data.copy_from_slice(&1.0f32.to_bits().to_le_bytes());
+        let out = depth_to_carla(&data, 1, 1, 4, 0.5);
+        let v = u32::from(out[0]) << 16 | u32::from(out[1]) << 8 | u32::from(out[2]);
+        let meters = v as f32 / 16_777_215.0 * CARLA_DEPTH_MAX_M;
+        assert!((meters - 0.5).abs() < 0.01, "meters={meters}");
     }
 
     #[test]
