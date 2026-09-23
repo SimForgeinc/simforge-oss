@@ -1,7 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { Pool, type PoolClient } from "pg";
-import { LOCAL_DATABASE_DIR } from "./config";
+import { LOCAL_DATABASE_DIR, LOCAL_DATABASE_LOCK } from "./config";
+import { acquireDataDirLock, type DataDirLock } from "./data-dir-lock";
 
 export type SqlPrimitive = string | number | boolean | null | Date;
 export type SqlValue = SqlPrimitive | Record<string, unknown> | unknown[];
@@ -29,6 +30,7 @@ export type Transaction = {
 type DatabaseState = {
   acceptingOperations: boolean;
   hooksInstalled: boolean;
+  dataDirLock?: DataDirLock;
   removeHooks?: () => void;
   operationTail: Promise<void>;
   pglitePromise?: Promise<PGlite>;
@@ -61,6 +63,10 @@ async function getPGlite(): Promise<PGlite> {
   if (!state.pglitePromise) {
     state.pglitePromise = (async () => {
       await mkdir(LOCAL_DATABASE_DIR, { recursive: true });
+      // Exactly one process may open the directory: a second PGlite instance
+      // overwrites the first one's checkpoint and the data root no longer
+      // opens after the first is killed. Throws, naming the owner, when held.
+      state.dataDirLock = acquireDataDirLock(LOCAL_DATABASE_LOCK);
       // PGlite takes a native path; its file:// shorthand does not decode URL escapes.
       const db = new PGlite(LOCAL_DATABASE_DIR, {
         relaxedDurability: false,
@@ -69,6 +75,8 @@ async function getPGlite(): Promise<PGlite> {
         await db.waitReady;
         return db;
       } catch (error) {
+        state.dataDirLock.release();
+        state.dataDirLock = undefined;
         const detail = error instanceof Error ? error.message : String(error);
         console.error(
           `[SimCloud] The local database at ${LOCAL_DATABASE_DIR} could not be opened and may contain a corrupt checkpoint. The data directory was left untouched; preserve it for recovery or restore it from a backup.`,
@@ -97,6 +105,8 @@ export async function shutdownDatabase(): Promise<void> {
         if (db) await db.close();
         state.pglitePromise = undefined;
       }
+      state.dataDirLock?.release();
+      state.dataDirLock = undefined;
       if (state.pool) {
         await state.pool.end();
         state.pool = undefined;
@@ -125,14 +135,23 @@ function handleSignal(): void {
 if (!state.hooksInstalled && state.acceptingOperations) {
   state.hooksInstalled = true;
   const beforeExit = () => { void shutdownDatabase().catch(reportShutdownFailure); };
+  // A process that exits without closing (process.exit elsewhere) leaves an
+  // unclean but recoverable directory; its lock must not outlive it.
+  const onExit = () => { state.dataDirLock?.release(); };
   state.removeHooks = () => {
     process.off("SIGINT", handleSignal);
     process.off("SIGTERM", handleSignal);
     process.off("beforeExit", beforeExit);
+    process.off("exit", onExit);
   };
-  process.once("SIGINT", handleSignal);
-  process.once("SIGTERM", handleSignal);
+  // `on`, not `once`: signal-exit (loaded by proper-lockfile and others)
+  // re-raises a signal with default disposition as soon as it counts itself
+  // as the only listener left, which a spent `once` listener makes true, and
+  // that killed the process before PGlite finished closing.
+  process.on("SIGINT", handleSignal);
+  process.on("SIGTERM", handleSignal);
   process.once("beforeExit", beforeExit);
+  process.once("exit", onExit);
 }
 
 function bindValue(value: SqlValue | undefined): unknown {
