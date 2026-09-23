@@ -50,7 +50,7 @@ from .contract import (
 )
 from .parity import ParityAccumulator
 from .replay import RenderPose, ReplayParityGate, expected_replay_poses, timeline_observation
-from .timeline import BoundTimeline, PlanTimeline, load_bound_timeline
+from .timeline import BoundTimeline, PlanTimeline, RenderWindow, load_bound_timeline, resolve_render_window
 from .sensor_video import SENSOR_VISUALIZATION_CODEC_ARGS, encode_sensor_video, visualization_scales
 from .materialized_traffic import merge_materialized_traffic, parse_materialized_traffic
 from .validation import validate_xosc14
@@ -440,17 +440,20 @@ def _capture_schedule(
     fps: float,
     abort: Callable[[], None] | None = None,
     execution_mode: str = EXECUTION_MODE_TRACE_REPLAY,
+    window: RenderWindow | None = None,
 ) -> dict[int, tuple[int, float, float]]:
     """Map each output frame to the 50 Hz tick it is rendered on.
 
     Returns ``{tick: (outputFrameIndex, scheduledTimeS, contentTimeS)}``.
-    Output frame ``k`` is scheduled at exactly ``k / fps`` and rendered on
-    the nearest tick. Its content time is what the pixels actually show:
+    Output frame ``k`` is scheduled at exactly ``start + k / fps`` (``start``
+    is the window's clip start, 0 for the full clip) and rendered on the
+    nearest tick. Its content time is what the pixels actually show:
 
-    * fps dividing 50 (1, 2, 5, 10, 25, 50): the tick *is* ``k / fps``;
+    * fps dividing 50 (1, 2, 5, 10, 25, 50): the tick *is* the scheduled time;
     * other fps in trace replay (the product's 20/24/30): the sampler is
-      evaluated at exactly ``k / fps`` on that tick, so the frame still shows
-      its scheduled instant (sub-tick sampling, never nearest-tick snapping);
+      evaluated at exactly the scheduled time on that tick, so the frame
+      still shows its scheduled instant (sub-tick sampling, never
+      nearest-tick snapping);
     * physics validation cannot sample off-tick: the pixels show the world
       one step after the applied frame, and are labelled with that time.
     """
@@ -458,21 +461,35 @@ def _capture_schedule(
     check()
     if not plan.frames or plan.frames[0].t != 0:
         raise RuntimeError("execution plan must begin at t=0")
-    duration = plan.frames[-1].t
-    exact_count = duration * fps
+    window = window or resolve_render_window(plan, None, execution_mode)
+    exact_count = (window.end_s - window.start_s) * fps
     expected_count = round(exact_count)
     if abs(exact_count - expected_count) > 1e-6:
-        raise RuntimeError("scenario duration multiplied by render fps must be an integer")
+        raise CarlaRenderError(
+            "carla_clip_frame_count_fractional",
+            f"the {window.end_s - window.start_s:g} s clip at {fps:g} fps is {exact_count:g} frames; "
+            "CARLA renders a whole number of frames and does not round the clip",
+        )
+    # A window starting on a frame boundary labels its frames exactly like
+    # the full-clip render labels the same frames.
+    start_frames = window.start_s * fps
+    aligned_start = round(start_frames) if abs(start_frames - round(start_frames)) <= 1e-6 else None
     dt = plan.fixed_timestep_s
     replay = execution_mode == EXECUTION_MODE_TRACE_REPLAY
     schedule: dict[int, tuple[int, float, float]] = {}
     for output_index in range(expected_count):
         if output_index % 50 == 0:
             check()
-        scheduled_time = output_index / fps
+        scheduled_time = (
+            (aligned_start + output_index) / fps if aligned_start is not None
+            else window.start_s + output_index / fps
+        )
         plan_index = round(scheduled_time / dt)
-        if plan_index in schedule or plan_index >= len(plan.frames) - 1:
-            raise RuntimeError("render fps cannot be represented by unique 50 Hz CARLA frames")
+        if plan_index in schedule or not window.start_tick <= plan_index < window.end_tick:
+            raise CarlaRenderError(
+                "carla_render_fps_unrepresentable",
+                f"render fps {fps:g} cannot be represented by unique 50 Hz CARLA frames",
+            )
         tick_time = plan.frames[plan_index].t
         content_time = scheduled_time if replay else round(tick_time + dt, 9)
         schedule[plan_index] = (output_index, scheduled_time, content_time)
@@ -487,13 +504,14 @@ def capture_policy(fps: float, execution_mode: str) -> str:
     return "sub-tick-sampled" if execution_mode == EXECUTION_MODE_TRACE_REPLAY else "nearest-tick-post-step"
 
 
-def _annotations_to_path(plan: ExecutionPlan, readbacks: list[Mapping[str, Mapping[str, float]]], capture_schedule: Mapping[int, tuple[int, float, float]], destination: Path, max_bytes: int, abort: Callable[[], None], sampled_frames: Mapping[int, PlanFrame] | None = None) -> Path:
+def _annotations_to_path(plan: ExecutionPlan, readbacks: list[Mapping[str, Mapping[str, float]]], capture_schedule: Mapping[int, tuple[int, float, float]], destination: Path, max_bytes: int, abort: Callable[[], None], sampled_frames: Mapping[int, PlanFrame] | None = None, first_tick: int = 0) -> Path:
+    """``readbacks[i]`` is the readback of tick ``first_tick + i`` (the render window's start)."""
     with destination.open("wb") as target:
         bounded = _BoundedWriter(target, max_bytes, "annotations")
         for plan_index, (output_index, scheduled_time, content_time) in sorted(capture_schedule.items(), key=lambda item: item[1][0]):
             abort()
             frame = (sampled_frames or {}).get(plan_index, plan.frames[plan_index])
-            actors = readbacks[plan_index]
+            actors = readbacks[plan_index - first_tick]
             bounded.write(json.dumps({
             "schema": "simforge.annotation-frame/v1",
             "index": output_index,
@@ -710,7 +728,9 @@ def _manifest_to_path(
         "capture": {
             "frameCount": len(sensor_records) // max(1, len(lease.render_spec.sensors)),
             "fps": lease.render_spec.fps,
-            "durationS": plan.frames[-1].t,
+            # The plan here is the rendered window; its first frame is the
+            # window start (clip t=0 for a full render).
+            "durationS": plan.frames[-1].t - plan.frames[0].t,
             "policy": capture_policy(lease.render_spec.fps, lease.render_spec.execution_mode),
             "labelSemantics": "contentTimeS is the clip time the pixels show",
         },
@@ -1814,16 +1834,21 @@ def execute_lease(
     collision_readbacks: list[list[Mapping[str, object]]] = []
     sampled_frames: dict[int, PlanFrame] = {}
     rendered_appearance: set[str] = set()
-    capture_schedule = _capture_schedule(plan, lease.render_spec.fps, lambda: check_abort("schedule_capture"), execution_mode) if lease.job_mode == "full_render" else {}
+    # The rendered part of the clip: the whole of it unless the render spec
+    # asks for a sub-clip, which replay renders exactly (never widened).
+    window = resolve_render_window(plan, lease.render_spec.clip, execution_mode)
+    window_ticks = window.ticks()
+    tick_total = window.tick_count
+    capture_schedule = _capture_schedule(plan, lease.render_spec.fps, lambda: check_abort("schedule_capture"), execution_mode, window) if lease.job_mode == "full_render" else {}
     expected_capture_count = len(capture_schedule)
     _enforce_render_budgets(lease, plan, expected_capture_count)
     if lease.job_mode == "full_render":
         annotation_schedule = capture_schedule
     else:
         annotation_schedule = {}
-        for frame in plan.frames:
+        for frame in window.frames(plan):
             if frame.index % 50 == 0:
-                check_abort("schedule_annotations", frame.index, len(plan.frames))
+                check_abort("schedule_annotations", frame.index - window.start_tick, tick_total)
             observed_t = frame.t if replay else round(frame.t + plan.fixed_timestep_s, 9)
             annotation_schedule[frame.index] = (frame.index, frame.t, observed_t)
     with tempfile.TemporaryDirectory(prefix="scenario-render-") as directory:
@@ -1872,7 +1897,10 @@ def execute_lease(
             substitutions = (*compiled_substitutions, *substitutions)
             for record in substitutions:
                 emit("substitution", record)
-            backend.spawn(plan.actors, plan.frames[0], catalog, abort=lambda: backend_fence("spawn_actors"))
+            # Seek: bodies spawn at their pose on the window's first tick (the
+            # clip start for a full render); absent ones are never spawned.
+            start_frame = plan.frames[window.start_tick]
+            backend.spawn(plan.actors, start_frame, catalog, abort=lambda: backend_fence("spawn_actors"))
             check_abort("spawn_actors")
             spawn_placement = _optional_backend_call(
                 backend,
@@ -1917,7 +1945,7 @@ def execute_lease(
             if lease.job_mode == "full_render":
                 backend.configure_sensors(lease.render_spec, output_dir, MAX_OUTPUT_BYTES, abort=lambda: backend_fence("configure_sensors"))
                 check_abort("configure_sensors")
-            stability = backend.prepare_scenario(plan.frames[0], abort=lambda: backend_fence("prepare_scenario"))
+            stability = backend.prepare_scenario(start_frame, abort=lambda: backend_fence("prepare_scenario"))
             check_abort("prepare_scenario")
             # Fail closed before t=0 on an actor that is displaced from its
             # placement, hanging above the ground or buried in it. Per-tick
@@ -1928,11 +1956,11 @@ def execute_lease(
                 abort=lambda: backend_fence("validate_placement"),
             )
             check_abort("validate_placement")
-            emit("interaction_started" if lease.job_mode == "interaction_2d" else "render_started", {"frames": len(plan.frames), "executionMode": execution_mode})
+            emit("interaction_started" if lease.job_mode == "interaction_2d" else "render_started", {"frames": tick_total, "executionMode": execution_mode})
             geometry = _replay_geometry(backend, plan) if replay else None
-            for index in range(sampler.tick_count()):
-                check_abort("execute", index, len(plan.frames))
-                backend_fence("execute", index, len(plan.frames))
+            for position, index in enumerate(window_ticks):
+                check_abort("execute", position, tick_total)
+                backend_fence("execute", position, tick_total)
                 capture = capture_schedule.get(index)
                 if replay:
                     # The render timeline is sampled at the instant the pixels
@@ -1942,11 +1970,11 @@ def execute_lease(
                         sampled_frames[index] = frame
                 else:
                     frame = plan.frames[index]
-                backend.apply(frame, abort=lambda: backend_fence("execute", index, len(plan.frames)))
+                backend.apply(frame, abort=lambda: backend_fence("execute", position, tick_total))
                 actual = backend.tick(None if capture is None else {
                     "outputFrameIndex": capture[0], "scheduledTimeS": capture[1], "contentTimeS": capture[2],
-                }, abort=lambda: backend_fence("execute", index, len(plan.frames)))
-                signals = backend.signal_readback(abort=lambda: backend_fence("execute", index, len(plan.frames)))
+                }, abort=lambda: backend_fence("execute", position, tick_total))
+                signals = backend.signal_readback(abort=lambda: backend_fence("execute", position, tick_total))
                 if replay:
                     # Contacts are the trace's events; CARLA observes none.
                     collisions: list[Mapping[str, object]] = []
@@ -1991,7 +2019,7 @@ def execute_lease(
                         "collision_readback",
                         frame.index,
                         frame.t,
-                        abort=lambda: backend_fence("execute", index, len(plan.frames)),
+                        abort=lambda: backend_fence("execute", position, tick_total),
                     ) or []
                     # A physics tick applied for frame i leaves the world at
                     # t_{i+1}: that is the state read back and the one it is
@@ -2002,14 +2030,14 @@ def execute_lease(
                 readbacks.append(actual)
                 signal_readbacks.append(signals)
                 collision_readbacks.append(collisions)
-                if index and index % 250 == 0:
-                    emit("progress", {"completedFrames": index + 1, "totalFrames": len(plan.frames)})
+                if position and position % 250 == 0:
+                    emit("progress", {"completedFrames": position + 1, "totalFrames": tick_total})
             if lease.job_mode == "full_render":
                 backend.finalize_capture(expected_capture_count, abort=lambda: backend_fence("finalize_capture", expected_capture_count, expected_capture_count))
             evidence = _optional_backend_call(
                 backend,
                 "runtime_evidence",
-                abort=lambda: backend_fence("collect_runtime_evidence", len(plan.frames), len(plan.frames)),
+                abort=lambda: backend_fence("collect_runtime_evidence", tick_total, tick_total),
             )
             if evidence is not None:
                 runtime_evidence = evidence
@@ -2058,7 +2086,7 @@ def execute_lease(
                 if isinstance(body, Path):
                     body.unlink(missing_ok=True)
         if "trace" in lease.render_spec.outputs or "trace" in lease.artifact_uploads:
-            trace_body = _trace_to_path(plan, readbacks, signal_readbacks, collision_readbacks, package.control_sha256, package.source_input_digest, package.materialized_traffic_digest, Path(directory) / "trace.json.gz", min(artifact_temp_limit, MAX_ARTIFACT_BYTES, MAX_OUTPUT_BYTES - output_bytes), lambda: check_abort("serialize_trace"), readback_times)
+            trace_body = _trace_to_path(window.restrict(plan), readbacks, signal_readbacks, collision_readbacks, package.control_sha256, package.source_input_digest, package.materialized_traffic_digest, Path(directory) / "trace.json.gz", min(artifact_temp_limit, MAX_ARTIFACT_BYTES, MAX_OUTPUT_BYTES - output_bytes), lambda: check_abort("serialize_trace"), readback_times)
             add_artifact(make_artifact("trace", trace_body, "application/gzip", lease.artifact_uploads.get("trace"), {"format": "json", "contentEncoding": "gzip"}))
         if "video" in lease.render_spec.outputs:
             check_abort("collect_camera_videos", len(plan.frames), len(plan.frames))
@@ -2108,7 +2136,7 @@ def execute_lease(
                         "height": int(sensor.config["height"]),
                         "frameCount": expected_capture_count,
                         "fps": lease.render_spec.fps,
-                        "durationS": plan.frames[-1].t,
+                        "durationS": window.duration_s(plan),
                     },
                 ))
             visualization_sensors = [
@@ -2154,7 +2182,7 @@ def execute_lease(
                         **visualization_scales(sensor),
                         "frameCount": expected_capture_count,
                         "fps": lease.render_spec.fps,
-                        "durationS": plan.frames[-1].t,
+                        "durationS": window.duration_s(plan),
                     },
                 ))
         data_sensors = [
@@ -2199,13 +2227,15 @@ def execute_lease(
                 },
             ))
         if "annotations" in lease.render_spec.outputs:
-            annotations_body = _annotations_to_path(plan, readbacks, annotation_schedule, Path(directory) / "annotations.ndjson", min(artifact_temp_limit, MAX_ARTIFACT_BYTES, MAX_OUTPUT_BYTES - output_bytes), lambda: check_abort("serialize_annotations"), sampled_frames)
-            add_artifact(make_artifact("annotations", annotations_body, "application/x-ndjson", lease.artifact_uploads.get("annotations"), {"frameCount": len(annotation_schedule), "fps": lease.render_spec.fps, "durationS": plan.frames[-1].t}))
+            annotations_body = _annotations_to_path(plan, readbacks, annotation_schedule, Path(directory) / "annotations.ndjson", min(artifact_temp_limit, MAX_ARTIFACT_BYTES, MAX_OUTPUT_BYTES - output_bytes), lambda: check_abort("serialize_annotations"), sampled_frames, window.start_tick)
+            add_artifact(make_artifact("annotations", annotations_body, "application/x-ndjson", lease.artifact_uploads.get("annotations"), {"frameCount": len(annotation_schedule), "fps": lease.render_spec.fps, "durationS": window.duration_s(plan)}))
         parity = accumulator.report()
         replay_report = replay_gate.report() if replay else None
         comparator_passed = True
         if replay and render_timeline is not None:
-            _verify_timeline_appearance(authored_plan, rendered_appearance)
+            # Only what the window shows must render: state authored outside
+            # it is not in any rendered frame.
+            _verify_timeline_appearance(window.restrict(authored_plan), rendered_appearance)
         if replay_report is not None and comparator_records is not None:
             import simforge_oss_timeline
             comparator = simforge_oss_timeline.compare_observed(
@@ -2265,7 +2295,7 @@ def execute_lease(
         if "manifest" in lease.render_spec.outputs:
             manifest_body = _manifest_to_path(
                 lease,
-                plan,
+                window.restrict(plan),
                 sensor_records,
                 validation,
                 parity_value,
@@ -2284,6 +2314,7 @@ def execute_lease(
                         "label": "Trace replay" if replay else "CARLA physics validation (not the scenario render)",
                     },
                     "timeline": dict(sampler.evidence()),
+                    "renderWindow": dict(window.evidence(plan)),
                     "approximations": _approximations(execution_mode, runtime_evidence, ridden_two_wheelers(plan, execution_mode)),
                 },
                 rendered_appearance if replay else None,

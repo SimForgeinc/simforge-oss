@@ -22,11 +22,11 @@ gate and every artifact writer consume one type regardless of the source.
 from __future__ import annotations
 
 import math
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import Any, Callable, Mapping, Protocol
 
 from .compiler import LIFECYCLE_ABSENT, LIFECYCLE_ACTIVE, LIFECYCLE_SPAWN, ActorFrame, ExecutionPlan, PlanFrame
-from .contract import ContractError
+from .contract import EXECUTION_MODE_TRACE_REPLAY, ContractError
 from .policy import CarlaRenderError
 
 #: The render-timeline sampler contract implemented here.
@@ -49,6 +49,108 @@ _TIMELINE_POSE_KEYS = frozenset({
 })
 #: Appearance keys the timeline owns (it states them every tick).
 _TIMELINE_OWNED_LIGHT_KEYS = frozenset(f"light.{value}" for value in TIMELINE_LIGHT_TYPES.values())
+
+
+#: How far a requested clip bound may sit from the authored clip end and still
+#: name it (the product's clip seconds are decimal; the plan's are ticks).
+CLIP_END_TOLERANCE_S = 1e-6
+
+
+@dataclass(frozen=True)
+class RenderWindow:
+    """The part of the scenario clip one render shows, on the 50 Hz ticks.
+
+    Output frame ``k`` shows clip time ``start_s + k / fps`` (the native
+    engine's ``frameTimestampSeconds``), so a sub-clip's frames are exactly
+    the corresponding frames of the full-clip render. Trace replay seeks: the
+    bodies spawn at the sampler pose of ``start_tick`` and the run ticks
+    ``start_tick..end_tick``. Nothing before ``start_tick`` is simulated,
+    because replay has no state beyond the pose the timeline gives each tick.
+    """
+
+    start_s: float
+    end_s: float
+    start_tick: int
+    end_tick: int
+    #: The whole authored clip: the render is the one that predates sub-clips.
+    full: bool
+
+    @property
+    def tick_count(self) -> int:
+        return self.end_tick - self.start_tick + 1
+
+    def ticks(self) -> range:
+        return range(self.start_tick, self.end_tick + 1)
+
+    def frames(self, plan: ExecutionPlan) -> tuple[PlanFrame, ...]:
+        return plan.frames[self.start_tick:self.end_tick + 1]
+
+    def restrict(self, plan: ExecutionPlan) -> ExecutionPlan:
+        """The plan's frames inside the window; identity (digest) unchanged."""
+        return plan if self.full else replace(plan, frames=self.frames(plan))
+
+    def duration_s(self, plan: ExecutionPlan) -> float:
+        return plan.frames[self.end_tick].t - plan.frames[self.start_tick].t
+
+    def evidence(self, plan: ExecutionPlan) -> Mapping[str, Any]:
+        return {
+            "schema": "simforge.carla-render-window/v1",
+            "startS": self.start_s,
+            "endS": self.end_s,
+            "startTick": self.start_tick,
+            "endTick": self.end_tick,
+            "authoredClipEndS": plan.frames[-1].t,
+            "fullClip": self.full,
+            # Replay seeks by spawning at the sampler pose of the start tick.
+            "seek": "none" if self.start_tick == 0 else "spawn-at-start-tick-pose",
+        }
+
+
+def resolve_render_window(
+    plan: ExecutionPlan,
+    clip: tuple[float, float] | None,
+    execution_mode: str,
+) -> RenderWindow:
+    """Place a requested clip on the plan's ticks, refusing what CARLA cannot show.
+
+    Every refusal is deterministic and names its reason; a request CARLA
+    cannot render exactly is never widened to the full clip.
+    """
+    if not plan.frames or plan.frames[0].t != 0:
+        raise ContractError("execution plan must begin at clip t=0")
+    dt = plan.fixed_timestep_s
+    last_tick = len(plan.frames) - 1
+    authored_end = plan.frames[-1].t
+    if clip is None:
+        return RenderWindow(0.0, authored_end, 0, last_tick, True)
+    start_s, end_s = float(clip[0]), float(clip[1])
+    if not (math.isfinite(start_s) and math.isfinite(end_s)) or start_s < 0 or end_s <= start_s:
+        raise ContractError("renderSpec.clip must have endSeconds > startSeconds >= 0")
+    if end_s > authored_end + CLIP_END_TOLERANCE_S:
+        raise CarlaRenderError(
+            "carla_clip_outside_scenario",
+            f"renderSpec.clip ends at {end_s:g} s but the scenario's authored clip ends at {authored_end:g} s",
+        )
+    # The first capture (at start_s) is rendered on the tick the capture
+    # schedule rounds it to; the run lasts to the first tick at or after end_s.
+    start_tick = round(start_s / dt)
+    end_tick = min(math.ceil(end_s / dt - 1e-9), last_tick)
+    if start_tick >= end_tick:
+        raise CarlaRenderError(
+            "carla_clip_too_short",
+            f"renderSpec.clip {start_s:g}-{end_s:g} s spans less than one {dt:g} s CARLA tick",
+        )
+    full = start_tick == 0 and end_tick == last_tick and abs(end_s - authored_end) <= CLIP_END_TOLERANCE_S
+    if not full and execution_mode != EXECUTION_MODE_TRACE_REPLAY:
+        # Physics validation integrates CARLA physics from the authored start
+        # (a body teleported to a later pose is not that run) and grades every
+        # authored contact, including those after a shorter window ends.
+        raise CarlaRenderError(
+            "carla_clip_physics_validation_partial",
+            f"CARLA physics validation runs the whole authored clip (0-{authored_end:g} s); "
+            f"it cannot render {start_s:g}-{end_s:g} s. Only trace replay renders part of a clip",
+        )
+    return RenderWindow(start_s, end_s, start_tick, end_tick, full)
 
 
 class FrameSampler(Protocol):
