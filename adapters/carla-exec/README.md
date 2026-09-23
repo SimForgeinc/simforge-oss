@@ -58,10 +58,12 @@ lease's `controlFeatures` (comma-separated); newer manifest fields, such as
 
 `renderSpec.clip` may name part of the authored clip, as it does for the native
 engine: output frame `k` shows clip time `startSeconds + k / fps`, so a
-sub-clip's frames are the corresponding frames of the full-clip render. Trace
-replay seeks: every body spawns at its sampler pose on the start tick and only
-the window's ticks run. The window is recorded in the render manifest
-(`renderWindow`). A window CARLA cannot render exactly is refused before CARLA
+sub-clip's frames are the corresponding frames of the full-clip render. The
+ticks before a later window are a pre-roll, replayed but neither captured nor
+graded, so camera exposure, temporal filtering and streamed geometry reach the
+window start exactly as in the full render (spawning at the start pose alone
+renders visibly different first frames). The window is recorded in the render
+manifest (`renderWindow`). A window CARLA cannot render exactly is refused before CARLA
 is contacted, never widened to the full clip: `carla_clip_outside_scenario`
 (ends after the authored clip), `carla_clip_frame_count_fractional` (the window
 is not a whole number of frames), `carla_clip_too_short`, and

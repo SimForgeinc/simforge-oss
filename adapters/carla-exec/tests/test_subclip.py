@@ -2,9 +2,9 @@
 
 A render intent may ask for part of the authored clip (`renderSpec.clip`),
 exactly as the native engine renders it: output frame ``k`` shows clip time
-``startSeconds + k / fps``. Trace replay seeks to the start by spawning every
-body at its start-tick pose, so a sub-clip's frames are the corresponding
-frames of the full-clip render. What CARLA cannot render exactly is refused
+``startSeconds + k / fps``. A later window is reached by replaying the ticks
+before it uncaptured (a pre-roll), so a sub-clip's frames are the
+corresponding frames of the full-clip render, pixels included. What CARLA cannot render exactly is refused
 with a machine code, never widened to the full clip.
 """
 from __future__ import annotations
@@ -81,7 +81,7 @@ def test_a_prefix_and_a_later_window_land_on_their_ticks():
     restricted = later.restrict(plan)
     assert restricted.sha256 == plan.sha256
     assert [frame.index for frame in restricted.frames] == list(range(125, 376))
-    assert later.evidence(plan)["seek"] == "spawn-at-start-tick-pose"
+    assert later.evidence(plan)["preRollTicks"] == 125
 
 
 def test_windows_carla_cannot_render_exactly_are_refused_with_a_code():
@@ -116,6 +116,15 @@ def test_a_sub_clip_schedules_exactly_the_full_clips_frames_for_those_seconds(fp
         assert full[tick] == (index + offset, scheduled, content)
     assert min(sub) == window.start_tick
     assert max(sub) < window.end_tick
+
+
+@pytest.mark.parametrize("fps", [20, 24, 25, 30])
+def test_the_pre_roll_samples_the_instants_the_full_render_samples(fps):
+    plan = _plan()
+    full = worker_runner._capture_schedule(plan, fps)
+    window = resolve_render_window(plan, (5.0, 10.0), "trace-replay")
+    pre_roll = worker_runner._pre_roll_sample_times(plan, fps, window)
+    assert pre_roll == {tick: content for tick, (_k, _s, content) in full.items() if tick < window.start_tick}
 
 
 def test_a_fractional_frame_count_is_refused_not_rounded():
@@ -179,11 +188,15 @@ def test_a_sub_clip_seeks_to_its_start_pose_and_matches_the_full_render_frame_fo
     full_result, full_backend, full_trace, full_annotations = _execute()
     sub_result, sub_backend, sub_trace, sub_annotations = _execute((0.2, 0.6))
     assert full_result["status"] == sub_result["status"] == "succeeded"
-    # Seek: spawn and prepare happen at the start tick, then only the
-    # window's ticks run (10..30), never the 0.2 s before it.
-    assert ("prepare", 10) in sub_backend.calls and ("prepare", 0) in full_backend.calls
+    # The run pre-rolls ticks 0..9 exactly as the full render ticks them
+    # (applied, no capture), then renders the window's ticks 10..30.
+    assert ("prepare", 0) in sub_backend.calls and ("prepare", 0) in full_backend.calls
     applied = [call[1] for call in sub_backend.calls if call[0] == "apply"]
-    assert applied == list(range(10, 31))
+    assert applied == list(range(0, 31))
+    ticks = [call[1] for call in sub_backend.calls if call[0] == "tick"]
+    assert ticks == list(range(0, 31))
+    assert [record["outputFrameIndex"] for record in sub_backend.records] == list(range(10))
+    assert sub_backend.records[0]["carlaFrame"] == 11
     # 0.4 s at 25 fps: 10 frames, labelled with the clip time they show.
     assert len(sub_annotations) == 10
     assert [item["index"] for item in sub_annotations] == list(range(10))
@@ -230,7 +243,7 @@ def test_the_render_manifest_records_the_window(tmp_path):
     assert render_manifest["renderWindow"] == {
         "schema": "simforge.carla-render-window/v1", "startS": 0.2, "endS": 0.6,
         "startTick": 10, "endTick": 30, "authoredClipEndS": 1.0, "fullClip": False,
-        "seek": "spawn-at-start-tick-pose",
+        "preRollTicks": 10,
     }
     assert render_manifest["capture"]["durationS"] == pytest.approx(0.4)
     assert render_manifest["capture"]["frameCount"] == 10
@@ -341,3 +354,29 @@ def test_an_unexpected_crash_is_not_disguised_as_a_refusal(monkeypatch):
     ])
     with pytest.raises(RuntimeError, match="tick barrier"):
         local.main()
+
+
+# -- the render timeline binding -----------------------------------------------------
+
+def _fake_binding(monkeypatch, sampler_version, from_json):
+    fake = type(sys)("simforge_oss_timeline")
+    fake.SAMPLER_VERSION = sampler_version
+    fake.Timeline = type("Timeline", (), {"from_json": staticmethod(from_json)})
+    monkeypatch.setitem(sys.modules, "simforge_oss_timeline", fake)
+
+
+def test_a_timeline_the_binding_cannot_read_is_a_coded_refusal_not_a_crash(monkeypatch):
+    """Formerly a ValueError traceback (exit 1) the worker retried."""
+    from simforge_oss_carla_exec.runtime.timeline import load_bound_timeline
+
+    def unreadable(_body):
+        raise ValueError("timeline JSON: unknown variant `van`")
+    _fake_binding(monkeypatch, "simforge.timeline-sampler/2", unreadable)
+    with pytest.raises(CarlaRenderError) as refused:
+        load_bound_timeline(b"{}", _plan(1.0))
+    assert code_of(refused) == "carla_render_timeline_unreadable"
+    assert "unknown variant `van`" in str(refused.value)
+    _fake_binding(monkeypatch, "simforge.timeline-sampler/1", unreadable)
+    with pytest.raises(CarlaRenderError) as mismatch:
+        load_bound_timeline(b"{}", _plan(1.0))
+    assert code_of(mismatch) == "carla_timeline_sampler_mismatch"

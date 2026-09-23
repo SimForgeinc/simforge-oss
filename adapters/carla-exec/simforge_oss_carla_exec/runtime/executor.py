@@ -497,6 +497,26 @@ def _capture_schedule(
     return schedule
 
 
+def _pre_roll_sample_times(plan: ExecutionPlan, fps: float, window: RenderWindow) -> dict[int, float]:
+    """``{tick: t}`` for the pre-roll ticks the full render captures on.
+
+    The full render samples a capture tick at its frame instant ``k / fps``
+    (sub-tick sampling), every other tick at the tick time. The pre-roll
+    samples the same instants so it leaves the world exactly as the full
+    render left it (flashing lights and signal phases included).
+    """
+    times: dict[int, float] = {}
+    dt = plan.fixed_timestep_s
+    k = 0
+    while True:
+        instant = k / fps
+        tick = round(instant / dt)
+        if tick >= window.start_tick:
+            return times
+        times[tick] = instant
+        k += 1
+
+
 def capture_policy(fps: float, execution_mode: str) -> str:
     divides = abs(50.0 / fps - round(50.0 / fps)) < 1e-9
     if divides:
@@ -1837,8 +1857,12 @@ def execute_lease(
     # The rendered part of the clip: the whole of it unless the render spec
     # asks for a sub-clip, which replay renders exactly (never widened).
     window = resolve_render_window(plan, lease.render_spec.clip, execution_mode)
-    window_ticks = window.ticks()
-    tick_total = window.tick_count
+    # The run always starts at the clip start: the ticks before a later
+    # window are a pre-roll (applied and ticked, never captured or graded),
+    # so the window renders with the world history of the full render.
+    run_ticks = range(0, window.end_tick + 1)
+    tick_total = len(run_ticks)
+    pre_roll_times = _pre_roll_sample_times(plan, lease.render_spec.fps, window) if replay else {}
     capture_schedule = _capture_schedule(plan, lease.render_spec.fps, lambda: check_abort("schedule_capture"), execution_mode, window) if lease.job_mode == "full_render" else {}
     expected_capture_count = len(capture_schedule)
     _enforce_render_budgets(lease, plan, expected_capture_count)
@@ -1897,9 +1921,7 @@ def execute_lease(
             substitutions = (*compiled_substitutions, *substitutions)
             for record in substitutions:
                 emit("substitution", record)
-            # Seek: bodies spawn at their pose on the window's first tick (the
-            # clip start for a full render); absent ones are never spawned.
-            start_frame = plan.frames[window.start_tick]
+            start_frame = plan.frames[0]
             backend.spawn(plan.actors, start_frame, catalog, abort=lambda: backend_fence("spawn_actors"))
             check_abort("spawn_actors")
             spawn_placement = _optional_backend_call(
@@ -1958,9 +1980,22 @@ def execute_lease(
             check_abort("validate_placement")
             emit("interaction_started" if lease.job_mode == "interaction_2d" else "render_started", {"frames": tick_total, "executionMode": execution_mode})
             geometry = _replay_geometry(backend, plan) if replay else None
-            for position, index in enumerate(window_ticks):
+            for position, index in enumerate(run_ticks):
                 check_abort("execute", position, tick_total)
                 backend_fence("execute", position, tick_total)
+                if index < window.start_tick:
+                    # Pre-roll to a later window: the same apply and
+                    # capture-less tick every uncaptured tick of the full
+                    # render gets. Camera exposure, temporal filtering and
+                    # streamed geometry then reach the window start exactly
+                    # as they do in the full render (spawning at the start
+                    # pose instead renders visibly different first frames).
+                    backend.apply(
+                        sampler.frame_at(index, pre_roll_times.get(index, plan.frames[index].t)) if replay else plan.frames[index],
+                        abort=lambda: backend_fence("execute", position, tick_total),
+                    )
+                    backend.tick(None, abort=lambda: backend_fence("execute", position, tick_total))
+                    continue
                 capture = capture_schedule.get(index)
                 if replay:
                     # The render timeline is sampled at the instant the pixels

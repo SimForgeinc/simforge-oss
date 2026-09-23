@@ -29,8 +29,12 @@ from .compiler import LIFECYCLE_ABSENT, LIFECYCLE_ACTIVE, LIFECYCLE_SPAWN, Actor
 from .contract import EXECUTION_MODE_TRACE_REPLAY, ContractError
 from .policy import CarlaRenderError
 
-#: The render-timeline sampler contract implemented here.
-SAMPLER_VERSION = "simforge.timeline-sampler/1"
+#: The render-timeline sampler contract implemented here. /2 (ENGINE_SEM_VER
+#: 0.11.0) keeps /1's sampling rules and changes only how the timeline is
+#: derived (heights from ground contact, road attitude on the actor
+#: transform, body attitude and wheel spin on separate channels CARLA does
+#: not read), so the poses CARLA applies mean the same thing.
+SAMPLER_VERSION = "simforge.timeline-sampler/2"
 
 #: WS-B timeline light channel -> OpenSCENARIO vehicleLightType appearance key.
 TIMELINE_LIGHT_TYPES: Mapping[str, str] = {
@@ -62,10 +66,12 @@ class RenderWindow:
 
     Output frame ``k`` shows clip time ``start_s + k / fps`` (the native
     engine's ``frameTimestampSeconds``), so a sub-clip's frames are exactly
-    the corresponding frames of the full-clip render. Trace replay seeks: the
-    bodies spawn at the sampler pose of ``start_tick`` and the run ticks
-    ``start_tick..end_tick``. Nothing before ``start_tick`` is simulated,
-    because replay has no state beyond the pose the timeline gives each tick.
+    the corresponding frames of the full-clip render. The run ticks
+    ``0..end_tick``; the ticks before ``start_tick`` are a pre-roll, replayed
+    but neither captured nor graded, so the window renders with the same
+    world history (camera exposure, temporal filtering, streamed geometry) as
+    the full render. Poses alone do not need it (replay has no state beyond
+    the pose each tick gives), but pixels do.
     """
 
     start_s: float
@@ -101,8 +107,8 @@ class RenderWindow:
             "endTick": self.end_tick,
             "authoredClipEndS": plan.frames[-1].t,
             "fullClip": self.full,
-            # Replay seeks by spawning at the sampler pose of the start tick.
-            "seek": "none" if self.start_tick == 0 else "spawn-at-start-tick-pose",
+            # Ticks replayed, uncaptured and ungraded, before the window.
+            "preRollTicks": self.start_tick,
         }
 
 
@@ -420,9 +426,18 @@ def load_bound_timeline(body: bytes, plan: ExecutionPlan, abort: Callable[[], No
             "this package ships a render timeline but the worker image lacks the "
             "simforge_oss_timeline sampler binding"
         ) from exc
-    timeline = simforge_oss_timeline.Timeline.from_json(body)
     if simforge_oss_timeline.SAMPLER_VERSION != SAMPLER_VERSION:
-        raise ContractError(
-            f"worker sampler {simforge_oss_timeline.SAMPLER_VERSION} is not {SAMPLER_VERSION}"
+        raise CarlaRenderError(
+            "carla_timeline_sampler_mismatch",
+            f"worker sampler {simforge_oss_timeline.SAMPLER_VERSION} is not {SAMPLER_VERSION}",
         )
+    try:
+        timeline = simforge_oss_timeline.Timeline.from_json(body)
+    except ValueError as exc:
+        # The same bytes are refused on every attempt and by every worker
+        # running this binding: a deterministic refusal, never a crash.
+        raise CarlaRenderError(
+            "carla_render_timeline_unreadable",
+            f"this worker's {SAMPLER_VERSION} binding cannot read the render timeline: {exc}",
+        ) from exc
     return BoundTimeline(timeline, plan, abort)
