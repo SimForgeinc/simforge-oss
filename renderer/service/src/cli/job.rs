@@ -32,7 +32,7 @@ use std::time::Instant;
 
 const JOB_USAGE: &str = "simforge-render job --job JOB.json [--preset training|showcase] [--set key=value ...]\n\
     simforge-render job --scene SCENE.json --trace TRACE.json --intent INTENT.json [--glb PATH] [--models DIR] [--sources all|id,...]\n\
-    common: [--scene-set field=json ...] [--start N] [--ticks N] [--out RESULT.json] [--dump-dir DIR --dump-every N]\n\
+    common: [--ground-mesh GROUND-MESH.bin] [--scene-set field=json ...] [--start N] [--ticks N] [--out RESULT.json] [--dump-dir DIR --dump-every N]\n\
             [--sweep ENTRIES.json] [--camera-size WxH] [--ablate a,b] [--shm-size-mb 512]\n\
     JOB.json is simforge.render-job/v2: {schema, scene, sceneState?, rig: {cameras?, lidars?, radars?, pronto?}, ticks?: {start?, count?}, passes, outDir, observe?}.\n\
     Artifacts: <outDir>/<sensor>/<tick:08>.<pass>.png|.f32.bin|.ply|.csv plus <outDir>/results.json.";
@@ -107,6 +107,9 @@ fn parse_args(argv: Vec<String>) -> Result<Args> {
                 let (k, v) = kv.split_once('=').context("--scene-set key=json")?;
                 parsed.spec_overrides.push((k.to_string(), v.to_string()));
             }
+            // The map's ground derivative (`derived/ground/ground-mesh.bin`):
+            // the scene spec's `groundMesh`, for either job form.
+            "--ground-mesh" => parsed.spec_overrides.push(("groundMesh".into(), serde_json::to_string(&value()?)?)),
             "--preset" => parsed.preset = Some(value()?),
             "--sweep" => parsed.sweep = Some(value()?.into()),
             "--camera-size" => {

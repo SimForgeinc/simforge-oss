@@ -116,6 +116,12 @@ pub struct SceneSpec {
     /// rig's most demanding camera; lidar/radar keep full detail.
     #[serde(default)]
     pub geometry_lod: Option<String>,
+    /// Absolute path of the map's `derived/ground/ground-mesh.bin`: the one
+    /// placement height source, shared with the simulator and the contact
+    /// gate. Absent only for map versions published before their ground
+    /// derivative; the service then reports `legacy-mesh-field` at hello.
+    #[serde(default)]
+    pub ground_mesh: Option<String>,
 }
 
 impl SceneSpec {
@@ -273,6 +279,13 @@ pub fn prewarm(spec: &SceneSpec) -> Result<SceneApp> {
         app.load_geometry_lods(Path::new(manifest), master)?;
     }
     app.load_vegetation(&spec.veg_glbs)?;
+    if let Some(ground_mesh) = &spec.ground_mesh {
+        app.load_ground_mesh(Path::new(ground_mesh))?;
+    }
+    match app.ground_source() {
+        render_core::engine::GroundSource::GroundMesh { sha256 } => eprintln!("ground-source: ground-mesh {sha256}"),
+        render_core::engine::GroundSource::LegacyMeshField => eprintln!("ground-source: legacy-mesh-field (the scene names no groundMesh)"),
+    }
     // One view compiles the look's pipelines before the first request.
     app.add_camera(CameraSpec {
         sensor_id: "__prewarm__".into(),
@@ -1173,6 +1186,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
                         .collect(),
                     render_config: state.render_config,
                     deprecations: state.render_deprecations.clone(),
+                    ground: state.app.ground_source().into(),
                 },
             }
         }
@@ -1527,7 +1541,6 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
                     rotation,
                     dims,
                     color,
-                    false,
                 );
                 if let Some(model) = model {
                     apply_actor_model(state, actor, &model, &frame, dims, color, position, rotation)?;
@@ -1677,21 +1690,25 @@ fn apply_actor_model(
 /// Height precedence for authored scene state. Non-zero actor Y is
 /// canonical; frame `groundY` covers zero-height traces; without either the
 /// scene-state contract says "snap to the map" (`groundY` absent), which
-/// must land on mapped ground: off the map is an error, never an invented
-/// height.
+/// must land on the scene's ground source (`SceneApp::ground_height`): off
+/// the map, or between stacked decks, is an error, never an invented height.
 fn actor_base_y(state: &ServiceState, actor_id: &str, position: [f32; 3], frame_ground_y: Option<f32>) -> Result<f32, String> {
-    Ok(base_y_precedence(position[1], frame_ground_y, || state.app.ground_at_covered(position[0], position[2]))
-        .ok_or_else(|| format!(
-            "[native_ground_height_unavailable] actor {actor_id} at x={:.2} z={:.2} has no authored height and no map ground within 20 m",
-            position[0], position[2]
-        ))?)
+    base_y_precedence(position[1], frame_ground_y, || state.app.ground_height(position[0], position[2]))
+        .map_err(|error| format!("actor {actor_id} has no authored height: {error}"))
 }
 
-fn base_y_precedence(authored_y: f32, frame_ground_y: Option<f32>, sampled_y: impl FnOnce() -> Option<f32>) -> Option<f32> {
+fn base_y_precedence(
+    authored_y: f32,
+    frame_ground_y: Option<f32>,
+    sampled_y: impl FnOnce() -> Result<f32, String>,
+) -> Result<f32, String> {
     if authored_y.abs() >= 1e-4 {
-        Some(authored_y)
+        Ok(authored_y)
     } else {
-        frame_ground_y.or_else(sampled_y)
+        match frame_ground_y {
+            Some(y) => Ok(y),
+            None => sampled_y(),
+        }
     }
 }
 
@@ -3172,11 +3189,15 @@ mod tests {
 
     #[test]
     fn authored_actor_height_precedes_mesh_ground() {
-        assert_eq!(base_y_precedence(2.225, None, || Some(-9.7)), Some(2.225));
-        assert_eq!(base_y_precedence(0.0, Some(3.5), || Some(-9.7)), Some(3.5));
-        assert_eq!(base_y_precedence(0.0, None, || Some(1.75)), Some(1.75));
-        // Off the map with no authored height: no invented height.
-        assert_eq!(base_y_precedence(0.0, None, || None), None);
+        assert_eq!(base_y_precedence(2.225, None, || Ok(-9.7)), Ok(2.225));
+        assert_eq!(base_y_precedence(0.0, Some(3.5), || Ok(-9.7)), Ok(3.5));
+        assert_eq!(base_y_precedence(0.0, None, || Ok(1.75)), Ok(1.75));
+        // Off the map with no authored height: the ground source's error,
+        // never an invented height.
+        assert_eq!(
+            base_y_precedence(0.0, None, || Err("[native_ground_height_unavailable] off".into())),
+            Err("[native_ground_height_unavailable] off".to_string())
+        );
     }
 
     #[test]

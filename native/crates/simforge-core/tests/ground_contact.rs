@@ -147,10 +147,10 @@ fn a_trace_without_contact_gets_the_same_contact_derived_at_timeline_build() {
     let height = HeightField::ground(Arc::clone(&ground));
     let from_trace = build_render_timeline(&grounded, &height, None).unwrap();
     let derived = build_render_timeline(&bare, &height, None).unwrap();
-    assert_eq!(from_trace.contact_origin, ContactOrigin::Trace);
+    assert_eq!(from_trace.contact_origin, Some(ContactOrigin::Trace));
     assert_eq!(
         derived.contact_origin,
-        ContactOrigin::DerivedAtTimelineBuild
+        Some(ContactOrigin::DerivedAtTimelineBuild)
     );
     assert_eq!(from_trace.height_source.kind, "ground-contact/v1");
     assert_eq!(
@@ -164,6 +164,28 @@ fn a_trace_without_contact_gets_the_same_contact_derived_at_timeline_build() {
         assert_eq!(a.track.road_pitch_rad, b.track.road_pitch_rad, "{}", a.id);
         assert_eq!(a.track.road_roll_rad, b.track.road_roll_rad, "{}", a.id);
     }
+    // The render contact gate: every wheel of both timelines is on the
+    // rendered surface within 3 cm.
+    for timeline in [&from_trace, &derived] {
+        let gate = simforge_core::trace::timeline::contact_gate::check_contact(
+            timeline,
+            ground.surface(),
+            simforge_core::trace::timeline::contact_gate::CONTACT_GATE_TOLERANCE_M,
+        );
+        assert!(gate.pass, "{:?}", gate.failures.first());
+        assert!(gate.checked > 1000);
+    }
+    // A trace without contact on a map version without a ground derivative
+    // is baked on the retired OpenDRIVE resolver, and says so.
+    let xodr = gunzip(&read(&format!("{MAP}/map.xodr.gz")));
+    let topology = read(&format!("{MAP}/topology-index.json.gz"));
+    let legacy = build_render_timeline(&bare, &HeightField::from_xodr(&xodr, &topology).unwrap(), None).unwrap();
+    assert_eq!(legacy.contact_origin, Some(ContactOrigin::LegacyXodrElevation));
+    // Bodies drawn at the wrong height fail the gate by name (a flat ground
+    // at 0 m under a map whose road is at ~7 m).
+    let flat = build_render_timeline(&bare, &HeightField::flat(0.0), None).unwrap();
+    let gate = simforge_core::trace::timeline::contact_gate::check_contact(&flat, ground.surface(), 0.03);
+    assert!(!gate.pass && gate.failure_count > 100 && gate.failures[0].gap_m < -1.0, "{gate:?}");
     // A grounded trace cannot be baked against a synthetic surface.
     assert!(matches!(
         build_render_timeline(&grounded, &HeightField::flat(0.0), None),

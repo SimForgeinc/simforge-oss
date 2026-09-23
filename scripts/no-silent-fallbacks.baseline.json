@@ -256,8 +256,8 @@
     {
       "file": "packages/render/src/timeline/index.ts",
       "rule": "ts-nullish-literal",
-      "count": 3,
-      "justification": "optional provenance digests passed through as absent (catalogDigest/recordedTraceSha256), not a render substitution; merged from fix/ground-height b3eb2290f"
+      "count": 1,
+      "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
     },
     {
       "file": "packages/render/src/web/capture.ts",

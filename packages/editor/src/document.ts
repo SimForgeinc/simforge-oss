@@ -1274,21 +1274,6 @@ export class EditorDocument {
   }
 
   /**
-   * Persist several execution-bearing ambient-traffic options as ONE undoable
-   * gesture (a traffic source together with the density it needs).
-   */
-  setAmbientTrafficExtensions(entries: Readonly<Record<string, unknown>>): void {
-    for (const key of Object.keys(entries)) {
-      if (!key.startsWith('studio.ambientTraffic.')) {
-        throw new Error(`ambient traffic extension key must start with "studio.ambientTraffic.": ${key}`);
-      }
-    }
-    this.#transaction(() => {
-      for (const [key, value] of Object.entries(entries)) this.#doc.setExtension(key, value);
-    });
-  }
-
-  /**
    * Apply a one-time repair of stored data (for example
    * `fixMirroredOpenScenarioImport`) as one undoable, autosaved gesture: the
    * named roles are replaced verbatim and the extension values set as given.
@@ -1307,6 +1292,21 @@ export class EditorDocument {
     this.#transaction(() => {
       for (const role of roles) this.#doc.replaceRole(role.id, role);
       for (const [key, value] of Object.entries(repair.extensions ?? {})) this.#doc.setExtension(key, value);
+    });
+  }
+
+  /**
+   * Persist several execution-bearing ambient-traffic options as ONE undoable
+   * gesture (a traffic source together with the density it needs).
+   */
+  setAmbientTrafficExtensions(entries: Readonly<Record<string, unknown>>): void {
+    for (const key of Object.keys(entries)) {
+      if (!key.startsWith('studio.ambientTraffic.')) {
+        throw new Error(`ambient traffic extension key must start with "studio.ambientTraffic.": ${key}`);
+      }
+    }
+    this.#transaction(() => {
+      for (const [key, value] of Object.entries(entries)) this.#doc.setExtension(key, value);
     });
   }
 

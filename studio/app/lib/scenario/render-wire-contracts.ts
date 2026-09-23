@@ -101,12 +101,21 @@ export const SubmitScenarioRenderIntentSchema = z.strictObject({
   idempotencyKey: z.string().trim().min(1).max(200),
   priority: z.number().int().min(-100).max(100).optional(),
   /**
-   * Where the motion comes from (`RenderIntentV1.motionSource`). Only an
-   * explicit `original-xosc` renders a revision that has no stored trace, as
-   * the labelled legacy OpenSCENARIO replay; nothing selects it implicitly.
+   * Where the motion comes from. Absent or `original`: the revision's active
+   * (original) simulation, whatever engine produced it; a revision with none
+   * is refused (`original_simulation_missing`), never re-simulated
+   * implicitly. `resimulated`: the explicitly re-simulated result `simKey`
+   * of this revision. `original-xosc`: the labelled legacy OpenSCENARIO
+   * replay for revisions that have no stored trace; nothing selects it
+   * implicitly.
    */
   motionSource: z.enum(RENDER_MOTION_SOURCES).optional(),
+  /** With `motionSource: "resimulated"`: which of the revision's results to render. */
+  simKey: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 }).superRefine((input, context) => {
+  if ((input.motionSource === "resimulated") !== (input.simKey !== undefined)) {
+    context.addIssue({ code: "custom", path: ["simKey"], message: "simKey is required with, and only with, motionSource \"resimulated\"." });
+  }
   if (input.engine !== "native" && (input.renderProfile !== undefined || input.nativeVramBudgetBytes !== undefined)) {
     context.addIssue({ code: "custom", path: ["renderProfile"], message: "Render and ML profiles require the native engine." });
   }

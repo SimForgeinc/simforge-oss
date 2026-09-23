@@ -61,7 +61,7 @@ describe('simKey', () => {
       simKey({ ...base, mapClosureDigest: 'c'.repeat(64) }),
       simKey({ ...base, engineSemVer: '0.8.1' }),
       simKey({ ...base, solverVer: '0.8.1' }),
-      simKey({ ...base, traceSchema: 'simforge.trace/v5' }),
+      simKey({ ...base, traceSchema: 'simforge.trace/v999' }),
       simKey({ ...base, trafficStepKey: 'd'.repeat(64) }),
     ]);
     expect(keys.size).toBe(7);

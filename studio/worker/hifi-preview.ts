@@ -19,6 +19,7 @@
  *   - `runHifiPreviewLoop()` — standalone polling worker
  *     (scripts/hifi-preview-worker.ts) for Postgres deployments.
  */
+import { GROUND_MESH_MEMBER } from "@simforge-oss/compiler";
 import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { hostname, tmpdir } from "node:os";
@@ -216,9 +217,13 @@ export async function executeHifiPreview(
       assertActorAppearanceGrounded(appearances, [], actorAssets);
       actorDirectory = actorAssets.directory;
     }
+    // The map's ground derivative, when this version carries one, is the
+    // service's placement height source (docs/engineering/ground-height.md).
+    const groundMesh = nativeMap.payloads.find((payload) => payload.relativePath === GROUND_MESH_MEMBER);
     await writeFile(sceneSpecPath, JSON.stringify({
       glbs: [nativeMap.masterPath],
       render: { preset: request.preset },
+      ...(groundMesh ? { groundMesh: groundMesh.path } : {}),
       nearM: Math.min(Math.max(request.camera.intrinsics.near, 0.05), 10),
       farM: Math.min(Math.max(request.camera.intrinsics.far, 200), 4000),
       warmupFrames: 10,
@@ -235,6 +240,14 @@ export async function executeHifiPreview(
       shmSizeMb: 128,
     });
     const { client } = session;
+    const ground = client.ground;
+    if (!ground || (groundMesh && (ground.source !== "ground-mesh" || ground.sha256 !== groundMesh.sha256))) {
+      throw new HifiPreviewFailure(
+        "renderer_ground_source_mismatch",
+        `the render service reported ground ${JSON.stringify(ground)}; the map version carries ${groundMesh ? groundMesh.sha256 : "no ground derivative"}`,
+      );
+    }
+    log("ground_source", { requestId: lease.requestId, ground });
     const prewarmMs = Date.now() - t0;
     await client.rpc({ op: "load_scene_state", states: [request.scene] }, RPC_TIMEOUT_MS);
 

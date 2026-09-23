@@ -36,6 +36,9 @@ ruzstd = "0.8"
 walkdir = "2"
 
 sha2 = "0.10"
+# The ground derivative (`derived/ground/ground-mesh.bin`): one decoder and
+# query implementation shared with the simulator and the contact gate.
+simforge-core = { path = "../../native/crates/simforge-core" }
 
 # Raw wgpu types (query sets for `gpu_diagnostics`); Bevy enables the
 # backends. `gpu-interop` (Linux) adds the Vulkan HAL for raw handles to

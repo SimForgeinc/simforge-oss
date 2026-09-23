@@ -22,6 +22,7 @@ import {
   type OpenScenarioPlanActor,
   type OpenScenarioPlanSample,
 } from '@simforge-oss/openscenario';
+import { SCENE_ACTOR_CLASS_OF_KIND } from '@simforge-oss/scenario';
 import { RenderInputError } from '../render-input-error.js';
 import { unionFrameMicros, type FixedSchedule } from '../schedule.js';
 
@@ -155,10 +156,8 @@ function sampleAt(actor: OpenScenarioPlanActor, time: number): OpenScenarioPlanS
  * explicit and an unknown kind is refused, never labelled `prop`.
  */
 export const NATIVE_ACTOR_CLASSES: Readonly<Record<string, string>> = Object.freeze({
-  vehicle: 'car', car: 'car', van: 'van', truck: 'truck', bus: 'bus', motorcycle: 'motorcycle',
-  bicycle: 'cyclist', scooter: 'cyclist', pedestrian: 'pedestrian',
-  // No service class of their own: rendered from their catalog model, labelled prop.
-  sidewalk_robot: 'prop', drone: 'prop', animal: 'prop', static_object: 'prop',
+  // Engine kinds: the one shared table (@simforge-oss/scenario).
+  ...SCENE_ACTOR_CLASS_OF_KIND,
   // OpenSCENARIO categories (legacy lowering only).
   obstacle: 'prop', suv: 'suv', pickup: 'pickup',
 });

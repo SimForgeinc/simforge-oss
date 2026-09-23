@@ -57,6 +57,11 @@ type DetailRow = {
   started_at: string | null;
   completed_at: string | null;
   cancel_requested_at: string | null;
+  motion_source: "original" | "resimulated" | "original-xosc" | null;
+  timeline_contact_origin: "trace" | "derived-at-timeline-build" | "legacy-xodr-elevation" | null;
+  sim_key: string | null;
+  trace_sha256: string | null;
+  sim_engine_sem_ver: string | null;
 };
 
 function progressPercentOf(progress: number | string | null): number | null {
@@ -311,8 +316,10 @@ export async function getRenderJobDetail(
             j.failure_detail->>'message' AS failure_message, j.billing_mode,
             j.estimated_cost_cents, j.render_spec_sha256, j.hidden_at, j.hidden_by_user_id,
             j.parent_render_job_id, j.source_artifact_id, j.model_family, j.model_config_sha256,
-            j.created_at, j.updated_at, j.started_at, j.completed_at, j.cancel_requested_at
+            j.created_at, j.updated_at, j.started_at, j.completed_at, j.cancel_requested_at,
+            j.motion_source, j.timeline_contact_origin, j.sim_key, j.trace_sha256, s.engine_sem_ver AS sim_engine_sem_ver
        FROM simforge.render_jobs j
+       LEFT JOIN simforge.sim_results s ON s.workspace_id = j.workspace_id AND s.sim_key = j.sim_key
        JOIN simforge.execution_packages ep
          ON ep.id = j.execution_package_id AND ep.workspace_id = j.workspace_id
       WHERE j.workspace_id = :workspace_id AND j.id = :job_id
@@ -421,6 +428,13 @@ export async function getRenderJobDetail(
     startedAt: job.started_at,
     completedAt: job.completed_at,
     cancelRequestedAt: job.cancel_requested_at,
+    motion: {
+      source: job.motion_source ?? null,
+      engineSemVer: job.sim_engine_sem_ver ?? null,
+      simKey: job.sim_key ?? null,
+      traceSha256: job.trace_sha256 ?? null,
+      heightSource: job.timeline_contact_origin ?? null,
+    },
     attempts,
     events,
     artifacts,

@@ -13,6 +13,7 @@
  * proves it sees no geometry, the worker retries once with world-bounds
  * framing and records the actual rendered pose separately.
  */
+import { SCENE_ACTOR_CLASSES } from "@simforge-oss/scenario";
 import { z } from "zod";
 import type { CameraStateReport } from "@simforge-oss/viewer";
 import { RENDERER_CONTRACT_VERSION } from "@simforge-oss/viewer";
@@ -77,7 +78,7 @@ export const HifiPreviewActorSchema = z.object({
   id: z.string().trim().min(1).max(200),
   kind: z.enum(["spawn", "update", "despawn"]).default("spawn"),
   catalogId: z.string().trim().min(1).max(200),
-  actorClass: z.enum(["car", "truck", "bus", "motorcycle", "bicycle", "pedestrian", "prop"]),
+  actorClass: z.enum(SCENE_ACTOR_CLASSES),
   transform: z.object({
     /** Scene y-up metres; y is a ground hint (service snaps via its height field). */
     position: Vec3Schema,

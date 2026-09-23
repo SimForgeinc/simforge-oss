@@ -25,7 +25,7 @@ import { LEGACY_XOSC_MOTION_SOURCE, parseRenderIntent, type RenderIntentV1, type
 
 import { lowerTimelineToNative, type NativeTimelineLowering } from './timeline-lowering.js';
 import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
-import { RENDER_TIMELINE_INPUT_ID, compareObserved, openRenderTimeline, type ParityReport } from '../timeline/index.js';
+import { RENDER_TIMELINE_INPUT_ID, checkTimelineContact, compareObserved, openRenderTimeline, type ContactGateReport, type ParityReport } from '../timeline/index.js';
 import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
 import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCsv } from './sensor-video.js';
 import { StreamingZipWriter, HashedArtifactSink } from '../web/artifacts.js';
@@ -45,6 +45,9 @@ import {
   DEFAULT_NVENC_MAX_SESSIONS, VideoEncoder, assignVideoCodecs, encoderCodecArgs, nvencAvailable,
   type NativeVideoCodec, type NativeVideoEncoderPreference, type VideoFormat,
 } from './video-encoder.js';
+
+/** The map ground surface member (`derived/ground`, docs/engineering/ground-height.md). */
+const GROUND_MESH_MEMBER = 'derived/ground/ground-mesh.bin';
 
 export const NATIVE_RENDER_ENGINE_ID = 'bevy-retained';
 /** Per-RPC budgets for a started service (the start itself scales with the scene: `nativeStartupTimeoutMs`). */
@@ -590,6 +593,10 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       if (!legacyReplay && !timelineInput) {
         throw new RenderInputError('native_render_timeline_missing', `native render requires the ${RENDER_TIMELINE_INPUT_ID} input (the simulation's render timeline); job ${context.jobId} declares none and does not request motionSource '${LEGACY_XOSC_MOTION_SOURCE}'`);
       }
+      // The map's ground derivative: the renderer's placement heights and
+      // the contact gate both come from it (docs/engineering/ground-height.md).
+      const groundMember = closure.members.get(GROUND_MESH_MEMBER);
+      let contactGate: ContactGateReport | undefined;
       const applyAttitude = options.applyAttitude !== false;
       let lowering: NativeSceneLowering | NativeTimelineLowering;
       let timelineSha256: string | undefined;
@@ -600,6 +607,22 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           throw new RenderInputError('render_timeline_digest_mismatch', `${RENDER_TIMELINE_INPUT_ID} bytes ${timelineInput.sha256} are not the canonical timeline ${timelineSha256}`);
         }
         lowering = timelineLowering;
+        // Contact gate: every wheel the renderer will draw stands on the
+        // rendered ground within 3 cm (docs/engineering/ground-height.md).
+        if (groundMember) {
+          const opened = await openRenderTimeline(await fs.readFile(timelineInput.path));
+          try {
+            contactGate = checkTimelineContact(opened, new Uint8Array(await fs.readFile(groundMember.path)));
+          } finally {
+            opened.free();
+          }
+          if (!contactGate.pass) {
+            const worst = contactGate.failures[0];
+            throw new RenderInputError('render_contact_gate_failed', `${contactGate.failureCount} wheel contact(s) off the rendered ground by more than ${contactGate.toleranceM} m; worst ${worst?.actorId} tick ${worst?.tick} ${worst?.contact} gap ${worst?.gapM.toFixed(3)} m`, { failures: contactGate.failures.slice(0, 10) });
+          }
+        } else {
+          warnings.push({ code: 'render_contact_gate_unavailable', message: `the map closure carries no ${GROUND_MESH_MEMBER}; wheel contact was not checked (a map version published before its ground derivative)` });
+        }
       } else {
         lowering = lowerOpenScenarioToNative((await fs.readFile(xoscInput.path)).toString('utf8'), xoscInput.sha256, rgbSchedules);
       }
@@ -621,6 +644,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         loweringSha256: lowering.sha256,
         sceneSource: lowering.source,
         ...(timelineSha256 ? { timelineSha256 } : {}),
+        ...(contactGate ? { contactGate: { pass: contactGate.pass, checked: contactGate.checked, maxAbsGapM: contactGate.maxAbsGapM, unsupported: contactGate.unsupported, groundSha256: contactGate.groundSha256 } } : {}),
         mapId: lowering.mapId,
         fixedTimestepSeconds: lowering.fixedTimestepSeconds,
         frames: lowering.states,
@@ -658,6 +682,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         render: renderRequest.request,
         textureTier: intent.renderTextures,
         ...(geometryLod ? { geometryLod: path.join(path.dirname(masterPath), NATIVE_GEOMETRY_LOD_MANIFEST) } : {}),
+        ...(groundMember ? { groundMesh: groundMember.path } : {}),
       });
       // Scene load is the longest silent stretch of a large-map job: report
       // it as `preparing` seconds against a budget that scales with the scene.
@@ -691,6 +716,24 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       }
       const renderConfig = session.renderConfig;
       const capture = nativeCaptureEvidence(renderConfig);
+      const groundSource = client.ground;
+      if (!groundSource) {
+        await session.close();
+        throw new RenderInputError('native_ground_source_unreported', 'the render service did not report its placement height source at hello (a service that predates the ground derivative)');
+      }
+      if (groundMember) {
+        // The service must place actors on the same surface the gate checked.
+        if (!client.supports('ground_mesh') || groundSource.source !== 'ground-mesh') {
+          await session.close();
+          throw new RenderInputError('native_ground_mesh_unsupported', `the render service did not load ${GROUND_MESH_MEMBER} (reported ${JSON.stringify(groundSource)}); it would place actors on a different ground than the simulator`);
+        }
+        if (groundSource.sha256 !== groundMember.sha256) {
+          await session.close();
+          throw new RenderInputError('native_ground_mesh_mismatch', `the render service loaded ground ${groundSource.sha256}, the closure carries ${groundMember.sha256}`);
+        }
+      } else {
+        warnings.push({ code: 'native_ground_legacy_field', message: `the map closure carries no ${GROUND_MESH_MEMBER}; heights for actors without one come from the renderer's legacy mesh field (a map version published before its ground derivative)` });
+      }
 
       const encoders = new Map<string, Encoder>();
       const rasterizers = new Map<string, LidarVideoRasterizer | RadarVideoRasterizer>();
@@ -956,6 +999,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         ...(observedFrames.length > 0 ? { observedFramesPath: observedRelative, observedFrames: observedFrames.map((line) => JSON.parse(line) as unknown) } : {}),
         parity,
         attitude: applyAttitude ? 'full' : 'yaw-only',
+        groundSource,
       });
       const traceDigest = await hashFile(tracePath);
       phase('parityAndTrace');

@@ -20,7 +20,7 @@ pub const NATIVE_SERVICE_PROTOCOL_VERSION: u32 = 5;
 
 /// Additive ops advertised in `hello.capabilities`.
 pub const NATIVE_SERVICE_CAPABILITIES: &[&str] =
-    &["observe_actors", "render_config", "capture_clock.pinned", "render_bundle.observe", "render_bundle.pipeline"];
+    &["observe_actors", "render_config", "capture_clock.pinned", "render_bundle.observe", "render_bundle.pipeline", "ground_mesh"];
 
 /// Rigid attachment of a camera to a scene-state actor (CARLA
 /// `AttachmentType.Rigid` analogue): the pose is re-resolved from the
@@ -332,6 +332,9 @@ pub enum ResponseBody {
         render_config: render_core::render_config::RenderConfig,
         /// Deprecation notes from resolving the scene spec.
         deprecations: Vec<String>,
+        /// The scene's placement height source: `ground-mesh` (the map's
+        /// ground derivative, with its sha256) or `legacy-mesh-field`.
+        ground: GroundInfo,
     },
     Load {
         ok: bool,
@@ -470,6 +473,27 @@ pub struct EpisodeImageHistory {
     pub time_seconds: f64,
     pub frame: FrameIdentity,
     pub frames: Vec<FrameRecord>,
+}
+
+/// Placement height source handed out at hello.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct GroundInfo {
+    pub source: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<String>,
+}
+
+impl From<render_core::engine::GroundSource> for GroundInfo {
+    fn from(source: render_core::engine::GroundSource) -> Self {
+        match source {
+            render_core::engine::GroundSource::GroundMesh { sha256 } => {
+                GroundInfo { source: "ground-mesh".into(), sha256: Some(sha256) }
+            }
+            render_core::engine::GroundSource::LegacyMeshField => {
+                GroundInfo { source: "legacy-mesh-field".into(), sha256: None }
+            }
+        }
+    }
 }
 
 /// Shared-memory ring descriptor handed out at hello.

@@ -195,6 +195,7 @@ export const rendertimeline_buildPlane: (a: number, b: number, c: number, d: num
 export const rendertimeline_catalogDigest: (a: number) => [number, number];
 export const rendertimeline_clipEndS: (a: number) => number;
 export const rendertimeline_compareObservedJson: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+export const rendertimeline_contactGateJson: (a: number, b: number, c: number, d: number) => [number, number, number, number];
 export const rendertimeline_contactOrigin: (a: number) => [number, number];
 export const rendertimeline_fromBytes: (a: number, b: number) => [number, number, number];
 export const rendertimeline_headerJson: (a: number) => [number, number, number, number];

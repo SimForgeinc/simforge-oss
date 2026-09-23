@@ -4,6 +4,7 @@ import {
   decodeTraceGz,
   safeParseSimScenarioInput,
   traceToSceneFrame,
+  READABLE_TRACE_VERSIONS,
   TRACE_FORMAT_VERSION,
   type SceneTrace,
   type SimActor,
@@ -278,6 +279,14 @@ export interface SampledActor {
    */
   readonly steerRad?: number;
   readonly wheelAngularSpeedRadps?: number;
+  /**
+   * Ground-contact elevation (scene y) and road attitude from the engine's
+   * contact channels (trace v5). Absent on traces recorded without a ground
+   * surface, where the host samples the rendered road itself.
+   */
+  readonly groundY?: number;
+  readonly roadPitchRad?: number;
+  readonly roadRollRad?: number;
   /**
    * Distance travelled, metres: the render timeline's `wheelSpinRad` rule
    * (Σ signed speed·dt over present ticks after spawn) interpolated to the sample
@@ -635,8 +644,8 @@ function validateTrace(value: unknown, name: string, issues: string[]): SimTrace
     }
   }
   if (header) {
-    if (header['traceVersion'] !== TRACE_FORMAT_VERSION) {
-      issues.push(`${name}: header.traceVersion must be ${TRACE_FORMAT_VERSION}; got ${display(header['traceVersion'])}`);
+    if (!READABLE_TRACE_VERSIONS.includes(header['traceVersion'] as number)) {
+      issues.push(`${name}: header.traceVersion must be one of ${READABLE_TRACE_VERSIONS.join(', ')} (current ${TRACE_FORMAT_VERSION}); got ${display(header['traceVersion'])}`);
     }
     if (header['frame'] !== 'xodr-local') {
       issues.push(`${name}: header.frame must be "xodr-local"; got ${display(header['frame'])}`);
@@ -1078,6 +1087,11 @@ export function samplePlaybackActors(bundle: PlaybackBundle, time: number): Samp
       static: false,
       motionDirection,
       downProgress: knockdownProgress(track.downSinceS, time),
+      ...(track.contact ? {
+        groundY: lerp(track.contact.z[bracket.lower] as number, track.contact.z[bracket.upper] as number, alpha),
+        roadPitchRad: lerp(track.contact.pitchRad[bracket.lower] as number, track.contact.pitchRad[bracket.upper] as number, alpha),
+        roadRollRad: lerp(track.contact.rollRad[bracket.lower] as number, track.contact.rollRad[bracket.upper] as number, alpha),
+      } : {}),
       odometerM: lerp(odometer[bracket.lower] as number, odometer[bracket.upper] as number, alpha),
       ...(physics ? {
         steerRad: lerp(physics.steerRad[bracket.lower] as number, physics.steerRad[bracket.upper] as number, alpha),

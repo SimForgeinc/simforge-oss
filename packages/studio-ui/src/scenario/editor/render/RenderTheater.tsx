@@ -24,6 +24,7 @@ import {
   renderStateVisual,
   shortDigest,
 } from "./render-view-model";
+import { renderHeightLabel, renderMotionLabel } from "./render-motion-model";
 import type { ScenarioRenderJobDetailDto } from "@simforge-oss/studio-host";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderTheater.stylex";
@@ -434,6 +435,10 @@ export function RenderTheater({
                           : latestAttempt ? "local process" : "—"
                       }
                     />
+                    <ConfigRow label="Motion" value={renderMotionLabel(detail.motion)} />
+                    {renderHeightLabel(detail.motion?.heightSource) ? (
+                      <ConfigRow label="Height" value={renderHeightLabel(detail.motion?.heightSource)!} />
+                    ) : null}
                     <ConfigRow label="Revision" value={detail.revisionId} mono />
                     <ConfigRow label="Execution package" value={detail.executionPackageId} mono />
                     <ConfigRow
