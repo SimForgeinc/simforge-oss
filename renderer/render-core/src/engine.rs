@@ -5850,6 +5850,15 @@ mod tests {
         let keys = vec!["cam:rgb".to_string()];
         let poses = [([6.0, 1.8, 6.0], [0.0, 0.8, 0.0]), ([-6.0, 1.8, 6.0], [0.0, 0.8, 0.0]), ([0.0, 2.5, 8.0], [0.0, 0.5, 0.0])];
         let mut app = pinned_scene(AntiAlias::SmaaHigh, CaptureClock::Pinned { samples: 1 });
+        // Both sequences start from the same drawn history (the last pose),
+        // so only the readback path differs between them.
+        let prime = |app: &mut SceneApp| {
+            let (eye, target) = poses[2];
+            app.set_pose("cam", &eye, &target).unwrap();
+            app.set_sim_time(2.0);
+            app.capture(99, &keys).unwrap();
+        };
+        prime(&mut app);
         let blocking: Vec<Vec<u8>> = poses
             .iter()
             .enumerate()
@@ -5859,6 +5868,7 @@ mod tests {
                 app.capture(tick as u64, &keys).unwrap().passes["cam:rgb"].bytes.clone()
             })
             .collect();
+        prime(&mut app);
         // Pipelined order: begin N+1 before finishing N.
         let mut frames = Vec::new();
         let mut pending: Option<CaptureTicket> = None;
@@ -5877,6 +5887,30 @@ mod tests {
             assert!(frame.passes["cam:rgb"].bytes == *expected, "deferred frame {tick} differs from the blocking capture");
         }
         assert!(blocking[0] != blocking[1], "fixture poses must differ");
+        std::mem::forget(app);
+    }
+
+    /// Probe (reports, does not gate): does a pinned capture depend on the
+    /// pose drawn before it? The same pose and time captured after two
+    /// different predecessors; prints which passes of the frame differ.
+    #[test]
+    #[ignore = "focused GPU integration probe"]
+    fn pinned_capture_pose_history_probe() {
+        use crate::profiles::AntiAlias;
+        let keys = vec!["cam:rgb".to_string()];
+        let mut app = pinned_scene(AntiAlias::SmaaHigh, CaptureClock::Pinned { samples: 1 });
+        let mut after = |app: &mut SceneApp, previous: ([f32; 3], [f32; 3])| {
+            app.set_pose("cam", &previous.0, &previous.1).unwrap();
+            app.set_sim_time(1.0);
+            app.capture(1, &keys).unwrap();
+            app.set_pose("cam", &[6.0, 1.8, 6.0], &[0.0, 0.8, 0.0]).unwrap();
+            app.set_sim_time(1.0);
+            app.capture(2, &keys).unwrap().passes["cam:rgb"].bytes.clone()
+        };
+        let same = after(&mut app, ([6.0, 1.8, 6.0], [0.0, 0.8, 0.0]));
+        let moved = after(&mut app, ([0.0, 2.5, 8.0], [0.0, 0.5, 0.0]));
+        let differing = same.iter().zip(&moved).filter(|(a, b)| a != b).count();
+        eprintln!("pose-history probe: {differing} of {} bytes differ after a different predecessor pose", same.len());
         std::mem::forget(app);
     }
 
