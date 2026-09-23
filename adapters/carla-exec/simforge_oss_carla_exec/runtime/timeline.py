@@ -27,6 +27,7 @@ from typing import Any, Callable, Mapping, Protocol
 
 from .compiler import LIFECYCLE_ABSENT, LIFECYCLE_ACTIVE, LIFECYCLE_SPAWN, ActorFrame, ExecutionPlan, PlanFrame
 from .contract import ContractError
+from .policy import CarlaRenderError
 
 #: The render-timeline sampler contract implemented here.
 SAMPLER_VERSION = "simforge.timeline-sampler/1"
@@ -40,6 +41,14 @@ TIMELINE_LIGHT_TYPES: Mapping[str, str] = {
     "indicatorRight": "indicatorRight",
     "emergency": "specialPurposeLights",
 }
+
+
+#: Every key a render-timeline pose must carry.
+_TIMELINE_POSE_KEYS = frozenset({
+    "present", "x", "y", "z", "headingRad", "pitchRad", "rollRad", "speedMps", "downed",
+})
+#: Appearance keys the timeline owns (it states them every tick).
+_TIMELINE_OWNED_LIGHT_KEYS = frozenset(f"light.{value}" for value in TIMELINE_LIGHT_TYPES.values())
 
 
 class FrameSampler(Protocol):
@@ -178,6 +187,38 @@ class BoundTimeline:
     def frame_at_tick(self, index: int) -> PlanFrame:
         return self.frame_at(index, self.times[index])
 
+    def _plan_appearance(self, actor_id: str, t: float, timeline_lights: Mapping[str, str]) -> dict[str, str]:
+        """xosc appearance the timeline does not carry, latched like the sampler.
+
+        The render timeline carries only its light channels. Doors, cues and
+        light types without a timeline channel come from the xosc plan, from
+        the tick at or before ``t``. `warningLights` has no channel of its own
+        because the timeline expresses hazards as both indicators; it is
+        rendered through them, and a hazard the indicators do not show fails.
+        """
+        frames = self.plan.frames
+        floor = min(max(int(math.floor(t / self.fixed_timestep_s + 1e-9)), 0), len(frames) - 1)
+        state = frames[floor].actors.get(actor_id)
+        if state is None:
+            return {}
+        merged: dict[str, str] = {}
+        for key, value in state.appearance.items():
+            if key in timeline_lights or key in _TIMELINE_OWNED_LIGHT_KEYS:
+                continue
+            if key == "light.warningLights":
+                if value != "off" and not (
+                    timeline_lights.get("light.indicatorLeft") == value
+                    and timeline_lights.get("light.indicatorRight") == value
+                ):
+                    raise CarlaRenderError(
+                        "carla_timeline_appearance_incomplete",
+                        f"{actor_id} authors warningLights {value} at t={t:g} but the render timeline's "
+                        "indicators do not show it",
+                    )
+                continue
+            merged[key] = value
+        return merged
+
     def frame_at(self, index: int, t: float) -> PlanFrame:
         self.abort()
         poses = self.timeline.poses(t)
@@ -185,13 +226,28 @@ class BoundTimeline:
         actors: dict[str, ActorFrame] = {}
         for actor_id in self.actor_ids:
             pose = poses[actor_id]
+            missing = sorted(_TIMELINE_POSE_KEYS - set(pose))
+            if missing:
+                # `downed` included: a timeline built before knockdowns
+                # existed cannot say whether a pedestrian is lying down.
+                raise CarlaRenderError(
+                    "carla_timeline_incomplete",
+                    f"render timeline pose for {actor_id} lacks {', '.join(missing)}",
+                )
             present = bool(pose["present"])
-            modes = self.timeline.light_modes_at(actor_id, t) if present else {}
+            modes = dict(self.timeline.light_modes_at(actor_id, t)) if present else {}
+            unknown = sorted(set(modes) - set(TIMELINE_LIGHT_TYPES))
+            if unknown:
+                raise CarlaRenderError(
+                    "carla_timeline_incomplete",
+                    f"render timeline light channel(s) {', '.join(unknown)} of {actor_id} have no CARLA light",
+                )
             appearance = {
                 f"light.{TIMELINE_LIGHT_TYPES[name]}": str(mode)
-                for name, mode in dict(modes).items()
-                if name in TIMELINE_LIGHT_TYPES
+                for name, mode in modes.items()
             }
+            if present:
+                appearance.update(self._plan_appearance(actor_id, t, appearance))
             lifecycle = (
                 LIFECYCLE_ABSENT if not present
                 else LIFECYCLE_SPAWN if index == 0
@@ -203,17 +259,21 @@ class BoundTimeline:
                 math.degrees(float(pose["headingRad"])),
                 float(pose["speedMps"]),
                 appearance,
-                # `downed` is the sampler's knockdown flag (per-actor
-                # `downedSinceTick`); absent from timelines built before it.
-                bool(pose.get("downed", False)),
+                bool(pose["downed"]),
                 math.degrees(float(pose["pitchRad"])),
                 math.degrees(float(pose["rollRad"])),
             )
         for prop_id, prop in self.props.items():
+            missing = sorted({"x", "y", "z", "headingRad"} - set(prop))
+            if missing:
+                raise CarlaRenderError(
+                    "carla_timeline_incomplete",
+                    f"render timeline prop {prop_id} lacks {', '.join(missing)}",
+                )
             actors[prop_id] = ActorFrame(
                 LIFECYCLE_SPAWN if index == 0 else LIFECYCLE_ACTIVE,
                 float(prop["x"]), float(prop["y"]), float(prop["z"]),
-                math.degrees(float(prop.get("headingRad", 0.0))), 0.0,
+                math.degrees(float(prop["headingRad"])), 0.0,
             )
         return PlanFrame(index, t, actors, signals)
 
