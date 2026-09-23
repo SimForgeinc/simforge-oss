@@ -35,6 +35,7 @@ type InventoryResponse = {
 };
 
 const PLAN_CONCURRENCY = 4;
+const INVENTORY_BATCH = 32;
 const planMemo = new Map<string, Promise<MapDownloadPlan>>();
 const inventoryMemo = new Map<string, DownloadInventory>();
 let capabilities: TextureCapabilities | null = null;
@@ -64,15 +65,18 @@ export function resetMapDownloadPlansForTests(): void {
 async function fetchInventories(ids: readonly string[], signal?: AbortSignal): Promise<InventoryResponse> {
   const missing = ids.filter((id) => !inventoryMemo.has(id));
   const unavailable: InventoryResponse["unavailable"] = [];
-  if (missing.length > 0) {
+  // The route answers at most 64 maps per request; batches go out together.
+  const batches: string[][] = [];
+  for (let start = 0; start < missing.length; start += INVENTORY_BATCH) batches.push(missing.slice(start, start + INVENTORY_BATCH));
+  await Promise.all(batches.map(async (batch) => {
     const query = new URLSearchParams();
-    for (const id of missing) query.append("mapVersionId", id);
+    for (const id of batch) query.append("mapVersionId", id);
     const response = await fetch(`/api/simforge/maps/download-plan?${query}`, { cache: "no-store", signal, credentials: "same-origin" });
     if (!response.ok) throw new Error(`The map download inventory could not be loaded (${response.status}).`);
     const body = await response.json() as InventoryResponse;
     for (const map of body.maps) inventoryMemo.set(map.mapVersionId, map);
     unavailable.push(...body.unavailable);
-  }
+  }));
   return { maps: ids.flatMap((id) => inventoryMemo.get(id) ?? []), unavailable };
 }
 
