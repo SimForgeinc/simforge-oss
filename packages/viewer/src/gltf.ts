@@ -375,7 +375,8 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '',
   textureSources: ReadonlyMap<string, MapTextureSource> = new Map(), packReader: MapPackReader | null = null): GLTFLoader {
   if (!sharedLoader) {
     const loader = new GLTFLoader();
-    MeshoptDecoder.useWorkers(Math.min(4, Math.max(1, (navigator.hardwareConcurrency ?? 4) - 2)));
+    // Every web-tier cell is meshopt-compressed; a map load decodes hundreds of MB of it.
+    MeshoptDecoder.useWorkers(Math.min(8, Math.max(1, (navigator.hardwareConcurrency ?? 4) - 2)));
     loader.setMeshoptDecoder(MeshoptDecoder);
     sharedLoader = loader;
   }
