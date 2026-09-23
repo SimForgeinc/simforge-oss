@@ -24,9 +24,15 @@ import { canonicalJson, sha256 } from './closure.js';
  *   batches; positions quantized to 16 bits over each mesh's own bounds
  *   (<= 5 mm on a 300 m mesh).
  *
+ * - `tiles/veg_<x>_<z>.lod<k>.glb` (k >= 1, when the geometry derivative is
+ *   given): the same cell with every LOD'd plant at derivative level k
+ *   (card-thinned levels, then the cross-card impostor), with the cell's
+ *   geometric error in metres, so the viewer draws and downloads coarse
+ *   vegetation far away and the full plant only near the camera.
+ *
  * The manifest keeps the `1.2.0` schema the viewer already streams.
  */
-export const WEB_TIER_REVISION = 2;
+export const WEB_TIER_REVISION = 3;
 export const MESHOPTIMIZER_VERSION = '1.2.0';
 
 const CLASSIFY_VEGETATION = /veg|tree|bush|grass|foliage|plant/;
@@ -56,10 +62,27 @@ interface TileRow {
   bounds: Bounds;
   triangles: number;
   fileSize: number;
+  /** Coarser levels of a vegetation cell (lod0 is the row itself). */
+  coarser?: Array<{ level: number; file: string; triangles: number; fileSize: number; geometricError: number }>;
+}
+
+/** One level of the geometry derivative, applied to the whole master. */
+export interface VegetationLodLevel {
+  level: number;
+  /** The master with every LOD'd mesh at this level; same node order as the master. */
+  document: Document;
+  /** Mesh-local geometric error (metres) of master mesh `index` at this level; 0 when it has no LOD. */
+  errorM(masterMeshIndex: number): number;
 }
 
 export interface WebTierOptions {
   cellSize?: number;
+  /**
+   * Levels of the geometry derivative (docs/engineering/map-geometry-lod.md),
+   * finest first, produced one at a time so only one substituted master is in
+   * memory. Vegetation cells get a `lod<k>` file per level that changes them.
+   */
+  vegetationLevels?: () => AsyncIterable<VegetationLodLevel>;
 }
 
 export interface WebTierReport {
@@ -74,6 +97,8 @@ export interface WebTierReport {
   skinnedNodesPreserved: number;
   positionBits: number;
   tilesByKind: Record<Kind, number>;
+  /** Coarser vegetation cell files written from the geometry derivative. */
+  vegetationLodTiles?: number;
 }
 
 export function webTierToolFingerprint(cellSize: number): string {
@@ -106,6 +131,14 @@ function primitiveTriangles(mesh: Mesh): number {
     }
   }
   return total;
+}
+
+function maxAxisScale(matrix: readonly number[]): number {
+  let scale = 0;
+  for (let column = 0; column < 3; column++) {
+    scale = Math.max(scale, Math.hypot(matrix[column * 4]!, matrix[column * 4 + 1]!, matrix[column * 4 + 2]!));
+  }
+  return scale;
 }
 
 function aggregateBounds(rows: Bounds[]): Bounds {
@@ -310,7 +343,7 @@ function sceneManifest(cellSize: number, origin: [number, number, number], bound
     gridX: row.gridX,
     gridZ: row.gridZ,
     bounds: row.bounds,
-    lods: [{ level: 0, file: row.file, triangles: row.triangles, fileSize: row.fileSize, geometricError: 0 }],
+    lods: [{ level: 0, file: row.file, triangles: row.triangles, fileSize: row.fileSize, geometricError: 0 }, ...(row.coarser ?? [])],
   });
   return {
     version: '1.2.0',
@@ -322,7 +355,7 @@ function sceneManifest(cellSize: number, origin: [number, number, number], bound
       gridDimensions: dimensions,
       cellSize: [cellSize, cellSize],
       origin,
-      lodLevels: 1,
+      lodLevels: 1 + Math.max(0, ...rows.map((row) => row.coarser?.length ?? 0)),
       coordinateSystem: 'y-up',
     },
     tiles: staticRows.map(tileEntry),
@@ -408,17 +441,55 @@ export async function buildWebTier(master: Document, outputDir: string, options:
     tilesByKind: { road: 1, static: 0, vegetation: 0 },
   };
   const streamed = new Set([...categories.static, ...categories.vegetation].map((row) => row.node));
+  const vegetationCells: Array<{ row: TileRow; members: PlacedNode[] }> = [];
   for (const tile of tiles) {
     const document = tile.row.kind === 'road'
       ? await faithfulDocument(master, streamed)
       : tileDocument(master, tile.members);
     const written = await writeTile(io, document, tile.quantize, path.basename(tile.row.file, '.glb'));
     await writeFile(path.join(webDir, tile.row.file), written.glb);
-    rows.push({ ...tile.row, fileSize: written.glb.byteLength });
+    const row: TileRow = { ...tile.row, fileSize: written.glb.byteLength };
+    rows.push(row);
+    if (tile.row.kind === 'vegetation') vegetationCells.push({ row, members: tile.members });
     report.bytes += written.glb.byteLength;
     report.instancedNodes += written.instancedNodes;
     report.instanceBatches += written.batches;
     if (tile.row.kind !== 'road') report.tilesByKind[tile.row.kind] += 1;
+  }
+  if (options.vegetationLevels && vegetationCells.length > 0) {
+    const masterNodes = master.getRoot().listNodes();
+    const nodeIndex = new Map(masterNodes.map((node, index) => [node, index]));
+    const meshIndex = new Map(master.getRoot().listMeshes().map((mesh, index) => [mesh, index]));
+    const previousError = new Map<TileRow, number>();
+    for await (const level of options.vegetationLevels()) {
+      const levelNodes = level.document.getRoot().listNodes();
+      if (levelNodes.length !== masterNodes.length) throw new Error(`geometry LOD level ${level.level} does not keep the master's nodes`);
+      for (const cell of vegetationCells) {
+        let error = 0;
+        const members: PlacedNode[] = cell.members.map((member) => {
+          const node = levelNodes[nodeIndex.get(member.node)!]!;
+          const mesh = node.getMesh();
+          if (!mesh) throw new Error(`geometry LOD level ${level.level} dropped the mesh of ${JSON.stringify(member.name)}`);
+          error = Math.max(error, level.errorM(meshIndex.get(member.mesh)!) * maxAxisScale(member.worldMatrix));
+          return { ...member, node, mesh, triangles: primitiveTriangles(mesh) };
+        });
+        // Nothing in this cell is coarser at this level: no file for it.
+        if (error <= (previousError.get(cell.row) ?? 0)) continue;
+        previousError.set(cell.row, error);
+        const file = cell.row.file.replace(/\.lod0\.glb$/, `.lod${level.level}.glb`);
+        const written = await writeTile(io, tileDocument(level.document, members), true, path.basename(file, '.glb'));
+        await writeFile(path.join(webDir, file), written.glb);
+        (cell.row.coarser ??= []).push({
+          level: level.level,
+          file,
+          triangles: members.reduce((sum, member) => sum + member.triangles, 0),
+          fileSize: written.glb.byteLength,
+          geometricError: Number(error.toFixed(5)),
+        });
+        report.bytes += written.glb.byteLength;
+        report.vegetationLodTiles = (report.vegetationLodTiles ?? 0) + 1;
+      }
+    }
   }
   await writeFile(path.join(webDir, 'manifest.json'), `${canonicalJson(sceneManifest(cellSize, [originX, sceneBounds.min[1], originZ], sceneBounds, rows))}\n`);
   await writeFile(path.join(webDir, 'semantics.json'), `${canonicalJson(semantics(placed))}\n`);
