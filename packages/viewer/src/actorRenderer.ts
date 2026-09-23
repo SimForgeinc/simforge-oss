@@ -875,6 +875,19 @@ export class ActorRenderer {
     this.selection.visible = verts.length > 0;
   }
 
+  /**
+   * The view last drawn for `actorId` on any visible layer, or null when no
+   * visible layer draws it. Lets a camera follow whatever the viewport shows
+   * (trace playback, SUMO traffic) from the pose the renderer actually used.
+   */
+  actorView(actorId: string): ActorView | null {
+    for (const [layer, actors] of this.layers) {
+      if (this.hiddenLayers.has(layer)) continue;
+      for (const actor of actors) if (actor.id === actorId) return actor;
+    }
+    return null;
+  }
+
   /** Objects a picking raycast should test. */
   pickables(): Object3D[] {
     const out: Object3D[] = [];

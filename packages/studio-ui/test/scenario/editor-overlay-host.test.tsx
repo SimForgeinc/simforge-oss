@@ -28,7 +28,7 @@ vi.mock(
 );
 
 import { EditorOverlayHost } from "../../src/scenario/editor/inspector/EditorOverlayHost";
-import { EditorConfigurationBlockProvider } from "../../src/scenario/editor/inspector/EditorDetailsPanel";
+import { EditorPlayerModeProvider } from "../../src/scenario/editor/player/player-mode";
 import {
   EditorOverlayProvider,
   useEditorOverlay,
@@ -165,18 +165,49 @@ describe("EditorOverlayHost", () => {
     expect(screen.queryByTestId("scenario-interaction-popover")).toBeNull();
   });
 
-  it("blocks details while simulation inspection is active", async () => {
+  it("steps the open panel aside while the simulation player owns the viewport, and brings it back", async () => {
     const document = makeDocument();
-    render(
-      <EditorConfigurationBlockProvider blocked>
+    const view = render(
+      <EditorPlayerModeProvider playing={false}>
         <Fixture document={document} />
-      </EditorConfigurationBlockProvider>,
+      </EditorPlayerModeProvider>,
     );
     fireEvent.click(screen.getByRole("button", { name: "open action" }));
+    const panel = await screen.findByTestId("scenario-interaction-popover");
+    expect(panel.hasAttribute("inert")).toBe(false);
 
-    expect(await screen.findByText("Cancel simulation first to configure")).toBeTruthy();
-    expect(screen.getByText("Press Esc to cancel simulation.")).toBeTruthy();
-    expect(screen.getByTestId("editor-details-simulation-blocker")).toBeTruthy();
+    view.rerender(
+      <EditorPlayerModeProvider playing>
+        <Fixture document={document} />
+      </EditorPlayerModeProvider>,
+    );
+    // Hidden, not unmounted: the very same element, no blocking sign.
+    const hidden = screen.getByTestId("scenario-interaction-popover");
+    expect(hidden).toBe(panel);
+    expect(hidden.hasAttribute("inert")).toBe(true);
+    expect(hidden.getAttribute("aria-hidden")).toBe("true");
+    expect(hidden.hasAttribute("data-player-hidden")).toBe(true);
+    expect(screen.queryByText(/Cancel simulation first/)).toBeNull();
+    expect(screen.queryByText(/Press Esc to cancel simulation/)).toBeNull();
+
+    // Keys belong to the player: Escape leaves the panel, Delete deletes nothing.
+    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(window, { key: "Delete" });
+    fireEvent.keyDown(window, { key: "Backspace" });
+    expect(document.removeInteraction).not.toHaveBeenCalled();
+    expect(screen.getByTestId("active-overlay-kind").textContent).toBe("interaction");
+
+    view.rerender(
+      <EditorPlayerModeProvider playing={false}>
+        <Fixture document={document} />
+      </EditorPlayerModeProvider>,
+    );
+    const restored = screen.getByTestId("scenario-interaction-popover");
+    expect(restored).toBe(panel);
+    expect(restored.hasAttribute("inert")).toBe(false);
+    expect(restored.hasAttribute("data-player-hidden")).toBe(false);
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByTestId("scenario-interaction-popover")).toBeNull();
   });
 
   it.each(["Delete", "Backspace"])(

@@ -60,18 +60,6 @@ export const styles = stylex.create({
     maxWidth: "920px",
     minWidth: 0,
   },
-  // pointer-events-none absolute inset-x-0 -top-6 text-center text-xs text-white
-  pressEscapeToExitSimulation: {
-    pointerEvents: "none",
-    position: "absolute",
-    left: "0",
-    right: "0",
-    top: `calc(-1 * ${space.s6})`,
-    textAlign: "center",
-    fontSize: text.sizeXs,
-    lineHeight: text.lineXs,
-    color: colors.ink,
-  },
   // pointer-events-none absolute inset-x-10 -bottom-5 h-16 rounded-full bg-black/45 blur-2xl
   divAbsolute: {
     pointerEvents: "none",

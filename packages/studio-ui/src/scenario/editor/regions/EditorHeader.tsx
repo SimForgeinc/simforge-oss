@@ -23,6 +23,7 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "./EditorHeader.stylex";
 import { SimulationStatus } from "../SimulationStatus";
 import type { ScenarioSharedPlayback } from "../../scene/useScenarioSession";
+import { playerChrome } from "../player/player-mode.stylex";
 
 const EXPECTED_MAP_BOUND_ISSUES = new Set([
   "non_portable_role",
@@ -47,6 +48,7 @@ export function EditorHeader({
   onExperienceToggle,
   documentSaveStatus,
   playback,
+  playerMode = false,
 }: {
   document?: EditorDocument | null;
   getDebugInformation?: () => string;
@@ -59,6 +61,12 @@ export function EditorHeader({
   onExperienceToggle?: () => void;
   documentSaveStatus?: React.ReactNode;
   playback?: ScenarioSharedPlayback;
+  /**
+   * The simulation player owns the viewport. The authoring actions (tutorial,
+   * readiness, reasoning trace, viewport settings) and the popovers they open
+   * step aside; exit, save and verification status stay.
+   */
+  playerMode?: boolean;
 }) {
   useRouteHeader({ title: "Editor" });
   useSetTopBarActionsAlignment("start");
@@ -120,7 +128,12 @@ export function EditorHeader({
         </div>
       </TopBarActionsPortal>
       <TopBarTrailingPortal>
-        <div {...stylex.props(styles.flexCenterGap2)} data-testid="scenario-editor-toolbar-trailing">
+        <div
+          {...stylex.props(styles.flexCenterGap2, playerMode && playerChrome.hidden)}
+          aria-hidden={playerMode || undefined}
+          data-testid="scenario-editor-toolbar-trailing"
+          inert={playerMode || undefined}
+        >
           <EditorTutorialGuide experience={experience ?? "advanced"} />
           <ScenarioReadinessButton issues={readinessIssues} />
           {/* Weather and traffic moved to the left rail: they are things you add
