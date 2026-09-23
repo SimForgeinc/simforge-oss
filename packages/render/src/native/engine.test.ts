@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import {
   assertNativeSourcesSupported, assertNativeVideoProfileSupported, createRenderEngine, nativeCameraClipPlanes, nativeEncoderVersion,
   nativeTextureEvidence, nativeVramCapacity, resolveBinary, resolveNativeEncoder,
+  nativeBundleBytes,
+  nativeShmSizeMb,
 } from './engine.js';
 import { stripRgbaPadding } from './service-client.js';
 
@@ -103,5 +105,30 @@ describe('native engine input policy', () => {
       .toThrow(expect.objectContaining({ code: 'native_video_profile_unsupported' }));
     expect(() => assertNativeVideoProfileSupported({ ...video, quality: 'lossless' }))
       .toThrow(expect.objectContaining({ code: 'native_video_quality_unsupported' }));
+  });
+});
+
+describe('native shared-memory ring sizing', () => {
+  const rgb = (width: number, height: number) => ({ modality: 'rgb', attributes: { width, height } });
+  // The PhysicalAI-AV rig: 7 x 1920x1080 cameras, 1 lidar, 9 radars.
+  const pai = [...Array.from({ length: 7 }, () => rgb(1920, 1080)), ...Array.from({ length: 10 }, () => ({ modality: 'lidar', attributes: {} }))];
+
+  it('sizes the ring from the rig so pipelining is never dropped for a large rig', () => {
+    const bytes = nativeBundleBytes(pai);
+    expect(bytes).toBe(7 * 1920 * 4 * 1080 + 10 * 8 * 1024 * 1024);
+    const mb = nativeShmSizeMb(bytes, 2);
+    expect(mb * 1024 * 1024).toBeGreaterThanOrEqual(5 * bytes);
+    expect(mb % 64).toBe(0);
+    expect(mb).toBeGreaterThan(512);
+  });
+
+  it('keeps the default for a small rig and for serial ticks', () => {
+    expect(nativeShmSizeMb(nativeBundleBytes([rgb(512, 384), rgb(512, 384)]), 2)).toBe(512);
+    expect(nativeShmSizeMb(nativeBundleBytes(pai), 0)).toBe(512);
+  });
+
+  it('fails loudly when an explicit ring is too small for the requested lookahead', () => {
+    expect(() => nativeShmSizeMb(nativeBundleBytes(pai), 2, 512)).toThrow(/native_shm_too_small|cannot hold/);
+    expect(nativeShmSizeMb(nativeBundleBytes(pai), 0, 512)).toBe(512);
   });
 });

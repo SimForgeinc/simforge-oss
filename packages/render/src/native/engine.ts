@@ -56,6 +56,34 @@ export const NATIVE_FIRST_BUNDLE_TIMEOUT_MS = 600_000;
 export const NATIVE_BUNDLE_TIMEOUT_MS = 120_000;
 /** Bundle requests kept queued behind the one being answered (pipelining). */
 export const NATIVE_BUNDLE_LOOKAHEAD = 2;
+
+/** Bytes one published bundle of `sources` takes in the shared-memory ring. */
+export function nativeBundleBytes(sources: readonly { modality: string; attributes: object }[]): number {
+  return sources.reduce((sum, source) => {
+    if (source.modality !== 'rgb') return sum + 8 * 1024 * 1024;
+    const { width, height } = source.attributes as { width: number; height: number };
+    return sum + Math.ceil(width * 4 / 256) * 256 * height;
+  }, 0);
+}
+
+/**
+ * The shared-memory ring for a rig: it must hold every published-but-unread
+ * bundle, `3 + lookahead` of them. Sized from the rig (never below the
+ * service default, rounded up to 64 MiB). An explicit size too small for the
+ * requested lookahead is an error, not a quiet switch to serial ticks.
+ */
+export function nativeShmSizeMb(bundleBytes: number, lookahead: number, explicitMb?: number): number {
+  const neededMb = lookahead > 0 ? Math.ceil((3 + lookahead) * bundleBytes / (64 * 1024 * 1024)) * 64 : 0;
+  if (explicitMb !== undefined) {
+    if (explicitMb < neededMb) {
+      throw new RenderInputError('native_shm_too_small',
+        `shared-memory ring of ${explicitMb} MiB cannot hold ${3 + lookahead} bundles of ${Math.ceil(bundleBytes / (1024 * 1024))} MiB `
+        + `(bundle lookahead ${lookahead} needs ${neededMb} MiB): raise shmSizeMb or set bundleLookahead 0`);
+    }
+    return explicitMb;
+  }
+  return Math.max(DEFAULT_SHM_SIZE_MB, neededMb);
+}
 const NATIVE_ENGINE_VERSION = '0.1.0-rc.65';
 
 export interface NativeRenderEngineOptions {
@@ -492,6 +520,18 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       assertNativeSourcesSupported(sources);
       assertNativeVideoProfileSupported(intent.renderSpec.video);
       const clipPlanes = nativeCameraClipPlanes(sources);
+      // Bundle pipelining needs a ring that holds every published-but-unread
+      // bundle: size it from the rig before the service starts.
+      const requestedLookahead = options.bundleLookahead
+        ?? (process.env.SIMFORGE_NATIVE_BUNDLE_LOOKAHEAD ? Number(process.env.SIMFORGE_NATIVE_BUNDLE_LOOKAHEAD) : NATIVE_BUNDLE_LOOKAHEAD);
+      if (!Number.isInteger(requestedLookahead) || requestedLookahead < 0) {
+        throw new RenderInputError('native_bundle_lookahead_invalid', `bundle lookahead must be a non-negative integer, got ${requestedLookahead}`);
+      }
+      const bundleBytes = nativeBundleBytes(sources);
+      const shmSizeMb = nativeShmSizeMb(bundleBytes, requestedLookahead, options.shmSizeMb);
+      counters.bundleBytes = bundleBytes;
+      counters.shmSizeMb = shmSizeMb;
+      counters.bundleLookaheadRequested = requestedLookahead;
       // Resolve the encoder before any download or GPU work: a job that
       // cannot encode fails in milliseconds, naming the missing binary.
       const encoderBinary = resolveNativeEncoder(options);
@@ -694,7 +734,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       try {
         session = await startNativeRenderService({
           binary, workspace: context.workspace, jobId: context.jobId, scenePath, signal: context.signal,
-          startupTimeoutMs, shmSizeMb: options.shmSizeMb,
+          startupTimeoutMs, shmSizeMb,
         });
       } finally {
         clearInterval(loadTicker);
@@ -825,16 +865,15 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         // the current one (CPU frame build overlaps GPU work). Needs the
         // service to report observations inside the bundle, and a ring that
         // holds every published-but-unread bundle.
-        const bundleBytes = sources.reduce((sum, source) => sum + (source.modality === 'rgb'
-          ? Math.ceil(source.attributes.width * 4 / 256) * 256 * source.attributes.height
-          : 8 * 1024 * 1024), 0);
-        const ringBytes = (options.shmSizeMb ?? DEFAULT_SHM_SIZE_MB) * 1024 * 1024;
-        const requestedLookahead = options.bundleLookahead
-          ?? (process.env.SIMFORGE_NATIVE_BUNDLE_LOOKAHEAD ? Number(process.env.SIMFORGE_NATIVE_BUNDLE_LOOKAHEAD) : NATIVE_BUNDLE_LOOKAHEAD);
-        const lookahead = Number.isInteger(requestedLookahead) && requestedLookahead > 0
-          && client.supports('render_bundle.pipeline') && client.supports('render_bundle.observe') && ringBytes >= (3 + requestedLookahead) * bundleBytes
-          ? requestedLookahead
-          : 0;
+        // The ring was sized for the requested lookahead above. A service
+        // without pipelined bundles (an older binary) renders serially: that
+        // is recorded (bundleLookaheadRequested vs bundleLookahead), never
+        // silent.
+        const servicePipelines = client.supports('render_bundle.pipeline') && client.supports('render_bundle.observe');
+        const lookahead = requestedLookahead > 0 && servicePipelines ? requestedLookahead : 0;
+        if (requestedLookahead > 0 && !servicePipelines) {
+          console.warn(JSON.stringify({ event: 'native.bundle_lookahead_unsupported', jobId: context.jobId, requested: requestedLookahead }));
+        }
         const bundleBody = (tick: number) => ({
           sim_tick: tick, tick_index: tick, cameras: cameras[tick], passes: ['rgb'], sim_time_s: lowering.frameTimes[tick],
           // The non-camera rig is retained by the service: declare it once.
