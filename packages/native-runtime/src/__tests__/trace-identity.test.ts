@@ -66,7 +66,7 @@ interface Build {
   studioConcreteInput?(input: Scenario, templateJson: string): Scenario;
   executionRefinements?(input: Scenario): Scenario;
 }
-interface Bundle { closureDigest?: string; graph: unknown; controlPlanJson(): string }
+interface Bundle { closureDigest?: string; graph: unknown; controlPlanJson(): string; attachGround?(groundMesh: Uint8Array): string }
 interface Scenario { toJson(): string }
 
 const corpus = existsSync(join(GOLDEN, 'corpus.json'))
@@ -147,6 +147,18 @@ describe.skipIf(!existsSync(WASM) || selected.length === 0)('N-API and WASM buil
     if (!pair) {
       const { sources, topology } = closureSources(dir, testCase.map);
       pair = { addon: addon.MapBundle.fromSources(sources, topology), wasm: wasm.MapBundle.fromSources(sources, topology) };
+      // The ground derivative is a simulation member when the version carries
+      // it (compiler SIMULATION_MAP_MEMBERS, GROUND_MESH_MEMBER): attach it
+      // before the graph is read, as the editor loader does
+      // (playback mapRuntime), so the closure digest includes it.
+      const groundPath = join(dir, 'derived', 'ground', 'ground-mesh.bin');
+      if (existsSync(groundPath)) {
+        const ground = new Uint8Array(readFileSync(groundPath));
+        for (const bundle of [pair.addon, pair.wasm]) {
+          if (!bundle.attachGround) throw new Error('This native runtime predates ground contact (engine 0.11.0); rebuild @simforge-oss/native-runtime');
+          bundle.attachGround(ground);
+        }
+      }
       bundles.set(dir, pair);
     }
     return pair;
