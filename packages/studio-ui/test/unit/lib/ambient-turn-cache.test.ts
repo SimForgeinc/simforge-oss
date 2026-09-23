@@ -26,6 +26,12 @@ afterEach(() => {
   vi.resetModules();
 });
 
+// Each case re-imports the cache module after vi.resetModules() (the "next
+// session"), which re-evaluates @simforge-oss/engine's module graph. That is
+// a few hundred milliseconds idle and exceeded the 10 s default on a machine
+// at load ~60, so these cases get room for it.
+const REIMPORT_TIMEOUT_MS = 30_000;
+
 describe('ambient turn-verdict cache', () => {
   it('persists grown tables per closure and engine, and restores them once in the next session', async () => {
     const { store, storage } = fakeCaches();
@@ -45,7 +51,7 @@ describe('ambient turn-verdict cache', () => {
     expect(await restoreAmbientTurnVerdicts(reader, 'c'.repeat(64))).toBe(3);
     expect(reader.loadAmbientTurnVerdicts).toHaveBeenCalledTimes(1);
     expect(await restoreAmbientTurnVerdicts(reader, 'd'.repeat(64))).toBe(0);
-  });
+  }, REIMPORT_TIMEOUT_MS);
 
   it('is a no-op without Cache Storage and survives a refused table', async () => {
     vi.stubGlobal('caches', undefined);
@@ -62,5 +68,5 @@ describe('ambient turn-verdict cache', () => {
     const refusing = fakeEngine(() => null);
     refusing.loadAmbientTurnVerdicts.mockImplementation(() => { throw new Error('turn verdicts were computed by engine 0.8.0'); });
     expect(await fresh.restoreAmbientTurnVerdicts(refusing, 'f'.repeat(64))).toBe(0);
-  });
+  }, REIMPORT_TIMEOUT_MS);
 });
