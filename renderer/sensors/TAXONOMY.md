@@ -79,6 +79,26 @@ truck/bus 0.65, pedestrian/cyclist 0.60, prop 0.50, unlabeled 0.
   actor proxy length/width axes were swapped, and lidar XYZ was world-oriented.
   A post-hoc point rotation cannot repair incorrect proxy geometry or classes.
 
+## Ray–triangle contract (lidar and radar)
+
+Both backends (CPU `bvh::InstancedScene::cast`, RT-core `gpu_rays`) return
+the same bytes; the contract they share:
+
+- First hit = smallest `t` of f32 Möller–Trumbore on the world-space
+  triangle (`Mat4::transform_point3` of the local vertices), `EPS = 1e-9`.
+- **Grazing cut:** a hit is rejected when the beam is within about **2.9°**
+  of the surface plane (`|cos(incidence)| < MIN_INCIDENCE_COS = 0.05`,
+  tested as `det² < 0.05² · |e1×e2|² · |dir|²`). Near grazing, f32
+  cancellation accepted beams that miss the triangle by centimetres to
+  metres ("ghost" returns); a physical lidar returns essentially nothing
+  there and the intensity proxy is already at its floor. Adopted as the
+  reference in rc.75 (goldens re-recorded once).
+- Ties on exact `t`: smallest `(instance_id, triangle index, instance
+  insertion order)`; an actor hit replaces a static one only when strictly
+  nearer. Static instances are inserted by `(instance_id, mesh asset label)`.
+- Parity gate: `sensors/tests/gpu_rays_parity.rs` (bit-identical on RTX
+  5080 and 3080) and `lidarBackend: "verify"` per scan in production.
+
 ## Output formats (CARLA-path parity)
 
 - lidar → ASCII PLY (`x,y,z,intensity` float properties + one extra declared
