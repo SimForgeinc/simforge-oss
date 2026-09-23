@@ -146,6 +146,11 @@ impl SceneSpec {
     }
 }
 
+/// A [`RenderRequest`] as JSON (`{preset, set}`), for tools.
+#[derive(Clone, Debug, serde::Deserialize)]
+#[serde(transparent)]
+pub struct RenderRequestJson(pub RenderRequest);
+
 /// Merge CLI `--preset` / `--set key=value` into the scene spec's `render`
 /// request (the CLI, the scene spec and the protocol share one surface).
 pub fn apply_render_cli(spec: &mut SceneSpec, preset: Option<String>, sets: &[String]) -> Result<()> {
@@ -735,6 +740,17 @@ impl ServiceState {
         let classes = std::sync::Arc::new(classes);
         self.static_sensor_classes = Some(classes.clone());
         classes
+    }
+
+    /// Switch a running service to another resolved render config (sweeps,
+    /// closed-loop reconfiguration). The next capture settles first.
+    pub fn reconfigure(&mut self, config: &RenderConfig) -> Result<(), String> {
+        self.app.reconfigure(config).map_err(|error| format!("{error:#}"))?;
+        self.profile_config = config.profile_config();
+        self.lidar_backend = config.lidar.backend;
+        self.render_config = *config;
+        self.needs_settle = true;
+        Ok(())
     }
 
     /// Whether the map sensor scenes exist (tests, diagnostics).

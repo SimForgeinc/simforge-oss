@@ -47,6 +47,8 @@ struct Args {
     spec_overrides: Vec<(String, String)>,
     preset: Option<String>,
     render_sets: Vec<String>,
+    sweep: Option<PathBuf>,
+    camera_size: Option<(u32, u32)>,
 }
 
 fn parse_args() -> Result<Args> {
@@ -68,6 +70,8 @@ fn parse_args() -> Result<Args> {
         spec_overrides: Vec::new(),
         preset: None,
         render_sets: Vec::new(),
+        sweep: None,
+        camera_size: None,
     };
     while let Some(arg) = args.next() {
         let mut value = || args.next().with_context(|| format!("{arg} requires a value"));
@@ -90,6 +94,12 @@ fn parse_args() -> Result<Args> {
                 parsed.spec_overrides.push((k.to_string(), v.to_string()));
             }
             "--preset" => parsed.preset = Some(value()?),
+            "--sweep" => parsed.sweep = Some(value()?.into()),
+            "--camera-size" => {
+                let size = value()?;
+                let (w, h) = size.split_once('x').context("--camera-size WxH")?;
+                parsed.camera_size = Some((w.parse()?, h.parse()?));
+            }
             "--set" => parsed.render_sets.push(value()?),
             "--ablate" => parsed.ablate = value()?.split(',').filter(|v| !v.is_empty()).map(String::from).collect(),
             other => bail!("unknown argument {other}"),
@@ -211,6 +221,76 @@ fn phase_stats(world: &mut bevy::prelude::World) -> Vec<(String, [usize; 5])> {
     out
 }
 
+/// Render `ticks` ticks from `start` (the first one settles and is not
+/// timed); returns timings and per-frame digests.
+#[allow(clippy::too_many_arguments)]
+fn sweep_pass(
+    state: &mut ServiceState,
+    cameras: &[serde_json::Value],
+    lidars: &[serde_json::Value],
+    radars: &[serde_json::Value],
+    start: usize,
+    ticks: usize,
+    frame_count: usize,
+    dump_dir: Option<&std::path::Path>,
+    dump_every: usize,
+) -> Result<serde_json::Value> {
+    let end = (start + ticks + 1).min(frame_count);
+    let mut tick_ms = Vec::new();
+    let mut gpu_frames = Vec::new();
+    let mut digests: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for (n, tick) in (start..end).enumerate() {
+        let mut body = serde_json::json!({
+            "i": 10 + tick, "op": "render_bundle", "sim_tick": tick, "tick_index": tick,
+            "cameras": cameras, "passes": ["rgb"],
+        });
+        if n == 0 && !lidars.is_empty() { body["lidars"] = serde_json::json!(lidars); }
+        if n == 0 && !radars.is_empty() { body["radars"] = serde_json::json!(radars); }
+        let started = Instant::now();
+        let response = dispatch(state, request(body)?);
+        let elapsed = started.elapsed().as_secs_f64() * 1000.0;
+        let ResponseBody::RenderBundle { frames: records, .. } = response.body else {
+            if let ResponseBody::Error { error, .. } = response.body { bail!("tick {tick}: {error}"); }
+            bail!("tick {tick}: unexpected response");
+        };
+        let frame_times = state.app.take_gpu_frame_times();
+        if n == 0 {
+            continue; // settle tick
+        }
+        tick_ms.push(elapsed);
+        gpu_frames.extend(frame_times);
+        for record in &records {
+            digests.entry(format!("{}:{}", record.sensor_id, record.pass)).or_default().push(record.digest.clone());
+            if let Some(dir) = dump_dir {
+                if record.pass == "rgb" && dump_every > 0 && (n - 1) % dump_every == 0 {
+                    std::fs::create_dir_all(dir)?;
+                    let map = state.shm.as_bytes();
+                    let offset = record.offset as usize + RECORD_HEADER_BYTES;
+                    let data = &map[offset..offset + record.len as usize];
+                    let raw = render_core::engine::strip_padding(data, record.width as usize, record.height as usize, 4);
+                    image::save_buffer(
+                        dir.join(format!("{}.t{tick:04}.png", record.sensor_id)),
+                        &raw, record.width, record.height, image::ColorType::Rgba8,
+                    )?;
+                }
+            }
+        }
+    }
+    let median = |values: &mut Vec<f64>| -> f64 {
+        values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        values.get(values.len() / 2).copied().unwrap_or(0.0) // fallback-ok: benchmark statistics over zero samples are reported as 0
+    };
+    let mut ticks_sorted = tick_ms.clone();
+    let mut frames_sorted = gpu_frames.clone();
+    Ok(serde_json::json!({
+        "tickMs": tick_ms,
+        "medianMsPerTick": median(&mut ticks_sorted),
+        "gpuFrameMs": gpu_frames,
+        "gpuFrameMedianMs": median(&mut frames_sorted),
+        "digests": digests,
+    }))
+}
+
 fn vertical_fov(horizontal_deg: f64, width: f64, height: f64) -> f64 {
     2.0 * ((horizontal_deg.to_radians() / 2.0).tan() * height / width).atan().to_degrees()
 }
@@ -252,7 +332,11 @@ fn main() -> Result<()> {
         .filter(|s| s["modality"] == "rgb")
         .map(|s| {
             let a = &s["attributes"];
-            let (w, h) = (a["width"].as_f64().unwrap(), a["height"].as_f64().unwrap());
+            let (w, h) = match args.camera_size {
+                // Same horizontal FOV, consumer-sized image (training rigs).
+                Some((w, h)) => (f64::from(w), f64::from(h)),
+                None => (a["width"].as_f64().unwrap(), a["height"].as_f64().unwrap()),
+            };
             serde_json::json!({
                 "sensorId": s["outputName"], "width": w as u32, "height": h as u32,
                 "fovDeg": vertical_fov(a["horizontalFovDeg"].as_f64().unwrap(), w, h),
@@ -307,6 +391,31 @@ fn main() -> Result<()> {
     }
     // fallback-ok: discard load-time timings so the ticks start from zero
     let _ = state.app.take_gpu_pass_times();
+
+    if let Some(sweep) = &args.sweep {
+        // One process, one map load: every entry reconfigures the running
+        // service (history-free pinned captures make that equivalent to a
+        // fresh process) and renders the same ticks.
+        let entries: Vec<serde_json::Value> = serde_json::from_slice(&std::fs::read(sweep)?)?;
+        let mut results = Vec::new();
+        for (index, entry) in entries.iter().enumerate() {
+            let name = entry["name"].as_str().context("sweep entry needs a name")?.to_string();
+            let request: service::server::RenderRequestJson = serde_json::from_value(entry["render"].clone())
+                .with_context(|| format!("sweep entry {name}: render"))?;
+            let config = request.0.resolve().with_context(|| format!("sweep entry {name}"))?;
+            state.reconfigure(&config).map_err(|error| anyhow::anyhow!("sweep entry {name}: {error}"))?;
+            let dump = args.dump_dir.as_ref().map(|dir| dir.join(&name));
+            let pass = sweep_pass(&mut state, &cameras, if index == 0 { &lidars } else { &[] }, &radars, args.start, args.ticks, frames.len(), dump.as_deref(), args.dump_every)?;
+            eprintln!("render-bench sweep {name}: {:.1} ms/tick, GPU {:.1} ms/frame", pass["medianMsPerTick"], pass["gpuFrameMedianMs"]);
+            results.push(serde_json::json!({"name": name, "renderConfig": config, "result": pass}));
+        }
+        // fallback-ok: best-effort cleanup of the bench's own ring file
+        let _ = std::fs::remove_file(&shm_path);
+        if let Some(out) = &args.out {
+            std::fs::write(out, serde_json::to_vec_pretty(&serde_json::json!({"schema": "simforge.render-bench-sweep/v1", "entries": results}))?)?;
+        }
+        return Ok(());
+    }
 
     let end = (args.start + args.ticks).min(frames.len());
     let mut tick_ms = Vec::new();

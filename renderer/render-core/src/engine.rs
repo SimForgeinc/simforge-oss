@@ -2643,6 +2643,18 @@ impl SceneApp {
             lods.pixel_error_px = config.lod.pixel_error_px;
             lods.applied_f_px = None;
         }
+        self.refresh_lod_ranges();
+        Ok(())
+    }
+
+    /// Reconfigure a running app: the non-look knobs, then a relight with
+    /// the config's look (re-applies every camera's effects). Output after
+    /// the next readiness settle is what a fresh app with this config
+    /// renders (history-free pinned captures).
+    pub fn reconfigure(&mut self, config: &crate::render_config::RenderConfig) -> Result<()> {
+        self.apply_render_config(config)?;
+        let lighting = self.lighting.clone();
+        self.apply_lighting(&lighting, config.profile_config())?;
         Ok(())
     }
 
