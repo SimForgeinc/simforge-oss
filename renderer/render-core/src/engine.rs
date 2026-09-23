@@ -5638,6 +5638,44 @@ mod tests {
 
     #[test]
     #[ignore = "focused GPU integration test"]
+    fn deferred_captures_return_the_frames_blocking_captures_return() {
+        use crate::profiles::AntiAlias;
+        let keys = vec!["cam:rgb".to_string()];
+        let poses = [([6.0, 1.8, 6.0], [0.0, 0.8, 0.0]), ([-6.0, 1.8, 6.0], [0.0, 0.8, 0.0]), ([0.0, 2.5, 8.0], [0.0, 0.5, 0.0])];
+        let mut app = pinned_scene(AntiAlias::SmaaHigh);
+        app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
+        let blocking: Vec<Vec<u8>> = poses
+            .iter()
+            .enumerate()
+            .map(|(tick, (eye, target))| {
+                app.set_pose("cam", eye, target).unwrap();
+                app.set_sim_time(tick as f64);
+                app.capture(tick as u64, &keys).unwrap().passes["cam:rgb"].bytes.clone()
+            })
+            .collect();
+        // Pipelined order: begin N+1 before finishing N.
+        let mut frames = Vec::new();
+        let mut pending: Option<CaptureTicket> = None;
+        for (tick, (eye, target)) in poses.iter().enumerate() {
+            app.set_pose("cam", eye, target).unwrap();
+            app.set_sim_time(tick as f64);
+            let ticket = app.capture_begin(tick as u64, &keys).unwrap();
+            if let Some(previous) = pending.replace(ticket) {
+                frames.push(app.capture_finish(previous).unwrap());
+            }
+        }
+        frames.push(app.capture_finish(pending.take().unwrap()).unwrap());
+        assert_eq!(frames.len(), blocking.len());
+        for (tick, (frame, expected)) in frames.iter().zip(&blocking).enumerate() {
+            assert_eq!(frame.identity.sim_tick, tick as u64);
+            assert!(frame.passes["cam:rgb"].bytes == *expected, "deferred frame {tick} differs from the blocking capture");
+        }
+        assert!(blocking[0] != blocking[1], "fixture poses must differ");
+        std::mem::forget(app);
+    }
+
+    #[test]
+    #[ignore = "focused GPU integration test"]
     fn mounted_camera_excludes_only_its_own_host() {
         let mut app = sedan_scene();
         app.add_camera(test_camera("mounted", 96, 64), Profile::Sensor);
