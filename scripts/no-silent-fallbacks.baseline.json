@@ -268,7 +268,7 @@
     {
       "file": "packages/render/src/timeline/index.ts",
       "rule": "ts-nullish-literal",
-      "count": 2,
+      "count": 1,
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
     },
     {
@@ -406,7 +406,7 @@
     {
       "file": "renderer/render-core/src/playback.rs",
       "rule": "rs-unwrap-or",
-      "count": 19,
+      "count": 18,
       "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
     },
     {
