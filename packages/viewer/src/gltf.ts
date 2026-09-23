@@ -474,7 +474,9 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '',
             }
           }
           if (!resolver || !signal || urls.length === 0) return;
-          const targets = [...new Set(urls.map(url => textureSources.get(url)?.url ?? url))];
+          // Packed members are read out of pack chunks, never fetched by URL.
+          const targets = [...new Set(urls.map(url => textureSources.get(url)?.url ?? url))].filter(url => !packReader?.has(url));
+          if (targets.length === 0) return;
           const resolved = await resolver(targets, signal);
           signal.throwIfAborted();
           for (const [url, target] of resolved) ktx2.resolvedUrls.set(url, target);

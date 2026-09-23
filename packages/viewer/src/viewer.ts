@@ -1826,7 +1826,15 @@ export class CityViewer {
       return this.freeSpace(budget - bytes, priority);
     },
     maxAssetBytes: (): number => this.options.byteBudget * 0.45,
-    pendingBytes: (): number => Math.max(0, this.totalBytes() - this.residentBytes()),
+    // Layers add and subtract scaled float estimates, so an idle pipeline can
+    // read 2e-7 instead of 0. Anything under one byte is nothing in flight:
+    // otherwise a required asset refused for budget never reports
+    // RequiredAssetBudgetError (which downgrades the tier) and the load stalls
+    // until the 600 s residency timeout (San Ramon 25 P2 at Medium, rc.73).
+    pendingBytes: (): number => {
+      const pending = this.totalBytes() - this.residentBytes();
+      return pending < 1 ? 0 : pending;
+    },
   };
 
   private enforceBudget(): void {
