@@ -52,6 +52,8 @@ export type CloudConnectionErrorCode =
   | "cloud_session_expired"
   | "cloud_unreachable"
   | "cloud_desktop_api_missing"
+  /** Asked of a cloud host, which is SimCloud itself and has no connector. */
+  | "cloud_connector_not_served"
   | "cloud_invalid_path"
   | "cloud_invalid_origin"
   | "cloud_invalid_response"
@@ -241,7 +243,25 @@ function vaultAccount(origin: string) {
   return `cloud:${origin}`;
 }
 
+/**
+ * The connector exists only on a local host. A cloud host IS SimCloud: it
+ * authenticates every request itself and has no second account to connect,
+ * so it must never open an OS credential vault — on a server that is at best
+ * a pointless probe and at worst (a locked Linux Secret Service) a call that
+ * never returns. Asking a cloud host for the connector is an explicit error.
+ */
+function requireLocalConnector(): void {
+  if (HOST_KIND === "cloud") {
+    throw new CloudConnectionError(
+      "cloud_connector_not_served",
+      "This host is SimCloud; it has no SimCloud connector or credential vault.",
+      404,
+    );
+  }
+}
+
 async function ensureLoaded(): Promise<void> {
+  requireLocalConnector();
   state.loaded ??= (async () => {
     state.vault ??= await openSecretVault(VAULT_SERVICE);
     const origin = normalizeCloudOrigin(undefined);
@@ -262,6 +282,7 @@ async function ensureLoaded(): Promise<void> {
 }
 
 async function storeCredential(credential: Credential | null, origin: string) {
+  requireLocalConnector();
   const vault = state.vault ?? (state.vault = await openSecretVault(VAULT_SERVICE));
   state.credential = credential;
   if (credential) await vault.set(vaultAccount(origin), JSON.stringify(credential));
@@ -318,6 +339,7 @@ export async function getCloudStatus(): Promise<StudioCloudStatus> {
   await ensureLoaded();
   const origin = normalizeCloudOrigin(undefined);
   const persistence = state.vault?.persistence ?? "session";
+  const vaultUnavailableReason = state.vault?.unavailableReason ?? null;
   const providers = await listCloudProviders();
   const now = Date.now();
   if (state.pending && now - state.pending.createdAt > PENDING_TTL_MS) {
@@ -359,7 +381,7 @@ export async function getCloudStatus(): Promise<StudioCloudStatus> {
       credentialPersistence: persistence,
       sessionExpiresAt: new Date(credential.sessionExpiresAt).toISOString(),
       message: persistence === "session"
-        ? "The OS credential vault is unavailable; this sign-in lasts until Studio closes."
+        ? `${vaultUnavailableReason ?? "The OS credential vault is unavailable."} This sign-in lasts until Studio closes.`
         : null,
     };
   }
@@ -371,7 +393,8 @@ export async function getCloudStatus(): Promise<StudioCloudStatus> {
     providers,
     credentialPersistence: persistence,
     sessionExpiresAt: null,
-    message: state.message,
+    // Signed out is still told where a sign-in would be kept, and why not the OS vault.
+    message: state.message ?? vaultUnavailableReason,
   };
 }
 

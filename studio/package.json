@@ -52,6 +52,7 @@
     "test:pglite-crash-safety": "node --conditions=development --conditions=react-server --import tsx --test app/lib/db/__tests__/pglite-crash-safety.test.ts",
     "test:fresh-schema": "node --conditions=development --conditions=react-server --import tsx --test app/lib/db/__tests__/map-asset-enrichment-fresh-schema.test.ts",
     "test:onboarding": "node --conditions=development --import tsx --test app/host/local/__tests__/onboarding-gate.test.ts app/components/map-preparation/__tests__/useMapPreparation.test.ts",
+    "test:cloud-vault": "node --conditions=development --import tsx --test app/lib/cloud/__tests__/vault.test.ts && node --experimental-test-module-mocks --conditions=development --conditions=react-server --import tsx --test app/lib/cloud/__tests__/connection-cloud-host.test.ts app/lib/cloud/__tests__/connection.test.ts",
     "test:connections": "node --conditions=development --import tsx --test desktop/__tests__/connections.test.mjs && node --conditions=development --import tsx --test app/lib/host/__tests__/pairing.test.ts",
     "test:worker-presence": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/cpu-worker-presence.test.ts",
     "test:simulate-lane": "node --conditions=development --import tsx --test worker/__tests__/simulate-lane.test.ts worker/__tests__/simulate-lane.sumo.test.ts",

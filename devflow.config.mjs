@@ -66,6 +66,13 @@ export default {
       when: ["packages/studio-ui/src/**", "studio/app/**", "scripts/style/**"],
       run: ["node", "scripts/style/ratchet.mjs", "--check"],
     },
+    {
+      // The OS credential vault must never block the event loop, and a cloud
+      // host must never open one (a locked Linux keyring wedged the server).
+      name: "studio-cloud-vault",
+      when: ["studio/app/lib/cloud/**", "studio/app/api/simforge/cloud/**", "studio/app/lib/host/cloud.tsx"],
+      steps: [{ cwd: "studio", run: ["pnpm", "run", "test:cloud-vault"] }],
+    },
     { name: "release-scripts", when: ["scripts/release/**"], run: ["node", "--test", "scripts/release/*.test.mjs"] },
     { name: "integration-scripts", when: ["scripts/integration/**"], run: ["node", "--test", "scripts/integration/*.test.mjs"] },
     { name: "devflow", when: ["scripts/devflow/**", "devflow.config.mjs", "turbo.json"], run: ["node", "--test", "scripts/devflow/*.test.mjs"] },

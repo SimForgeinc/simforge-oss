@@ -23,6 +23,7 @@ import {
   type StudioCloudOrganization,
 } from "@simforge-oss/studio-host";
 import { studioHost } from "@/app/lib/host";
+import { HOST_KIND } from "@/app/lib/host/kind";
 
 /**
  * The local SimCloud connector: same-origin `/api/simforge/cloud/*` routes on
@@ -132,6 +133,9 @@ export function StudioCloudProvider({ children }: { children: ReactNode }) {
   }, [mapScope]);
 
   useEffect(() => {
+    // A cloud host IS SimCloud: there is no connector to ask, and its status
+    // route answers 404. `status` stays null, which no cloud surface reads.
+    if (HOST_KIND === "cloud") return;
     const controller = new AbortController();
     const readStatus = () => {
       void studioCloud.status(controller.signal)
