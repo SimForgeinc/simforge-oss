@@ -567,9 +567,13 @@ state/route channel, exact teacher replay, and kernel `appliedControl` labels
 must agree. These labels are the actual **final physics-substep** actuator
 inputs, after the follower/jerk envelope—not guessed controls from setpoints.
 Older runs lacking those fields are refused with a re-render instruction.
-Foreign/student-driven runs are refused: DAgger counterfactual relabelling is
-not implemented. This is a working BC recipe, not completion of the proposed
-100k-frame BC plus two DAgger rounds or any promotion gate.
+`train/relabel.py` now accepts completed student-driven camera runs for DAgger:
+it replays the exact visible state through the native `EpisodeBatch`, snapshots
+and restores the counterfactual before executing the frozen teacher action, and
+requires matching native state, actuator, trace and RGB digests. Teacher labels
+remain render-free and are never inferred from setpoints. The paired BC/DAgger
+campaign is still a PoC until its preregistered budgets, validation selection,
+held-out promotion, statistics and release evidence are complete.
 
 **Wire v3:** `hello.protocol = simforge.policy-endpoint/v3` advertises
 `calibrationRequirements`, `historyRequirements`, and
