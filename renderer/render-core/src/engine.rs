@@ -1733,41 +1733,94 @@ impl GroundField {
         instances: impl IntoIterator<Item = (&'a Mesh3d, &'a GlobalTransform)>,
         cell_m: f32,
     ) -> GroundField {
-        let mut field = GroundField { cell_m, min_y: HashMap::new(), median: None };
-        for (mesh, gt) in instances {
-            let Some(mesh) = meshes.get(&mesh.0) else { continue };
-            let Some(pos) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { continue };
-            let bevy::mesh::VertexAttributeValues::Float32x3(values) = pos else { continue };
-            let gt = gt.to_matrix();
-            let positions: Vec<Vec3> = values.iter()
-                .map(|v| gt.transform_point3(Vec3::from(*v)))
+        // A large map is hundreds of millions of triangles: split the
+        // instances into contiguous chunks, build each chunk's field on its
+        // own thread, and fold the chunk fields in order. Every cell is a
+        // running `min`, and folding chunk minima in instance order applies
+        // the same tie rule as the serial loop, so the field (and its
+        // median) is bit-identical to `from_meshes_serial`.
+        let items: Vec<(&Mesh, Mat4)> = instances
+            .into_iter()
+            .filter_map(|(mesh, gt)| Some((meshes.get(&mesh.0)?, gt.to_matrix())))
+            .collect();
+        let threads = std::thread::available_parallelism().map_or(1, |n| n.get()).clamp(1, 16);
+        let chunk = items.len().div_ceil(threads).max(1);
+        let parts: Vec<GroundField> = std::thread::scope(|scope| {
+            let handles: Vec<_> = items
+                .chunks(chunk)
+                .map(|part| {
+                    scope.spawn(move || {
+                        let mut field = GroundField { cell_m, min_y: HashMap::new(), median: None };
+                        for (mesh, matrix) in part {
+                            field.add_mesh(mesh, matrix);
+                        }
+                        field
+                    })
+                })
                 .collect();
-            for p in &positions {
-                let key = (
-                    (p.x / cell_m).floor() as i64,
-                    (p.z / cell_m).floor() as i64,
-                );
-                field
-                    .min_y
-                    .entry(key)
-                    .and_modify(|y| *y = y.min(p.y))
-                    .or_insert(p.y);
+            handles.into_iter().map(|handle| handle.join().expect("ground field thread panicked")).collect()
+        });
+        let mut field = GroundField { cell_m, min_y: HashMap::new(), median: None };
+        for part in parts {
+            if field.min_y.is_empty() {
+                field.min_y = part.min_y;
+                continue;
             }
-            if mesh.primitive_topology() == bevy::render::render_resource::PrimitiveTopology::TriangleList {
-                if let Some(indices) = mesh.indices() {
-                    let mut indices = indices.iter();
-                    while let (Some(a), Some(b), Some(c)) = (indices.next(), indices.next(), indices.next()) {
-                        field.rasterize_triangle(positions[a], positions[b], positions[c]);
-                    }
-                } else {
-                    for triangle in positions.chunks_exact(3) {
-                        field.rasterize_triangle(triangle[0], triangle[1], triangle[2]);
-                    }
-                }
+            for (cell, y) in part.min_y {
+                field.min_y.entry(cell).and_modify(|height| *height = height.min(y)).or_insert(y);
             }
         }
         field.median = field.median_y();
         field
+    }
+
+    /// The single-threaded reference [`Self::from_meshes`] must reproduce.
+    #[cfg(test)]
+    pub(crate) fn from_meshes_serial<'a>(
+        meshes: &Assets<Mesh>,
+        instances: impl IntoIterator<Item = (&'a Mesh3d, &'a GlobalTransform)>,
+        cell_m: f32,
+    ) -> GroundField {
+        let mut field = GroundField { cell_m, min_y: HashMap::new(), median: None };
+        for (mesh, gt) in instances {
+            let Some(mesh) = meshes.get(&mesh.0) else { continue };
+            field.add_mesh(mesh, &gt.to_matrix());
+        }
+        field.median = field.median_y();
+        field
+    }
+
+    /// Fold one mesh instance into the field: every vertex's cell and every
+    /// triangle's covered cell centres keep their minimum height.
+    fn add_mesh(&mut self, mesh: &Mesh, gt: &Mat4) {
+        let cell_m = self.cell_m;
+        let Some(pos) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { return };
+        let bevy::mesh::VertexAttributeValues::Float32x3(values) = pos else { return };
+        let positions: Vec<Vec3> = values.iter()
+            .map(|v| gt.transform_point3(Vec3::from(*v)))
+            .collect();
+        for p in &positions {
+            let key = (
+                (p.x / cell_m).floor() as i64,
+                (p.z / cell_m).floor() as i64,
+            );
+            self.min_y
+                .entry(key)
+                .and_modify(|y| *y = y.min(p.y))
+                .or_insert(p.y);
+        }
+        if mesh.primitive_topology() == bevy::render::render_resource::PrimitiveTopology::TriangleList {
+            if let Some(indices) = mesh.indices() {
+                let mut indices = indices.iter();
+                while let (Some(a), Some(b), Some(c)) = (indices.next(), indices.next(), indices.next()) {
+                    self.rasterize_triangle(positions[a], positions[b], positions[c]);
+                }
+            } else {
+                for triangle in positions.chunks_exact(3) {
+                    self.rasterize_triangle(triangle[0], triangle[1], triangle[2]);
+                }
+            }
+        }
     }
 
     fn rasterize_triangle(&mut self, a: Vec3, b: Vec3, c: Vec3) {
@@ -5252,6 +5305,42 @@ mod tests {
         // This cell has foliage vertices but no road vertices. Its road
         // triangle still covers the centre (5, 5), at interpolated Y = 1.5.
         assert!((field.sample(4.3, 4.3) - 1.5).abs() < 1.0e-5);
+    }
+
+    #[test]
+    fn parallel_ground_field_is_bit_identical_to_the_serial_build() {
+        // Many overlapping instances with equal heights (signed zeros too):
+        // the chunked build must keep exactly the serial tie winners.
+        let mut meshes = Assets::<Mesh>::default();
+        let mut state = 0x2545_f491_4f6c_dd1du64;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            ((state >> 40) as f32) / (1u64 << 24) as f32
+        };
+        let mut instances = Vec::new();
+        for i in 0..200 {
+            let mut positions = Vec::new();
+            for _ in 0..30 {
+                let y = match i % 4 { 0 => 0.0, 1 => -0.0, _ => (next() * 4.0).floor() * 0.5 };
+                positions.push([next() * 60.0, y, next() * 60.0]);
+            }
+            let indices: Vec<u32> = (0..30).collect();
+            let mesh = Mesh::new(bevy::render::render_resource::PrimitiveTopology::TriangleList, RenderAssetUsages::MAIN_WORLD)
+                .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+                .with_inserted_indices(bevy::mesh::Indices::U32(indices));
+            let transform = GlobalTransform::from(Transform::from_xyz(next() * 5.0, 0.0, next() * 5.0));
+            instances.push((Mesh3d(meshes.add(mesh)), transform));
+        }
+        let pairs: Vec<(&Mesh3d, &GlobalTransform)> = instances.iter().map(|(m, t)| (m, t)).collect();
+        let parallel = GroundField::from_meshes(&meshes, pairs.iter().copied(), 2.0);
+        let serial = GroundField::from_meshes_serial(&meshes, pairs.iter().copied(), 2.0);
+        assert_eq!(parallel.min_y.len(), serial.min_y.len());
+        for (cell, y) in &serial.min_y {
+            assert_eq!(parallel.min_y[cell].to_bits(), y.to_bits(), "cell {cell:?}");
+        }
+        assert_eq!(parallel.median.map(f32::to_bits), serial.median.map(f32::to_bits));
     }
 
     #[test]
