@@ -29,3 +29,10 @@ opt-level = 3
 
 [profile.release]
 codegen-units = 1
+
+# Optimised build with line tables for Nsight Systems / perf sampling and a
+# faster link than `release` (codegen-units=1). Not a shipping profile.
+[profile.profiling]
+inherits = "release"
+codegen-units = 16
+debug = "line-tables-only"

@@ -1937,6 +1937,14 @@ impl SceneApp {
                 .before(RenderGraphSystems::Submit),
         );
 
+        // Opt-in GPU pass timing (timestamp queries + pipeline statistics per
+        // Bevy render pass), read back through [`Self::take_gpu_pass_times`].
+        // Profiling only: the queries add encoder work, so production never
+        // sets the variable.
+        if crate::gpu_diagnostics::enabled() {
+            app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin);
+        }
+
         // Drive the plugin lifecycle to completion manually (we never call
         // app.run()): pump updates until plugins are built, then finish so the
         // render world has its RenderDevice before cameras register readbacks.
@@ -2000,6 +2008,12 @@ impl SceneApp {
             probe_cubemap: None,
             env_gain: 1.0,
         })
+    }
+
+    /// Drain the GPU pass timings recorded since the last call (see
+    /// [`crate::gpu_diagnostics`]). Empty unless diagnostics are enabled.
+    pub fn take_gpu_pass_times(&mut self) -> Vec<crate::gpu_diagnostics::PassTotal> {
+        crate::gpu_diagnostics::drain(self.app.world_mut())
     }
 
     /// Spawn (or re-point) the planet entity and its scattering medium.
