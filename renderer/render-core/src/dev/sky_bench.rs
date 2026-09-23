@@ -335,7 +335,7 @@ pub fn run(args: Vec<String>) -> Result<()> {
                     fov_y_deg: 55.0,
                     near: manifest.near_m,
                     far: manifest.far_m,
-                    passes: PassSet { rgb: true, id: false, depth: false },
+                    passes: PassSet { rgb: true, id: false, depth: false, hdr: false },
                 },
             );
             app.set_pose(
@@ -371,7 +371,7 @@ pub fn run(args: Vec<String>) -> Result<()> {
                 fov_y_deg: 55.0,
                 near: manifest.near_m,
                 far: manifest.far_m,
-                passes: PassSet { rgb: true, id: false, depth: false },
+                passes: PassSet { rgb: true, id: false, depth: false, hdr: false },
             },
         );
         app.set_pose(

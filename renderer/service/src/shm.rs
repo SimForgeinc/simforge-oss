@@ -78,6 +78,8 @@ pub const FORMAT_LIDAR_PLY: u32 = 5;
 pub const FORMAT_RADAR_CSV: u32 = 6;
 /// Binary little-endian PLY (same five named properties as the ASCII product).
 pub const FORMAT_LIDAR_BINARY: u32 = 7;
+/// Row-padded RGBA half-float (the camera's pre-exposure linear HDR frame).
+pub const FORMAT_RGBA16F: u32 = 8;
 
 /// Reserved sensor id of bundle records in the ring.
 pub const BUNDLE_SENSOR_ID: &str = "__bundle__";

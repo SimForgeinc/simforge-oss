@@ -442,6 +442,13 @@ fn write_artifact(
             format!("{tick:08}.{}.f32.bin", record.pass),
             render_core::engine::strip_padding(data, record.width as usize, record.height as usize, 4),
         ),
+        // Linear pre-exposure radiance: RGBA f16, row-major, no padding.
+        // Scene luminance (cd/m²) = value · 1.2 · 2^EV100 with the base EV100
+        // (`exposure[sensor].ev100 + exposure[sensor].adjustEv`).
+        "rgba16f" => (
+            format!("{tick:08}.{}.f16.bin", record.pass),
+            render_core::engine::strip_padding(data, record.width as usize, record.height as usize, 8),
+        ),
         "ply-ascii" | "ply-binary" => (format!("{tick:08}.ply"), data.to_vec()),
         "radar-csv" => (format!("{tick:08}.csv"), data.to_vec()),
         other => bail!("job artifact: {} {} has format {other}, which a job does not write", record.sensor_id, record.pass),
@@ -727,6 +734,7 @@ pub fn run(argv: Vec<String>) -> Result<()> {
     let mut tick_ms = Vec::new();
     let mut server_ms = Vec::new();
     let mut digests: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut exposures: BTreeMap<String, serde_json::Value> = BTreeMap::new();
     let mut gpu: BTreeMap<String, (f64, usize)> = BTreeMap::new();
     let mut first_tick_ms = 0.0;
     let mut stages: BTreeMap<String, f64> = BTreeMap::new();
@@ -750,10 +758,13 @@ pub fn run(argv: Vec<String>) -> Result<()> {
         let started = Instant::now();
         let response = dispatch(&mut state, request(body)?);
         let elapsed = started.elapsed().as_secs_f64() * 1000.0;
-        let ResponseBody::RenderBundle { frames: records, server_ms: reported, stages: tick_stages, observed_actors, .. } = response.body else {
+        let ResponseBody::RenderBundle { frames: records, server_ms: reported, stages: tick_stages, observed_actors, exposure, .. } = response.body else {
             if let ResponseBody::Error { error, .. } = response.body { bail!("tick {tick}: {error}"); }
             bail!("tick {tick}: unexpected response");
         };
+        if let Some(exposure) = exposure {
+            exposures.insert(format!("{tick:08}"), serde_json::to_value(exposure)?);
+        }
         if let Some(dir) = &out_dir {
             for record in &records {
                 artifacts.push(write_artifact(&state, record, dir, tick)?);
@@ -879,6 +890,8 @@ pub fn run(argv: Vec<String>) -> Result<()> {
         "gpuPerTick": gpu_rows.iter().map(|(p, v, c)| serde_json::json!({"path": p, "perTick": v, "spansPerTick": c})).collect::<Vec<_>>(),
         "stagesPerTick": stages.iter().map(|(k, v)| (k.clone(), serde_json::json!(v / measured))).collect::<serde_json::Map<_, _>>(),
         "digests": digests,
+        // Per tick, per RGB camera: the metered exposure (dash-cam camera model).
+        "exposure": exposures,
         "artifacts": artifacts,
     });
     if let Some(dir) = &out_dir {

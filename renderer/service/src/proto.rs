@@ -418,6 +418,10 @@ pub enum ResponseBody {
         /// With `observe`: every scene actor as drawn by this bundle.
         #[serde(skip_serializing_if = "Option::is_none")]
         observed_actors: Option<Vec<ObservedActorPose>>,
+        /// Per RGB camera, the exposure the camera model metered for this
+        /// frame (the `dashcam-wdr` look only).
+        #[serde(skip_serializing_if = "Option::is_none")]
+        exposure: Option<std::collections::BTreeMap<String, CameraExposure>>,
     },
     /// Exportable device stream allocated for a camera.
     OpenDeviceStream {
@@ -663,6 +667,23 @@ mod tests {
             _ => panic!("wrong request variant"),
         }
     }
+}
+
+/// The exposure one camera rendered a frame with: the metered EV100 and the
+/// aperture/shutter/gain the camera's exposure program realises it with.
+#[derive(Debug, Clone, Copy, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CameraExposure {
+    pub ev100: f32,
+    /// Metered adjustment over the lighting's incident exposure, stops
+    /// (positive: brighter).
+    pub adjust_ev: f32,
+    /// Weighted mean log2 luminance the metering read (pre-exposed units).
+    pub metered_log2_luminance: f32,
+    pub f_number: f32,
+    pub shutter_s: f32,
+    pub iso: f32,
+    pub gain_db: f32,
 }
 
 /// One actor as drawn (scene-yup world frame, metres).

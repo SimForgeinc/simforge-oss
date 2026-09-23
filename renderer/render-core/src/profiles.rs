@@ -159,6 +159,9 @@ pub enum ToneMap {
     SomewhatBoringDisplayTransform,
     /// Bypass the display transform (linear).
     None,
+    /// The dash-cam camera model: per-frame metering and a WDR log curve
+    /// (`crate::camera_model`). Bevy's own tone mapping is off.
+    DashcamWdr,
 }
 
 impl ToneMap {
@@ -173,7 +176,7 @@ impl ToneMap {
             ToneMap::SomewhatBoringDisplayTransform => {
                 Tonemapping::SomewhatBoringDisplayTransform
             }
-            ToneMap::None => Tonemapping::None,
+            ToneMap::None | ToneMap::DashcamWdr => Tonemapping::None,
         }
     }
 }
@@ -215,6 +218,10 @@ pub struct CinematicFx {
     pub grading_contrast: f32,
     /// Display transform. Defaults to the campaign's AgX.
     pub tone_map: ToneMap,
+    /// The camera model when `tone_map` is `DashcamWdr` (set by the render
+    /// config; a legacy `profileConfig` gets the model's defaults).
+    #[serde(skip)]
+    pub camera: Option<crate::camera_model::CameraModel>,
 }
 
 impl Default for CinematicFx {
@@ -256,6 +263,7 @@ impl Default for CinematicFx {
             grading_post_saturation: 0.98,
             grading_contrast: 1.02,
             tone_map: ToneMap::AgX,
+            camera: None,
         }
     }
 }
@@ -310,6 +318,7 @@ impl RenderProfile {
             .entity(entity)
             .remove::<Hdr>()
             .remove::<Tonemapping>()
+            .remove::<crate::camera_model::CameraModel>()
             .remove::<Exposure>()
             .remove::<ColorGrading>()
             .remove::<Vignette>()
@@ -353,6 +362,14 @@ impl RenderProfile {
             ..Default::default()
         };
         let mut cam = commands.entity(entity);
+        if fx.tone_map == ToneMap::DashcamWdr {
+            // The camera model owns exposure, grading and the curve.
+            let mut model = fx.camera.unwrap_or_else(crate::camera_model::CameraModel::dashcam); // fallback-ok: a legacy profileConfig names no camera model; it gets the documented dash-cam defaults
+            model.grading_exposure_ev = fx.grading_exposure;
+            model.saturation = fx.grading_post_saturation;
+            model.contrast = fx.grading_contrast;
+            cam.insert(model);
+        }
         cam.insert((
             Hdr,
             fx.tone_map.bevy(),

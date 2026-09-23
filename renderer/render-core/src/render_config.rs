@@ -263,6 +263,85 @@ pub struct ClockConfig {
     pub mode: ClockMode,
 }
 
+/// Automatic exposure.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ExposureMode {
+    /// Meter every frame (instant; no state between renders).
+    Auto,
+    /// Keep the incident-light exposure of the lighting.
+    Fixed,
+}
+
+/// Where the camera meters.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum MeteringMode {
+    Average,
+    CenterWeighted,
+    /// Centre-weighted, the sky band at the top of the frame at 1/4.
+    Dashcam,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ExposureConfig {
+    pub mode: ExposureMode,
+    /// Stops added after metering (positive: brighter).
+    pub compensation_ev: f32,
+    pub metering: MeteringMode,
+    /// Fraction of the weighted histogram dropped at each end (0..0.45).
+    pub trim: f32,
+}
+
+/// The camera's exposure program: fixed aperture, shutter first, then gain.
+/// Its limits bound the metered EV100 and are what the manifest reports.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SensorConfig {
+    pub f_number: f32,
+    pub min_shutter_s: f32,
+    pub max_shutter_s: f32,
+    pub iso_max: f32,
+}
+
+impl SensorConfig {
+    /// EV100 range the program can realise: `log2(N²/t) − log2(S/100)`.
+    pub fn ev100_range(&self) -> (f32, f32) {
+        let n2 = self.f_number * self.f_number;
+        ((n2 / self.max_shutter_s).log2() - (self.iso_max / 100.0).log2(), (n2 / self.min_shutter_s).log2())
+    }
+}
+
+/// The WDR tone curve (`crate::camera_model`).
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WdrConfig {
+    /// Stops above the metered key that print white.
+    pub white_stops: f32,
+    /// Display-linear value the metered key prints at.
+    pub mid_grey: f32,
+}
+
+/// The dash-cam camera model; used when `grading.toneMap` is `dashcam-wdr`.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CameraConfig {
+    pub exposure: ExposureConfig,
+    pub sensor: SensorConfig,
+    pub wdr: WdrConfig,
+}
+
+/// Atmosphere controls on top of the authored weather.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AtmosphereConfig {
+    /// Multiplier on the boundary-layer haze of the weather's visibility
+    /// (distance haze / aerial perspective): 0 clean air, 1 the weather's
+    /// meteorological range (clear: 25 km).
+    pub haze_density: f32,
+}
+
 /// Every knob of the native renderer. See the module docs.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -278,6 +357,8 @@ pub struct RenderConfig {
     pub dof: DofConfig,
     pub motion_blur: MotionBlurConfig,
     pub grading: GradingConfig,
+    pub camera: CameraConfig,
+    pub atmosphere: AtmosphereConfig,
     pub lens: LensConfig,
     pub lod: LodConfig,
     pub textures: TextureConfig,
@@ -304,14 +385,31 @@ impl RenderConfig {
                 focal_distance_m: look.dof_focal_distance_m,
             },
             motion_blur: MotionBlurConfig { shutter_angle: look.motion_shutter_angle, samples: look.motion_samples },
+            // The dash-cam camera model: its metering sets exposure and its
+            // curve the tone scale, so the grading is neutral.
             grading: GradingConfig {
-                tone_map: look.tone_map,
-                exposure: look.grading_exposure,
+                tone_map: ToneMap::DashcamWdr,
+                exposure: 0.0,
                 temperature: look.grading_temperature,
                 tint: look.grading_tint,
-                post_saturation: look.grading_post_saturation,
-                contrast: look.grading_contrast,
+                post_saturation: 1.0,
+                // A touch of contrast over the log curve, pivoting on mid
+                // grey (provisional until the dash-cam calibration).
+                contrast: 1.1,
             },
+            camera: CameraConfig {
+                exposure: ExposureConfig {
+                    mode: ExposureMode::Auto,
+                    compensation_ev: 0.0,
+                    metering: MeteringMode::Dashcam,
+                    trim: 0.05,
+                },
+                // A typical automotive camera: f/1.8, 1/8000 s .. 1/30 s,
+                // gain up to ISO 6400.
+                sensor: SensorConfig { f_number: 1.8, min_shutter_s: 1.0 / 8000.0, max_shutter_s: 1.0 / 30.0, iso_max: 6400.0 },
+                wdr: WdrConfig { white_stops: 6.0, mid_grey: 0.2 },
+            },
+            atmosphere: AtmosphereConfig { haze_density: 1.0 },
             lens: LensConfig {
                 vignette: look.vignette_intensity,
                 distortion: look.lens_distortion,
@@ -399,6 +497,33 @@ impl RenderConfig {
         if self.encode.finish_threads > 64 {
             return bad(format!("encode.finishThreads {} (0..=64)", self.encode.finish_threads));
         }
+        let exposure = &self.camera.exposure;
+        if !(-6.0..=6.0).contains(&exposure.compensation_ev) {
+            return bad(format!("camera.exposure.compensationEv {} (-6..=6)", exposure.compensation_ev));
+        }
+        if !(0.0..=0.45).contains(&exposure.trim) {
+            return bad(format!("camera.exposure.trim {} (0..=0.45)", exposure.trim));
+        }
+        let sensor = &self.camera.sensor;
+        if !(0.7..=32.0).contains(&sensor.f_number)
+            || !(sensor.min_shutter_s > 0.0 && sensor.min_shutter_s < sensor.max_shutter_s && sensor.max_shutter_s <= 1.0)
+            || !(100.0..=409_600.0).contains(&sensor.iso_max)
+        {
+            return bad(format!(
+                "camera.sensor f/{} shutter {}..{} s ISO max {} (f 0.7..=32, 0 < min < max <= 1 s, ISO 100..=409600)",
+                sensor.f_number, sensor.min_shutter_s, sensor.max_shutter_s, sensor.iso_max
+            ));
+        }
+        let wdr = &self.camera.wdr;
+        if !(2.0..=12.0).contains(&wdr.white_stops) || !(0.05..=0.5).contains(&wdr.mid_grey) {
+            return bad(format!("camera.wdr whiteStops {} midGrey {} (2..=12, 0.05..=0.5)", wdr.white_stops, wdr.mid_grey));
+        }
+        if self.grading.tone_map == ToneMap::DashcamWdr && (self.grading.temperature != 0.0 || self.grading.tint != 0.0) {
+            return bad("grading.temperature/tint are not applied by the dashcam-wdr camera model; use another toneMap or leave them 0".into());
+        }
+        if !(0.0..=20.0).contains(&self.atmosphere.haze_density) {
+            return bad(format!("atmosphere.hazeDensity {} (0..=20)", self.atmosphere.haze_density));
+        }
         self.cinematic_fx().validate().context("[native_render_config_invalid]")?;
         Ok(())
     }
@@ -430,6 +555,31 @@ impl RenderConfig {
             grading_post_saturation: self.grading.post_saturation,
             grading_contrast: self.grading.contrast,
             tone_map: self.grading.tone_map,
+            camera: (self.grading.tone_map == ToneMap::DashcamWdr).then(|| self.camera_model()),
+        }
+    }
+
+    /// The camera model the `camera` group describes.
+    pub fn camera_model(&self) -> crate::camera_model::CameraModel {
+        use crate::camera_model::{CameraModel, Metering};
+        let (min_ev100, max_ev100) = self.camera.sensor.ev100_range();
+        CameraModel {
+            auto: self.camera.exposure.mode == ExposureMode::Auto,
+            compensation_ev: self.camera.exposure.compensation_ev,
+            metering: match self.camera.exposure.metering {
+                MeteringMode::Average => Metering::Average,
+                MeteringMode::CenterWeighted => Metering::CenterWeighted,
+                MeteringMode::Dashcam => Metering::Dashcam,
+            },
+            trim: self.camera.exposure.trim,
+            min_ev100,
+            max_ev100,
+            white_stops: self.camera.wdr.white_stops,
+            mid_grey: self.camera.wdr.mid_grey,
+            saturation: self.grading.post_saturation,
+            contrast: self.grading.contrast,
+            grading_exposure_ev: self.grading.exposure,
+            ..CameraModel::dashcam()
         }
     }
 

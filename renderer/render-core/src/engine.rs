@@ -163,6 +163,10 @@ pub struct Lighting {
     /// incident light alone.
     #[serde(default)]
     pub meter_view: Option<crate::atmosphere::MeterView>,
+    /// `RenderConfig.atmosphere.hazeDensity`, set by the engine from the
+    /// render config (not part of the authored lighting).
+    #[serde(skip, default = "unit_haze_density")]
+    pub haze_density: f32,
     /// UTC/site-resolved celestial, sky, fixture and honest fallback controls.
     #[serde(default)]
     pub night: crate::night::NightControls,
@@ -223,9 +227,14 @@ impl Default for Lighting {
             cloud_deck: None,
             ground_y: None,
             meter_view: None,
+            haze_density: 1.0,
             night: crate::night::NightControls::default(),
         }
     }
+}
+
+fn unit_haze_density() -> f32 {
+    1.0
 }
 
 /// Exactly what the engine ended up with after the weather model, the
@@ -373,6 +382,7 @@ impl Lighting {
             ground_albedo: crate::atmosphere::GROUND_ALBEDO,
             meter_view: self.meter_view,
             sky_cube: self.sun_elev_deg <= PROBE_HANDOVER_ELEVATION_DEG,
+            haze_density: self.haze_density,
         }
     }
 
@@ -697,6 +707,10 @@ pub struct PassSet {
     pub id: bool,
     #[serde(default)]
     pub depth: bool,
+    /// The pre-exposure linear HDR frame (`<sensor>:hdr`, RGBA f16; needs the
+    /// dash-cam camera model, `crate::camera_model::HdrCapture`).
+    #[serde(default)]
+    pub hdr: bool,
 }
 
 fn default_true() -> bool {
@@ -705,7 +719,7 @@ fn default_true() -> bool {
 
 impl Default for PassSet {
     fn default() -> Self {
-        Self { rgb: true, id: false, depth: false }
+        Self { rgb: true, id: false, depth: false, hdr: false }
     }
 }
 
@@ -721,6 +735,9 @@ impl PassSet {
         }
         if self.depth {
             keys.push(format!("{sensor_id}:depth"));
+        }
+        if self.hdr {
+            keys.push(format!("{sensor_id}:hdr"));
         }
         keys
     }
@@ -947,6 +964,9 @@ struct ReadbackTarget {
     key: String,
     src_image: Handle<Image>,
     depth: bool,
+    /// The camera model's metering result of the view rendering
+    /// `src_image` (16 bytes), not a texture.
+    exposure: bool,
 }
 
 /// One plane of a device stream and the resident target it is copied from.
@@ -1025,6 +1045,7 @@ struct StagingBuffer {
     key: String,
     src_image: Handle<Image>,
     depth: bool,
+    exposure: bool,
     width: u32,
     height: u32,
     padded_row: usize,
@@ -2475,6 +2496,7 @@ impl SceneApp {
                 ScheduleRunnerPlugin::run_loop(Duration::ZERO),
                 crate::road_detail::RoadDetailPlugin,
                 crate::sky_pass::SkyPassPlugin { assets: sky_assets },
+                crate::camera_model::CameraModelPlugin,
                 crate::readiness::GpuReadinessPlugin,
                 crate::shared_shadows::SharedShadowsPlugin,
             ))
@@ -2777,6 +2799,15 @@ impl SceneApp {
         let lighting = self.lighting.clone();
         self.apply_lighting(&lighting, config.profile_config())?;
         Ok(())
+    }
+
+    /// `lighting` with the render config's haze density (the authored
+    /// lighting never carries it).
+    fn with_render_config_haze(&self, lighting: &Lighting) -> Lighting {
+        Lighting {
+            haze_density: self.render_config.map_or(1.0, |config| config.atmosphere.haze_density), // fallback-ok: without a render config the weather's own haze (density 1)
+            ..lighting.clone()
+        }
     }
 
     /// The resolved render config this app runs with, if one was applied.
@@ -3122,6 +3153,7 @@ impl SceneApp {
         profile_config: RenderProfileConfig,
     ) -> Result<ResolvedLighting> {
         profile_config.cinematic.validate()?;
+        let lighting = &self.with_render_config_haze(lighting);
         lighting.validate_for_scene_app()?;
         self.scene_revision += 1;
         let rung = LightingRung(lighting.rung);
@@ -3464,6 +3496,7 @@ impl SceneApp {
         lighting: &Lighting,
         profile_config: RenderProfileConfig,
     ) -> Result<(ResolvedLighting, bool)> {
+        let lighting = &self.with_render_config_haze(lighting);
         lighting.validate_for_scene_app()?;
         let tier = ladder_tier(lighting.sun_elev_deg);
         self.scene_revision += 1;
@@ -3848,7 +3881,34 @@ impl SceneApp {
             key: format!("{}:rgb", spec.sensor_id),
             src_image: rgb_handle.clone(),
             depth: false,
+            exposure: false,
         });
+        // Copied only when the look carries the camera model and the
+        // caller asks for it.
+        self.app.world_mut().spawn(ReadbackTarget {
+            key: format!("{}:exposure", spec.sensor_id),
+            src_image: rgb_handle.clone(),
+            depth: false,
+            exposure: true,
+        });
+        if spec.passes.hdr {
+            let hdr_image = {
+                let mut images = self.app.world_mut().resource_mut::<Assets<Image>>();
+                let mut image = Image::new_target_texture(spec.width, spec.height, TextureFormat::Rgba16Float, None);
+                image.texture_descriptor.usage |= TextureUsages::COPY_SRC | TextureUsages::COPY_DST;
+                images.add(image)
+            };
+            self.app
+                .world_mut()
+                .entity_mut(rgb_entity)
+                .insert(crate::camera_model::HdrCapture(hdr_image.clone()));
+            self.app.world_mut().spawn(ReadbackTarget {
+                key: format!("{}:hdr", spec.sensor_id),
+                src_image: hdr_image,
+                depth: false,
+                exposure: false,
+            });
+        }
 
         let id_entity = if spec.passes.id {
             let id_image = {
@@ -3859,6 +3919,7 @@ impl SceneApp {
                 key: format!("{}:id", spec.sensor_id),
                 src_image: id_image.clone(),
                 depth: false,
+                exposure: false,
             });
             let cmd = self.app.world_mut().spawn((
                 Camera3d::default(),
@@ -3889,6 +3950,7 @@ impl SceneApp {
                 key: format!("{}:depth", spec.sensor_id),
                 src_image: rgb_handle,
                 depth: true,
+                exposure: false,
             });
         }
 
@@ -5385,7 +5447,15 @@ impl SceneApp {
     pub fn expected_keys(&self) -> Vec<String> {
         self.groups
             .iter()
-            .flat_map(|g| g.spec.passes.keys(&g.spec.sensor_id))
+            .flat_map(|g| {
+                let mut keys = g.spec.passes.keys(&g.spec.sensor_id);
+                // Every RGB camera registers its exposure readback; it is
+                // only filled when the look carries the camera model.
+                if g.spec.passes.rgb {
+                    keys.push(format!("{}:exposure", g.spec.sensor_id));
+                }
+                keys
+            })
             .collect()
     }
 
@@ -5432,7 +5502,17 @@ impl SceneApp {
 
     /// Capture every registered pass of one submission to host memory.
     pub fn render_once(&mut self, sim_tick: u64) -> Result<CapturedFrame> {
-        let keys = self.expected_keys();
+        let with_model: Vec<String> = self
+            .groups
+            .iter()
+            .filter(|g| self.app.world().get::<crate::camera_model::CameraModel>(g.rgb_entity).is_some())
+            .map(|g| format!("{}:exposure", g.spec.sensor_id))
+            .collect();
+        let keys: Vec<String> = self
+            .expected_keys()
+            .into_iter()
+            .filter(|key| !key.ends_with(":exposure") || with_model.contains(key))
+            .collect();
         self.capture(sim_tick, &keys)
     }
 
@@ -6139,7 +6219,7 @@ fn sync_staging(
         targets
             .0
             .iter()
-            .any(|t| t.src_image == b.src_image && t.depth == b.depth && t.key == b.key)
+            .any(|t| t.src_image == b.src_image && t.depth == b.depth && t.exposure == b.exposure && t.key == b.key)
     });
     let slot = capture.0.slot;
     for target in targets.0.iter() {
@@ -6147,15 +6227,18 @@ fn sync_staging(
             || staging
                 .0
                 .iter()
-                .any(|b| b.src_image == target.src_image && b.depth == target.depth && b.slot == slot)
+                .any(|b| b.src_image == target.src_image && b.depth == target.depth && b.exposure == target.exposure && b.slot == slot)
         {
             continue;
         }
         // Depth views share the colour target's extent.
         let Some(gpu) = gpu_images.get(&target.src_image) else { continue };
-        let width = gpu.texture_descriptor.size.width;
-        let height = gpu.texture_descriptor.size.height;
-        let pixel: usize = if target.depth {
+        let (width, height) = if target.exposure {
+            (4, 1)
+        } else {
+            (gpu.texture_descriptor.size.width, gpu.texture_descriptor.size.height)
+        };
+        let pixel: usize = if target.depth || target.exposure {
             4
         } else {
             gpu.texture_descriptor.format.block_copy_size(None).unwrap_or(4) as usize
@@ -6165,6 +6248,7 @@ fn sync_staging(
             key: target.key.clone(),
             src_image: target.src_image.clone(),
             depth: target.depth,
+            exposure: target.exposure,
             width,
             height,
             padded_row,
@@ -6262,6 +6346,8 @@ fn copy_passes(
     gpu_images: Res<RenderAssets<GpuImage>>,
     cameras: Query<&ExtractedCamera>,
     depth_views: Query<(&ExtractedCamera, &ViewDepthTexture)>,
+    model_views: Query<(&ExtractedCamera, &crate::camera_model::CameraModelBuffers)>,
+    hdr_views: Query<&crate::camera_model::HdrCapture, With<ExtractedCamera>>,
 ) {
     if capture.0.keys.is_empty() {
         return;
@@ -6276,7 +6362,15 @@ fn copy_passes(
             bytes_per_row: Some(b.padded_row as u32),
             rows_per_image: None,
         };
-        if b.depth {
+        if b.exposure {
+            let Some((_, buffers)) = model_views
+                .iter()
+                .find(|(camera, _)| targets_image(camera, &b.src_image))
+            else {
+                continue;
+            };
+            ctx.command_encoder().copy_buffer_to_buffer(&buffers.result, 0, &b.buffer, 0, 16);
+        } else if b.depth {
             let Some((_, view)) = depth_views
                 .iter()
                 .find(|(camera, _)| targets_image(camera, &b.src_image))
@@ -6289,7 +6383,11 @@ fn copy_passes(
                 view.texture.size(),
             );
         } else {
-            if !cameras.iter().any(|camera| targets_image(camera, &b.src_image)) {
+            // A camera's own target, or the HDR copy its camera model made
+            // this frame.
+            if !cameras.iter().any(|camera| targets_image(camera, &b.src_image))
+                && !hdr_views.iter().any(|hdr| hdr.0.id() == b.src_image.id())
+            {
                 continue;
             }
             let Some(src) = gpu_images.get(&b.src_image) else {
@@ -6880,7 +6978,7 @@ mod tests {
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
         app.load_tiles(&[repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb").to_string_lossy().into_owned()]).unwrap();
         app.add_camera(
-            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera("cam", 160, 120) }
+            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false, hdr: false }, ..test_camera("cam", 160, 120) }
         );
         app.wait_until_ready().unwrap();
         app.upsert_actor("moto", "motorcycle", [0.0, 0.7, -20.0], Quat::IDENTITY, [2.1, 1.4, 0.75], [0.5, 0.5, 0.5]);
@@ -6924,7 +7022,7 @@ mod tests {
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
         app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
         app.add_camera(
-            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera("cam", 128, 96) }
+            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false, hdr: false }, ..test_camera("cam", 128, 96) }
         );
         app.wait_until_ready().unwrap();
 
@@ -7018,7 +7116,7 @@ mod tests {
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
         app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
         for sensor in ["left", "right"] {
-            app.add_camera(CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera(sensor, 320, 180) });
+            app.add_camera(CameraSpec { passes: PassSet { rgb: true, id: true, depth: false, hdr: false }, ..test_camera(sensor, 320, 180) });
         }
         app.wait_until_ready().unwrap();
         for (k, x) in [-6.0f32, 0.0, 6.0].into_iter().enumerate() {
@@ -7060,6 +7158,120 @@ mod tests {
         std::mem::forget(app);
     }
 
+    /// Measurement probe (not a gate): the shadow fill the renderer delivers
+    /// against the atmosphere model's own diffuse/total horizontal
+    /// illuminance. A 0.5-albedo, fully rough horizontal plane under a
+    /// floating box; no AO/contact shadows/SSR/bloom, linear output. Prints
+    /// the linear shadow/lit ratio beside the model's E_diffuse/E_total.
+    /// `SIMFORGE_SKY_FILL_ELEVATIONS=60,30,15` (default), GPU or lavapipe.
+    #[test]
+    #[ignore = "measurement probe"]
+    fn sky_fill_probe() {
+        use crate::profiles::{AntiAlias, CinematicFx, RenderProfileConfig, ToneMap};
+        let elevations: Vec<f32> = std::env::var("SIMFORGE_SKY_FILL_ELEVATIONS")
+            .unwrap_or_else(|_| "60,30,15".into())
+            .split(',')
+            .map(|v| v.trim().parse().unwrap())
+            .collect();
+        let weathers: Vec<String> = std::env::var("SIMFORGE_SKY_FILL_WEATHERS")
+            .unwrap_or_else(|_| "clear".into())
+            .split(',')
+            .map(|v| v.trim().to_string())
+            .collect();
+        let look = RenderProfileConfig {
+            cinematic: CinematicFx {
+                aa: AntiAlias::Off,
+                ssr: false,
+                ssao: false,
+                contact_shadows: false,
+                bloom_intensity: 0.0,
+                vignette_intensity: 0.0,
+                lens_distortion: 0.0,
+                chromatic_aberration: 0.0,
+                grading_exposure: 0.0,
+                grading_contrast: 1.0,
+                grading_post_saturation: 1.0,
+                tone_map: ToneMap::None,
+                ..Default::default()
+            },
+        };
+        for weather in &weathers {
+            for &elev in &elevations {
+                let lighting = Lighting {
+                    atmosphere: true,
+                    sun_elev_deg: elev,
+                    sun_azim_deg: 180.0,
+                    weather: serde_json::from_value(serde_json::json!(weather)).unwrap(),
+                    ..Default::default()
+                };
+                let mut app = SceneApp::new_with_profile_config(&lighting, look).unwrap();
+                // Readiness needs one loaded tile; it is moved out of view.
+                let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+                app.load_tiles(&[repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb").to_string_lossy().into_owned()]).unwrap();
+                app.add_camera(CameraSpec { passes: PassSet { rgb: true, id: false, depth: false, hdr: false }, ..test_camera("cam", 256, 256) });
+                app.wait_until_ready().unwrap();
+                {
+                    let world = app.app.world_mut();
+                    let roots: Vec<Entity> = world.query_filtered::<Entity, With<WorldAssetRoot>>().iter(world).collect();
+                    for root in roots {
+                        world.entity_mut(root).insert(Transform::from_xyz(5000.0, 0.0, 5000.0));
+                    }
+                    let plane = world.resource_mut::<Assets<Mesh>>().add(Plane3d::default().mesh().size(600.0, 600.0));
+                    let block = world.resource_mut::<Assets<Mesh>>().add(Cuboid::new(40.0, 10.0, 40.0));
+                    let grey = world.resource_mut::<Assets<StandardMaterial>>().add(StandardMaterial {
+                        base_color: Color::linear_rgb(0.5, 0.5, 0.5),
+                        perceptual_roughness: 1.0,
+                        metallic: 0.0,
+                        reflectance: 0.0,
+                        ..default()
+                    });
+                    world.spawn((Mesh3d(plane), MeshMaterial3d(grey.clone()), Transform::IDENTITY));
+                    world.spawn((Mesh3d(block), MeshMaterial3d(grey), Transform::from_xyz(0.0, 40.0, 0.0)));
+                }
+                app.apply_lighting(&lighting, look).unwrap();
+                // Straight down from 150 m over the box's shadow (the sun is
+                // due south, -z; the shadow falls towards +z).
+                let shadow_z = 40.0 / elev.to_radians().tan();
+                app.set_pose("cam", &[0.0, 150.0, shadow_z + 0.01], &[0.0, 0.0, shadow_z]).unwrap();
+                app.warmup(4);
+                let frame = app.render_once(1).unwrap();
+                let pass = &frame.passes["cam:rgb"];
+                let raw = strip_padding(&pass.bytes, 256, 256, 4);
+                if let Ok(dir) = std::env::var("SIMFORGE_SKY_FILL_DUMP") {
+                    image::save_buffer(format!("{dir}/sky-fill-{weather}-{elev}.png"), &raw, 256, 256, image::ColorType::Rgba8).unwrap();
+                }
+                let decode = |v: u8| {
+                    let c = v as f32 / 255.0;
+                    if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+                };
+                let mut lum: Vec<f32> = raw
+                    .chunks_exact(4)
+                    .map(|p| 0.2126 * decode(p[0]) + 0.7152 * decode(p[1]) + 0.0722 * decode(p[2]))
+                    .collect();
+                lum.sort_by(|a, b| a.total_cmp(b));
+                // Shadow: the darkest 3% (the box's shadow is ~4-8% of the
+                // frame); lit: the brightest half.
+                let n = lum.len();
+                let shadow: f32 = lum[n / 200..n * 3 / 100].iter().sum::<f32>() / (n * 3 / 100 - n / 200) as f32;
+                let lit: f32 = lum[n / 2..].iter().sum::<f32>() / (n - n / 2) as f32;
+                let resolved = app.resolved_lighting();
+                let a = resolved.atmosphere.as_ref().unwrap();
+                eprintln!(
+                    "sky-fill weather={weather} elev={elev}: rendered shadow/lit {:.3} (shadow {:.4}, lit {:.4}, lit clipped {}) | model E_diff/E_total {:.3} (E_dir {:.0} lx, E_diff {:.0} lx) | ev100 {:.2}",
+                    shadow / lit,
+                    shadow,
+                    lit,
+                    lum[n - 1] >= 0.999,
+                    a.diffuse_horizontal_illuminance_lx / a.total_horizontal_illuminance_lx,
+                    a.direct_horizontal_illuminance_lx,
+                    a.diffuse_horizontal_illuminance_lx,
+                    resolved.ev100,
+                );
+                std::mem::forget(app);
+            }
+        }
+    }
+
     fn test_camera(sensor_id: &str, width: u32, height: u32) -> CameraSpec {
         CameraSpec {
             sensor_id: sensor_id.into(),
@@ -7068,7 +7280,7 @@ mod tests {
             fov_y_deg: 58.0,
             near: 0.5,
             far: 200.0,
-            passes: PassSet { rgb: true, id: true, depth: true },
+            passes: PassSet { rgb: true, id: true, depth: true, hdr: false },
         }
     }
 
@@ -7150,7 +7362,7 @@ mod tests {
         app.apply_lighting(&lighting, config).unwrap();
         app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
         let mut spec = test_camera("cam", 160, 96);
-        spec.passes = PassSet { rgb: true, id: false, depth: false };
+        spec.passes = PassSet { rgb: true, id: false, depth: false, hdr: false };
         app.add_camera(spec);
         app.wait_until_ready().unwrap();
         app.set_pose("cam", &[6.0, 1.8, 6.0], &[0.0, 0.8, 0.0]).unwrap();
@@ -7319,6 +7531,53 @@ mod tests {
         let differing = same.iter().zip(&moved).filter(|(a, b)| a != b).count();
         std::mem::forget(app);
         assert_eq!(differing, 0, "{differing} of {} bytes depend on the previously drawn pose", same.len());
+    }
+
+    /// The dash-cam camera model meters every frame from that frame alone:
+    /// tick t's exposure and pixels are the same rendered cold or after a
+    /// frame of a very different (brighter/darker) view. GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn camera_model_exposure_does_not_depend_on_the_previous_frame() {
+        use crate::render_config::{Preset, RenderConfig};
+        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let config = RenderConfig::preset(Preset::Training);
+        let lighting = Lighting { atmosphere: true, ..Lighting::default() };
+        let mut app = SceneApp::new_with_profile_config(&lighting, config.profile_config()).unwrap();
+        app.apply_render_config(&config).unwrap();
+        app.apply_lighting(&lighting, config.profile_config()).unwrap();
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+        let mut spec = test_camera("cam", 160, 96);
+        spec.passes = PassSet { rgb: true, id: false, depth: false, hdr: false };
+        app.add_camera(spec);
+        app.wait_until_ready().unwrap();
+        let keys = vec!["cam:rgb".to_string(), "cam:exposure".to_string()];
+        let target = ([6.0, 1.8, 6.0], [0.0, 0.8, 0.0]);
+        let mut shot = |app: &mut SceneApp, before: Option<([f32; 3], [f32; 3])>| {
+            if let Some(before) = before {
+                app.set_pose("cam", &before.0, &before.1).unwrap();
+                app.set_sim_time(1.0);
+                app.capture(1, &keys).unwrap();
+            }
+            app.set_pose("cam", &target.0, &target.1).unwrap();
+            app.set_sim_time(1.0);
+            let frame = app.capture(2, &keys).unwrap();
+            (frame.passes["cam:rgb"].bytes.clone(), frame.passes["cam:exposure"].bytes[..16].to_vec())
+        };
+        app.wait_for_capture_ready().unwrap();
+        let cold = shot(&mut app, None);
+        // Straight up at the sky, then straight down at the ground: two
+        // frames metered far apart.
+        let after_sky = shot(&mut app, Some(([0.0, 2.0, 0.0], [0.01, 50.0, 0.0])));
+        let after_ground = shot(&mut app, Some(([0.0, 30.0, 0.0], [0.01, 0.0, 0.0])));
+        std::mem::forget(app);
+        let ev = |bytes: &[u8]| f32::from_le_bytes(bytes[..4].try_into().unwrap());
+        assert!(ev(&cold.1).is_finite() && ev(&cold.1) > 5.0, "metered EV100 {}", ev(&cold.1));
+        assert_eq!(cold.1, after_sky.1, "exposure depends on the previous frame");
+        assert_eq!(cold.1, after_ground.1, "exposure depends on the previous frame");
+        assert_eq!(cold.0, after_sky.0, "pixels depend on the previous frame");
+        assert_eq!(cold.0, after_ground.0, "pixels depend on the previous frame");
     }
 
     #[test]

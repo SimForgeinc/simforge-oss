@@ -17,7 +17,7 @@ use crate::proto::{
 use crate::scene::{ActorState, SceneState};
 use crate::shm::{
     BundleEntry, ShmRing, FORMAT_DEPTH32F, FORMAT_JPEG, FORMAT_LIDAR_PLY, FORMAT_LIDAR_BINARY, FORMAT_RADAR_CSV,
-    FORMAT_RGBA8,
+    FORMAT_RGBA16F, FORMAT_RGBA8,
 };
 use anyhow::{Context, Result};
 use bevy::math::{Quat, Vec3};
@@ -295,7 +295,7 @@ pub fn prewarm(spec: &SceneSpec) -> Result<SceneApp> {
         fov_y_deg: 58.0,
         near: spec.near_m,
         far: spec.far_m,
-        passes: PassSet { rgb: true, id: false, depth: false },
+        passes: PassSet { rgb: true, id: false, depth: false, hdr: false },
     });
     let _legend = app.wait_until_ready()?;
     phase("ready", &mut mark);
@@ -718,6 +718,12 @@ impl ServiceState {
 
     /// Classes of the frozen static legend, resolved once: the legend never
     /// changes after readiness and dynamic actors take ids beyond it.
+    /// Whether RGB cameras carry the dash-cam camera model (its per-frame
+    /// metering replaces the service's scene-wide auto meter).
+    pub(crate) fn camera_model_on(&self) -> bool {
+        self.render_config.grading.tone_map == render_core::profiles::ToneMap::DashcamWdr
+    }
+
     fn static_sensor_classes(&mut self) -> std::sync::Arc<HashMap<u32, sensors::taxonomy::SemanticClass>> {
         if let Some(classes) = &self.static_sensor_classes {
             return classes.clone();
@@ -838,7 +844,13 @@ impl ServiceState {
 /// moved since the last reading. An in-place advance (see
 /// `SceneApp::advance_lighting`): ~25 ms by day, and the TAA history is kept.
 fn auto_meter(state: &mut ServiceState, cam: &ServiceCamera, eye: &[f32; 3], target: &[f32; 3]) -> Result<(), String> {
+    // With the camera model on auto, every frame meters itself; the scene's
+    // incident exposure stays the base (and nothing depends on the heading a
+    // previous request metered).
+    let camera_meters = state.camera_model_on()
+        && state.render_config.camera.exposure.mode == render_core::render_config::ExposureMode::Auto;
     if !state.auto_meter
+        || camera_meters
         || !state.lighting_authored.atmosphere
         || state.lighting_authored.meter_view.is_some()
     {
@@ -1916,12 +1928,12 @@ fn upsert_rig(state: &mut ServiceState, cam: &ServiceCamera) -> Result<(), Strin
 /// GPU pass set every service camera is registered with. Which of them
 /// are copied out is decided per request (`capture_keys`); the ID view
 /// only renders when one of its passes is requested.
-const SERVICE_PASSES: PassSet = PassSet { rgb: true, id: true, depth: true };
+const SERVICE_PASSES: PassSet = PassSet { rgb: true, id: true, depth: true, hdr: false };
 
 /// Register a camera, or re-register it when its size or field of view
 /// changed since the last request. Cached payloads of a replaced
 /// camera belong to the old target and are dropped.
-fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera) {
+fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera, hdr: bool) {
     let spec = CameraSpec {
         sensor_id: cam.sensor_id.clone(),
         width: cam.width,
@@ -1929,7 +1941,7 @@ fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera) {
         fov_y_deg: cam.fov_deg,
         near: state.near_m,
         far: state.far_m,
-        passes: SERVICE_PASSES,
+        passes: PassSet { hdr, ..SERVICE_PASSES },
     };
     if state.app.camera(&cam.sensor_id) == Some(&spec) {
         return;
@@ -1949,9 +1961,9 @@ fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera) {
 /// or replace each camera, mount it on its attach actor (so that actor's
 /// RGB geometry is excluded from this view only), resolve and set its
 /// pose, and re-meter through the first camera.
-fn sync_rig(state: &mut ServiceState, cameras: &[ServiceCamera]) -> Result<(), String> {
+fn sync_rig(state: &mut ServiceState, cameras: &[ServiceCamera], hdr: bool) -> Result<(), String> {
     for (index, cam) in cameras.iter().enumerate() {
-        ensure_camera(state, cam);
+        ensure_camera(state, cam, hdr);
         let host = cam
             .attach
             .as_ref()
@@ -2099,6 +2111,9 @@ fn plan_camera_passes(
     if want.id {
         planned.push(PlannedPass { pass: "id", format_tag: FORMAT_RGBA8, format_name: "rgba8", data: take("id")?.to_vec() });
     }
+    if want.hdr {
+        planned.push(PlannedPass { pass: "hdr", format_tag: FORMAT_RGBA16F, format_name: "rgba16f", data: take("hdr")?.to_vec() });
+    }
     if want.depth {
         let raw = take("depth")?;
         let carla = cam.depth_encoding.as_deref() == Some("carla");
@@ -2139,7 +2154,7 @@ fn render_tick(
             return WireResponse::error(i, error);
         }
     }
-    if let Err(error) = sync_rig(state, &cameras) {
+    if let Err(error) = sync_rig(state, &cameras, false) {
         return WireResponse::error(i, error);
     }
     if let Err(error) = state.app.wait_for_capture_ready() {
@@ -2425,13 +2440,14 @@ fn close_device_stream_op(_state: &mut ServiceState, i: u64, _sensor_id: &str, _
 /// Requested bundle passes: the GPU pass set to copy plus whether the
 /// derived semantic output is wanted (which needs the id pass rendered).
 fn parse_bundle_passes(requested: &[String]) -> Result<(PassSet, bool, bool), String> {
-    let mut want = PassSet { rgb: false, id: false, depth: false };
+    let mut want = PassSet { rgb: false, id: false, depth: false, hdr: false };
     let mut want_semantic = false;
     for pass in requested {
         match pass.as_str() {
             "rgb" => want.rgb = true,
             "id" => want.id = true,
             "depth" => want.depth = true,
+            "hdr" => want.hdr = true,
             "semantic" => want_semantic = true,
             other => return Err(format!("unknown bundle pass {other:?}")),
         }
@@ -2439,6 +2455,45 @@ fn parse_bundle_passes(requested: &[String]) -> Result<(PassSet, bool, bool), St
     let want_id_output = want.id;
     want.id |= want_semantic;
     Ok((want, want_id_output, want_semantic))
+}
+
+/// The exposure each camera metered for this capture, when the look carries
+/// the camera model (`None` otherwise). A camera model whose readback is
+/// missing from the capture is an error, never an omitted row.
+fn camera_exposures(
+    state: &ServiceState,
+    captured: &CapturedFrame,
+    rig: &[ServiceCamera],
+) -> Result<Option<std::collections::BTreeMap<String, crate::proto::CameraExposure>>, String> {
+    if !state.camera_model_on() || !rig.iter().any(|cam| captured.passes.contains_key(&format!("{}:rgb", cam.sensor_id))) {
+        return Ok(None);
+    }
+    let sensor = state.render_config.camera.sensor;
+    let mut out = std::collections::BTreeMap::new();
+    for cam in rig {
+        if !captured.passes.contains_key(&format!("{}:rgb", cam.sensor_id)) {
+            continue;
+        }
+        let bytes = captured_pass(captured, &cam.sensor_id, "exposure")?;
+        let value = |k: usize| f32::from_le_bytes(bytes[k * 4..k * 4 + 4].try_into().expect("four bytes"));
+        let program = render_core::camera_model::exposure_program(
+            value(0),
+            sensor.f_number,
+            sensor.min_shutter_s,
+            sensor.max_shutter_s,
+            sensor.iso_max,
+        );
+        out.insert(cam.sensor_id.clone(), crate::proto::CameraExposure {
+            ev100: value(0),
+            adjust_ev: value(1),
+            metered_log2_luminance: value(2),
+            f_number: program.f_number,
+            shutter_s: program.shutter_s,
+            iso: program.iso,
+            gain_db: program.gain_db,
+        });
+    }
+    Ok(Some(out))
 }
 
 /// Everything [`finish_bundle`] needs of a bundle whose capture is on the GPU.
@@ -2536,9 +2591,12 @@ pub(crate) fn begin_bundle(state: &mut ServiceState, request: BundleRequest) -> 
     let rig = state.rig.clone();
     let lidar_rig = state.lidars.clone();
     let radar_rig = state.radars.clone();
-    sync_rig(state, &rig).map_err(|error| WireResponse::error(i, error))?;
+    sync_rig(state, &rig, want.hdr).map_err(|error| WireResponse::error(i, error))?;
     stages.rig_ms = ms(mark);
-    let host_keys = capture_keys(&rig, want);
+    let mut host_keys = capture_keys(&rig, want);
+    if want.rgb && state.camera_model_on() {
+        host_keys.extend(rig.iter().map(|cam| format!("{}:exposure", cam.sensor_id)));
+    }
     for sensor_id in &device_sensors {
         if !rig.iter().any(|cam| cam.sensor_id == *sensor_id) {
             return Err(WireResponse::error(i, format!("render_bundle: device sensor {sensor_id:?} is not in the rig")));
@@ -2608,7 +2666,7 @@ pub(crate) fn begin_bundle(state: &mut ServiceState, request: BundleRequest) -> 
         i,
         sim_tick,
         rig,
-        published: PassSet { rgb: want.rgb, id: want_id_output, depth: want.depth },
+        published: PassSet { rgb: want.rgb, id: want_id_output, depth: want.depth, hdr: want.hdr },
         want_semantic,
         ticket,
         scan,
@@ -2664,6 +2722,10 @@ pub(crate) fn finish_bundle(state: &mut ServiceState, flight: BundleInFlight) ->
         }
     }
     stages.publish_cameras_ms = ms(mark);
+    let exposure = match camera_exposures(state, &captured, &rig) {
+        Ok(exposure) => exposure,
+        Err(error) => return WireResponse::error(i, error),
+    };
     if let Some(scan) = scan {
         let mark = std::time::Instant::now();
         let result = match scan.join() {
@@ -2728,6 +2790,7 @@ pub(crate) fn finish_bundle(state: &mut ServiceState, flight: BundleInFlight) ->
                 stages: Some(stages),
                 observed_tick,
                 observed_actors,
+                exposure,
             },
         },
         Err(error) => WireResponse::error(i, format!("publish bundle: {error}")),

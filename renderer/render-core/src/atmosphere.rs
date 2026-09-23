@@ -295,6 +295,10 @@ pub struct AtmosphereInputs {
     /// for the celestial probe. Costs ~20-60 ms; the engine asks for it only
     /// below the probe handover.
     pub sky_cube: bool,
+    /// Multiplier on the boundary-layer haze the weather's visibility calls
+    /// for (`RenderConfig.atmosphere.hazeDensity`): 0 leaves the clean
+    /// Rayleigh + aerosol column, 1 is the weather's meteorological range.
+    pub haze_density: f32,
 }
 
 /// The camera the exposure meter reads the sky through.
@@ -339,6 +343,7 @@ impl Default for AtmosphereInputs {
             ground_albedo: GROUND_ALBEDO,
             meter_view: None,
             sky_cube: false,
+            haze_density: 1.0,
         }
     }
 }
@@ -366,6 +371,7 @@ impl AtmosphereInputs {
                     && v.aspect.is_finite()
             }),
             sky_cube: self.sky_cube,
+            haze_density: self.haze_density,
         }
     }
 
@@ -402,7 +408,7 @@ impl AtmosphereInputs {
         // luma-weighted background extinction at the ground.
         let background = luma(RAYLEIGH_SCATTERING * self.air_density)
             + MIE_EXTINCTION * self.aerosol_multiplier();
-        let extra = target - background;
+        let extra = (target - background) * self.haze_density.max(0.0);
         (extra > 1.0e-9).then_some(extra)
     }
 

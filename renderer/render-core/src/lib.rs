@@ -17,6 +17,7 @@
 pub mod actor_lights;
 pub mod atmosphere;
 pub mod calibration;
+pub mod camera_model;
 pub mod catalog;
 pub mod ktx2_variant;
 pub mod cloud_noise;
