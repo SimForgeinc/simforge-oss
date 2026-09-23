@@ -2,8 +2,8 @@
  * "Which lane is this world point on?" — the missing inverse for every reader
  * that has a position but needs a lane id.
  *
- * The motivating case is the .xosc importer. The writer emits absolute world
- * positions and never `LanePosition` (road ids renumber across UE5 map
+ * The motivating case was the (since retired) .xosc importer. The writer emits
+ * absolute world positions and never `LanePosition` (road ids renumber across UE5 map
  * rebuilds), so an exported file carries no lane ids at all — and without them
  * a reader cannot tell the travel frame from the reference-line frame, which
  * is the difference between a left swerve and a right one. The topology index

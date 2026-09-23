@@ -67,18 +67,16 @@ $U locations find --map yale-st-palo-alto-ca --type junction --facts control=sig
 $U locations resolve "signalized junction near a school" --map yale-st-palo-alto-ca
 ```
 
-## Import / export (OpenSCENARIO)
+## Export (OpenSCENARIO) and render
 
 ```sh
-$U import scene.xosc --map yale-st-palo-alto-ca --out imported.template.json
+$U export instance.json --format xosc-1.4 --out scenario.xosc
 $U render hash render-intent.json
 $U render run render-intent.json --engine browser --inputs inputs.json --out clip/
 ```
 
-`import` reports mapped/unmapped features and what was lossy (storyboard
-semantics stay in the source; actors land as map-pinned `scene_absolute`
-roles); findings → exit 2. `export` formats: `xosc-1.4`, `xosc-1.3-esmini`,
-`osc-2.2`.
+`export` formats: `xosc-1.4`, `xosc-1.3-esmini`, `osc-2.2`. OpenSCENARIO
+import is not supported.
 
 ## Determinism rules
 

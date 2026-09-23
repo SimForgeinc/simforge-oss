@@ -1,9 +1,9 @@
 /**
  * The OpenSCENARIO conformance suite's own tests, plus the primary suite run.
  *
- * The primary check (SimForge vs the spec-derived oracle, and the live
- * importer's disposition of each probe) needs no third-party simulator, so it
- * runs here on every CI run. The esmini cross-check and trajectory round trip
+ * The primary check (SimForge vs the spec-derived oracle) needs no
+ * third-party simulator, so it runs here on every CI run. Hand-written `xosc`
+ * probes have no SimForge side; they only record esmini evidence. The esmini cross-check and trajectory round trip
  * run in `pnpm osc-conformance:verify` when esmini is installed.
  * See docs/engineering/openscenario-conformance.md.
  */

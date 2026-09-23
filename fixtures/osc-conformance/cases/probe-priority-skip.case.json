@@ -47,14 +47,7 @@
   },
   "expect": {
     "ours": "not-expressible",
-    "finding": "F-11",
     "esmini": "disagrees",
-    "esminiNote": "esmini keeps e2 in standby and starts it at t=5 once e1 is done (the \"does not leave the standbyState\" reading); the spec is self-inconsistent here, see D-16",
-    "import": {
-      "actors": 1,
-      "diagnostics": [
-        "storyboard_semantics_not_translated"
-      ]
-    }
+    "esminiNote": "esmini keeps e2 in standby and starts it at t=5 once e1 is done (the \"does not leave the standbyState\" reading); the spec is self-inconsistent here, see D-16"
   }
 }
