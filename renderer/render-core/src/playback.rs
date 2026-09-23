@@ -1280,6 +1280,7 @@ fn on_scene_ready(
             Option<&Name>,
             Option<&ChildOf>,
             Option<&Transform>,
+            Option<&GlobalTransform>,
         ),
         Without<IdClone>,
     >,
@@ -1296,21 +1297,42 @@ fn on_scene_ready(
         return;
     }
 
-    // --- tile instance IDs (deterministic: name, then entity bits) ---
-    let mut entries: Vec<(String, u64, Handle<Mesh>, Option<Entity>, Transform)> = Vec::new();
-    for (e, mesh, name, child_of, transform) in &meshes_q {
+    // --- tile instance IDs ---
+    // Deterministic: name, glTF sub-asset label, world pose; entity bits only
+    // for exact duplicates (entity allocation follows async load order, so it
+    // must never decide between two distinct meshes).
+    type Entry = (String, String, [f32; 7], u64, Handle<Mesh>, Option<Entity>, Transform);
+    let mut entries: Vec<Entry> = Vec::new();
+    for (e, mesh, name, child_of, transform, global) in &meshes_q {
         commands.entity(e).insert(StaticMapMesh);
+        let local = transform.copied().unwrap_or(Transform::IDENTITY);
+        let (_, r, t) = global
+            .map(|g| g.to_scale_rotation_translation())
+            .unwrap_or((local.scale, local.rotation, local.translation));
         entries.push((
             name.map(|n| n.to_string())
-                .unwrap_or_else(|| format!("unnamed_mesh_{e}")),
+                .unwrap_or_else(|| "unnamed_mesh".to_string()),
+            mesh.0.path().map(|p| p.to_string()).unwrap_or_default(),
+            [t.x, t.y, t.z, r.x, r.y, r.z, r.w],
             e.to_bits(),
             mesh.0.clone(),
             child_of.map(|c| c.parent()),
-            transform.copied().unwrap_or(Transform::IDENTITY),
+            local,
         ));
     }
-    entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
-    for (i, (name, _, mesh_h, parent, transform)) in entries.into_iter().enumerate() {
+    entries.sort_by(|a, b| {
+        a.0.cmp(&b.0)
+            .then_with(|| a.1.cmp(&b.1))
+            .then_with(|| {
+                a.2.iter()
+                    .zip(b.2.iter())
+                    .map(|(x, y)| x.total_cmp(y))
+                    .find(|o| o.is_ne())
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then(a.3.cmp(&b.3))
+    });
+    for (i, (name, _, _, _, mesh_h, parent, transform)) in entries.into_iter().enumerate() {
         let id = (i + 1) as u32;
         let bytes = id.to_le_bytes();
         let mat = materials.add(StandardMaterial {

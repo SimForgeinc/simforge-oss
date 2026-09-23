@@ -1,0 +1,44 @@
+{
+  "sceneId": "richmond-frame0",
+  "mapId": "richmond-field-station",
+  "profile": "sensor",
+  "description": "richmond-field-station native master (single master.gltf) from the edge-case-06 focus vehicle start pose, native-render-job sensor profile. The ID pass must encode real map instances (idPass gate).",
+  "corpusRootEnv": "SIMFORGE_CORPUS_RICHMOND",
+  "corpusFiles": [
+    "master.gltf"
+  ],
+  "rendererArgs": {
+    "eye": [
+      -172.89,
+      7.01,
+      41.79
+    ],
+    "target": [
+      -164.0,
+      6.01,
+      13.14
+    ],
+    "fov": 70,
+    "width": 736,
+    "height": 416,
+    "warmup": 20,
+    "frames": 30,
+    "cameras": 1,
+    "sunElev": 38,
+    "sunAzim": 145,
+    "lux": 28000,
+    "ambient": 0.6
+  },
+  "expectedPasses": [
+    "rgb0",
+    "id0",
+    "depth0"
+  ],
+  "idPass": {
+    "keys": [
+      "id0"
+    ],
+    "minInstances": 20,
+    "minCoverage": 0.2
+  }
+}
