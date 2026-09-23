@@ -25,7 +25,7 @@ import type { GeometryLodManifest, LodLevelEntry, LodMeshEntry, SensorPrimitiveE
  * Bump when the output for identical input changes (algorithm, defaults,
  * file layout). Part of every build key, so a bump rebuilds every map.
  */
-export const GEOMETRY_LOD_REVISION = 3;
+export const GEOMETRY_LOD_REVISION = 4;
 export const MESHOPTIMIZER_VERSION = '1.2.0';
 /** Closure directory of the derivative (next to `derived/sumo`). */
 export const GEOMETRY_LOD_DIR = 'derived/geometry-lod';
@@ -321,10 +321,20 @@ export async function buildGeometryLod(options: BuildGeometryLodOptions): Promis
     const levels: LodLevelEntry[] = [];
     let previous = triangles;
     let previousError = 0;
+    // Candidate levels first: a level whose error does not exceed the previous
+    // one's has an empty selection range (the rule prefers the coarser of
+    // equals), so the finer of the two would never be drawn; it is dropped.
+    const kept: Array<{ level: BuiltLevel; error: number }> = [];
     for (const [index, ratio] of levelRatios(triangles).entries()) {
       const level: BuiltLevel = buildLevel(prepared, ratio, sphere.radius, resolved.levels, LEVEL_ERROR_FRACTIONS[Math.min(index, LEVEL_ERROR_FRACTIONS.length - 1)]);
       if (level.triangles > previous * 0.75) continue;
       const error = Math.max(level.geometricErrorM, previousError);
+      if (kept.length > 0 && error <= previousError) kept.pop();
+      kept.push({ level, error });
+      previous = level.triangles;
+      previousError = error;
+    }
+    for (const { level, error } of kept) {
       const lodMesh = lod.addMesh({
         name: `${mesh.name ?? `mesh${meshIndex}`}_LOD${levels.length + 1}`,
         primitives: level.primitives.map((primitive) => ({ data: primitive.data })),
@@ -342,8 +352,6 @@ export async function buildGeometryLod(options: BuildGeometryLodOptions): Promis
           cardScale: round(Math.max(...level.primitives.filter((p) => p.cardScale !== undefined).map((p) => p.cardScale!))),
         } : {}),
       });
-      previous = level.triangles;
-      previousError = error;
     }
 
     let impostor: LodMeshEntry['impostor'] = null;
