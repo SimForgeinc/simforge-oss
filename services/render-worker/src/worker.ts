@@ -19,6 +19,8 @@ import {
   type JobLeasedResponse,
   type RenderEngineAdapter,
   type RenderProgressRecord,
+  WORKER_CONTROL_FEATURES_LABEL,
+  WORKER_CONTROL_FEATURES_V1,
   WORKER_INPUT_URLS_BATCH_V1,
   WORKER_INPUT_URLS_LABEL,
 } from '@simforge-oss/render';
@@ -325,6 +327,7 @@ async function executeClaim(
       signal: state.controller.signal,
       reportProgress: forward,
       ...(gpuMemory ? { gpuMemory } : {}),
+      controlFeatures: new Set(job.controlFeatures ?? []),
     }));
     if (manifest.intentSha256 !== job.intentSha256) throw new Error('engine manifest intentSha256 does not match claimed intent');
 
@@ -510,9 +513,12 @@ export async function runRenderWorker(
   const swept = await sweepScratch(config.scratchDir, config.workspaceRetentionMs);
   console.error(JSON.stringify({ event: 'cache.ready', root: config.cacheDir, migratedLegacyBlobs: migrated, sweptWorkspaces: swept, jobConcurrency }));
   const operationSignal = new AbortController().signal;
-  const labels = transport.inputUrls
-    ? { ...config.labels, [WORKER_INPUT_URLS_LABEL]: WORKER_INPUT_URLS_BATCH_V1 }
-    : config.labels;
+  const labels = {
+    ...config.labels,
+    // Leases may then carry `controlFeatures`; without it the engine writes baseline outputs only.
+    [WORKER_CONTROL_FEATURES_LABEL]: WORKER_CONTROL_FEATURES_V1,
+    ...(transport.inputUrls ? { [WORKER_INPUT_URLS_LABEL]: WORKER_INPUT_URLS_BATCH_V1 } : {}),
+  };
   const registration = await withBoundedRetry('worker registration', config.retries, operationSignal, () => transport.register({
     schema: RENDER_WORKER_CONTROL_V2_SCHEMA,
     type: 'worker.register',

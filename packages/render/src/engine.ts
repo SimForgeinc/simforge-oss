@@ -30,6 +30,13 @@ export interface RenderExecutionContext {
    * Engines refuse fast when a scene cannot fit instead of timing out.
    */
   readonly gpuMemory?: { readonly totalBytes: number; readonly freeBytes: number };
+  /**
+   * Output fields the control plane accepts beyond the baseline contract
+   * (`CONTROL_FEATURES_V1`). Engines must omit any newer output field that is
+   * not listed: an older control plane parses outputs strictly and would
+   * reject the whole job. Absent = baseline only.
+   */
+  readonly controlFeatures?: ReadonlySet<string>;
 }
 
 /** Declared input metadata an engine may inspect before any bulk download. */
