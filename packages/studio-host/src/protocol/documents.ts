@@ -26,6 +26,7 @@ import {
   type ScenarioMapDescriptorDto,
   type ScenarioMapPinStatusDto,
   type ScenarioMapRepinPreviewDto,
+  type ScenarioMapMoveResultDto,
   type ScenarioVersionsDto,
   type SimulationComparisonDto,
   type SimulationMotionDiffDto,
@@ -415,6 +416,7 @@ export type ResimulateVersionRequest = { waitMs?: number };
 export type SetActiveSimulationRequest = { simKey: string };
 export type RestoreVersionRequest = { expectedVersion: number };
 export type MapRepinPreviewRequest = { targetMapVersionId: string; waitMs?: number };
+export type MapMoveRequest = { expectedVersion: number; targetMapVersionId: string };
 export type VersionContentDto = { revisionId: string; contentSha256: string; mapVersionId: string | null; content: ScenarioTemplateV2 };
 export type ResimulateVersionResultDto = { status: ScenarioSimulationStatusDto; motionDiff: SimulationMotionDiffDto | null };
 export type MapPinStatusResponse = ScenarioMapPinStatusDto & { pinnedDescriptor: ScenarioMapDescriptorDto | null };
@@ -641,6 +643,12 @@ export const documentsProtocol = {
     method: "GET",
     path: (params) => `${document(params)}/map-pin`,
     response: passthrough<MapPinStatusResponse>(),
+  }),
+  /** Move the draft to another map version; the state before the move is saved as a version first. */
+  moveToMapVersion: endpoint<{ documentId: string }, void, MapMoveRequest, ScenarioMapMoveResultDto>({
+    method: "POST",
+    path: (params) => `${document(params)}/map-pin/move`,
+    response: passthrough<ScenarioMapMoveResultDto>(),
   }),
   /** Simulate the draft on another map version and diff it against what the draft shows now. */
   previewMapRepin: endpoint<{ documentId: string }, void, MapRepinPreviewRequest, ScenarioMapRepinPreviewDto>({

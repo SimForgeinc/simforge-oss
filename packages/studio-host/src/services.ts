@@ -45,6 +45,7 @@ import type {
 } from "./protocol/documents";
 import type {
   ScenarioMapPinStatusDto,
+  ScenarioMapMoveResultDto,
   ScenarioMapRepinPreviewDto,
   ScenarioVersionsDto,
   SimulationComparisonDto,
@@ -248,6 +249,12 @@ export interface StudioProjectService {
     request: MapRepinPreviewRequest,
     signal?: AbortSignal,
   ): Promise<ScenarioMapRepinPreviewDto>;
+  /** "Move to new map version": saves the current state as a version, then moves the draft. */
+  moveToMapVersion(
+    document: Pick<ScenarioDocumentDto, "id" | "draftVersion">,
+    targetMapVersionId: string,
+    signal?: AbortSignal,
+  ): Promise<ScenarioMapMoveResultDto>;
 }
 
 /** Map catalog and artifact resolution. URLs may be presigned and short-lived. */

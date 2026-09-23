@@ -26,7 +26,7 @@ export async function POST(request: Request, route: Context) {
   try {
     const preview = await previewMapRepin(auth.context, documentId, parsed.data);
     if (!preview) return NextResponse.json({ error: "document_not_found" }, { status: 404, headers: SCENARIO_PRIVATE_CACHE_HEADERS });
-    const done = preview.status.state === "succeeded" || preview.status.state === "failed";
+    const done = !preview.status || preview.status.state === "succeeded" || preview.status.state === "failed";
     return NextResponse.json(preview, { status: done ? 200 : 202, headers: SCENARIO_PRIVATE_CACHE_HEADERS });
   } catch (error) {
     const response = versionErrorResponse(error);

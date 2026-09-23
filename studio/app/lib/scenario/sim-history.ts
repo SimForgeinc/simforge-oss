@@ -8,6 +8,8 @@ import {
   type ScenarioMapDescriptorDto,
   type ScenarioMapPinStatusDto,
   type ScenarioMapRepinPreviewDto,
+  type ScenarioMapTransitionPlanDto,
+  type ScenarioDocumentDto,
   type ScenarioSimulationStatusDto,
   type ScenarioVersionActorDto,
   type ScenarioVersionCreatedFor,
@@ -27,7 +29,8 @@ import {
   readPinnedScenarioMapDescriptor,
   updateScenarioDocument,
 } from "./document-store";
-import { requireScenarioMapPin } from "./map-pin";
+import { canonicalContentSha256 } from "./core";
+import { planMapTransition } from "./map-transition";
 import {
   linkRevisionSimulation,
   readSimulationRecord,
@@ -520,9 +523,10 @@ export async function draftMapPinStatus(context: AppContext, documentId: string)
 }
 
 /**
- * Simulate the draft's content on `targetMapVersionId` (nothing changes on the draft) and diff it
- * against the motion the draft shows now. The author then re-pins explicitly
- * (`updateDocument({ mapVersionId })`).
+ * The transition view's data: the server's plan for moving the draft to `targetMapVersionId`
+ * (`planMapTransition`: same road geometry keeps every placement; changed geometry places each
+ * actor by world position and flags what it could not), the planned content simulated on the
+ * target, and that motion compared with what the draft shows now. Nothing changes on the draft.
  */
 export async function previewMapRepin(
   context: AppContext,
@@ -531,27 +535,67 @@ export async function previewMapRepin(
 ): Promise<ScenarioMapRepinPreviewDto | null> {
   const document = await getScenarioDocument(context, documentId);
   if (!document) return null;
-  const target = await queryOne<{ id: string; label: string; created_at: string }>(
-    `SELECT id, label, created_at::text AS created_at FROM simforge.map_versions WHERE id = :id AND retired_at IS NULL`,
-    { id: input.targetMapVersionId },
-  );
-  if (!target) throw new SimulationHistoryError("scenario_map_version_unavailable", `map version ${input.targetMapVersionId} is retired or does not exist`, 404);
-  await requireScenarioMapPin({ queryOne }, target.id);
+  const plan = await planMapTransition(context, document, input.targetMapVersionId);
+  if (!plan.content || plan.blocking) {
+    return { target: plan.target, plan, status: null, motionDiff: null };
+  }
   const status = await resolveSimulation({
     workspaceId: context.workspaceId,
     userId: context.userId,
-    canonicalContent: document.content,
-    contentSha256: document.contentSha256,
-    mapVersionId: target.id,
+    canonicalContent: plan.content,
+    contentSha256: canonicalContentSha256(plan.content),
+    mapVersionId: plan.target.mapVersionId,
   }, { waitMs: input.waitMs ?? 0 });
   const draft = await readDraftSim(context.workspaceId, documentId);
   const base = draft?.last_sim_key ?? null;
   const motionDiff = status.state === "succeeded" && base && base !== status.result.simKey
     ? await simulationMotionDiff(context.workspaceId, base, status.result.simKey)
     : null;
+  return { target: plan.target, plan, status, motionDiff };
+}
+
+/**
+ * "Move to new map version". The move is planned again here (the client's view is only a preview),
+ * then the BEFORE is saved as a version with its map pin and simulation (`map_move`; a version
+ * already cut from this exact draft counts), and only then does the draft move to the planned
+ * content on the new version. If the before cannot be saved, nothing moves.
+ */
+export async function moveDraftToMapVersion(
+  context: AppContext,
+  documentId: string,
+  input: { expectedVersion: number; targetMapVersionId: string },
+): Promise<
+  | { kind: "moved"; document: ScenarioDocumentDto; before: { revisionId: string; revisionNumber: number }; plan: ScenarioMapTransitionPlanDto }
+  | { kind: "blocked"; plan: ScenarioMapTransitionPlanDto }
+  | { kind: "not_found" }
+  | { kind: "conflict"; current: ScenarioDocumentDto }
+  | Exclude<Awaited<ReturnType<typeof createScenarioRevision>>, { kind: "created" } | { kind: "not_found" } | { kind: "conflict" }>
+> {
+  const document = await getScenarioDocument(context, documentId);
+  if (!document) return { kind: "not_found" };
+  if (document.draftVersion !== input.expectedVersion) return { kind: "conflict", current: document };
+  const plan = await planMapTransition(context, document, input.targetMapVersionId);
+  if (!plan.content || plan.blocking) return { kind: "blocked", plan };
+  const before = await createScenarioRevision(context, documentId, {
+    expectedVersion: input.expectedVersion,
+    idempotencyKey: `map-move:${documentId}:${input.expectedVersion}:${input.targetMapVersionId}`,
+    createdFor: "map_move",
+    label: `Before moving to ${plan.target.name} · ${plan.target.publishedAt.slice(0, 10)}`,
+  });
+  if (before.kind === "not_found") return { kind: "not_found" };
+  if (before.kind === "conflict") return { kind: "conflict", current: before.current };
+  if (before.kind !== "created") return before;
+  const moved = await updateScenarioDocument(context, documentId, {
+    expectedVersion: input.expectedVersion,
+    content: plan.content,
+    mapVersionId: plan.target.mapVersionId,
+  });
+  if (moved.kind === "not_found") return { kind: "not_found" };
+  if (moved.kind === "conflict") return { kind: "conflict", current: moved.current };
   return {
-    target: { mapVersionId: target.id, name: target.label, publishedAt: target.created_at },
-    status,
-    motionDiff,
+    kind: "moved",
+    document: moved.document,
+    before: { revisionId: before.revision.id, revisionNumber: before.revision.revisionNumber },
+    plan,
   };
 }
