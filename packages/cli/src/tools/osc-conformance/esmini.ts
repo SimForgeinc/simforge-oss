@@ -49,7 +49,19 @@ export interface EsminiRun {
  * `--traj_filter 0` keeps every trajectory vertex (the default merges points
  * closer than 0.1 m, which would silently resample trajectory-replay files).
  */
-export function runEsmini(binary: EsminiBinary, xoscPath: string, workDir: string, timeoutMs = 60_000): EsminiRun {
+export interface EsminiRunOptions {
+  readonly timeoutMs?: number;
+  /**
+   * esmini's polyline orientation mode. Our trajectory-replay files write the
+   * body heading on every vertex; esmini 3.6.0 predates the OSC 1.4
+   * `Interpolation` element and by default ("corner") averages headings at
+   * vertices, so the round trip replays with "segment", which keeps them.
+   */
+  readonly polylineInterpolation?: 'corner' | 'segment' | 'off';
+}
+
+export function runEsmini(binary: EsminiBinary, xoscPath: string, workDir: string, options: EsminiRunOptions = {}): EsminiRun {
+  const timeoutMs = options.timeoutMs ?? 60_000;
   const csvPath = path.join(workDir, 'esmini.csv');
   const logPath = path.join(workDir, 'esmini.log');
   const result = spawnSync(binary.path, [
@@ -61,6 +73,7 @@ export function runEsmini(binary: EsminiBinary, xoscPath: string, workDir: strin
     '--csv_logger', csvPath,
     '--logfile_path', logPath,
     '--disable_stdout',
+    ...(options.polylineInterpolation ? ['--pline_interpolation', options.polylineInterpolation] : []),
   ], { cwd: workDir, encoding: 'utf8', timeout: timeoutMs });
   return {
     exitCode: result.status,
