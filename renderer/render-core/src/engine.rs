@@ -3412,6 +3412,11 @@ impl SceneApp {
         }
         let mut resolved = resolved;
         resolved.road_materials = self.set_wetness(resolved.wetness) as u32;
+        // A wet scene on a map whose road materials the ramp does not
+        // recognise renders dry: say so instead of pretending.
+        if resolved.wetness > 0.0 && resolved.road_materials == 0 {
+            resolved.inert_controls.push("wetness".to_string());
+        }
         // Changing which post-process components a view carries changes the
         // view's pipeline specialization key, its prepass texture set and
         // its view-target chain. For a frame or two afterwards the graph
@@ -3655,6 +3660,10 @@ impl SceneApp {
     /// that original, so dragging a wetness slider back to zero restores the
     /// scene exactly instead of compounding the darkening.
     pub fn set_wetness(&mut self, wetness: f32) -> usize {
+        // Matched against the mesh entity's name (older corpus exports) and
+        // its glTF material name (RoadRunner masters: Belmont's road is
+        // `MI_Road_Asphalt_A_Roads_Road_Layer0` on a generically named mesh,
+        // so a name-only match left wetness inert there).
         const ROAD_MARKERS: [&str; 2] = ["asphalt1_road", "roads_road_layer0"];
         let wetness = wetness.clamp(0.0, 1.0);
         self.scene_revision += 1;
@@ -3665,17 +3674,18 @@ impl SceneApp {
                 Option<&Name>,
                 Option<&ChildOf>,
                 &MeshMaterial3d<StandardMaterial>,
+                Option<&GltfMaterialName>,
             )>();
             let mut names = world.query::<&Name>();
             let mut seen: std::collections::HashSet<AssetId<StandardMaterial>> =
                 std::collections::HashSet::new();
-            let rows: Vec<(Option<String>, Option<Entity>, Handle<StandardMaterial>)> = meshes
+            let rows: Vec<(Option<String>, Option<Entity>, Handle<StandardMaterial>, Option<String>)> = meshes
                 .iter(world)
-                .map(|(name, parent, mat)| {
-                    (name.map(|n| n.as_str().to_owned()), parent.map(|p| p.0), mat.0.clone())
+                .map(|(name, parent, mat, material_name)| {
+                    (name.map(|n| n.as_str().to_owned()), parent.map(|p| p.0), mat.0.clone(), material_name.map(|m| m.0.clone()))
                 })
                 .collect();
-            for (name, parent, material) in rows {
+            for (name, parent, material, material_name) in rows {
                 let mut label = name.unwrap_or_default();
                 if label.is_empty() {
                     if let Some(parent) = parent {
@@ -3685,7 +3695,8 @@ impl SceneApp {
                     }
                 }
                 let lower = label.to_ascii_lowercase();
-                if ROAD_MARKERS.iter().any(|m| lower.contains(m))
+                let material_lower = material_name.unwrap_or_default().to_ascii_lowercase(); // fallback-ok: an unnamed material only fails to match
+                if ROAD_MARKERS.iter().any(|m| lower.contains(m) || material_lower.contains(m))
                     && seen.insert(material.id())
                 {
                     road_materials.push(material);

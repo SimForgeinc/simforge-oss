@@ -858,6 +858,7 @@ pub fn run(argv: Vec<String>) -> Result<()> {
         "schema": "simforge.render-job-results/v2",
         "ablate": args.ablate,
         "renderConfig": resolved,
+        "unlabeledStatics": crate::server::UnlabeledStatics::of(&state.legend),
         "prewarmS": prewarm_s,
         "firstTickMs": first_tick_ms,
         "ticks": tick_ms.len(),

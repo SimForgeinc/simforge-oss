@@ -69,6 +69,8 @@ pub fn depth_to_carla(
 pub mod classes {
     pub const UNLABELED: u8 = 0;
     pub const BUILDING: u8 = 1;
+    pub const FENCE: u8 = 2;
+    pub const POLE: u8 = 5;
     pub const PEDESTRIAN: u8 = 4;
     pub const ROAD: u8 = 7;
     pub const VEGETATION: u8 = 9;
@@ -82,25 +84,17 @@ pub mod classes {
 /// before road keywords). Everything unmatched stays 0 (unlabeled) — honest
 /// background, not a guess.
 pub fn static_class_of(name: &str) -> u8 {
-    let lower = name.to_ascii_lowercase();
-    let has = |needles: &[&str]| needles.iter().any(|n| lower.contains(n));
-    if has(&["tree", "veg", "bush", "shrub", "plant", "foliage", "grass", "hedge"]) {
-        classes::VEGETATION
-    } else if lower.contains("building") {
-        classes::BUILDING
-    } else if has(&[
-        "road",
-        "asphalt",
-        "sidewalk",
-        "curb",
-        "ground",
-        "pavement",
-        "crosswalk",
-        "marking",
-    ]) {
-        classes::ROAD
-    } else {
-        classes::UNLABELED
+    use sensors::taxonomy::StaticKind;
+    match StaticKind::of(name) {
+        StaticKind::Vegetation => classes::VEGETATION,
+        StaticKind::Building => classes::BUILDING,
+        StaticKind::Road => classes::ROAD,
+        StaticKind::Pole => classes::POLE,
+        StaticKind::TrafficSign => classes::TRAFFIC_SIGN,
+        StaticKind::Fence => classes::FENCE,
+        // Reported per map (`unlabeledStatics` in the ready record and job
+        // results), never guessed.
+        StaticKind::Unknown => classes::UNLABELED,
     }
 }
 

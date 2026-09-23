@@ -573,7 +573,7 @@ pub struct ServiceState {
     /// a lighting-only change keeps the look the scene was prewarmed with.
     pub profile_config: render_core::profiles::RenderProfileConfig,
     /// Static instance legend (id -> mesh name), frozen at readiness.
-    legend: HashMap<u32, String>,
+    pub(crate) legend: HashMap<u32, String>,
     /// Loaded scene-state stream (V2 `load_scene_state`).
     scene: Vec<SceneState>,
     /// Index of the most recently applied scene frame.
@@ -896,6 +896,38 @@ pub struct ReadyRecord<'a> {
     pub render_config: &'a RenderConfig,
     /// Deprecation notes (legacy scene-spec fields that were mapped).
     pub deprecations: &'a [String],
+    /// Static meshes no semantic rule classifies (their semantic pixels are
+    /// unlabeled), so a consumer sees the gap instead of a guess.
+    pub unlabeled_statics: UnlabeledStatics,
+}
+
+/// Static legend entries whose mesh name no [`sensors::taxonomy::StaticKind`]
+/// rule matches: the semantic pass writes them as unlabeled.
+#[derive(Clone, Debug, Default, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnlabeledStatics {
+    pub instances: usize,
+    /// Up to 16 distinct names, most frequent first (trailing digits and
+    /// underscores stripped), then by name.
+    pub names: Vec<(String, usize)>,
+}
+
+impl UnlabeledStatics {
+    pub fn of(legend: &HashMap<u32, String>) -> Self {
+        let mut counts: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+        let mut instances = 0;
+        for name in legend.values() {
+            if sensors::taxonomy::StaticKind::of(name) == sensors::taxonomy::StaticKind::Unknown {
+                instances += 1;
+                let base = name.trim_end_matches(|c: char| c.is_ascii_digit() || c == '_' || c == '.').to_string();
+                *counts.entry(base).or_default() += 1;
+            }
+        }
+        let mut names: Vec<(String, usize)> = counts.into_iter().collect();
+        names.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        names.truncate(16);
+        Self { instances, names }
+    }
 }
 
 fn write_ready_file(path: &Path, record: &ReadyRecord<'_>) -> Result<()> {
@@ -927,6 +959,7 @@ pub fn serve(mut state: ServiceState, endpoint: &str, ready_file: Option<&Path>)
                 shm: ShmInfo { path: state.shm_path.clone(), size_bytes, meta_bytes },
                 render_config: &state.render_config,
                 deprecations: &state.render_deprecations,
+                unlabeled_statics: UnlabeledStatics::of(&state.legend),
             },
         )?;
     }

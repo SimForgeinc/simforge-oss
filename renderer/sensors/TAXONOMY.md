@@ -18,7 +18,7 @@ Background/sky = 0.
 | 0  | unlabeled  | background / sky                                              |
 | 1  | road       | static mesh names matching road/asphalt/sidewalk/curb/ground/pavement/crosswalk/marking |
 | 2  | building   | static mesh names containing "building"                       |
-| 3  | vegetation | mesh names containing tree/veg/bush/shrub/plant/foliage/grass/hedge |
+| 3  | vegetation | mesh names containing tree/veg/bush/shrub/plant/foliage/grass/hedge or a tree genus (see below) |
 | 4  | car        | scenario-model actor class `car`                              |
 | 5  | truck      | actor class `truck`; scenario `kind: bus` folds into truck    |
 | 6  | pedestrian | actor class `pedestrian`                                      |
@@ -35,8 +35,16 @@ service's CARLA-layout output uses the legacy CityScapes palette, which has
 neither class: there the rider is `Pedestrian` (4) and the two-wheeler
 `Vehicles` (10), and the instance ids still differ.
 
-Matching order for statics: vegetation before building before road keywords,
-fallback `prop`.
+Static meshes are classified once, by `sensors::taxonomy::StaticKind::of(mesh name)`. That one table serves both this taxonomy and the service's CARLA semantic pass. Rules are applied in this order:
+
+1. vegetation: tree, veg, bush, shrub, plant, foliage, grass, hedge, or a tree genus (maple, oak, pine, alder, birch, eucalyptus, palm, spruce, cypress, willow, conifer);
+2. building;
+3. fence: fence, guardrail, railbracket, barrier;
+4. pole: post, pole, luminaire, streetlight;
+5. traffic sign: sign;
+6. road keywords.
+
+Poles, signs, fences and unmatched meshes are `prop` here. In the CARLA pass, poles are Pole (5), signs are TrafficSign (12) and fences are Fence (2). An unmatched mesh is Unlabeled (0) there, and the service reports every such mesh in its ready record and job results (`unlabeledStatics`) instead of guessing a class.
 
 ## Instance IDs
 

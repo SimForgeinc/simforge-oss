@@ -85,28 +85,60 @@ impl SemanticClass {
         }
     }
 
-    /// Classify a static corpus mesh by its GLB node/mesh name (same naming
-    /// the spike legend exposed, e.g. `2301_16569_B_56.Building_56_st`).
-    /// Order matters: vegetation before building, road last as the fallback
-    /// for ground/roadway geometry.
+    /// The ray sensors' class of a static corpus mesh (see [`StaticKind`]):
+    /// poles, signs, fences and unknown meshes are props (TAXONOMY.md).
     pub fn from_mesh_name(name: &str) -> SemanticClass {
+        match StaticKind::of(name) {
+            StaticKind::Vegetation => SemanticClass::Vegetation,
+            StaticKind::Building => SemanticClass::Building,
+            StaticKind::Road => SemanticClass::Road,
+            StaticKind::Pole | StaticKind::TrafficSign | StaticKind::Fence | StaticKind::Unknown => SemanticClass::Prop,
+        }
+    }
+}
+
+/// What a static map mesh is, from its mesh name: the one table behind both
+/// the camera's CARLA semantic pass and the ray sensors' classes. RoadRunner
+/// masters name meshes after their asset (`SM_NorwayMaple_Field_02_PP`,
+/// `FencePost_6ft_Prop`, `Sign_R1-1_1_StopSign`, `signal_post_35ft_mesh_Prop`).
+/// A name no rule matches is [`StaticKind::Unknown`]; consumers report those
+/// instead of guessing a class.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StaticKind {
+    Vegetation,
+    Building,
+    Road,
+    Pole,
+    TrafficSign,
+    Fence,
+    Unknown,
+}
+
+impl StaticKind {
+    /// Order matters: vegetation first; fences before poles (a fence post is
+    /// fence); poles before signs (a sign post is a pole, its face a sign);
+    /// road keywords last.
+    pub fn of(name: &str) -> StaticKind {
         let n = name.to_ascii_lowercase();
-        if ["tree", "veg", "bush", "shrub", "plant", "foliage", "grass", "hedge"]
-            .iter()
-            .any(|k| n.contains(k))
-        {
-            return SemanticClass::Vegetation;
+        let any = |keys: &[&str]| keys.iter().any(|k| n.contains(k));
+        if any(&[
+            "tree", "veg", "bush", "shrub", "plant", "foliage", "grass", "hedge", "maple", "oak", "pine", "alder",
+            "birch", "eucalyptus", "palm", "spruce", "cypress", "willow", "conifer",
+        ]) {
+            StaticKind::Vegetation
+        } else if n.contains("building") {
+            StaticKind::Building
+        } else if any(&["fence", "guardrail", "railbracket", "barrier"]) {
+            StaticKind::Fence
+        } else if any(&["post", "pole", "luminaire", "streetlight", "street_light"]) {
+            StaticKind::Pole
+        } else if n.contains("sign") {
+            StaticKind::TrafficSign
+        } else if any(&["road", "asphalt", "sidewalk", "curb", "ground", "pavement", "crosswalk", "marking"]) {
+            StaticKind::Road
+        } else {
+            StaticKind::Unknown
         }
-        if n.contains("building") {
-            return SemanticClass::Building;
-        }
-        if ["road", "roadway", "asphalt", "sidewalk", "curb", "ground", "pavement", "crosswalk", "marking"]
-            .iter()
-            .any(|k| n.contains(k))
-        {
-            return SemanticClass::Road;
-        }
-        SemanticClass::Prop
     }
 }
 
@@ -147,6 +179,14 @@ mod tests {
     #[test]
     fn rider_is_its_own_class() {
         assert_eq!(SemanticClass::try_from_actor_class("rider"), Ok(SemanticClass::Rider));
+        // RoadRunner asset names (Belmont master).
+        assert_eq!(super::StaticKind::of("SM_NorwayMaple_Field_02_PP"), super::StaticKind::Vegetation);
+        assert_eq!(super::StaticKind::of("FencePost_6ft_Prop"), super::StaticKind::Fence);
+        assert_eq!(super::StaticKind::of("signal_post_35ft_mesh_Prop"), super::StaticKind::Pole);
+        assert_eq!(super::StaticKind::of("sign_post_10_mesh_Prop"), super::StaticKind::Pole);
+        assert_eq!(super::StaticKind::of("Sign_R1-1_1_StopSign"), super::StaticKind::TrafficSign);
+        assert_eq!(super::StaticKind::of("Luminaire_Head02_mesh_Prop"), super::StaticKind::Pole);
+        assert_eq!(super::StaticKind::of("ParkingBlocks_Lg01_Prop"), super::StaticKind::Unknown);
         assert_eq!(SemanticClass::Rider.id(), 9);
         assert_eq!(SemanticClass::Rider.name(), "rider");
         assert!(SemanticClass::ALL.contains(&SemanticClass::Rider));

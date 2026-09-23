@@ -85,6 +85,13 @@ Showcase is the cheapest candidate in the 0.90–0.95 SSIM band. Training keeps 
 
 A dump-free timing pass on the render-video agent's rig replaces these GPU numbers when it runs.
 
+Knob notes, from both the sweep and the render-video agent's one-knob pass on a single 1080p chase camera:
+- `shadows.shared` affects only rig cameras. A presentation camera (a trailing chase that shows its host) always fits its own cascades.
+- Foliage has no density knob. Its cost scales only with `lod.pixelErrorPx` (coarser levels and impostors).
+- SSR is visible only on glossy surfaces: roughness between 0.12 and 0.55, such as car paint and wet road. On a dry scene every SSR setting measures FLIP 0.0000 against the reference, at no measurable cost. Both presets keep it on because it carries wet-road reflections (`lighting.wetness`).
+- The SMAA levels differ by FLIP ≤ 0.002 at the same cost. The config still exposes all four because they are part of the wire form.
+- On one camera the frame is geometry- and shadow-bound. What moves cost is cascades, shadows, LOD, resolution and TAA; every screen-space effect lands within 0.6 ms.
+
 ## Where a frame went (rc.73)
 
 - **It was geometry-bound, not pixel-bound.** Each view ran about 105 M vertex invocations per pass (depth prepass and main pass) against about 2 M fragment invocations.
