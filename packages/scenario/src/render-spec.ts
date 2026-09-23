@@ -16,7 +16,16 @@ import {
   WeatherSchema,
   type Environment,
 } from './schema/v2/environment.js';
-import { CameraProfileSchema, CameraProfileSourceSchema, SensorMountSchema, cameraProfileCapabilities, markCameraProfileSourceResolved, withCameraProfileSource } from './schema/v2/sensors.js';
+import {
+  CameraCalibrationPerturbationSchema,
+  CameraCalibrationViewSchema,
+  CameraProfileSchema,
+  CameraProfileSourceSchema,
+  SensorMountSchema,
+  cameraProfileCapabilities,
+  markCameraProfileSourceResolved,
+  withCameraProfileSource,
+} from './schema/v2/sensors.js';
 
 export const RENDER_SPEC_V3_SCHEMA = 'simforge.render-spec/v3' as const;
 
@@ -160,6 +169,9 @@ const RenderCameraAttributesObjectSchema = z.strictObject({
   farM: z.number().finite().positive(),
   cameraProfile: CameraProfileSchema.prefault({}),
   profileSource: CameraProfileSourceSchema.default('default'),
+  calibrationSource: CameraProfileSourceSchema.optional(),
+  reportedCalibration: CameraCalibrationViewSchema.optional(),
+  calibrationPerturbation: CameraCalibrationPerturbationSchema.optional(),
 }).check((ctx) => {
   if (ctx.value.farM <= ctx.value.nearM) {
     ctx.issues.push({

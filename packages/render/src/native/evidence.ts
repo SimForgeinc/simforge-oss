@@ -2,7 +2,18 @@ import { createHash } from 'node:crypto';
 
 import { z } from 'zod';
 
-import { CameraProfileSchema, GENERIC_CAMERA_PROFILE, canonicalize, type CameraProfile, type RenderIntentV1 } from '@simforge-oss/scenario';
+import {
+  CameraCalibrationPerturbationSchema,
+  CameraCalibrationViewSchema,
+  CameraProfileSchema,
+  GENERIC_CAMERA_PROFILE,
+  canonicalize,
+  type CameraCalibrationPerturbation,
+  type CameraCalibrationView,
+  type CameraProfile,
+  type RenderIntentV1,
+  type RenderSourceV3,
+} from '@simforge-oss/scenario';
 
 import { EngineCapabilityApproximationSchema } from '../capabilities.js';
 import { createFixedSchedules, unionFrameMicros, type FixedSchedule } from '../schedule.js';
@@ -96,6 +107,7 @@ const NativeCameraProfileV2Schema = NativeCameraProfileV1Schema.extend({
   profileSource: z.enum(['default', 'authored']),
   profileVersion: z.number().int().positive(),
   configHash: Sha256Schema,
+  reportedCalibration: CameraCalibrationViewSchema.optional(),
 }).check((ctx) => {
   if (ctx.value.profileVersion !== cameraProfileVersion(ctx.value.requested)) {
     ctx.issues.push({ code: 'custom', path: ['profileVersion'], message: 'profileVersion must match requested.profileId', input: ctx.value.profileVersion });
@@ -171,6 +183,11 @@ export const NativeRunDiagnosticsSchema = NativeRunLineageSchema.extend({
     frameCount: z.number().int().positive(),
     sha256: Sha256Schema,
   })).min(1),
+  calibrationPerturbations: z.array(z.strictObject({
+    actorId: IdentifierSchema,
+    sensorId: IdentifierSchema,
+    perturbation: CameraCalibrationPerturbationSchema,
+  })).default([]),
   service: z.strictObject({
     protocol: z.literal(NATIVE_SERVICE_PROTOCOL),
     binary: IdentifierSchema,
@@ -198,6 +215,19 @@ export const NativeRunDiagnosticsSchema = NativeRunLineageSchema.extend({
 
 export type NativeRunDiagnostics = z.infer<typeof NativeRunDiagnosticsSchema>;
 
+export function nativeCalibrationEvidence(sources: readonly RenderSourceV3[]) {
+  return {
+    consumer: sources.flatMap((source) =>
+      source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.reportedCalibration
+        ? [{ actorId: source.actorId, sensorId: source.sensorId, reportedCalibration: source.attributes.reportedCalibration }]
+        : []),
+    privileged: sources.flatMap((source) =>
+      source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.calibrationPerturbation
+        ? [{ actorId: source.actorId, sensorId: source.sensorId, perturbation: source.attributes.calibrationPerturbation }]
+        : []),
+  };
+}
+
 /** A reserved upload the host already verified against object storage. */
 export interface NativeReservedArtifact {
   readonly role: string;
@@ -223,6 +253,8 @@ export interface NativeRunExpectations {
     requested: CameraProfile;
     effective: CameraProfile | null;
     differences: string[];
+    reportedCalibration?: CameraCalibrationView;
+    calibrationPerturbation?: CameraCalibrationPerturbation;
   }>;
 }
 
@@ -277,6 +309,8 @@ export function nativeRunExpectations(
     requested: CameraProfile;
     effective: CameraProfile | null;
     differences: string[];
+    reportedCalibration?: CameraCalibrationView;
+    calibrationPerturbation?: CameraCalibrationPerturbation;
   }>();
   const sensorVideo = intent.renderSpec.sources.some((source) => source.modality === 'lidar' || source.modality === 'radar')
     ? nativeSensorVideoFormat(intent)
@@ -304,6 +338,8 @@ export function nativeRunExpectations(
         source.attributes.cameraProfile,
         intent.renderSpec.capabilityIntent.fidelity === 'dataset' ? 'sensor' : 'cinematic',
       ),
+      ...(source.attributes.reportedCalibration ? { reportedCalibration: source.attributes.reportedCalibration } : {}),
+      ...(source.attributes.calibrationPerturbation ? { calibrationPerturbation: source.attributes.calibrationPerturbation } : {}),
     });
   }
   return {
@@ -378,8 +414,18 @@ export function nativeEvidenceFailure(
         || profile.outputName !== expected.outputName
         || profile.profileSource !== expected.profileSource
         || profile.configHash !== cameraProfileConfigHash(expected.requested)
+        || JSON.stringify(profile.reportedCalibration) !== JSON.stringify(expected.reportedCalibration)
         || !effectiveMatches
         || JSON.stringify(profile.differences) !== JSON.stringify(expected.differences);
+    })
+    || new Set(diagnostics.calibrationPerturbations.map(videoKey)).size !== diagnostics.calibrationPerturbations.length
+    || diagnostics.calibrationPerturbations.length
+      !== [...expectations.cameraProfiles.values()].filter((profile) => profile.calibrationPerturbation).length
+    || [...expectations.cameraProfiles.entries()].some(([key, profile]) =>
+      profile.calibrationPerturbation && !diagnostics.calibrationPerturbations.some((record) => videoKey(record) === key))
+    || diagnostics.calibrationPerturbations.some((record) => {
+      const expected = expectations.cameraProfiles.get(videoKey(record));
+      return !expected || JSON.stringify(record.perturbation) !== JSON.stringify(expected.calibrationPerturbation);
     })
     || manifest.videos.some((video) => {
       const reserved = reservedVideos.get(videoKey(video));

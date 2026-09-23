@@ -6,7 +6,9 @@ import { EntityIdSchema } from '../v1.js';
 
 import {
   ActorSensorSchema,
+  CameraCalibrationPerturbationSchema,
   DashCameraSensorObjectSchema,
+  DashCameraIntrinsicsSchema,
   DashCameraSensorSchema,
   LidarSensorSchema,
   RadarSensorSchema,
@@ -27,8 +29,50 @@ import {
 import { DEFAULT_ACTOR_DIMS, type ActorSpec } from './roles.js';
 
 const SensorRigCameraTemplateObjectSchema = DashCameraSensorObjectSchema
-  .omit({ mount: true })
-  .extend({ mount: SensorRigMountSchema });
+  .omit({ mount: true, calibration: true })
+  .extend({
+    mount: SensorRigMountSchema,
+    calibration: z.strictObject({
+      actual: z.strictObject({ intrinsics: DashCameraIntrinsicsSchema, extrinsics: SensorRigMountSchema }),
+      reported: z.strictObject({ intrinsics: DashCameraIntrinsicsSchema, extrinsics: SensorRigMountSchema }),
+      perturbation: CameraCalibrationPerturbationSchema.optional(),
+    }).check((ctx) => {
+      const reportedAtActualYaw = {
+        ...ctx.value.reported,
+        extrinsics: {
+          ...ctx.value.reported.extrinsics,
+          rotation: {
+            ...ctx.value.reported.extrinsics.rotation,
+            yawRad: ctx.value.actual.extrinsics.rotation.yawRad,
+          },
+        },
+      };
+      const expectedYaw = ctx.value.actual.extrinsics.rotation.yawRad
+        + (ctx.value.perturbation?.yawOffsetRad ?? 0);
+      const yawDifference = ctx.value.reported.extrinsics.rotation.yawRad - expectedYaw;
+      if (JSON.stringify(reportedAtActualYaw) !== JSON.stringify(ctx.value.actual)
+        || Math.abs(Math.atan2(Math.sin(yawDifference), Math.cos(yawDifference))) > 1e-12) {
+        ctx.issues.push({
+          code: 'custom',
+          message: 'reported calibration must equal actual plus the declared yaw offset',
+          path: ['reported'],
+          input: ctx.value.reported,
+        });
+      }
+    }).optional(),
+  }).check((ctx) => {
+    if (ctx.value.calibration && JSON.stringify(ctx.value.calibration.actual) !== JSON.stringify({
+      intrinsics: ctx.value.camera,
+      extrinsics: ctx.value.mount,
+    })) {
+      ctx.issues.push({
+        code: 'custom',
+        message: 'camera and mount must match calibration.actual',
+        path: ['calibration', 'actual'],
+        input: ctx.value.calibration.actual,
+      });
+    }
+  });
 export const SensorRigCameraTemplateSchema = z.preprocess(
   (value) => withCameraProfileSource(value, 'profile'),
   SensorRigCameraTemplateObjectSchema.transform((value) => markCameraProfileSourceResolved(value, 'profile')),
@@ -1028,11 +1072,33 @@ export function instantiateSensorRig(
     if (ids.has(id)) throw new Error(`sensor id factory produced duplicate id "${id}"`);
     ids.add(id);
 
-    const { mount, ...sensor } = template;
+    const resolvedMount = resolveSensorRigMount(template.mount, actor);
+    if (template.type === 'dash_camera') {
+      const { mount: _mount, calibration, ...sensor } = template;
+      return ActorSensorSchema.parse({
+        ...sensor,
+        id,
+        mount: resolvedMount,
+        ...(calibration ? {
+          calibration: {
+            ...calibration,
+            actual: {
+              ...calibration.actual,
+              extrinsics: resolveSensorRigMount(calibration.actual.extrinsics, actor),
+            },
+            reported: {
+              ...calibration.reported,
+              extrinsics: resolveSensorRigMount(calibration.reported.extrinsics, actor),
+            },
+          },
+        } : {}),
+      });
+    }
+    const { mount: _mount, ...sensor } = template;
     return ActorSensorSchema.parse({
       ...sensor,
       id,
-      mount: resolveSensorRigMount(mount, actor),
+      mount: resolvedMount,
     });
   });
 }

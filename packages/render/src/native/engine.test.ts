@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CameraProfileSchema, type RenderIntentV1 } from '@simforge-oss/scenario';
+import { CameraProfileSchema, type RenderIntentV1, type RenderSensorSourceHost, type RenderSourceV3 } from '@simforge-oss/scenario';
 
 import {
   UnsupportedRenderIntentError,
@@ -12,6 +12,8 @@ import {
   resolveEffectiveCameraProfile,
   resolveNativeCaptureProfile,
 } from './engine.js';
+import { createNativeCameraSchedule } from './camera-schedule.js';
+import type { NativeSceneState } from './lowering.js';
 import { stripRgbaPadding } from './service-client.js';
 
 const profile = CameraProfileSchema.parse({});
@@ -136,6 +138,82 @@ describe('native retained engine adapter', () => {
       },
     };
     expect(rejectionReasons(raw)).toContain('missing capability camera.output.raw');
+  });
+
+  it('rejects reported calibration overrides when an engine does not declare support', () => {
+    const engine = createRenderEngine({ binary: '/bin/true' });
+    const candidate: RenderIntentV1 = {
+      ...intent,
+      renderSpec: {
+        ...intent.renderSpec,
+        capabilityIntent: {
+          ...intent.renderSpec.capabilityIntent,
+          required: [...intent.renderSpec.capabilityIntent.required, 'camera.reported-calibration-override'],
+        },
+      },
+    };
+    const unsupported = {
+      ...engine.capabilities,
+      capabilities: engine.capabilities.capabilities.filter(
+        (capability) => capability !== 'camera.reported-calibration-override',
+      ),
+    };
+
+    expect(() => assertEngineSupportsIntent(unsupported, candidate)).toThrowError(
+      expect.objectContaining({ reasons: ['missing capability camera.reported-calibration-override'] }),
+    );
+    expect(() => assertEngineSupportsIntent(engine.capabilities, candidate)).not.toThrow();
+  });
+
+  it('keeps T08 native camera requests fixed while reported calibration changes', () => {
+    const source = intent.renderSpec.sources[0]! as RenderSourceV3;
+    if (source.modality !== 'rgb') throw new Error('test source must be RGB');
+    const reportedCalibration = {
+      intrinsics: {
+        horizontalFovDeg: 90,
+        verticalFovDeg: 58.7155,
+        aspectRatio: 16 / 9,
+        nearM: 0.1,
+        farM: 100,
+      },
+      extrinsics: source.transform,
+    };
+    const control: RenderSourceV3 = {
+      ...source,
+      attributes: { ...source.attributes, reportedCalibration },
+    };
+    const perturbed: RenderSourceV3 = {
+      ...source,
+      attributes: {
+        ...source.attributes,
+        reportedCalibration: {
+          ...reportedCalibration,
+          extrinsics: {
+            ...reportedCalibration.extrinsics,
+            rotation: { ...reportedCalibration.extrinsics.rotation, yawRad: 0.1 },
+          },
+        },
+        calibrationPerturbation: { kind: 'yaw-offset', yawOffsetRad: 0.1, label: 'T08 reported yaw' },
+      },
+    };
+    const host: RenderSensorSourceHost = {
+      sourceId: source.outputName,
+      actorId: source.actorId,
+      vehicleAsset: { catalogAssetId: 'vehicle.sedan' },
+    };
+    const state: NativeSceneState = {
+      version: 'simforge.scene-state.v1', mapId: 'map', tick: 0, tickHz: 24,
+      weather: { preset: 'clear' }, timeOfDay: 12,
+      actors: [{
+        id: source.actorId, kind: 'spawn', catalogId: 'vehicle.sedan', actorClass: 'car',
+        transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1] }, velocity: [0, 0, 0],
+      }],
+    };
+
+    expect(createNativeCameraSchedule([perturbed], [host], [state]))
+      .toEqual(createNativeCameraSchedule([control], [host], [state]));
+    expect(perturbed.attributes.reportedCalibration)
+      .not.toEqual(control.attributes.reportedCalibration);
   });
 
   it('reports every unsupported camera feature in a combination', () => {

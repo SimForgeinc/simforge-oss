@@ -2,6 +2,7 @@ import {
   PRONTO_CHASE_CAMERA_SENSOR,
   PRONTO_CHASE_CAMERA_SENSOR_ID,
   cameraProfileCapabilities,
+  cameraCalibration,
   hasTrailingChaseCamera,
   markCameraProfileSourceResolved,
   RENDER_SPEC_V3_SCHEMA,
@@ -55,6 +56,10 @@ export function mergeCameraProfileCapabilityIntent(
     ...sources.flatMap((source) =>
       source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.profileSource === 'authored'
         ? cameraProfileCapabilities(source.attributes.cameraProfile)
+        : []),
+    ...sources.flatMap((source) =>
+      source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.calibrationSource === 'authored'
+        ? ['camera.reported-calibration-override']
         : []),
   ])];
   const requiredSet = new Set(mergedRequired);
@@ -167,13 +172,13 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
           actorId: selection.actorId,
           sensorId: sensor.id,
           outputName: `${selection.actorId}-${sensor.id}-${modality}`,
-          transform: {
-            position: sensor.mount.position,
-            rotation: sensor.mount.rotation,
-          },
+          transform: sensor.type === 'dash_camera'
+            ? cameraCalibration(sensor).actual.extrinsics
+            : { position: sensor.mount.position, rotation: sensor.mount.rotation },
           modality,
         };
         if (sensor.type === "dash_camera") {
+          const calibration = cameraCalibration(sensor);
           const capture = authored && authored.modality !== "lidar" && authored.modality !== "radar" ? authored.attributes : null;
           return {
             ...common,
@@ -182,11 +187,14 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
               width: input.video?.width ?? capture?.width ?? 1280,
               height: input.video?.height ?? capture?.height ?? 720,
               fps: input.video?.fps ?? capture?.fps ?? 24,
-              horizontalFovDeg: sensor.camera.horizontalFovDeg,
-              nearM: sensor.camera.nearM,
-              farM: sensor.camera.farM,
+              horizontalFovDeg: calibration.actual.intrinsics.horizontalFovDeg,
+              nearM: calibration.actual.intrinsics.nearM,
+              farM: calibration.actual.intrinsics.farM,
               cameraProfile: sensor.profile,
               profileSource: sensor.profileSource,
+              calibrationSource: sensor.calibration ? 'authored' : 'default',
+              reportedCalibration: calibration.reported,
+              ...(calibration.perturbation ? { calibrationPerturbation: calibration.perturbation } : {}),
             }, 'cameraProfile'),
           };
         }

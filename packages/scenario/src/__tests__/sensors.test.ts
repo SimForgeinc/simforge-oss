@@ -7,7 +7,9 @@ import { parseTemplate, serializeTemplate } from '../serialize.js';
 import { TemplateDocument } from '../template-document.js';
 import {
   ActorSensorSchema,
+  CameraCalibrationSetSchema,
   CameraProfileSchema,
+  cameraCalibrationWithYawOffset,
   dashCameras,
   firstEnabledDashCamera,
   newSensorId,
@@ -17,6 +19,7 @@ import {
   defaultDashCamera,
   defaultLidar,
   defaultRadar,
+  instantiateSensorRig,
   matchSensorMountPreset,
   SensorRigCameraTemplateSchema,
 } from '../schema/v2/sensor-rigs.js';
@@ -166,6 +169,106 @@ describe('actor-attached sensors', () => {
     for (const required of spec.capabilityIntent.required) {
       expect(spec.capabilityIntent.preferred).not.toContain(required);
     }
+  });
+
+  it('uses actual calibration for rendering and reported calibration for consumers', () => {
+    const input = ltapTemplateInput();
+    const camera = defaultDashCamera(
+      { class: 'car', dims: { length: 4.4, width: 1.8, height: 1.6 } },
+      'calibrated-camera',
+    );
+    const actual = { intrinsics: camera.camera, extrinsics: camera.mount };
+    camera.calibration = cameraCalibrationWithYawOffset(actual, 0.1, 'T08 reported yaw');
+    input.roles![0]!.actor.sensors = [camera];
+    const template = parseTemplate(input);
+    const spec = buildCanonicalRenderSpec({
+      content: template,
+      selections: [{ actorId: template.roles[0]!.id, sensorId: camera.id, modalities: ['rgb'] }],
+      clip: { startSeconds: 0, endSeconds: 1 },
+      video: null,
+      artifacts: [],
+      staticSemantics: false,
+      fidelity: 'dataset',
+    });
+    const source = spec.sources[0]!;
+    if (source.modality !== 'rgb') throw new Error('expected RGB source');
+
+    expect(source.transform).toEqual(actual.extrinsics);
+    expect(source.attributes.reportedCalibration?.extrinsics.rotation.yawRad)
+      .toBeCloseTo(actual.extrinsics.rotation.yawRad + 0.1);
+    expect(source.attributes.calibrationSource).toBe('authored');
+    expect(source.attributes.calibrationPerturbation).toMatchObject({ kind: 'yaw-offset', yawOffsetRad: 0.1 });
+    expect(spec.capabilityIntent.required).toContain('camera.reported-calibration-override');
+    expect(spec.capabilityIntent.preferred).not.toContain('camera.reported-calibration-override');
+
+    expect(CameraCalibrationSetSchema.safeParse({
+      ...camera.calibration,
+      reported: actual,
+    }).success).toBe(false);
+    expect(CameraCalibrationSetSchema.safeParse({
+      actual: {
+        ...actual,
+        extrinsics: { ...actual.extrinsics, rotation: { ...actual.extrinsics.rotation, yawRad: 0.2 } },
+      },
+      reported: {
+        ...actual,
+        extrinsics: { ...actual.extrinsics, rotation: { ...actual.extrinsics.rotation, yawRad: 0.3 } },
+      },
+      perturbation: { kind: 'yaw-offset', yawOffsetRad: 0.1, label: 'decimal yaw' },
+    }).success).toBe(true);
+    const wrapped = cameraCalibrationWithYawOffset({
+      ...actual,
+      extrinsics: { ...actual.extrinsics, rotation: { ...actual.extrinsics.rotation, yawRad: 3.1 } },
+    }, 0.1, 'wrapped yaw');
+    expect(wrapped.reported.extrinsics.rotation.yawRad).toBeCloseTo(3.2 - 2 * Math.PI);
+
+    const explicitUnperturbed = { ...camera, id: 'explicit-unperturbed', calibration: { actual, reported: actual } };
+    const explicitTemplate = parseTemplate({
+      ...input,
+      roles: input.roles!.map((role, index) => index === 0
+        ? { ...role, actor: { ...role.actor, sensors: [explicitUnperturbed] } }
+        : role),
+    });
+    const explicitSpec = buildCanonicalRenderSpec({
+      content: explicitTemplate,
+      selections: [{ actorId: explicitTemplate.roles[0]!.id, sensorId: explicitUnperturbed.id, modalities: ['rgb'] }],
+      clip: { startSeconds: 0, endSeconds: 1 },
+      video: null,
+      artifacts: [],
+      staticSemantics: false,
+      fidelity: 'dataset',
+    });
+    expect(explicitSpec.capabilityIntent.required).toContain('camera.reported-calibration-override');
+    expect(ActorSensorSchema.safeParse({
+      ...camera,
+      mount: { ...camera.mount, position: { ...camera.mount.position, x: camera.mount.position.x + 1 } },
+    }).success).toBe(false);
+
+    const rigMount = {
+      anchor: { longitudinal: 'front' as const, vertical: 'top' as const, lateral: 'center' as const },
+      offset: { x: -0.35, y: -0.25, z: 0 },
+      rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 },
+    };
+    const rigCamera = SensorRigCameraTemplateSchema.parse({
+      ...camera,
+      mount: rigMount,
+      calibration: {
+        actual: { intrinsics: camera.camera, extrinsics: rigMount },
+        reported: {
+          intrinsics: camera.camera,
+          extrinsics: { ...rigMount, rotation: { ...rigMount.rotation, yawRad: 0.1 } },
+        },
+        perturbation: { kind: 'yaw-offset', yawOffsetRad: 0.1, label: 'T08 reported yaw' },
+      },
+    });
+    const [instantiated] = instantiateSensorRig(
+      { id: 'calibrated-rig', name: 'Calibrated rig', sensors: [rigCamera] },
+      { class: 'car', dims: { length: 4.4, width: 1.8, height: 1.6 } },
+      () => 'instantiated-camera',
+    );
+    expect(instantiated?.mount).toEqual(instantiated?.type === 'dash_camera' ? instantiated.calibration?.actual.extrinsics : null);
+    expect(instantiated?.type === 'dash_camera' ? instantiated.calibration?.reported.extrinsics.rotation.yawRad : null)
+      .toBeCloseTo(0.1);
   });
 
   it('requires rolling-shutter profiles to declare their readout span', () => {

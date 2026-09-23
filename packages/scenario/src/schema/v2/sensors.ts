@@ -62,6 +62,74 @@ export const DashCameraIntrinsicsSchema = z.strictObject({
   }
 });
 
+export const CameraCalibrationViewSchema = z.strictObject({
+  intrinsics: DashCameraIntrinsicsSchema,
+  extrinsics: SensorMountSchema,
+});
+
+export const CameraCalibrationPerturbationSchema = z.strictObject({
+  kind: z.literal('yaw-offset'),
+  yawOffsetRad: z.number().finite().min(-Math.PI).max(Math.PI),
+  label: z.string().min(1).max(200),
+});
+
+function angularDistanceRad(left: number, right: number): number {
+  return Math.abs(Math.atan2(Math.sin(left - right), Math.cos(left - right)));
+}
+
+function normalizeAngleRad(value: number): number {
+  return Math.atan2(Math.sin(value), Math.cos(value));
+}
+
+export const CameraCalibrationSetSchema = z.strictObject({
+  actual: CameraCalibrationViewSchema,
+  reported: CameraCalibrationViewSchema,
+  perturbation: CameraCalibrationPerturbationSchema.optional(),
+}).check((ctx) => {
+  const { actual, reported, perturbation } = ctx.value;
+  const reportedAtActualYaw = {
+    ...reported,
+    extrinsics: {
+      ...reported.extrinsics,
+      rotation: {
+        ...reported.extrinsics.rotation,
+        yawRad: actual.extrinsics.rotation.yawRad,
+      },
+    },
+  };
+  const expectedYaw = actual.extrinsics.rotation.yawRad + (perturbation?.yawOffsetRad ?? 0);
+  if (JSON.stringify(reportedAtActualYaw) !== JSON.stringify(actual)
+    || angularDistanceRad(reported.extrinsics.rotation.yawRad, expectedYaw) > 1e-12) {
+    ctx.issues.push({
+      code: 'custom',
+      message: 'reported calibration must equal actual plus the declared yaw offset',
+      path: ['reported'],
+      input: reported,
+    });
+  }
+});
+
+export function cameraCalibrationWithYawOffset(
+  actual: CameraCalibrationView,
+  yawOffsetRad: number,
+  label: string,
+): CameraCalibrationSet {
+  return CameraCalibrationSetSchema.parse({
+    actual,
+    reported: {
+      ...actual,
+      extrinsics: {
+        ...actual.extrinsics,
+        rotation: {
+          ...actual.extrinsics.rotation,
+          yawRad: normalizeAngleRad(actual.extrinsics.rotation.yawRad + yawOffsetRad),
+        },
+      },
+    },
+    perturbation: { kind: 'yaw-offset', yawOffsetRad, label },
+  });
+}
+
 export const CAMERA_PROFILE_V1_SCHEMA = 'simforge.camera-profile/v1' as const;
 export const CameraProfileSourceSchema = z.enum(['default', 'authored']);
 
@@ -184,13 +252,27 @@ export const DashCameraSensorObjectSchema = z.strictObject({
   enabled: z.boolean().default(true),
   mount: SensorMountSchema,
   camera: DashCameraIntrinsicsSchema.prefault({}),
+  calibration: CameraCalibrationSetSchema.optional(),
   profile: CameraProfileSchema.prefault({}),
   profileSource: CameraProfileSourceSchema.default('default'),
   detection: DetectionModelSchema.prefault({}),
 });
+const DashCameraSensorValidatedObjectSchema = DashCameraSensorObjectSchema.check((ctx) => {
+  if (ctx.value.calibration && JSON.stringify(ctx.value.calibration.actual) !== JSON.stringify({
+    intrinsics: ctx.value.camera,
+    extrinsics: ctx.value.mount,
+  })) {
+    ctx.issues.push({
+      code: 'custom',
+      message: 'camera and mount must match calibration.actual',
+      path: ['calibration', 'actual'],
+      input: ctx.value.calibration.actual,
+    });
+  }
+});
 export const DashCameraSensorSchema = z.preprocess(
   (value) => withCameraProfileSource(value, 'profile'),
-  DashCameraSensorObjectSchema.transform((value) => markCameraProfileSourceResolved(value, 'profile')),
+  DashCameraSensorValidatedObjectSchema.transform((value) => markCameraProfileSourceResolved(value, 'profile')),
 );
 
 /** Angular/range envelope for the active modalities. */
@@ -249,6 +331,9 @@ export type VehicleAnchor = z.infer<typeof VehicleAnchorSchema>;
 export type VehicleAnchorMount = z.infer<typeof VehicleAnchorMountSchema>;
 export type SensorRigMount = z.infer<typeof SensorRigMountSchema>;
 export type DashCameraIntrinsics = z.infer<typeof DashCameraIntrinsicsSchema>;
+export type CameraCalibrationView = z.infer<typeof CameraCalibrationViewSchema>;
+export type CameraCalibrationPerturbation = z.infer<typeof CameraCalibrationPerturbationSchema>;
+export type CameraCalibrationSet = z.infer<typeof CameraCalibrationSetSchema>;
 export type CameraProfile = z.infer<typeof CameraProfileSchema>;
 export type CameraProfileSource = z.infer<typeof CameraProfileSourceSchema>;
 export type DashCameraSensor = z.infer<typeof DashCameraSensorSchema>;
@@ -258,6 +343,13 @@ export type ActiveSensorField = z.infer<typeof ActiveSensorFieldSchema>;
 export type SensorDetectionModel = z.infer<typeof DetectionModelSchema>;
 export type SensorSensitivity = z.infer<typeof SensorSensitivitySchema>;
 export type ActorSensor = z.infer<typeof ActorSensorSchema>;
+
+export function cameraCalibration(sensor: DashCameraSensor): CameraCalibrationSet {
+  return sensor.calibration ?? CameraCalibrationSetSchema.parse({
+    actual: { intrinsics: sensor.camera, extrinsics: sensor.mount },
+    reported: { intrinsics: sensor.camera, extrinsics: sensor.mount },
+  });
+}
 
 /**
  * Convert a resolved canonical mount into the Three.js scene frame.

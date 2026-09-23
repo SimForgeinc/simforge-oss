@@ -11,6 +11,7 @@ import {
   NativeRunDiagnosticsSchema,
   cameraProfileConfigHash,
   cameraProfileVersion,
+  nativeCalibrationEvidence,
   nativeEvidenceFailure,
   nativeRunExpectations,
   type NativeRenderManifestV2,
@@ -93,6 +94,7 @@ function profileEvidence(source: RenderSourceV3): NativeRenderManifestV2['camera
     effective: source.attributes.cameraProfile,
     approximations: [],
     differences: [],
+    ...(source.attributes.reportedCalibration ? { reportedCalibration: source.attributes.reportedCalibration } : {}),
   }];
 }
 
@@ -129,6 +131,7 @@ function evidence(overrides: { slowFrames?: number; actorAssetsSha256?: string }
         { actorId: 'ego', sensorId: 'fast', frameCount: 48, sha256: HEX('2') },
         { actorId: 'ego', sensorId: 'slow', frameCount: slowFrames, sha256: HEX('1') },
       ],
+      calibrationPerturbations: [],
       service: { protocol: NATIVE_SERVICE_PROTOCOL, binary: '/opt/native-render-service' },
       frames: Array.from({ length: 48 }, (_, simTick) => ({ simTick, sceneRevision: 1, rigRevision: 1, generation: 1 })),
       timings: { wallMs: 1000, serverMs: 800 },
@@ -188,7 +191,11 @@ describe('native run expectations', () => {
   });
 
   it('classifies v1 manifests as pre-v2 camera-profile evidence absence', () => {
-    const { cameraProfileEvidence: _classification, fidelityMode: _fidelityMode, ...manifest } = evidence().manifest;
+    const {
+      cameraProfileEvidence: _classification,
+      fidelityMode: _fidelityMode,
+      ...manifest
+    } = evidence().manifest;
     const parsed = NativeRenderManifestSchema.parse({
       ...manifest,
       schema: NATIVE_RENDER_MANIFEST_V1_SCHEMA,
@@ -230,6 +237,64 @@ describe('native run expectations', () => {
         })),
       }).success).toBe(false);
     }
+  });
+
+  it('emits reported calibration and perturbation metadata without leaking actual values', () => {
+    const actualYaw = 0.123456789;
+    const reportedYaw = 0.223456789;
+    const reportedCalibration = {
+      intrinsics: {
+        horizontalFovDeg: 90,
+        verticalFovDeg: 58.7155,
+        aspectRatio: 16 / 9,
+        nearM: 0.1,
+        farM: 1_000,
+      },
+      extrinsics: {
+        position: { x: 1.6, y: 0, z: 1.7 },
+        rotation: { yawRad: reportedYaw, pitchRad: 0, rollRad: 0 },
+      },
+    };
+    const baseSource = camera('slow', 12);
+    if (baseSource.modality !== 'rgb') throw new Error('expected RGB source');
+    const originatingSource: RenderSourceV3 = {
+      ...baseSource,
+      transform: {
+        position: { x: 1.6, y: 0, z: 1.7 },
+        rotation: { yawRad: actualYaw, pitchRad: 0, rollRad: 0 },
+      },
+      attributes: {
+        ...baseSource.attributes,
+        reportedCalibration,
+        calibrationPerturbation: { kind: 'yaw-offset', yawOffsetRad: 0.1, label: 'T08 reported yaw' },
+      },
+    };
+    const calibrationEvidence = nativeCalibrationEvidence([originatingSource]);
+    const manifest = evidence().manifest;
+    const parsed = NativeRenderManifestV2Schema.parse({
+      ...manifest,
+      cameraProfiles: manifest.cameraProfiles.map((entry, index) =>
+        index === 0 ? { ...entry, reportedCalibration: calibrationEvidence.consumer[0]!.reportedCalibration } : entry),
+    });
+    const diagnostics = NativeRunDiagnosticsSchema.parse({
+      ...evidence().diagnostics,
+      calibrationPerturbations: calibrationEvidence.privileged,
+    });
+    const consumerArtifactBytes = Buffer.from(JSON.stringify(parsed));
+    const privilegedArtifactBytes = Buffer.from(JSON.stringify(diagnostics));
+
+    expect(consumerArtifactBytes.includes(Buffer.from(String(actualYaw)))).toBe(false);
+    expect(consumerArtifactBytes.includes(Buffer.from('"actual"'))).toBe(false);
+    expect(consumerArtifactBytes.includes(Buffer.from(String(reportedYaw)))).toBe(true);
+    expect(privilegedArtifactBytes.includes(Buffer.from(String(actualYaw)))).toBe(false);
+    expect(privilegedArtifactBytes.includes(Buffer.from('"actual"'))).toBe(false);
+    expect(JSON.stringify(parsed)).not.toContain('T08 reported yaw');
+    expect(diagnostics.calibrationPerturbations).toHaveLength(1);
+    expect(NativeRenderManifestV2Schema.safeParse({
+      ...parsed,
+      cameraProfiles: parsed.cameraProfiles.map((entry, index) =>
+        index === 0 ? { ...entry, actualCalibration: { yawRad: actualYaw } } : entry),
+    }).success).toBe(false);
   });
 
   it('derives each source schedule, the union tick count and the pinned actor closure from the intent', () => {
@@ -276,6 +341,80 @@ describe('native evidence acceptance', () => {
       .toBe('native_diagnostics_evidence_mismatch');
   });
 
+  it('rejects reported calibration or perturbation evidence inconsistent with the intent', () => {
+    const source = intent.renderSpec.sources[0]!;
+    if (source.modality !== 'rgb') throw new Error('expected RGB source');
+    const reportedCalibration = {
+      intrinsics: {
+        horizontalFovDeg: 90,
+        verticalFovDeg: 58.7155,
+        aspectRatio: 16 / 9,
+        nearM: 0.1,
+        farM: 1_000,
+      },
+      extrinsics: {
+        position: { x: 1.6, y: 0, z: 1.7 },
+        rotation: { yawRad: 0.1, pitchRad: 0, rollRad: 0 },
+      },
+    };
+    const perturbation = { kind: 'yaw-offset' as const, yawOffsetRad: 0.1, label: 'T08 reported yaw' };
+    const calibratedIntent: RenderIntentV1 = {
+      ...intent,
+      renderSpec: {
+        ...intent.renderSpec,
+        sources: intent.renderSpec.sources.map((entry, index) =>
+          index === 0 && entry.modality === 'rgb'
+            ? { ...entry, attributes: { ...entry.attributes, reportedCalibration, calibrationPerturbation: perturbation } }
+            : entry),
+      },
+    };
+    const { manifest, diagnostics } = evidence();
+    const calibratedManifest: NativeRenderManifestV2 = {
+      ...manifest,
+      cameraProfiles: manifest.cameraProfiles.map((entry, index) =>
+        index === 0 ? { ...entry, reportedCalibration } : entry),
+    };
+    const calibratedDiagnostics: NativeRunDiagnostics = {
+      ...diagnostics,
+      calibrationPerturbations: [{ actorId: 'ego', sensorId: 'slow', perturbation }],
+    };
+    expect(nativeEvidenceFailure(reservations, calibratedManifest, calibratedDiagnostics, nativeRunExpectations(calibratedIntent, lease)))
+      .toBeNull();
+    expect(nativeEvidenceFailure(
+      reservations,
+      calibratedManifest,
+      { ...calibratedDiagnostics, calibrationPerturbations: [] },
+      nativeRunExpectations(calibratedIntent, lease),
+    )).toBe('native_diagnostics_evidence_mismatch');
+
+    const fullyCalibratedIntent: RenderIntentV1 = {
+      ...intent,
+      renderSpec: {
+        ...intent.renderSpec,
+        sources: intent.renderSpec.sources.map((entry) => entry.modality === 'rgb'
+          ? { ...entry, attributes: { ...entry.attributes, reportedCalibration, calibrationPerturbation: perturbation } }
+          : entry),
+      },
+    };
+    const fullyCalibratedManifest: NativeRenderManifestV2 = {
+      ...manifest,
+      cameraProfiles: manifest.cameraProfiles.map((entry) => ({ ...entry, reportedCalibration })),
+    };
+    const duplicatedDiagnostics: NativeRunDiagnostics = {
+      ...diagnostics,
+      calibrationPerturbations: [
+        { actorId: 'ego', sensorId: 'slow', perturbation },
+        { actorId: 'ego', sensorId: 'slow', perturbation },
+      ],
+    };
+    expect(nativeEvidenceFailure(
+      reservations,
+      fullyCalibratedManifest,
+      duplicatedDiagnostics,
+      nativeRunExpectations(fullyCalibratedIntent, lease),
+    )).toBe('native_diagnostics_evidence_mismatch');
+  });
+
   it('rejects duplicate camera-profile evidence that omits another camera', () => {
     const { manifest, diagnostics } = evidence();
     const duplicate = {
@@ -295,7 +434,11 @@ describe('native evidence acceptance', () => {
 
   it('does not accept a readable v1 manifest as complete camera-profile evidence', () => {
     const { manifest, diagnostics } = evidence();
-    const { cameraProfileEvidence: _classification, fidelityMode: _fidelityMode, ...legacy } = manifest;
+    const {
+      cameraProfileEvidence: _classification,
+      fidelityMode: _fidelityMode,
+      ...legacy
+    } = manifest;
     const parsed = NativeRenderManifestSchema.parse({
       ...legacy,
       schema: NATIVE_RENDER_MANIFEST_V1_SCHEMA,

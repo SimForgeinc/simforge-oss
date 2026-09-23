@@ -35,6 +35,7 @@ export const EngineCapabilitySchema = z.enum([
   'camera.output.linear_rgb',
   'camera.output.processed_rgb',
   'camera.noise.ptc',
+  'camera.reported-calibration-override',
   'full-mount-rotation',
 ]);
 

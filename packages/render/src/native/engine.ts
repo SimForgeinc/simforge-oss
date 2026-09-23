@@ -36,6 +36,7 @@ import {
   NativeRunDiagnosticsSchema,
   cameraProfileConfigHash,
   cameraProfileVersion,
+  nativeCalibrationEvidence,
   nativeSensorVideoFormat,
   resolveEffectiveCameraProfile,
 } from './evidence.js';
@@ -97,6 +98,7 @@ const CAPABILITIES: EngineCapabilityDeclaration = {
     'camera.projection.pinhole',
     'camera.shutter.global',
     'camera.output.linear_rgb',
+    'camera.reported-calibration-override',
     'full-mount-rotation',
     'map.static_semantics',
   ],
@@ -475,6 +477,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
 
       const nativeManifestRelative = 'manifest/native-render.json';
       const nativeManifestPath = path.join(context.workspace, nativeManifestRelative);
+      const calibrationEvidence = nativeCalibrationEvidence(sources);
+      const reportedCalibrationBySensor = new Map(calibrationEvidence.consumer.map((entry) => [
+        `${entry.actorId}\0${entry.sensorId}`,
+        entry.reportedCalibration,
+      ]));
       await writeJson(nativeManifestPath, NativeRenderManifestV2Schema.parse({
         schema: 'simforge.native-render-manifest/v2',
         intentSha256: context.intentSha256,
@@ -501,6 +508,9 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           configHash: cameraProfileConfigHash(source.attributes.cameraProfile),
           requested: source.attributes.cameraProfile,
           ...resolveEffectiveCameraProfile(source.attributes.cameraProfile, captureProfile.profile),
+          ...(reportedCalibrationBySensor.has(`${source.actorId}\0${source.sensorId}`)
+            ? { reportedCalibration: reportedCalibrationBySensor.get(`${source.actorId}\0${source.sensorId}`)! }
+            : {}),
         }] : []),
         warnings: [],
         videos: videoRecords,
@@ -526,6 +536,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         traceSha256: traceDigest.sha256,
         videoCount: videoRecords.length,
         videos: videoRecords.map(({ actorId, sensorId, frameCount, sha256 }) => ({ actorId, sensorId, frameCount, sha256 })),
+        calibrationPerturbations: calibrationEvidence.privileged,
         service: { protocol: session.protocol, binary },
         frames: frameIdentities,
         timings: { wallMs: performance.now() - wallStarted, serverMs },
