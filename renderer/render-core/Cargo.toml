@@ -48,6 +48,9 @@ serde_json = "1"
 walkdir = "2"
 
 sha2 = "0.10"
+# The ground derivative (`derived/ground/ground-mesh.bin`): one decoder and
+# query implementation shared with the simulator and the contact gate.
+simforge-core = { path = "../../native/crates/simforge-core" }
 
 # `gpu-interop` only (Linux): raw Vulkan handles for exportable output memory
 # and semaphores (see src/gpu_interop.rs). `ash` must track wgpu-hal's 0.38.

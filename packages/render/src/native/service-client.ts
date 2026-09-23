@@ -101,6 +101,23 @@ const promiseConstructor = Promise as PromiseConstructor & {
   withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (reason?: unknown) => void };
 };
 
+/**
+ * Where the service's placement heights come from: the map's ground
+ * derivative (`derived/ground/ground-mesh.bin`, by sha256) or the legacy
+ * field built from the rendered meshes (map versions without one).
+ */
+export type NativeServiceGround =
+  | { readonly source: 'ground-mesh'; readonly sha256: string }
+  | { readonly source: 'legacy-mesh-field' };
+
+function parseServiceGround(value: unknown): NativeServiceGround | null {
+  if (value === undefined || value === null) return null;
+  const ground = value as { source?: unknown; sha256?: unknown };
+  if (ground.source === 'ground-mesh' && typeof ground.sha256 === 'string') return { source: 'ground-mesh', sha256: ground.sha256 };
+  if (ground.source === 'legacy-mesh-field') return { source: 'legacy-mesh-field' };
+  throw new Error(`native render service reported an unknown ground source ${JSON.stringify(value)}`);
+}
+
 export class NativeServiceClient {
   readonly #socket: net.Socket;
   readonly #pending = new Map<number, { resolve: (value: NativeServiceResponse) => void; reject: (reason?: unknown) => void }>();
@@ -110,6 +127,8 @@ export class NativeServiceClient {
   #shm: Promise<fs.FileHandle> | undefined;
   /** Additive ops the service advertised in `hello.capabilities`. */
   #capabilities = new Set<string>();
+  /** The scene's placement height source from `hello.ground` (null: a service that predates it). */
+  #ground: NativeServiceGround | null = null;
   /** Set once the connection is unusable; every later `rpc` rejects with it. */
   #failure: Error | undefined;
 
@@ -157,6 +176,12 @@ export class NativeServiceClient {
     client.#shmPath = hello.shm.path;
     const capabilities = (hello as { capabilities?: unknown }).capabilities;
     client.#capabilities = new Set(Array.isArray(capabilities) ? capabilities.filter((c): c is string => typeof c === 'string') : []);
+    try {
+      client.#ground = parseServiceGround((hello as { ground?: unknown }).ground);
+    } catch (error) {
+      await client.close();
+      throw error;
+    }
     return client;
   }
 
@@ -205,6 +230,11 @@ export class NativeServiceClient {
       throw renderInputErrorFromServiceMessage(message) ?? new Error(message);
     }
     return value;
+  }
+
+  /** The scene's placement height source the service reported at hello; null when it reported none. */
+  get ground(): NativeServiceGround | null {
+    return this.#ground;
   }
 
   /** Whether the service advertised an additive op in `hello.capabilities`. */

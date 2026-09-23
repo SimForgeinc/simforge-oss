@@ -19,7 +19,7 @@
 //! profile from `crate::profiles::RenderProfile::apply` (fixed EV100,
 //! AgX cinematic stack, GTAO at rung ≥ 3). Sensor views keep TAA, motion
 //! blur and auto-exposure disabled.
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Context as _, Result};
 use bevy::app::ScheduleRunnerPlugin;
 use bevy::asset::RecursiveDependencyLoadState;
 use crate::readiness::{GpuPending, GPU_IDLE_FRAMES};
@@ -2011,8 +2011,6 @@ fn sync_light_layers(
 pub(crate) struct GroundField {
     cell_m: f32,
     min_y: HashMap<(i64, i64), f32>,
-    /// Median per-cell height, fixed at build; the far fallback of `sample`.
-    median: Option<f32>,
 }
 
 impl GroundField {
@@ -2028,7 +2026,7 @@ impl GroundField {
         instances: impl IntoIterator<Item = (&'a Mesh3d, &'a GlobalTransform)>,
         cell_m: f32,
     ) -> GroundField {
-        let mut field = GroundField { cell_m, min_y: HashMap::new(), median: None };
+        let mut field = GroundField { cell_m, min_y: HashMap::new() };
         for (mesh, gt) in instances {
             let Some(mesh) = meshes.get(&mesh.0) else { continue };
             let Some(pos) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { continue };
@@ -2061,7 +2059,6 @@ impl GroundField {
                 }
             }
         }
-        field.median = field.median_y();
         field
     }
 
@@ -2095,16 +2092,8 @@ impl GroundField {
         }
     }
 
-    /// Ground height under (x, z).
-    ///
-    /// Cells outside the mesh coverage use the nearest populated cell within
-    /// 20 m, then the scene median, then 0.0 for an entirely empty scene.
-    pub(crate) fn sample(&self, x: f32, z: f32) -> f32 {
-        self.sample_covered(x, z).or(self.median).unwrap_or(0.0)
-    }
-
-    /// [`Self::sample`] without the off-map median/zero: `None` when no
-    /// populated cell lies within 20 m.
+    /// Ground height under (x, z): the cell itself or the nearest populated
+    /// cell within 20 m (cell-edge gaps); `None` further off the map.
     pub(crate) fn sample_covered(&self, x: f32, z: f32) -> Option<f32> {
         let (cx, cz) = ((x / self.cell_m).floor() as i64, (z / self.cell_m).floor() as i64);
         if let Some(y) = self.min_y.get(&(cx, cz)) {
@@ -2142,6 +2131,39 @@ impl GroundField {
         let mut ys: Vec<f32> = self.min_y.values().copied().collect();
         ys.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
         Some(ys[ys.len() / 2])
+    }
+}
+
+/// The scene's placement height source (reported in the service `hello`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GroundSource {
+    /// The map's ground derivative, identified by its sha256.
+    GroundMesh { sha256: String },
+    /// No ground derivative: the readiness field built from the rendered
+    /// meshes. An explicit substitution for older map versions.
+    LegacyMeshField,
+}
+
+/// World-Y ground height from the ground derivative under world (x, z).
+pub(crate) fn ground_mesh_height(
+    surface: &simforge_core::map::ground::GroundSurface,
+    x: f32,
+    z: f32,
+) -> std::result::Result<f32, String> {
+    let (xodr_x, xodr_y) = (f64::from(x), -f64::from(z));
+    let hits = surface
+        .surfaces_at(xodr_x, xodr_y)
+        .map_err(|error| format!("[native_ground_height_unavailable] x={x:.2} z={z:.2}: {error}"))?;
+    match hits.as_slice() {
+        [] => Err(format!(
+            "[native_ground_height_unavailable] x={x:.2} z={z:.2} is off the map's ground surface"
+        )),
+        [hit] => Ok(hit.z as f32),
+        decks => Err(format!(
+            "[native_ground_height_ambiguous] x={x:.2} z={z:.2} has {} stacked surfaces ({}) and no authored height to choose one",
+            decks.len(),
+            decks.iter().map(|hit| format!("{:.2} {}", hit.z, hit.class.as_str())).collect::<Vec<_>>().join(", ")
+        )),
     }
 }
 
@@ -2212,8 +2234,13 @@ pub struct SceneApp {
     actor_classes: HashMap<u32, String>,
     /// Next instance id for dynamic actors (beyond the static legend range).
     next_instance_id: u32,
-    /// Coarse ground-height field (minimum surface Y per cell), built at readiness.
+    /// Legacy coarse ground-height field (minimum surface Y per cell), built
+    /// at readiness only when the scene has no ground derivative.
     ground: GroundField,
+    /// The map's ground derivative (`derived/ground/ground-mesh.bin`): the
+    /// one height source the simulator and the contact gate use. When set,
+    /// every placement height comes from it and `ground` is never built.
+    ground_surface: Option<simforge_core::map::ground::GroundSurface>,
     /// Sky cubemap spawned by the lighting ladder (rung ≥ 1), attached as a
     /// `Skybox` to every RGB camera.
     sky: Option<Handle<Image>>,
@@ -2495,6 +2522,7 @@ impl SceneApp {
             actor_classes: HashMap::new(),
             next_instance_id: 0,
             ground: GroundField::default(),
+            ground_surface: None,
             sky,
             skybox_brightness: plan.skybox_brightness,
             ev100_fixed: plan.ev100_fixed.unwrap_or_else(|| {
@@ -3715,20 +3743,44 @@ impl SceneApp {
         self.app.world().resource::<Legend>().0.clone()
     }
 
-    /// Ground height under (x, z) from the readiness height field.
-    ///
-    /// Outside mesh coverage this is the scene median (or 0.0 for an empty
-    /// scene): fine for an atmosphere reference height, never for placing
-    /// geometry. Placement uses [`Self::ground_at_covered`].
-    pub fn ground_at(&self, x: f32, z: f32) -> f32 {
-        self.ground.sample(x, z)
+    /// Decode the map's ground derivative and make it the scene's height
+    /// source. Call before [`Self::wait_until_ready`]; the legacy readiness
+    /// field is then never built. A malformed file is an error, never a
+    /// silent return to the legacy field.
+    pub fn load_ground_mesh(&mut self, path: &std::path::Path) -> Result<()> {
+        let bytes = std::fs::read(path)
+            .with_context(|| format!("[native_ground_mesh_unreadable] {}", path.display()))?;
+        let surface = simforge_core::map::ground::GroundSurface::decode(&bytes)
+            .map_err(|error| anyhow!("[native_ground_mesh_invalid] {}: {error}", path.display()))?;
+        self.ground_surface = Some(surface);
+        Ok(())
     }
 
-    /// Ground height under (x, z) when the map covers it: the cell itself or
-    /// the nearest populated cell within 20 m (cell-edge gaps). `None` off
-    /// the map, where a height would be invented.
-    pub fn ground_at_covered(&self, x: f32, z: f32) -> Option<f32> {
-        self.ground.sample_covered(x, z)
+    /// Which height source placement uses: the ground derivative (with its
+    /// sha256) or the legacy readiness field, an explicit substitution for
+    /// map versions published before their ground derivative.
+    pub fn ground_source(&self) -> GroundSource {
+        match &self.ground_surface {
+            Some(surface) => GroundSource::GroundMesh { sha256: surface.digest().to_owned() },
+            None => GroundSource::LegacyMeshField,
+        }
+    }
+
+    /// Ground height (world Y) under world (x, z) for an actor that carries
+    /// no authored height.
+    ///
+    /// With the ground derivative this is the single surface there (scene
+    /// X = xodr x, scene Z = -xodr y, scene Y = xodr z). No surface, or two
+    /// decks with no height to choose between them, is an error. Without it,
+    /// the legacy field's cell (or its nearest populated cell within 20 m);
+    /// off the map is an error. Never an invented height.
+    pub fn ground_height(&self, x: f32, z: f32) -> std::result::Result<f32, String> {
+        match &self.ground_surface {
+            Some(surface) => ground_mesh_height(surface, x, z),
+            None => self.ground.sample_covered(x, z).ok_or_else(|| format!(
+                "[native_ground_height_unavailable] x={x:.2} z={z:.2} has no map ground within 20 m"
+            )),
+        }
     }
 
     /// Remove an actor's catalog model (and its ID clones), keeping the
@@ -3777,7 +3829,8 @@ impl SceneApp {
     /// so ID-pass pixels resolve to the actor class.
     ///
     /// `position` is the cuboid centre; callers with ground-origin vehicle
-    /// poses add half the height. `snap_ground` explicitly replaces Y.
+    /// poses add half the height (see [`Self::ground_height`] for poses
+    /// without one).
     /// `rotation` is the body orientation.
     /// Catalog asset calibration is applied separately with
     /// [`Self::set_actor_asset_pose`], never to the sensor/ID cuboid.
@@ -3789,11 +3842,9 @@ impl SceneApp {
         rotation: Quat,
         dims: [f32; 3],
         color: [f32; 3],
-        snap_ground: bool,
     ) {
-        let y = if snap_ground { self.ground.sample(position[0], position[2]) } else { position[1] };
         let transform = Transform {
-            translation: Vec3::new(position[0], y, position[2]),
+            translation: Vec3::from_array(position),
             rotation,
             scale: Vec3::ONE,
         };
@@ -4694,7 +4745,11 @@ impl SceneApp {
         let gpu_ready_s = started.elapsed().as_secs_f64();
         self.finalize_scene()?;
         let finalized_s = started.elapsed().as_secs_f64();
-        self.ground = GroundField::build(&mut self.app, 2.0);
+        // The ground derivative, when the scene has one, is the only height
+        // source; the legacy field is built only for scenes without it.
+        if self.ground_surface.is_none() {
+            self.ground = GroundField::build(&mut self.app, 2.0);
+        }
         let spawned = scene_spawned_s.unwrap_or(gpu_ready_s);
         self.ready_phases = vec![
             ("assetsLoadedAndSpawned", spawned),
@@ -4707,7 +4762,11 @@ impl SceneApp {
         // own ground plane. The boundary-layer fog term has a 300 m scale
         // height, so a tens-of-metres offset would be visible.
         if self.lighting.atmosphere && self.lighting.ground_y.is_none() {
-            if let Some(median) = self.ground.median_y() {
+            let median = match &self.ground_surface {
+                Some(surface) => Some(surface.median_z() as f32),
+                None => self.ground.median_y(),
+            };
+            if let Some(median) = median {
                 self.reanchor_atmosphere(median);
             }
         }
@@ -5932,7 +5991,29 @@ mod tests {
         let field = GroundField::from_meshes(&meshes, [(&mesh, &transform)], 2.0);
         // This cell has foliage vertices but no road vertices. Its road
         // triangle still covers the centre (5, 5), at interpolated Y = 1.5.
-        assert!((field.sample(4.3, 4.3) - 1.5).abs() < 1.0e-5);
+        assert!((field.sample_covered(4.3, 4.3).unwrap() - 1.5).abs() < 1.0e-5);
+    }
+
+    #[test]
+    fn ground_mesh_height_maps_scene_axes_and_refuses_to_guess() {
+        use simforge_core::map::ground::{encode_ground_mesh, GroundSurface, SurfaceClass};
+        // A street at z=2 m over xodr x,y in [0,20]^2 and a deck at z=8 m
+        // over x in [10,20] (xodr-local, mm).
+        let vertices = [
+            [0, 0, 2000], [20000, 0, 2000], [20000, 20000, 2000], [0, 20000, 2000],
+            [10000, 0, 8000], [20000, 0, 8000], [20000, 20000, 8000], [10000, 20000, 8000],
+        ];
+        let triangles = [[0, 1, 2], [0, 2, 3], [4, 5, 6], [4, 6, 7]];
+        let classes = [SurfaceClass::Road, SurfaceClass::Road, SurfaceClass::Bridge, SurfaceClass::Bridge];
+        let surface = GroundSurface::decode(&encode_ground_mesh(&vertices, &triangles, &classes)).unwrap();
+        // Scene (x, z) = xodr (x, -y): xodr (5, 7) is scene (5, -7).
+        assert!((ground_mesh_height(&surface, 5.0, -7.0).unwrap() - 2.0).abs() < 1e-6);
+        // xodr y = -7 is off the surface: an error, not a height.
+        let off = ground_mesh_height(&surface, 5.0, 7.0).unwrap_err();
+        assert!(off.starts_with("[native_ground_height_unavailable]"), "{off}");
+        // Two decks and no authored height: refuse to choose.
+        let stacked = ground_mesh_height(&surface, 15.0, -7.0).unwrap_err();
+        assert!(stacked.starts_with("[native_ground_height_ambiguous]"), "{stacked}");
     }
 
     #[test]
@@ -6174,7 +6255,6 @@ mod tests {
             Quat::IDENTITY,
             [4.5, 1.6, 1.8],
             [0.5, 0.5, 0.5],
-            false,
         );
         app.attach_actor_asset("vehicle-test", &vehicle, 1.0, Some([0.56, 0.18, 0.18]), None, 0.0)
             .unwrap();
@@ -6185,7 +6265,6 @@ mod tests {
             Quat::IDENTITY,
             [0.5, 1.8, 0.5],
             [0.5, 0.5, 0.5],
-            false,
         );
         app.attach_actor_asset("walker-test", &pedestrian, 1.0, None, None, 0.0)
             .unwrap();
@@ -6223,7 +6302,7 @@ mod tests {
             Profile::Sensor,
         );
         app.wait_until_ready().unwrap();
-        app.upsert_actor("moto", "motorcycle", [0.0, 0.7, -20.0], Quat::IDENTITY, [2.1, 1.4, 0.75], [0.5, 0.5, 0.5], false);
+        app.upsert_actor("moto", "motorcycle", [0.0, 0.7, -20.0], Quat::IDENTITY, [2.1, 1.4, 0.75], [0.5, 0.5, 0.5]);
         app.attach_actor_asset("moto", &bike, 0.9, None, Some("ride"), 0.25).unwrap();
         app.set_actor_asset_pose("moto", [0.0, 0.0, -20.0], Quat::IDENTITY).unwrap();
         app.set_actor_material_colors("moto", &[("rider_top".into(), [0.8, 0.1, 0.1])]).unwrap();
@@ -6270,7 +6349,7 @@ mod tests {
         app.wait_until_ready().unwrap();
 
         let body = [0.0, 0.8, -20.0];
-        app.upsert_actor("car", "car", body, Quat::IDENTITY, [4.5, 1.6, 1.8], [0.5, 0.5, 0.5], false);
+        app.upsert_actor("car", "car", body, Quat::IDENTITY, [4.5, 1.6, 1.8], [0.5, 0.5, 0.5]);
         let legend_max = app.legend().iter().map(|entry| entry.id).max().unwrap();
         assert!(app.actor_instance_id("car").unwrap() > legend_max, "actor ids never reuse static legend ids");
         // Before a model is attached the cuboid is what the camera draws
@@ -6317,7 +6396,7 @@ mod tests {
         assert!(hits < box_px * 95 / 100, "ID silhouette is the car, not a filled box ({hits} of {box_px})");
 
         // A walking pedestrian's skin is posed on the CPU and follows the clip.
-        app.upsert_actor("ped", "pedestrian", [3.0, 0.9, -20.0], Quat::IDENTITY, [0.5, 1.8, 0.5], [0.5, 0.5, 0.5], false);
+        app.upsert_actor("ped", "pedestrian", [3.0, 0.9, -20.0], Quat::IDENTITY, [0.5, 1.8, 0.5], [0.5, 0.5, 0.5]);
         app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("walk"), 0.0).unwrap();
         app.set_actor_asset_pose("ped", [3.0, 0.0, -20.0], Quat::IDENTITY).unwrap();
         app.warmup(2);
@@ -6368,11 +6447,11 @@ mod tests {
         app.wait_until_ready().unwrap();
         for (k, x) in [-6.0f32, 0.0, 6.0].into_iter().enumerate() {
             let id = format!("car{k}");
-            app.upsert_actor(&id, "car", [x, 0.8, -18.0], Quat::from_rotation_y(0.4 * k as f32), [4.5, 1.6, 1.8], [0.5, 0.5, 0.5], false);
+            app.upsert_actor(&id, "car", [x, 0.8, -18.0], Quat::from_rotation_y(0.4 * k as f32), [4.5, 1.6, 1.8], [0.5, 0.5, 0.5]);
             app.attach_actor_asset(&id, &vehicle, 1.0, Some([0.2, 0.3, 0.6]), None, 0.0).unwrap();
             app.set_actor_asset_pose(&id, [x, 0.0, -18.0], Quat::from_rotation_y(0.4 * k as f32)).unwrap();
         }
-        app.upsert_actor("ped", "pedestrian", [3.0, 0.9, -14.0], Quat::IDENTITY, [0.5, 1.8, 0.5], [0.5, 0.5, 0.5], false);
+        app.upsert_actor("ped", "pedestrian", [3.0, 0.9, -14.0], Quat::IDENTITY, [0.5, 1.8, 0.5], [0.5, 0.5, 0.5]);
         app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("walk"), 0.3).unwrap();
         app.set_actor_asset_pose("ped", [3.0, 0.0, -14.0], Quat::IDENTITY).unwrap();
         let mut known: std::collections::HashSet<u32> = app.legend().iter().map(|entry| entry.id).collect();
@@ -6538,8 +6617,8 @@ mod tests {
         app.add_camera(test_camera("mounted", 96, 64), Profile::Sensor);
         app.add_camera(test_camera("spectator", 96, 64), Profile::Sensor);
         app.wait_until_ready().unwrap();
-        app.upsert_actor("ego", "car", [0.0, 0.0, 0.0], Quat::IDENTITY, [4.5, 1.6, 1.8], [0.9, 0.1, 0.1], false);
-        app.upsert_actor("lead", "car", [0.0, 0.0, -6.0], Quat::IDENTITY, [4.5, 1.6, 1.8], [0.1, 0.1, 0.9], false);
+        app.upsert_actor("ego", "car", [0.0, 0.0, 0.0], Quat::IDENTITY, [4.5, 1.6, 1.8], [0.9, 0.1, 0.1]);
+        app.upsert_actor("lead", "car", [0.0, 0.0, -6.0], Quat::IDENTITY, [4.5, 1.6, 1.8], [0.1, 0.1, 0.9]);
         let pose = ([0.0, 2.5, 8.0], [0.0, 0.5, -3.0]);
         for cam in ["mounted", "spectator"] {
             app.set_pose(cam, &pose.0, &pose.1).unwrap();
