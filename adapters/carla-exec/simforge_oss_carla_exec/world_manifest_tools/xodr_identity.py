@@ -565,6 +565,20 @@ def compare(source: Network, runtime: Network) -> Comparison:
         "onlySource": sum((mapped_controllers - runtime_controllers).values()),
         "onlyRuntime": sum((runtime_controllers - mapped_controllers).values()),
     }
+    # CARLA spawns a traffic-light actor only for a head some controller
+    # drives. A dynamic head no controller owns has no actor to bind, so a
+    # plan that drives it fails loudly in bind_signals; record which ones.
+    controlled = set().union(*runtime.controllers.values()) if runtime.controllers else set()
+    inverse = {v: k for k, v in signal_map.items()}
+    uncontrolled = sorted(sid for sid in runtime.dynamic_signal_ids if sid not in controlled)
+    result.signals["runtimeDynamicWithoutController"] = uncontrolled
+    result.signals["sourceHeadsWithoutCarlaActor"] = sorted(inverse[s] for s in uncontrolled if s in inverse)
+    if uncontrolled:
+        result.differences.append(
+            f"{len(uncontrolled)} dynamic heads have no signal controller (in the world and the source), so CARLA "
+            "spawns no actor for them; a signal plan that drives them fails at bind_signals: "
+            + ", ".join(f"{inverse.get(s, '?')}->{s}" for s in uncontrolled)
+        )
     if result.controllers["onlySource"]:
         result.blocking.append(f"{result.controllers['onlySource']} source signal controllers are not in the world")
     if result.controllers["onlyRuntime"]:

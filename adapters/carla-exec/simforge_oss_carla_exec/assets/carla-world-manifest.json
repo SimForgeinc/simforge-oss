@@ -178,8 +178,10 @@
      "renumbered": 11,
      "runtime": 77,
      "runtimeDynamic": 0,
+     "runtimeDynamicWithoutController": [],
      "source": 81,
      "sourceDynamic": 0,
+     "sourceHeadsWithoutCarlaActor": [],
      "unpairedRuntimeDynamic": [],
      "unpairedRuntimeStatic": 66,
      "unpairedSourceDynamic": [],
@@ -347,8 +349,12 @@
      "renumbered": 88,
      "runtime": 488,
      "runtimeDynamic": 104,
+     "runtimeDynamicWithoutController": [
+      "1571"
+     ],
      "source": 499,
      "sourceDynamic": 98,
+     "sourceHeadsWithoutCarlaActor": [],
      "unpairedRuntimeDynamic": [
       "1389",
       "1390",
@@ -526,6 +532,7 @@
     "junction ids renumbered (14)",
     "signal ids renumbered (88)",
     "static signs differ (335 only in source, 318 only in the world)",
+    "1 dynamic heads have no signal controller (in the world and the source), so CARLA spawns no actor for them; a signal plan that drives them fails at bind_signals: ?->1571",
     "OpenDRIVE objects differ (2733 in source, 3193 in the world); the world renders its own cooked meshes",
     "export date 2026-08-28T11:17:16 vs cooked 2026-06-19T12:25:47"
    ],
@@ -681,8 +688,19 @@
      "renumbered": 12,
      "runtime": 88,
      "runtimeDynamic": 31,
+     "runtimeDynamicWithoutController": [
+      "2250",
+      "2252",
+      "2253",
+      "2271",
+      "2272",
+      "2274",
+      "2276",
+      "2277"
+     ],
      "source": 97,
      "sourceDynamic": 40,
+     "sourceHeadsWithoutCarlaActor": [],
      "unpairedRuntimeDynamic": [
       "2233",
       "2234",
@@ -763,6 +781,7 @@
     "junction ids renumbered (18)",
     "signal ids renumbered (12)",
     "static signs differ (50 only in source, 50 only in the world)",
+    "8 dynamic heads have no signal controller (in the world and the source), so CARLA spawns no actor for them; a signal plan that drives them fails at bind_signals: ?->2250, ?->2252, ?->2253, ?->2271, ?->2272, ?->2274, ?->2276, ?->2277",
     "OpenDRIVE objects differ (1293 in source, 1850 in the world); the world renders its own cooked meshes",
     "export date 2026-08-28T17:41:50 vs cooked 2026-06-19T16:21:53"
    ],
@@ -1010,8 +1029,10 @@
      "renumbered": 13,
      "runtime": 47,
      "runtimeDynamic": 11,
+     "runtimeDynamicWithoutController": [],
      "source": 55,
      "sourceDynamic": 11,
+     "sourceHeadsWithoutCarlaActor": [],
      "unpairedRuntimeDynamic": [
       "423",
       "429",
@@ -1194,8 +1215,20 @@
      "renumbered": 425,
      "runtime": 425,
      "runtimeDynamic": 106,
+     "runtimeDynamicWithoutController": [
+      "20435",
+      "20439",
+      "20451",
+      "20723"
+     ],
      "source": 425,
      "sourceDynamic": 106,
+     "sourceHeadsWithoutCarlaActor": [
+      "20421",
+      "20425",
+      "20437",
+      "20709"
+     ],
      "unpairedRuntimeDynamic": [],
      "unpairedRuntimeStatic": 0,
      "unpairedSourceDynamic": [],
@@ -1209,6 +1242,7 @@
     "2 roads exported in the opposite direction (same reference line and lanes): 19709->19728, 19714->19736",
     "junction ids renumbered (220)",
     "signal ids renumbered (425)",
+    "4 dynamic heads have no signal controller (in the world and the source), so CARLA spawns no actor for them; a signal plan that drives them fails at bind_signals: 20421->20435, 20425->20439, 20437->20451, 20709->20723",
     "OpenDRIVE objects differ (9902 in source, 9902 in the world); the world renders its own cooked meshes",
     "export date 2026-08-28T12:42:44 vs cooked 2026-06-22T14:07:25"
    ],
@@ -1475,8 +1509,14 @@
      "renumbered": 248,
      "runtime": 248,
      "runtimeDynamic": 148,
+     "runtimeDynamicWithoutController": [
+      "5898"
+     ],
      "source": 248,
      "sourceDynamic": 148,
+     "sourceHeadsWithoutCarlaActor": [
+      "5918"
+     ],
      "unpairedRuntimeDynamic": [],
      "unpairedRuntimeStatic": 0,
      "unpairedSourceDynamic": [],
@@ -1489,6 +1529,7 @@
     "road ids renumbered (1354 of 1822)",
     "junction ids renumbered (208)",
     "signal ids renumbered (248)",
+    "1 dynamic heads have no signal controller (in the world and the source), so CARLA spawns no actor for them; a signal plan that drives them fails at bind_signals: 5918->5898",
     "OpenDRIVE objects differ (4964 in source, 4964 in the world); the world renders its own cooked meshes",
     "export date 2026-08-28T12:25:57 vs cooked 2026-06-22T13:23:34"
    ],
@@ -1789,8 +1830,10 @@
      "renumbered": 0,
      "runtime": 762,
      "runtimeDynamic": 471,
+     "runtimeDynamicWithoutController": [],
      "source": 686,
      "sourceDynamic": 0,
+     "sourceHeadsWithoutCarlaActor": [],
      "unpairedRuntimeDynamic": [
       "35370",
       "35371",
@@ -2422,8 +2465,10 @@
      "renumbered": 44,
      "runtime": 54,
      "runtimeDynamic": 0,
+     "runtimeDynamicWithoutController": [],
      "source": 44,
      "sourceDynamic": 0,
+     "sourceHeadsWithoutCarlaActor": [],
      "unpairedRuntimeDynamic": [],
      "unpairedRuntimeStatic": 10,
      "unpairedSourceDynamic": [],
@@ -2587,8 +2632,10 @@
      "renumbered": 25,
      "runtime": 126,
      "runtimeDynamic": 46,
+     "runtimeDynamicWithoutController": [],
      "source": 176,
      "sourceDynamic": 65,
+     "sourceHeadsWithoutCarlaActor": [],
      "unpairedRuntimeDynamic": [
       "1594",
       "1595",
