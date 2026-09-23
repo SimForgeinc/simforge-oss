@@ -12,6 +12,7 @@ import {
 import { PINNED_SUMO_RUNTIME_VERSION, type SumoRuntime } from "@simforge-oss/engine/node";
 
 import { serveLocalMapAsset } from "@/app/lib/cloud/asset-response";
+import { localObjectGetResponse } from "@/app/lib/s3/local-object-response";
 import { queryOne } from "@/app/lib/db/data-api";
 import { SUMO_RUNTIME_BUCKET } from "@/app/lib/s3/s3-config";
 import { getS3ObjectBytes } from "@/app/lib/s3/s3-get-object";
@@ -88,7 +89,18 @@ export function mapMemberFetcher(origin: string, serve = serveLocalMapAsset): ty
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
       if (!location) throw new Error(`map asset redirect without a location: ${url.pathname}`);
-      return fetch(new URL(location, url), { redirect: "follow", signal: AbortSignal.timeout(120_000) });
+      const target = new URL(location, url);
+      // A local host redirects to its own signed object route (a same-origin path); this process
+      // is that host, so the object is served here rather than over a network it has no name for.
+      const local = target.origin === url.origin ? target.pathname.match(/^\/api\/local-objects\/([^/]+)\/(.+)$/) : null;
+      if (local) {
+        return localObjectGetResponse(
+          new Request(target),
+          decodeURIComponent(local[1]!),
+          local[2]!.split("/").map((part) => decodeURIComponent(part)),
+        );
+      }
+      return fetch(target, { redirect: "follow", signal: AbortSignal.timeout(120_000) });
     }
     return response;
   }) as typeof fetch;
