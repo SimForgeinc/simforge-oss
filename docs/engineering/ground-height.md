@@ -98,7 +98,7 @@ exists only for the ingest report.
 | engine (native, WASM, Python) | `engine::contact` on `GroundSurface` every tick | `RunOptions.ground`; `MapAsset.attach_ground` / `MapBundle.attachGround(bytes)`; trace v5 `contact` + `header.groundDigest`; the map closure digest includes the ground |
 | render timeline | copied from the trace, or derived with the same solver for older traces | `ground-contact/v1`, `contactOrigin`; `buildRenderTimeline({ground})`, WASM `RenderTimeline.buildOnGround`, Python `build_timeline(ground_mesh=)` |
 | Bevy | the timeline pose; body attitude on the `body` node, `wheelDropM` on `wheel_*`. An actor with no authored height (xosc-lowered or editor frames) is placed on `GroundSurface` itself (scene X = x, Y = z, Z = -y): off the surface is `native_ground_height_unavailable`, two stacked decks `native_ground_height_ambiguous` | scene spec `groundMesh`; `hello.ground` reports `ground-mesh` + sha256 (the render engine and hifi preview refuse a mismatch) or `legacy-mesh-field`, which is recorded as the `native_ground_legacy_field` warning; the atmosphere anchors on `GroundSurface::median_z` |
-| editor, drive mode | the engine's contact (session snapshots carry `contact`) | map descriptor `ground` (member + ingest status) |
+| editor, drive mode | the engine's contact (session snapshots carry `contact`; the drive's truth frames carry `actors[].contact`) | map descriptor `ground` (member + ingest status); a body with no known height is held back and listed (`placingActorIds`), never drawn at 0 |
 | CARLA | the timeline pose | unchanged path |
 
 Map versions published before the ground derivative keep simulating without
