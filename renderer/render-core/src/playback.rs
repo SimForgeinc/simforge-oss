@@ -859,7 +859,7 @@ fn startup_setup(
         &mut images,
         pb.args.width,
         pb.args.height,
-        TextureFormat::Rgba8UnormSrgb,
+        crate::engine::ID_PASS_FORMAT,
     );
     commands.spawn(PassCopier {
         buffer: readback::make_buffer(&device, rgba_row),
@@ -879,8 +879,7 @@ fn startup_setup(
             far: pb.args.far,
             ..default()
         }),
-        Msaa::Off,
-        Tonemapping::None,
+        crate::engine::id_pass_camera(),
         Transform::from_translation(eye).looking_at(target, Vec3::Y),
         RenderTarget::Image(id_image.into()),
         RenderLayers::layer(1),
@@ -1366,12 +1365,7 @@ fn on_scene_ready(
     });
     for (i, (name, _, _, _, mesh_h, parent, transform)) in entries.into_iter().enumerate() {
         let id = (i + 1) as u32;
-        let bytes = id.to_le_bytes();
-        let mat = materials.add(StandardMaterial {
-            base_color: Color::srgb_u8(bytes[0], bytes[1], bytes[2]),
-            unlit: true,
-            ..default()
-        });
+        let mat = materials.add(crate::engine::instance_id_material(id));
         let mut cmd = commands.spawn((
             IdClone,
             Mesh3d(mesh_h),
@@ -1456,12 +1450,7 @@ fn spawn_actor_if_needed(
         return;
     };
     let instance_id = registry.instance_ids[id];
-    let bytes = instance_id.to_le_bytes();
-    let id_mat = materials.add(StandardMaterial {
-        base_color: Color::srgb_u8(bytes[0], bytes[1], bytes[2]),
-        unlit: true,
-        ..default()
-    });
+    let id_mat = materials.add(crate::engine::instance_id_material(instance_id));
     let mv_handle = mv_materials.add(MotionVectorMaterial {});
     let dims = actor_dims(desc);
     let (l, w, h) = (dims.l as f32, dims.w as f32, dims.h as f32);
