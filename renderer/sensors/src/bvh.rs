@@ -532,6 +532,11 @@ impl Blas {
         self.0.tri_count()
     }
 
+    /// The tree's model-local triangles, in leaf order.
+    pub fn tris(&self) -> &[Tri] {
+        &self.0.tris
+    }
+
     /// Whether two handles share one built tree (cache tests).
     pub fn ptr_eq(&self, other: &Blas) -> bool {
         std::sync::Arc::ptr_eq(&self.0, &other.0)

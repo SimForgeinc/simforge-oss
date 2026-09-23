@@ -11,28 +11,7 @@ use sensors::bvh::{Blas, InstancedScene, Tri};
 use sensors::gpu_rays::{GpuRayScene, Ray};
 
 fn device() -> Option<(wgpu::Device, wgpu::Queue, String)> {
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::VULKAN,
-        ..wgpu::InstanceDescriptor::new_without_display_handle_from_env()
-    });
-    let adapter = bevy::tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::HighPerformance,
-        ..Default::default()
-    }))
-    .ok()?;
-    if !adapter.features().contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY) {
-        return None;
-    }
-    let name = adapter.get_info().name;
-    let (device, queue) = bevy::tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-        label: Some("gpu rays parity"),
-        required_features: wgpu::Features::EXPERIMENTAL_RAY_QUERY,
-        required_limits: wgpu::Limits::default().using_minimum_supported_acceleration_structure_values(),
-        experimental_features: unsafe { wgpu::ExperimentalFeatures::enabled() },
-        ..Default::default()
-    }))
-    .ok()?;
-    Some((device, queue, name))
+    sensors::gpu_rays::headless_device()
 }
 
 /// Deterministic xorshift, so a failure reproduces.

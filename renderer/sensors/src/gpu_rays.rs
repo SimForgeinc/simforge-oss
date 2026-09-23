@@ -81,6 +81,35 @@ pub struct GpuRayScene {
     pub envelope_triangles: usize,
 }
 
+/// A headless Vulkan device with hardware ray queries, for tests and tools
+/// (`None` when the machine has none). The service uses Bevy's device.
+pub fn headless_device() -> Option<(wgpu::Device, wgpu::Queue, String)> {
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::VULKAN,
+        ..wgpu::InstanceDescriptor::new_without_display_handle_from_env()
+    });
+    let adapter = bevy::tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+        power_preference: wgpu::PowerPreference::HighPerformance,
+        ..Default::default()
+    }))
+    .ok()?;
+    if !adapter.features().contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY) {
+        return None;
+    }
+    let name = adapter.get_info().name;
+    let (device, queue) = bevy::tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+        label: Some("gpu rays headless"),
+        required_features: wgpu::Features::EXPERIMENTAL_RAY_QUERY,
+        required_limits: wgpu::Limits::default().using_minimum_supported_acceleration_structure_values(),
+        // SAFETY: ray queries are an experimental wgpu feature; this device
+        // only runs the ray pipeline of this module.
+        experimental_features: unsafe { wgpu::ExperimentalFeatures::enabled() },
+        ..Default::default()
+    }))
+    .ok()?;
+    Some((device, queue, name))
+}
+
 /// Whether `device` can run [`GpuRayScene`].
 pub fn supported(device: &wgpu::Device) -> bool {
     device.features().contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY)

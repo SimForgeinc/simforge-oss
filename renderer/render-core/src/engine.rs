@@ -1722,6 +1722,18 @@ pub struct ActorSensorMesh {
     pub geometry: ActorSensorGeometry,
 }
 
+/// One static map mesh as the lidar/radar scene instances it (see
+/// [`SceneApp::static_sensor_meshes`]).
+#[derive(Clone, Debug)]
+pub struct StaticSensorMesh {
+    pub mesh: Handle<Mesh>,
+    pub world: Mat4,
+    pub instance_id: u32,
+    /// Asset label of the mesh (`<gltf>#Mesh<N>/Primitive<M>`), or its
+    /// entity name for generated meshes; errors and ordering use it.
+    pub label: String,
+}
+
 #[derive(Clone, Debug)]
 pub enum ActorSensorGeometry {
     /// A rigid mesh: model-local triangles (see
@@ -4238,6 +4250,54 @@ impl SceneApp {
         self.actors.get(actor_id).map(|(_, instance_id)| *instance_id)
     }
 
+    /// The static map geometry as instances of mesh assets: every
+    /// instance-ID'd mesh that is not a dynamic actor, with the world matrix
+    /// the cameras draw it with. The static layer of the lidar/radar scene
+    /// is built from this (one tree per mesh asset, 2.2M unique triangles on
+    /// Belmont instead of 266M world-space copies).
+    ///
+    /// Order is deterministic and part of the sensor contract (it is the
+    /// last tie-break between coincident instances): by instance id, then
+    /// the mesh's asset label, then the world matrix bits. Every mesh must
+    /// have main-world data; a missing one is an error naming it.
+    pub fn static_sensor_meshes(&mut self) -> Result<Vec<StaticSensorMesh>> {
+        let world = self.app.world_mut();
+        let mut query = world.query_filtered::<
+            (&Mesh3d, &GlobalTransform, &InstanceId, Option<&Name>),
+            Without<IdClone>,
+        >();
+        let meshes = world.resource::<Assets<Mesh>>();
+        let mut out = Vec::new();
+        for (mesh3d, transform, instance_id, name) in query.iter(world) {
+            if name.is_some_and(|name| name.as_str().starts_with("actor:")) {
+                continue;
+            }
+            let label = match mesh3d.0.path() {
+                Some(path) => path.to_string(),
+                None => format!("{}#{:?}", name.map(|name| name.as_str()).unwrap_or("unnamed static mesh"), mesh3d.0.id()),
+            };
+            if meshes.get(&mesh3d.0).is_none() {
+                bail!(
+                    "static mesh {label} (instance {}) has no main-world mesh data for the lidar/radar scene",
+                    instance_id.0
+                );
+            }
+            out.push(StaticSensorMesh {
+                mesh: mesh3d.0.clone(),
+                world: transform.to_matrix(),
+                instance_id: instance_id.0,
+                label,
+            });
+        }
+        out.sort_by(|a, b| {
+            a.instance_id
+                .cmp(&b.instance_id)
+                .then_with(|| a.label.cmp(&b.label))
+                .then_with(|| a.world.to_cols_array().map(f32::to_bits).cmp(&b.world.to_cols_array().map(f32::to_bits)))
+        });
+        Ok(out)
+    }
+
     /// Snapshot the static map geometry (every instance-ID'd mesh that is not
     /// a dynamic actor) as world-space triangles.
     ///
@@ -4280,7 +4340,7 @@ impl SceneApp {
     pub fn mesh_asset_triangles(&self, mesh: &Handle<Mesh>, label: &str) -> Result<Vec<[Vec3; 3]>> {
         let meshes = self.app.world().resource::<Assets<Mesh>>();
         let data = meshes.get(mesh).ok_or_else(|| anyhow::anyhow!(
-            "actor mesh {label} has no main-world mesh data for the lidar/radar scene"
+            "mesh {label} has no main-world mesh data for the lidar/radar scene"
         ))?;
         mesh_local_triangles(data, label)
     }

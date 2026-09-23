@@ -703,6 +703,8 @@ pub struct BundleStages {
     pub radar_ms: f64,
     /// Lidar/radar scans ran on the ray pool while the GPU rendered.
     pub sensors_overlapped: bool,
+    /// Lidar beams were traced on the RT cores (`lidarBackend`).
+    pub lidar_gpu: bool,
     /// Time publication waited for the tick's scans to finish.
     pub sensor_wait_ms: f64,
     /// Ring publication of lidar/radar payloads and the bundle table.

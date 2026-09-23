@@ -92,9 +92,24 @@ pub struct SceneSpec {
     /// to the union of the rig's frusta, so every view stays covered.
     #[serde(default)]
     pub shared_shadows: bool,
+    /// `auto` (default: hardware rays when the device has them), `gpu`,
+    /// `cpu` or `verify` (hardware rays re-checked against the CPU every
+    /// scan). Every backend produces the same bytes; see [`LidarBackend`].
+    #[serde(default)]
+    pub lidar_backend: Option<String>,
 }
 
 impl SceneSpec {
+    pub fn lidar_backend(&self) -> Result<LidarBackend> {
+        match self.lidar_backend.as_deref() {
+            None | Some("auto") => Ok(LidarBackend::Auto),
+            Some("gpu") => Ok(LidarBackend::Gpu),
+            Some("cpu") => Ok(LidarBackend::Cpu),
+            Some("verify") => Ok(LidarBackend::Verify),
+            Some(other) => anyhow::bail!("[native_lidar_backend_invalid] lidarBackend {other:?} (auto | gpu | cpu | verify)"),
+        }
+    }
+
     pub fn capture_clock(&self) -> Result<render_core::engine::CaptureClock> {
         match self.capture_clock.as_deref() {
             None | Some("free") => Ok(render_core::engine::CaptureClock::Free),
@@ -235,185 +250,106 @@ fn build_sensor_scene(triangles: Vec<SensorTriangle>) -> RaycastScene {
     scene
 }
 
-/// The static map's raycast scenes: every map triangle (lidar/radar) and
-/// the road surface (episode footprint checks). Built on first use, never at
-/// startup: an RGB-only render must not pay for them, and on a large map on a
-/// slow CPU the build alone outlasted the worker's readiness budget.
+/// The static map's ray scenes, built on first use, never at startup (an
+/// RGB-only render must not pay for them).
+///
+/// The static layer is instanced: one tree per mesh asset and one instance
+/// per mesh node (Belmont: 2.2M unique triangles, 4.9k instances, built in
+/// about a second), where a flat world-space soup was 266M triangles, a
+/// minute to build and ~15 GB. It is the lidar/radar reference; the
+/// hardware-ray backend traces a device copy of exactly this scene and
+/// returns bit-identical hits (`sensors::gpu_rays`).
 pub(crate) struct MapSensorScenes {
-    pub(crate) static_scene: RaycastScene,
+    pub(crate) static_scene: InstancedScene,
+    /// The road surface only, world-space (episode footprint checks).
     pub(crate) road: RaycastScene,
+    /// Hardware-ray copy of `static_scene` for lidar, when enabled.
+    pub(crate) gpu: Option<sensors::gpu_rays::GpuRayScene>,
 }
 
-/// Build both map scenes in parallel from one triangle snapshot.
-pub(crate) fn build_map_sensor_scenes(
-    triangles: Vec<SensorTriangle>,
-    legend: &HashMap<u32, String>,
-) -> MapSensorScenes {
-    let road_triangles: Vec<SensorTriangle> = triangles
-        .iter()
-        .filter(|tri| {
-            legend.get(&tri.instance_id).is_some_and(|name| {
-                sensors::taxonomy::SemanticClass::from_mesh_name(name)
-                    == sensors::taxonomy::SemanticClass::Road
-            })
-        })
-        .copied()
-        .collect();
+/// Static map geometry as mesh trees and their placements.
+pub(crate) struct StaticSensorInput {
+    pub(crate) blases: Vec<Blas>,
+    /// `(tree, world, instance id)` in the deterministic static order
+    /// (`SceneApp::static_sensor_meshes`): the insertion order is the last
+    /// tie-break between coincident instances.
+    pub(crate) instances: Vec<(usize, bevy::math::Mat4, u32)>,
+}
+
+/// Build the static and road scenes from the static input.
+pub(crate) fn build_map_sensor_scenes(input: &StaticSensorInput, legend: &HashMap<u32, String>) -> MapSensorScenes {
+    let mut static_scene = InstancedScene::new();
+    let slots: Vec<usize> = input.blases.iter().map(|blas| static_scene.add_blas(blas)).collect();
+    let mut road = RaycastScene::new();
+    for (blas, world, instance_id) in &input.instances {
+        static_scene.add_instance(slots[*blas], *world, *instance_id);
+        let is_road = legend.get(instance_id).is_some_and(|name| {
+            sensors::taxonomy::SemanticClass::from_mesh_name(name) == sensors::taxonomy::SemanticClass::Road
+        });
+        if is_road {
+            for tri in input.blases[*blas].tris() {
+                road.push_tri(Tri {
+                    a: world.transform_point3(tri.a),
+                    b: world.transform_point3(tri.b),
+                    c: world.transform_point3(tri.c),
+                    instance_id: *instance_id,
+                });
+            }
+        }
+    }
     std::thread::scope(|scope| {
-        let road = scope.spawn(|| build_sensor_scene(road_triangles));
-        let static_scene = build_sensor_scene(triangles);
-        MapSensorScenes {
-            static_scene,
-            road: road.join().expect("road sensor scene build panicked"),
-        }
-    })
-}
-
-/// Format/algorithm tag of the sensor-scene cache key: bump with any change
-/// to how the map scenes are derived from the triangle snapshot.
-const SENSOR_SCENE_CACHE_VERSION: &str = "simforge.sensor-scenes/v1";
-/// Maps whose scenes stay cached; older entries are pruned by mtime.
-const SENSOR_SCENE_CACHE_KEEP: usize = 3;
-
-/// Content key of the map scenes: the exact triangle snapshot (bit
-/// patterns and instance ids, in snapshot order) and which instances are road.
-fn sensor_scene_cache_key(triangles: &[SensorTriangle], legend: &HashMap<u32, String>) -> String {
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(SENSOR_SCENE_CACHE_VERSION.as_bytes());
-    hasher.update((triangles.len() as u64).to_le_bytes());
-    let mut chunk = Vec::with_capacity(40 * 16_384);
-    for part in triangles.chunks(16_384) {
-        chunk.clear();
-        for tri in part {
-            for c in tri.a.iter().chain(&tri.b).chain(&tri.c) {
-                chunk.extend_from_slice(&c.to_bits().to_le_bytes());
-            }
-            chunk.extend_from_slice(&tri.instance_id.to_le_bytes());
-        }
-        hasher.update(&chunk);
-    }
-    let mut roads: Vec<u32> = legend
-        .iter()
-        .filter(|(_, name)| sensors::taxonomy::SemanticClass::from_mesh_name(name) == sensors::taxonomy::SemanticClass::Road)
-        .map(|(id, _)| *id)
-        .collect();
-    roads.sort_unstable();
-    hasher.update((roads.len() as u64).to_le_bytes());
-    for id in roads {
-        hasher.update(id.to_le_bytes());
-    }
-    format!("{:x}", hasher.finalize())
-}
-
-fn read_cached_scene(path: &Path) -> std::io::Result<RaycastScene> {
-    let file = std::fs::File::open(path)?;
-    RaycastScene::read_from(&mut std::io::BufReader::with_capacity(8 << 20, file))
-}
-
-fn load_cached_sensor_scenes(dir: &Path, key: &str) -> Option<MapSensorScenes> {
-    let static_path = dir.join(format!("{key}.static.bvh"));
-    let road_path = dir.join(format!("{key}.road.bvh"));
-    if !static_path.is_file() || !road_path.is_file() {
-        return None;
-    }
-    let loaded = std::thread::scope(|scope| {
-        let road = scope.spawn(|| read_cached_scene(&road_path));
-        let static_scene = read_cached_scene(&static_path);
-        (static_scene, road.join().expect("road scene load panicked"))
+        scope.spawn(|| road.build());
+        static_scene.build();
     });
-    match loaded {
-        (Ok(static_scene), Ok(road)) => {
-            // Touch for the keep-newest pruning.
-            let now = std::time::SystemTime::now();
-            for path in [&static_path, &road_path] {
-                let _ = std::fs::File::options().append(true).open(path).and_then(|file| file.set_modified(now)); // fallback-ok: sensor-scene cache LRU touch; a cache is an optimisation, bytes are identical
+    MapSensorScenes { static_scene, road, gpu: None }
+}
+
+/// Snapshot the static map as mesh trees: one tree per mesh asset, built in
+/// parallel. A mesh the snapshot cannot read fails, naming it.
+pub(crate) fn static_sensor_input(app: &mut SceneApp) -> Result<StaticSensorInput, String> {
+    let meshes = app.static_sensor_meshes().map_err(|error| format!("static sensor geometry: {error:#}"))?;
+    let mut slot_of: HashMap<bevy::asset::AssetId<bevy::prelude::Mesh>, usize> = HashMap::new();
+    let mut triangles: Vec<Vec<[Vec3; 3]>> = Vec::new();
+    let mut instances = Vec::with_capacity(meshes.len());
+    for mesh in &meshes {
+        let slot = match slot_of.get(&mesh.mesh.id()) {
+            Some(slot) => *slot,
+            None => {
+                let tris = app
+                    .mesh_asset_triangles(&mesh.mesh, &mesh.label)
+                    .map_err(|error| format!("static sensor geometry: {error:#}"))?;
+                triangles.push(tris);
+                slot_of.insert(mesh.mesh.id(), triangles.len() - 1);
+                triangles.len() - 1
             }
-            Some(MapSensorScenes { static_scene, road })
-        }
-        (static_scene, road) => {
-            eprintln!(
-                "sensor-scenes: cache entry {key} unreadable ({:?} / {:?}); rebuilding",
-                static_scene.err(),
-                road.err()
-            );
-            None
-        }
+        };
+        instances.push((slot, mesh.world, mesh.instance_id));
     }
-}
-
-/// Free bytes on the filesystem holding `dir` (unknown: `None`).
-fn free_bytes(dir: &Path) -> Option<u64> {
-    #[cfg(unix)]
-    {
-        use std::os::unix::ffi::OsStrExt;
-        let path = std::ffi::CString::new(dir.as_os_str().as_bytes()).ok()?; // fallback-ok: free-space probe for the optional sensor-scene cache
-        let mut stat: libc::statvfs = unsafe { std::mem::zeroed() };
-        if unsafe { libc::statvfs(path.as_ptr(), &mut stat) } != 0 {
-            return None;
+    // Largest meshes first so the parallel build finishes evenly.
+    let threads = std::thread::available_parallelism().map_or(4, |n| n.get()).min(16); // fallback-ok: thread count only, not output
+    let mut order: Vec<usize> = (0..triangles.len()).collect();
+    order.sort_by_key(|&i| std::cmp::Reverse(triangles[i].len()));
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let built: Vec<std::sync::Mutex<Option<Blas>>> = (0..triangles.len()).map(|_| std::sync::Mutex::new(None)).collect();
+    std::thread::scope(|scope| {
+        for _ in 0..threads {
+            scope.spawn(|| loop {
+                let k = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                let Some(&index) = order.get(k) else { break };
+                let blas = Blas::build(triangles[index].iter().copied().map(to_tri));
+                *built[index].lock().expect("static tree slot") = Some(blas);
+            });
         }
-        Some(stat.f_bavail as u64 * stat.f_frsize as u64)
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = dir; // fallback-ok: unused on this platform
-        None
-    }
-}
-
-/// Keep this much of the cache filesystem free after a write.
-const SENSOR_SCENE_CACHE_HEADROOM_BYTES: u64 = 20 << 30;
-
-/// Write both scenes atomically (temp + rename), then prune old maps.
-/// Skips (returns `false`) when the write would leave the filesystem with
-/// less than [`SENSOR_SCENE_CACHE_HEADROOM_BYTES`] free.
-fn store_cached_sensor_scenes(dir: &Path, key: &str, scenes: &MapSensorScenes) -> std::io::Result<bool> {
-    std::fs::create_dir_all(dir)?;
-    let needed = 48 + (scenes.static_scene.triangle_count() + scenes.road.triangle_count()) as u64 * 60;
-    if let Some(free) = free_bytes(dir) {
-        if free < needed + SENSOR_SCENE_CACHE_HEADROOM_BYTES {
-            eprintln!(
-                "sensor-scenes: not caching {key}: {:.1} GB needed, {:.1} GB free (keeping {} GB headroom)",
-                needed as f64 / 1e9,
-                free as f64 / 1e9,
-                SENSOR_SCENE_CACHE_HEADROOM_BYTES >> 30
-            );
-            return Ok(false);
-        }
-    }
-    for (suffix, scene) in [("road", &scenes.road), ("static", &scenes.static_scene)] {
-        let path = dir.join(format!("{key}.{suffix}.bvh"));
-        let tmp = dir.join(format!("{key}.{suffix}.bvh.{}.tmp", std::process::id()));
-        let written = (|| {
-            let mut out = std::io::BufWriter::with_capacity(8 << 20, std::fs::File::create(&tmp)?);
-            scene.write_to(&mut out)?;
-            std::io::Write::flush(&mut out)?;
-            std::fs::rename(&tmp, &path)
-        })();
-        if let Err(error) = written {
-            let _ = std::fs::remove_file(&tmp); // fallback-ok: cache temp cleanup after a failed write (the error is returned)
-            return Err(error);
-        }
-    }
-    let mut entries: Vec<(std::time::SystemTime, String)> = std::fs::read_dir(dir)?
-        .filter_map(|entry| entry.ok()) // fallback-ok: cache pruning scan; unreadable entries are simply not pruned
-        .filter_map(|entry| {
-            let name = entry.file_name().into_string().ok()?; // fallback-ok: cache pruning scan
-            let key = name.strip_suffix(".static.bvh")?.to_string();
-            Some((entry.metadata().ok()?.modified().ok()?, key)) // fallback-ok: cache pruning scan
-        })
+    });
+    let blases = built
+        .into_iter()
+        .map(|slot| slot.into_inner().expect("static tree slot").expect("every static tree built"))
         .collect();
-    entries.sort_by(|a, b| b.0.cmp(&a.0));
-    for (_, stale) in entries.into_iter().skip(SENSOR_SCENE_CACHE_KEEP) {
-        for suffix in ["static", "road"] {
-            let _ = std::fs::remove_file(dir.join(format!("{stale}.{suffix}.bvh"))); // fallback-ok: cache pruning; failure leaves an extra cache entry
-        }
-    }
-    Ok(true)
+    Ok(StaticSensorInput { blases, instances })
 }
 
 struct CombinedSensorScene<'a> {
-    static_scene: &'a dyn Raycast,
+    static_scene: &'a InstancedScene,
     actor_scene: &'a dyn Raycast,
 }
 
@@ -571,6 +507,8 @@ pub struct ServiceState {
     /// Run a tick's lidar/radar scans while the GPU renders it (on by
     /// default; outputs are verified bit-identical to the serial path).
     pub overlap_sensors: bool,
+    /// Lidar tracing engine (see [`SceneSpec::lidar_backend`]).
+    pub lidar_backend: LidarBackend,
     vehicle_models: Option<VehicleModelCatalog>,
     pedestrian_models: Option<VehicleModelCatalog>,
     actor_model_refs: HashMap<String, PathBuf>,
@@ -587,11 +525,31 @@ pub struct ServiceState {
 
 /// What [`ServiceState::ensure_sensor_scenes_outcome`] did.
 pub struct SensorScenesOutcome {
-    /// Content key of the map scenes (`None` without a cache directory).
+    /// Content key of a cached scene (the static layer is no longer cached).
     pub key: Option<String>,
-    /// Loaded from the cache instead of built.
+    /// Already built before this call.
     pub loaded: bool,
+    /// Logical (instanced) static triangles.
     pub triangles: usize,
+    /// Unique static triangles (the trees' storage).
+    pub unique_triangles: usize,
+    /// The hardware-ray backend is on.
+    pub gpu: bool,
+}
+
+/// Which engine traces lidar beams against the static map
+/// (`SceneSpec::lidar_backend`). All produce the same bytes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LidarBackend {
+    /// Hardware rays when the device supports them, else the CPU trees.
+    Auto,
+    /// Hardware rays; a device without them fails the request.
+    Gpu,
+    /// The CPU reference trees.
+    Cpu,
+    /// Hardware rays, each scan re-traced on the CPU and compared bit for
+    /// bit (a mismatch fails the bundle). Diagnostics and CI.
+    Verify,
 }
 
 impl ServiceState {
@@ -604,86 +562,70 @@ impl ServiceState {
         Ok(())
     }
 
-    /// [`Self::ensure_sensor_scenes`], reporting whether the cache served it.
-    /// A static mesh the snapshot cannot read fails the request.
+    /// [`Self::ensure_sensor_scenes`], reporting what was built.
+    /// A static mesh the snapshot cannot read fails the request, and so
+    /// does a requested hardware backend the device cannot run.
     pub fn ensure_sensor_scenes_outcome(&mut self) -> Result<SensorScenesOutcome, String> {
         if let Some(scenes) = &self.sensor_scenes {
-            return Ok(SensorScenesOutcome { key: None, loaded: true, triangles: scenes.static_scene.triangle_count() });
+            return Ok(SensorScenesOutcome {
+                key: None,
+                loaded: true,
+                triangles: scenes.static_scene.tri_count(),
+                unique_triangles: scenes.static_scene.unique_tri_count(),
+                gpu: scenes.gpu.is_some(),
+            });
         }
         let started = std::time::Instant::now();
-        let triangles = self
-            .app
-            .static_sensor_triangles()
-            .map_err(|error| format!("static sensor geometry: {error:#}"))?;
-        eprintln!(
-            "sensor-scenes: building static + road BVHs over {} map triangles (first lidar/radar/episode request)",
-            triangles.len()
-        );
+        let input = static_sensor_input(&mut self.app)?;
         let snapshot_s = started.elapsed().as_secs_f64();
-        let cache = self.sensor_cache_dir.clone().map(|dir| {
-            let key = sensor_scene_cache_key(&triangles, &self.legend);
-            (dir, key)
-        });
-        let triangle_count = triangles.len();
-        if let Some((dir, key)) = &cache {
-            if let Some(scenes) = load_cached_sensor_scenes(dir, key) {
-                self.sensor_scenes = Some(std::sync::Arc::new(scenes));
-                eprintln!(
-                    "sensor-scenes: loaded cached {key} in {:.1} s (triangle snapshot {snapshot_s:.1} s)",
-                    started.elapsed().as_secs_f64()
-                );
-                return Ok(SensorScenesOutcome { key: Some(key.clone()), loaded: true, triangles: triangle_count });
+        let mut scenes = build_map_sensor_scenes(&input, &self.legend);
+        drop(input);
+        let built_s = started.elapsed().as_secs_f64();
+        let use_gpu = match self.lidar_backend {
+            LidarBackend::Cpu => false,
+            LidarBackend::Gpu | LidarBackend::Verify => true,
+            LidarBackend::Auto => self.gpu_ray_device().is_some_and(|(device, _)| sensors::gpu_rays::supported(&device)),
+        };
+        if use_gpu {
+            let (device, queue) = self
+                .gpu_ray_device()
+                .ok_or_else(|| "[native_lidar_gpu_unavailable] no render device for hardware rays".to_string())?;
+            if !sensors::gpu_rays::supported(&device) {
+                return Err("[native_lidar_gpu_unavailable] lidarBackend requires hardware ray queries this device lacks".into());
             }
+            let gpu = sensors::gpu_rays::GpuRayScene::new(&scenes.static_scene, device, queue)
+                .map_err(|error| format!("[native_lidar_gpu_build] {error:#}"))?;
+            scenes.gpu = Some(gpu);
         }
-        // A heartbeat while the BVHs build, so a watcher of the service log
-        // sees progress instead of a silent minute on a large map.
-        let done = std::sync::atomic::AtomicBool::new(false);
-        let legend = &self.legend;
-        let scenes = std::thread::scope(|scope| {
-            scope.spawn(|| {
-                let mut last = std::time::Instant::now();
-                while !done.load(std::sync::atomic::Ordering::Relaxed) {
-                    std::thread::sleep(std::time::Duration::from_millis(200));
-                    if last.elapsed() >= std::time::Duration::from_secs(10) {
-                        last = std::time::Instant::now();
-                        eprintln!(
-                            "sensor-scenes: still building ({:.0} s)",
-                            started.elapsed().as_secs_f64()
-                        );
-                    }
-                }
-            });
-            let scenes = build_map_sensor_scenes(triangles, legend);
-            done.store(true, std::sync::atomic::Ordering::Relaxed);
-            scenes
-        });
         eprintln!(
-            "sensor-scenes: built in {:.1} s (triangle snapshot {:.1} s)",
-            started.elapsed().as_secs_f64(),
-            snapshot_s
+            "sensor-scenes: static {} instances / {} unique of {} logical triangles; snapshot {snapshot_s:.1} s, trees {:.1} s, hardware rays {} ({:.1} s)",
+            scenes.static_scene.instance_count(),
+            scenes.static_scene.unique_tri_count(),
+            scenes.static_scene.tri_count(),
+            built_s - snapshot_s,
+            if scenes.gpu.is_some() { "on" } else { "off" },
+            started.elapsed().as_secs_f64() - built_s,
         );
-        let scenes = std::sync::Arc::new(scenes);
-        if let Some((dir, key)) = &cache {
-            // Writing a large map's trees takes a while: a render keeps
-            // rendering while it lands (temp + rename, so readers never see
-            // a partial entry); the one-shot build mode waits for it.
-            let (dir, key, shared) = (dir.clone(), key.clone(), scenes.clone());
-            let write = move || {
-                let stored = std::time::Instant::now();
-                match store_cached_sensor_scenes(&dir, &key, &shared) {
-                    Ok(true) => eprintln!("sensor-scenes: cached {key} in {:.1} s", stored.elapsed().as_secs_f64()),
-                    Ok(false) => {}
-                    Err(error) => eprintln!("sensor-scenes: could not cache {key}: {error}"),
-                }
-            };
-            if self.sync_sensor_cache_writes {
-                write();
-            } else {
-                std::thread::Builder::new().name("sensor-cache-write".into()).spawn(write).ok(); // fallback-ok: background cache write; a failure only loses the optimisation
-            }
+        if self.sensor_cache_dir.is_some() {
+            eprintln!("sensor-scenes: sensorCacheDir is not used any more (the instanced static scene builds in seconds)");
         }
-        self.sensor_scenes = Some(scenes);
-        Ok(SensorScenesOutcome { key: cache.map(|(_, key)| key), loaded: false, triangles: triangle_count })
+        let outcome = SensorScenesOutcome {
+            key: None,
+            loaded: false,
+            triangles: scenes.static_scene.tri_count(),
+            unique_triangles: scenes.static_scene.unique_tri_count(),
+            gpu: scenes.gpu.is_some(),
+        };
+        self.sensor_scenes = Some(std::sync::Arc::new(scenes));
+        Ok(outcome)
+    }
+
+    /// The render device and queue, for the hardware-ray backend.
+    fn gpu_ray_device(&mut self) -> Option<(wgpu::Device, wgpu::Queue)> {
+        let world = self.app.world_mut();
+        let device = world.get_resource::<bevy::render::renderer::RenderDevice>()?.wgpu_device().clone();
+        let queue: wgpu::Queue = (****world.get_resource::<bevy::render::renderer::RenderQueue>()?).clone();
+        Some((device, queue))
     }
 
     /// Classes of the frozen static legend, resolved once: the legend never
@@ -768,6 +710,7 @@ impl ServiceState {
                 .clone()
                 .or_else(|| std::env::var("SIMFORGE_NATIVE_SENSOR_CACHE_DIR").ok().filter(|dir| !dir.is_empty())) // fallback-ok: optional cache location from the environment
                 .map(PathBuf::from),
+            lidar_backend: spec.lidar_backend()?,
             overlap_sensors: std::env::var("SIMFORGE_NATIVE_SERIAL_SENSORS").map_or(true, |value| value.is_empty() || value == "0"),
             vehicle_models,
             pedestrian_models,
@@ -2470,16 +2413,17 @@ pub(crate) fn begin_bundle(state: &mut ServiceState, request: BundleRequest) -> 
         stages.sensor_setup_ms = ms(mark);
         sensor_to_policy = work.sensor_to_policy.clone();
         let scenes = state.sensor_scenes.clone().expect("sensor scenes built");
+        let backend = state.lidar_backend;
         if state.overlap_sensors {
             stages.sensors_overlapped = true;
             scan = Some(
                 std::thread::Builder::new()
                     .name("sensor-scan".into())
-                    .spawn(move || run_sensor_work(&scenes.static_scene, &work))
+                    .spawn(move || run_sensor_work(&scenes, &work, backend))
                     .map_err(|error| WireResponse::error(i, format!("spawn sensor scan: {error}")))?,
             );
         } else {
-            let result = run_sensor_work(&scenes.static_scene, &work);
+            let result = run_sensor_work(&scenes, &work, backend);
             scan = Some(std::thread::spawn(move || result));
         }
     }
@@ -2551,6 +2495,10 @@ pub(crate) fn finish_bundle(state: &mut ServiceState, flight: BundleInFlight) ->
             Err(_) => return WireResponse::error(i, "sensor scan thread panicked"),
         };
         stages.sensor_wait_ms = ms(mark);
+        if let Some(error) = result.error {
+            return WireResponse::error(i, error);
+        }
+        stages.lidar_gpu = result.lidar_gpu;
         if !result.unknown_instances.is_empty() {
             return WireResponse::error(i, format!(
                 "[native_sensor_instance_unknown] lidar/radar hit instance id(s) {:?} that are neither static meshes nor live actors",
@@ -2675,6 +2623,11 @@ struct SensorResult {
     /// Hit instance ids that are neither static legend entries nor live
     /// actors (must be empty: the finish step fails the bundle otherwise).
     unknown_instances: Vec<u32>,
+    /// A scan that could not run (hardware-ray failure or a verify-mode
+    /// mismatch): fails the bundle.
+    error: Option<String>,
+    /// Lidar beams traced on the RT cores.
+    lidar_gpu: bool,
     actor_scene_ms: f64,
     lidar_ms: f64,
     radar_ms: f64,
@@ -2749,12 +2702,44 @@ fn prepare_sensor_work(
     Ok(SensorWork { actors, static_classes, actor_classes, instance_velocities, lidars, radars, sensor_to_policy })
 }
 
+/// One lidar scan with the static layer traced on the RT cores and the
+/// actor layer on the CPU, merged by the same rule as
+/// [`CombinedSensorScene`] (an actor wins only strictly nearer; its search
+/// stops at the static hit). Byte-identical to the CPU scan.
+fn gpu_lidar_scan(
+    gpu: &sensors::gpu_rays::GpuRayScene,
+    combined: &CombinedSensorScene<'_>,
+    config: &sensors::lidar::LidarConfig,
+    origin: Vec3,
+    rotation: Quat,
+    instance_class: &(dyn Fn(u32) -> sensors::taxonomy::SemanticClass + Sync),
+) -> Result<Vec<sensors::lidar::LidarPoint>, String> {
+    let (frame, dirs) = sensors::lidar::beams(config, origin, rotation);
+    let rays: Vec<sensors::gpu_rays::Ray> =
+        dirs.iter().map(|dir| sensors::gpu_rays::Ray { origin, dir: *dir, t_max: config.range_m }).collect();
+    let statics = gpu
+        .cast_hits(combined.static_scene, &rays)
+        .map_err(|error| format!("[native_lidar_gpu_trace] {error:#}"))?;
+    let hits: Vec<Option<Hit>> = dirs
+        .iter()
+        .zip(statics)
+        .map(|(dir, static_hit)| {
+            let reach = static_hit.map_or(config.range_m, |hit| hit.distance);
+            match combined.actor_scene.cast(origin, *dir, reach) {
+                Some(actor_hit) if static_hit.is_none_or(|hit| actor_hit.distance < hit.distance) => Some(actor_hit),
+                _ => static_hit,
+            }
+        })
+        .collect();
+    Ok(sensors::lidar::points_from_hits(frame, &dirs, &hits, instance_class))
+}
+
 /// Build the actor scene and run every scan of `work` (pure; any thread).
-fn run_sensor_work(static_scene: &RaycastScene, work: &SensorWork) -> SensorResult {
+fn run_sensor_work(scenes: &MapSensorScenes, work: &SensorWork, backend: LidarBackend) -> SensorResult {
     let started = std::time::Instant::now();
     let actor_scene = build_actor_sensor_scene(&work.actors);
     let actor_scene_ms = started.elapsed().as_secs_f64() * 1000.0;
-    let combined_scene = CombinedSensorScene { static_scene, actor_scene: &actor_scene };
+    let combined_scene = CombinedSensorScene { static_scene: &scenes.static_scene, actor_scene: &actor_scene };
     // Every hit resolves to a static legend class or a live actor; an id
     // that resolves to neither is recorded and fails the bundle rather than
     // being labelled a prop.
@@ -2769,9 +2754,34 @@ fn run_sensor_work(static_scene: &RaycastScene, work: &SensorWork) -> SensorResu
         }
     };
     let mut payloads = Vec::with_capacity(work.lidars.len() + work.radars.len());
+    let mut error = None;
+    let lidar_gpu = scenes.gpu.is_some() && backend != LidarBackend::Cpu;
     let started = std::time::Instant::now();
     for job in &work.lidars {
-        let points = sensors::lidar::scan(&combined_scene, &job.config, job.origin, job.rotation, &instance_class);
+        let points = match (&scenes.gpu, lidar_gpu) {
+            (Some(gpu), true) => match gpu_lidar_scan(gpu, &combined_scene, &job.config, job.origin, job.rotation, &instance_class) {
+                Ok(points) => {
+                    if backend == LidarBackend::Verify {
+                        let reference = sensors::lidar::scan(&combined_scene, &job.config, job.origin, job.rotation, &instance_class);
+                        let bytes = |points: &[sensors::lidar::LidarPoint]| sensors::formats::encode_lidar_ply_binary(points);
+                        if bytes(&points) != bytes(&reference) {
+                            error = Some(format!(
+                                "[native_lidar_gpu_parity] lidar {}: hardware rays ({} points) differ from the CPU reference ({} points)",
+                                job.sensor_id,
+                                points.len(),
+                                reference.len()
+                            ));
+                        }
+                    }
+                    points
+                }
+                Err(message) => {
+                    error = Some(message);
+                    Vec::new()
+                }
+            },
+            _ => sensors::lidar::scan(&combined_scene, &job.config, job.origin, job.rotation, &instance_class),
+        };
         payloads.push(SensorPayload {
             sensor_id: job.sensor_id.clone(),
             pass: "lidar",
@@ -2815,7 +2825,7 @@ fn run_sensor_work(static_scene: &RaycastScene, work: &SensorWork) -> SensorResu
     }
     let radar_ms = started.elapsed().as_secs_f64() * 1000.0;
     let unknown_instances = unknown.into_inner().expect("unknown-instance set").into_iter().collect();
-    SensorResult { payloads, unknown_instances, actor_scene_ms, lidar_ms, radar_ms }
+    SensorResult { payloads, unknown_instances, error, lidar_gpu, actor_scene_ms, lidar_ms, radar_ms }
 }
 
 /// PNG demotion: encoding happens off the critical path after the response.
@@ -2861,6 +2871,27 @@ mod tests {
         ]
     }
 
+    /// World-space test triangles as static input: one identity-placed
+    /// tree per instance id, in id order (as the engine orders statics).
+    fn static_input(triangles: Vec<SensorTriangle>) -> super::StaticSensorInput {
+        let mut by_id: std::collections::BTreeMap<u32, Vec<Tri>> = Default::default();
+        for t in triangles {
+            by_id.entry(t.instance_id).or_default().push(Tri {
+                a: Vec3::from_array(t.a), b: Vec3::from_array(t.b), c: Vec3::from_array(t.c), instance_id: 0,
+            });
+        }
+        let mut input = super::StaticSensorInput { blases: Vec::new(), instances: Vec::new() };
+        for (id, tris) in by_id {
+            input.blases.push(sensors::bvh::Blas::build(tris));
+            input.instances.push((input.blases.len() - 1, bevy::math::Mat4::IDENTITY, id));
+        }
+        input
+    }
+
+    fn static_scene(triangles: Vec<SensorTriangle>) -> sensors::bvh::InstancedScene {
+        build_map_sensor_scenes(&static_input(triangles), &HashMap::new()).static_scene
+    }
+
     #[test]
     fn combined_scene_prunes_actors_behind_static_hits_without_changing_results() {
         // Static: ground at y=0 plus walls; actors: cars in front of, level
@@ -2873,7 +2904,7 @@ mod tests {
             map.push(SensorTriangle { a: [x, 0.0, -30.0], b: [x, 6.0, -30.0], c: [x, 0.0, 30.0], instance_id: id });
             map.push(SensorTriangle { a: [x, 6.0, -30.0], b: [x, 6.0, 30.0], c: [x, 0.0, 30.0], instance_id: id });
         }
-        let statics = build_sensor_scene(map);
+        let statics = static_scene(map);
         let car = sensors::bvh::Blas::build(quad(-2.0, -1.0, 4.0, 1.4, 0).iter().map(|t| Tri {
             a: Vec3::from_array(t.a), b: Vec3::from_array(t.b), c: Vec3::from_array(t.c), instance_id: 0,
         }).chain([Tri { a: Vec3::new(-2.0, 0.0, 0.0), b: Vec3::new(-2.0, 1.4, 0.0), c: Vec3::new(-2.0, 0.0, 1.0), instance_id: 0 }]));
@@ -2917,16 +2948,19 @@ mod tests {
         triangles.extend(quad(20.0, 0.0, 10.0, 5.0, 2));
         let legend: HashMap<u32, String> =
             [(1, "Road_Asphalt_01".to_string()), (2, "Building_Block_7".to_string())].into();
-        let scenes = build_map_sensor_scenes(triangles.clone(), &legend);
+        let scenes = build_map_sensor_scenes(&static_input(triangles.clone()), &legend);
         let down = |scene: &RaycastScene, x: f32| {
             scene.cast(Vec3::new(x, 100.0, 5.0), Vec3::NEG_Y, 1000.0).map(|hit| hit.instance_id)
         };
         assert_eq!(down(&scenes.road, 5.0), Some(1));
         assert_eq!(down(&scenes.road, 25.0), None, "buildings are not road");
-        assert_eq!(down(&scenes.static_scene, 25.0), Some(2));
+        let instanced = |x: f32| {
+            scenes.static_scene.cast(Vec3::new(x, 100.0, 5.0), Vec3::NEG_Y, 1000.0).map(|hit| hit.instance_id)
+        };
+        assert_eq!(instanced(25.0), Some(2));
         let serial = build_sensor_scene(triangles);
         for x in [1.0, 5.0, 9.5, 15.0, 21.0, 29.0] {
-            assert_eq!(down(&scenes.static_scene, x), down(&serial, x));
+            assert_eq!(instanced(x), down(&serial, x));
         }
         let footprint = |x: f64| crate::traffic::Footprint { x, z: 5.0, yaw: 0.0, length: 2.0, width: 1.0 };
         assert!(on_road(&scenes.road, footprint(5.0)));
@@ -2935,7 +2969,7 @@ mod tests {
     use crate::proto::ServiceCamera;
     use crate::scene::{ActorState, ActorTransform};
     use bevy::math::{Quat, Vec3};
-    use sensors::bvh::{RaycastScene, Tri};
+    use sensors::bvh::{InstancedScene, RaycastScene, Tri};
     use sensors::taxonomy::SemanticClass;
 
     #[test]
@@ -3026,9 +3060,13 @@ mod tests {
             static_scene.push_tri(Tri { a, b, c, instance_id: 1 });
         }
         static_scene.build();
+        let mut static_instanced = InstancedScene::new();
+        let wall = static_instanced.add_mesh(static_scene);
+        static_instanced.add_instance(wall, bevy::math::Mat4::IDENTITY, 1);
+        static_instanced.build();
         let actor_scene = RaycastScene::new();
         let scene = CombinedSensorScene {
-            static_scene: &static_scene,
+            static_scene: &static_instanced,
             actor_scene: &actor_scene,
         };
         let lidar = sensors::lidar::LidarConfig {
@@ -3119,52 +3157,41 @@ mod tests {
         for (i, x) in [10.0f32, -12.0, 0.0].into_iter().enumerate() {
             map.extend(quad(x, 8.0, 2.0, 0.5, 1 + i as u32));
         }
-        let scenes = std::sync::Arc::new(build_map_sensor_scenes(map, &HashMap::new()));
+        let scenes = std::sync::Arc::new(build_map_sensor_scenes(&static_input(map), &HashMap::new()));
         let actor = quad(5.0, -3.0, 2.0, 1.0, 7).to_vec();
-        let serial = super::run_sensor_work(&scenes.static_scene, &sensor_work(actor.clone()));
+        let serial = super::run_sensor_work(&scenes, &sensor_work(actor.clone()), super::LidarBackend::Cpu);
         let shared = scenes.clone();
         let work = sensor_work(actor);
-        let threaded = std::thread::spawn(move || super::run_sensor_work(&shared.static_scene, &work)).join().unwrap();
+        let threaded = std::thread::spawn(move || super::run_sensor_work(&shared, &work, super::LidarBackend::Cpu)).join().unwrap();
         let bytes = |result: &super::SensorResult| result.payloads.iter().map(|p| (p.sensor_id.clone(), p.count, p.data.clone())).collect::<Vec<_>>();
         assert_eq!(bytes(&threaded), bytes(&serial));
         assert!(threaded.payloads.iter().any(|p| p.count > 0), "fixture must produce hits");
     }
 
+    /// The hardware-ray lidar path publishes the CPU scan's exact bytes,
+    /// with actors merged on top (skips without an RT-capable GPU).
     #[test]
-    fn cached_sensor_scenes_load_as_the_built_trees_and_prune_old_maps() {
-        let dir = std::env::temp_dir().join(format!("sensor-cache-test-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        let legend: HashMap<u32, String> = [(1, "Road_Asphalt_01".to_string()), (2, "Building".to_string())].into();
-        let mut triangles = quad(0.0, 0.0, 10.0, 0.0, 1).to_vec();
-        triangles.extend(quad(20.0, 0.0, 10.0, 5.0, 2));
-        let key = super::sensor_scene_cache_key(&triangles, &legend);
-        assert_eq!(key, super::sensor_scene_cache_key(&triangles, &legend), "key is a pure function");
-        let mut shifted = triangles.clone();
-        shifted[0].a[0] += 1.0;
-        assert_ne!(key, super::sensor_scene_cache_key(&shifted, &legend));
-        let renamed: HashMap<u32, String> = [(1, "Building_Annex".to_string()), (2, "Building".to_string())].into();
-        assert_ne!(key, super::sensor_scene_cache_key(&triangles, &renamed), "the road set is part of the key");
-
-        let built = build_map_sensor_scenes(triangles, &legend);
-        assert!(super::store_cached_sensor_scenes(&dir, &key, &built).unwrap());
-        let loaded = super::load_cached_sensor_scenes(&dir, &key).expect("cached");
-        for x in [1.0f32, 5.0, 9.0, 21.0, 29.0] {
-            let origin = Vec3::new(x, 100.0, 5.0);
-            let hit = |scene: &RaycastScene| scene.cast(origin, Vec3::NEG_Y, 1000.0).map(|h| (h.distance.to_bits(), h.instance_id));
-            assert_eq!(hit(&loaded.static_scene), hit(&built.static_scene));
-            assert_eq!(hit(&loaded.road), hit(&built.road));
+    fn gpu_lidar_payloads_match_the_cpu_scan_byte_for_byte() {
+        let Some((device, queue, name)) = sensors::gpu_rays::headless_device() else {
+            eprintln!("SKIP gpu lidar payload parity: no hardware ray queries");
+            return;
+        };
+        let mut map = Vec::new();
+        map.extend(quad(-50.0, -50.0, 100.0, 0.0, 1));
+        for (i, x) in [10.0f32, -12.0, 0.0].into_iter().enumerate() {
+            map.extend(quad(x, 8.0, 2.0, 0.5, 2 + i as u32));
         }
-        // Keep-newest pruning: only SENSOR_SCENE_CACHE_KEEP maps survive.
-        for n in 0..super::SENSOR_SCENE_CACHE_KEEP + 1 {
-            std::thread::sleep(std::time::Duration::from_millis(20));
-            assert!(super::store_cached_sensor_scenes(&dir, &format!("{n:064x}"), &built).unwrap());
-        }
-        let kept = std::fs::read_dir(&dir).unwrap().filter(|entry| {
-            entry.as_ref().unwrap().file_name().to_string_lossy().ends_with(".static.bvh")
-        }).count();
-        assert_eq!(kept, super::SENSOR_SCENE_CACHE_KEEP);
-        assert!(super::load_cached_sensor_scenes(&dir, &key).is_none(), "the oldest map was pruned");
-        let _ = std::fs::remove_dir_all(&dir);
+        let mut scenes = build_map_sensor_scenes(&static_input(map), &HashMap::new());
+        scenes.gpu = Some(sensors::gpu_rays::GpuRayScene::new(&scenes.static_scene, device, queue).expect("gpu scene"));
+        let actor = quad(5.0, -3.0, 2.0, 1.0, 7).to_vec();
+        let cpu = super::run_sensor_work(&scenes, &sensor_work(actor.clone()), super::LidarBackend::Cpu);
+        let gpu = super::run_sensor_work(&scenes, &sensor_work(actor.clone()), super::LidarBackend::Gpu);
+        let verify = super::run_sensor_work(&scenes, &sensor_work(actor), super::LidarBackend::Verify);
+        assert!(gpu.lidar_gpu && !cpu.lidar_gpu);
+        assert!(gpu.error.is_none() && verify.error.is_none(), "{:?} {:?}", gpu.error, verify.error);
+        let bytes = |result: &super::SensorResult| result.payloads.iter().map(|p| (p.sensor_id.clone(), p.count, p.data.clone())).collect::<Vec<_>>();
+        assert_eq!(bytes(&gpu), bytes(&cpu), "on {name}");
+        assert!(gpu.payloads.iter().any(|p| p.pass == "lidar" && p.count > 0), "fixture must produce lidar hits");
     }
 
     #[test]
