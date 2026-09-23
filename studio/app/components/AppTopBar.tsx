@@ -6,6 +6,8 @@ import * as stylex from "@stylexjs/stylex";
 import * as Dialog from "@radix-ui/react-dialog";
 import { MoreHorizontal, X } from "lucide-react";
 import { AppSwitcherOverlay } from "./AppSwitcherOverlay";
+import { MapDownloadIndicator } from "@simforge-oss/studio-ui/map-downloads";
+import { useMapDownloadsFirstRun } from "@/app/lib/map-downloads-first-run";
 import SimForgeLogo from "./landing/SimForgeLogo";
 import { useTopBarSlotContext } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
@@ -22,7 +24,17 @@ export function AppTopBar() {
   const [wide, setWide] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const slotCtx = useTopBarSlotContext();
-  const { activeItem } = useDashboardNav(pathname);
+  const { activeItem, capabilities } = useDashboardNav(pathname);
+  // A first sign-in that lands anywhere but the switcher page still starts on
+  // Map Downloads: the switcher opens over the page, once.
+  const firstSignIn = useMapDownloadsFirstRun(capabilities);
+  const [welcome, setWelcome] = useState(false);
+  useEffect(() => {
+    if (!firstSignIn.pending || pathname === "/dashboard/apps") return;
+    setWelcome(true);
+    setSwitcherOpen(true);
+    firstSignIn.markSeen();
+  }, [firstSignIn.pending, firstSignIn.markSeen, pathname]);
   const routePageTitle = pathname.startsWith("/dashboard/scenario") ? "Dataset" : activeItem?.label ?? null;
   const header = hasMounted ? slotCtx?.header : null;
   const title = (header?.title || routePageTitle)?.replace(/^SIMFORGE\s*[-—:]\s*/i, "").trim();
@@ -47,6 +59,8 @@ export function AppTopBar() {
       <div {...stylex.props(styles.row)}>
         <button ref={switcherTriggerRef} type="button" onClick={() => setSwitcherOpen(true)} aria-label="Open app switcher" aria-haspopup="dialog" aria-expanded={switcherOpen} {...stylex.props(styles.trigger)}>
           <span {...stylex.props(styles.logo)} data-testid="app-topbar-logo"><SimForgeLogo size={30} /></span>
+          {/* A download running with the switcher closed shows here; the one mounted instance also resumes a stored job. */}
+          <MapDownloadIndicator restore />
         </button>
         <div {...stylex.props(styles.content)}>
           <div {...stylex.props(styles.titleRow)} data-topbar-slot="title">
@@ -69,6 +83,13 @@ export function AppTopBar() {
         </div>
       </div>
     </header>
-    <AppSwitcherOverlay open={switcherOpen} onOpenChange={setSwitcherOpen} pathname={pathname} triggerRef={switcherTriggerRef} />
+    <AppSwitcherOverlay
+      open={switcherOpen}
+      onOpenChange={(open) => { setSwitcherOpen(open); if (!open) setWelcome(false); }}
+      pathname={pathname}
+      triggerRef={switcherTriggerRef}
+      initialView={welcome ? "map-downloads" : null}
+      firstRun={welcome}
+    />
   </>;
 }

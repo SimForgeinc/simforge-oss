@@ -333,6 +333,14 @@
         "types": "./dist/onboarding/index.d.ts",
         "default": "./dist/onboarding/index.js"
       },
+      "./map-downloads": {
+        "types": "./dist/map-downloads/index.d.ts",
+        "default": "./dist/map-downloads/index.js"
+      },
+      "./lib/maps/frontend/map-downloads": {
+        "types": "./dist/lib/maps/frontend/map-downloads.d.ts",
+        "default": "./dist/lib/maps/frontend/map-downloads.js"
+      },
       "./render-selection/RenderSelectionPanel": {
         "types": "./dist/render-selection/RenderSelectionPanel.d.ts",
         "default": "./dist/render-selection/RenderSelectionPanel.js"
@@ -875,6 +883,16 @@
       "development": "./src/onboarding/index.ts",
       "types": "./dist/onboarding/index.d.ts",
       "default": "./dist/onboarding/index.js"
+    },
+    "./map-downloads": {
+      "development": "./src/map-downloads/index.ts",
+      "types": "./dist/map-downloads/index.d.ts",
+      "default": "./dist/map-downloads/index.js"
+    },
+    "./lib/maps/frontend/map-downloads": {
+      "development": "./src/lib/maps/frontend/map-downloads.ts",
+      "types": "./dist/lib/maps/frontend/map-downloads.d.ts",
+      "default": "./dist/lib/maps/frontend/map-downloads.js"
     },
     "./render-selection/RenderSelectionPanel": {
       "development": "./src/render-selection/RenderSelectionPanel.tsx",

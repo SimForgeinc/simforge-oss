@@ -42,7 +42,13 @@ export type NavItem = {
 };
 
 /** Views the app switcher can show in place of its app tabs. */
-export type SwitcherInlineView = "render-settings";
+export type SwitcherInlineView = "render-settings" | "map-downloads";
+
+export const SWITCHER_INLINE_VIEWS: readonly SwitcherInlineView[] = ["render-settings", "map-downloads"];
+
+export function isSwitcherInlineView(value: string | null | undefined): value is SwitcherInlineView {
+  return SWITCHER_INLINE_VIEWS.includes(value as SwitcherInlineView);
+}
 
 /**
  * The product is three pages, and the app switcher is those three tabs. Every
@@ -101,24 +107,20 @@ export const DASHBOARD_UTILITIES: NavItem[] = [
     match: (p) => p.startsWith("/dashboard/assets"),
   },
   {
-    // The only surface that installs maps outside first-run onboarding, and
-    // the one place that says what this computer already holds. It is a
-    // utility rather than a fourth app tab for the same reason Models is:
-    // the product is three pages, and this one prepares what they open.
+    // Map Downloads (formerly the Map Library page, "Map availability"): the
+    // one place that says which maps this device holds and gets more. Like
+    // Render Settings it is not a page but a view of the switcher itself, and
+    // it is where a person's first sign-in lands.
     //
     // Both hosts have it, and it means a different thing on each: a local
-    // installation manages residency on its own disk, a cloud host lists the
-    // maps its workspace can stream.
-    href: "/dashboard/map-library",
-    label: "Map Library",
-    description: "Every map this workspace can open",
+    // installation installs closures on its own disk, a cloud host downloads
+    // maps into this browser's map cache at the chosen render setting.
+    href: "/dashboard/apps?view=map-downloads",
+    label: "Map Downloads",
+    description: "Maps on this device and the cache they live in",
     icon: HardDriveDownload,
-    highlights: [
-      "Every map this installation can use",
-      "Locality and preview before you open",
-      "What a plan does not unlock",
-    ],
-    match: (p) => p.startsWith("/dashboard/map-library"),
+    inlineView: "map-downloads",
+    match: () => false,
   },
   {
     // Local-only: the store downloads weights to this installation's disk and

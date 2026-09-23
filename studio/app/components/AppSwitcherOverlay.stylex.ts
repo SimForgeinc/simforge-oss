@@ -169,6 +169,9 @@ export const styles = stylex.create({
     paddingBlock: space.s6,
   },
 
+  /** Map Downloads fills the column above the bar instead of centring in it. */
+  containerFill: { alignContent: "stretch", gridTemplateRows: "minmax(0, 1fr) auto" },
+
   /** The three app cards: stacked on narrow viewports, one row of equal cards from LG. */
   tabs: {
     display: "grid",
@@ -281,8 +284,17 @@ export const styles = stylex.create({
     maxWidth: "none",
   },
 
-  /** Inline views (Render Settings) replace the tabs inside the same column. */
-  inlineView: { display: "grid", gap: space.s4, minWidth: 0, minHeight: 0, overflow: "hidden" },
+  /** Inline views (Render Settings, Map Downloads) replace the tabs inside the same column. */
+  inlineView: {
+    display: "grid",
+    gridTemplateRows: "auto minmax(0, 1fr)",
+    gap: space.s4,
+    minWidth: 0,
+    minHeight: 0,
+    overflow: "hidden",
+  },
+  /** The view itself: it scrolls, or fills and scrolls its own parts (Map Downloads). */
+  inlineBody: { display: "grid", minWidth: 0, minHeight: 0, overflowY: "auto" },
   inlineHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: space.s3 },
   inlineBack: {
     display: "inline-flex",
