@@ -168,24 +168,21 @@ async function rustEnv() {
   let remote = { kind: "local" };
   if (sccache) {
     remote = args.remote ? sccacheRemoteEnv(layout) : { kind: "local", env: {} };
+    // One sccache server per worktree (its own port) with the worktree root as
+    // its basedir, so cache keys carry no absolute path: every worktree and CI
+    // produce the same keys and share the local disk cache and Depot.
+    let h = 0;
+    for (const ch of root) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     Object.assign(env, {
       RUSTC_WRAPPER: sccache,
       SCCACHE_DIR: process.env.SCCACHE_DIR || join(CACHE_ROOT, "sccache"),
       SCCACHE_CACHE_SIZE: process.env.SCCACHE_CACHE_SIZE || "30G",
-      SCCACHE_IDLE_TIMEOUT: "3600",
-      // One sccache server per machine; a config change restarts it.
-      SCCACHE_SERVER_PORT: process.env.SCCACHE_SERVER_PORT || "4226",
+      SCCACHE_BASEDIRS: root,
+      SCCACHE_IDLE_TIMEOUT: "1800",
+      SCCACHE_SERVER_PORT: process.env.SCCACHE_SERVER_PORT || String(14300 + (h % 600)),
       ...remote.env,
     });
-    // The server keeps the config it started with; make sure it matches ours.
-    const want = `${remote.kind}`;
-    const marker = join(CACHE_ROOT, "sccache-server.mode");
-    const have = existsSync(marker) ? readFileSync(marker, "utf8") : "";
-    if (have !== want) {
-      trySh(sccache, ["--stop-server"], { env, timeout: 30_000 });
-      writeFileSync(marker, want);
-    }
-    trySh(sccache, ["--start-server"], { env, timeout: 30_000 });
+    trySh(sccache, ["--start-server"], { env, timeout: 30_000 }); // no-op when this worktree's server runs
   }
   rustEnvCache = { env, sccache, remote: remote.kind };
   return rustEnvCache;
