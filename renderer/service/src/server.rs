@@ -788,28 +788,122 @@ fn handle_connection(
 ) -> Result<CloseConnection> {
     let mut reader = FrameReader::new();
     let mut buf = [0u8; 65536];
+    let mut queue: std::collections::VecDeque<WireRequest> = std::collections::VecDeque::new();
+    // A bundle whose capture is on the GPU (pipelined clients only).
+    let mut in_flight: Option<BundleInFlight> = None;
+    let mut eof = false;
+    let write = |connection: &mut crate::endpoint::Connection, response: &WireResponse| -> Result<()> {
+        connection.write_all(&encode_frame(response)?)?;
+        Ok(())
+    };
     loop {
-        let n = connection.read(&mut buf)?;
-        if n == 0 {
-            return Ok(CloseConnection::Eof);
-        }
-        for payload in reader.push(&buf[..n]).map_err(anyhow::Error::msg)? {
-            let request = decode_request(&payload).map_err(anyhow::Error::msg)?;
-            let response = dispatch(state, request);
-            connection.write_all(&encode_frame(&response)?)?;
-            // Descriptor transfer rides the same socket right behind its
-            // acknowledgement: this thread is the only writer, so the
-            // `SFGX` frame and its SCM_RIGHTS cannot interleave.
-            #[cfg(feature = "gpu-interop")]
-            if let Some(exported) = state.take_export() {
-                exported
-                    .send_over_unix(connection.unix_stream())
-                    .context("send device stream handles")?;
-            }
-            if matches!(response.body, ResponseBody::Close { .. }) {
-                return Ok(CloseConnection::ClientClose);
+        if queue.is_empty() && !eof {
+            // With a capture on the GPU, take only what the client already
+            // sent; otherwise block for the next request.
+            let read = if in_flight.is_some() { read_ready(&mut connection, &mut buf)? } else { Some(connection.read(&mut buf)?) };
+            match read {
+                Some(0) => eof = true,
+                Some(n) => {
+                    for payload in reader.push(&buf[..n]).map_err(anyhow::Error::msg)? {
+                        queue.push_back(decode_request(&payload).map_err(anyhow::Error::msg)?);
+                    }
+                }
+                None => {}
             }
         }
+        let next = queue.pop_front();
+        let chain = next.as_ref().is_some_and(|request| pipelined_bundle(state, request));
+        if let Some(flight) = in_flight.take() {
+            if chain {
+                // Submit the next capture before collecting this one: its CPU
+                // frame build overlaps this frame's GPU work. Responses keep
+                // request order.
+                let begun = begin_bundle(state, bundle_request(next.expect("chained request")));
+                write(&mut connection, &finish_bundle(state, flight))?;
+                match begun {
+                    Ok(flight) => in_flight = Some(flight),
+                    Err(response) => write(&mut connection, &response)?,
+                }
+                continue;
+            }
+            write(&mut connection, &finish_bundle(state, flight))?;
+        }
+        let Some(request) = next else {
+            if eof {
+                return Ok(CloseConnection::Eof);
+            }
+            continue;
+        };
+        if chain {
+            match begin_bundle(state, bundle_request(request)) {
+                Ok(flight) => in_flight = Some(flight),
+                Err(response) => write(&mut connection, &response)?,
+            }
+            continue;
+        }
+        let response = dispatch(state, request);
+        write(&mut connection, &response)?;
+        // Descriptor transfer rides the same socket right behind its
+        // acknowledgement: this thread is the only writer, so the
+        // `SFGX` frame and its SCM_RIGHTS cannot interleave.
+        #[cfg(feature = "gpu-interop")]
+        if let Some(exported) = state.take_export() {
+            exported
+                .send_over_unix(connection.unix_stream())
+                .context("send device stream handles")?;
+        }
+        if matches!(response.body, ResponseBody::Close { .. }) {
+            return Ok(CloseConnection::ClientClose);
+        }
+    }
+}
+
+/// Bytes the client has already sent, without blocking (`None`: nothing yet;
+/// `Some(0)`: end of stream). Named-pipe hosts never pipeline.
+fn read_ready(connection: &mut crate::endpoint::Connection, buf: &mut [u8]) -> Result<Option<usize>> {
+    #[cfg(unix)]
+    {
+        let stream = connection.unix_stream();
+        stream.set_nonblocking(true)?;
+        let read = connection.read(buf);
+        connection.unix_stream().set_nonblocking(false)?;
+        match read {
+            Ok(n) => Ok(Some(n)),
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => Ok(None),
+            Err(error) => Err(error.into()),
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (connection, buf);
+        Ok(None)
+    }
+}
+
+/// A `render_bundle` the service may begin while the previous one is still
+/// on the GPU: the client asked for it, it needs no device outputs and no
+/// semantic pass (derived from the live actor legend at publication), and
+/// no policy episode owns the scene.
+fn pipelined_bundle(state: &ServiceState, request: &WireRequest) -> bool {
+    match &request.body {
+        RequestBody::RenderBundle { pipeline, device_sensors, passes, .. } => {
+            pipeline.unwrap_or(false)
+                && device_sensors.as_ref().is_none_or(Vec::is_empty)
+                && passes.as_ref().is_none_or(|passes| !passes.iter().any(|pass| pass == "semantic"))
+                && state.episode.is_none()
+        }
+        _ => false,
+    }
+}
+
+fn bundle_request(request: WireRequest) -> BundleRequest {
+    let i = request.i;
+    match request.body {
+        RequestBody::RenderBundle { sim_tick, cameras, lidars, radars, tick_index, passes, device_sensors, sim_time_s, observe, .. } => BundleRequest {
+            i, sim_tick, cameras, lidars, radars, tick_index, passes,
+            device_sensors: device_sensors.unwrap_or_default(), sim_time_s, observe: observe.unwrap_or(false),
+        },
+        _ => unreachable!("bundle_request on a non-bundle request"),
     }
 }
 
@@ -947,27 +1041,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             WireResponse { i, body: ResponseBody::LoadSceneState { ok: true, ticks, map_id } }
         }
         RequestBody::ObserveActors => {
-            let mut actors = Vec::new();
-            let mut ids: Vec<String> = state.actor_extents.keys().cloned().collect();
-            ids.sort();
-            for id in ids {
-                let Some((centre, rotation)) = state.app.actor_world_pose(&id) else {
-                    continue;
-                };
-                let half = state.actor_extents[&id][1] * 0.5;
-                let origin = centre - rotation * Vec3::new(0.0, half, 0.0);
-                let model = state.app.actor_model_world_pose(&id);
-                actors.push(crate::proto::ObservedActorPose {
-                    id,
-                    position: origin.to_array(),
-                    rotation: rotation.to_array(),
-                    body_centre: centre.to_array(),
-                    model_position: model.map(|(p, _)| p.to_array()),
-                    model_rotation: model.map(|(_, r)| r.to_array()),
-                    visible: true,
-                });
-            }
-            WireResponse { i, body: ResponseBody::ObserveActors { ok: true, tick: state.current_tick, actors } }
+            WireResponse { i, body: ResponseBody::ObserveActors { ok: true, tick: state.current_tick, actors: observe_actors(state) } }
         }
         RequestBody::ResetCameras => {
             state.episode=None;
@@ -1037,18 +1111,18 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             passes,
             device_sensors,
             sim_time_s,
-        } => render_bundle_op(
-            state,
-            i,
-            sim_tick,
-            cameras,
-            lidars,
-            radars,
-            tick_index,
-            passes,
-            device_sensors.unwrap_or_default(),
-            sim_time_s,
-        ),
+            observe,
+            pipeline: _,
+        } => {
+            let request = BundleRequest {
+                i, sim_tick, cameras, lidars, radars, tick_index, passes,
+                device_sensors: device_sensors.unwrap_or_default(), sim_time_s, observe: observe.unwrap_or(false),
+            };
+            match begin_bundle(state, request) {
+                Ok(flight) => finish_bundle(state, flight),
+                Err(response) => response,
+            }
+        }
         RequestBody::EncodeJpeg { items } => encode_jpeg_op(state, i, items),
         RequestBody::OpenDeviceStream { sensor_id, passes, slots, wait_ms } => {
             open_device_stream_op(state, i, &sensor_id, &passes, slots, wait_ms)
@@ -1059,6 +1133,31 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
         }
         RequestBody::Close => WireResponse { i, body: ResponseBody::Close { ok: true } },
     }
+}
+
+/// Every scene actor as the renderer drew it on the last applied tick.
+fn observe_actors(state: &ServiceState) -> Vec<crate::proto::ObservedActorPose> {
+    let mut actors = Vec::new();
+    let mut ids: Vec<String> = state.actor_extents.keys().cloned().collect();
+    ids.sort();
+    for id in ids {
+        let Some((centre, rotation)) = state.app.actor_world_pose(&id) else {
+            continue;
+        };
+        let half = state.actor_extents[&id][1] * 0.5;
+        let origin = centre - rotation * Vec3::new(0.0, half, 0.0);
+        let model = state.app.actor_model_world_pose(&id);
+        actors.push(crate::proto::ObservedActorPose {
+            id,
+            position: origin.to_array(),
+            rotation: rotation.to_array(),
+            body_centre: centre.to_array(),
+            model_position: model.map(|(p, _)| p.to_array()),
+            model_rotation: model.map(|(_, r)| r.to_array()),
+            visible: true,
+        });
+    }
+    actors
 }
 
 /// Compiled frames are complete snapshots. A despawn between sampled image
@@ -1899,6 +1998,37 @@ fn parse_bundle_passes(requested: &[String]) -> Result<(PassSet, bool, bool), St
     Ok((want, want_id_output, want_semantic))
 }
 
+/// Everything [`finish_bundle`] needs of a bundle whose capture is on the GPU.
+pub(crate) struct BundleInFlight {
+    i: u64,
+    sim_tick: u64,
+    rig: Vec<ServiceCamera>,
+    published: PassSet,
+    want_semantic: bool,
+    ticket: render_core::engine::CaptureTicket,
+    /// This tick's lidar/radar scans, running on the ray pool.
+    scan: Option<std::thread::JoinHandle<SensorResult>>,
+    sensor_to_policy: std::collections::BTreeMap<String, render_core::coordinates::PolicyFromSensor>,
+    observed: Option<(Option<u32>, Vec<crate::proto::ObservedActorPose>)>,
+    stages: crate::proto::BundleStages,
+    /// Service time spent in [`begin_bundle`], ms.
+    begin_ms: f64,
+}
+
+/// Arguments of one `render_bundle` request.
+pub(crate) struct BundleRequest {
+    pub i: u64,
+    pub sim_tick: u64,
+    pub cameras: Option<Vec<ServiceCamera>>,
+    pub lidars: Option<Vec<ServiceLidar>>,
+    pub radars: Option<Vec<ServiceRadar>>,
+    pub tick_index: Option<u32>,
+    pub passes: Option<Vec<String>>,
+    pub device_sensors: Vec<String>,
+    pub sim_time_s: Option<f64>,
+    pub observe: bool,
+}
+
 /// Render every rig camera for one sim tick and publish an atomic frame
 /// bundle (frames first, then the bundle table record, then the meta-page
 /// latest-bundle pointer flip). Cameras keep rig registration order and
@@ -1918,15 +2048,27 @@ fn render_bundle_op(
     device_sensors: Vec<String>,
     sim_time_s: Option<f64>,
 ) -> WireResponse {
+    let request = BundleRequest {
+        i, sim_tick, cameras, lidars, radars, tick_index, passes, device_sensors, sim_time_s, observe: false,
+    };
+    match begin_bundle(state, request) {
+        Ok(flight) => finish_bundle(state, flight),
+        Err(response) => response,
+    }
+}
+
+/// First half of a bundle: apply the tick, pose the rig, submit the capture
+/// (without waiting for the GPU) and start the tick's sensor scans. After
+/// this returns the world may move on to the next tick: everything the
+/// bundle publishes is either on the GPU or owned by the in-flight record.
+pub(crate) fn begin_bundle(state: &mut ServiceState, request: BundleRequest) -> Result<BundleInFlight, WireResponse> {
     let t0 = std::time::Instant::now();
+    let BundleRequest { i, sim_tick, cameras, lidars, radars, tick_index, passes, device_sensors, sim_time_s, observe } = request;
     let mut stages = crate::proto::BundleStages::default();
     let ms = |since: std::time::Instant| since.elapsed().as_secs_f64() * 1000.0;
     // Default rgb-only: the policy hot loop.
     let requested = passes.unwrap_or_else(|| vec!["rgb".to_string()]);
-    let (want, want_id_output, want_semantic) = match parse_bundle_passes(&requested) {
-        Ok(parsed) => parsed,
-        Err(error) => return WireResponse::error(i, error),
-    };
+    let (want, want_id_output, want_semantic) = parse_bundle_passes(&requested).map_err(|error| WireResponse::error(i, error))?;
     for cam in cameras.iter().flatten() {
         upsert_rig(state, cam);
     }
@@ -1937,30 +2079,26 @@ fn render_bundle_op(
         upsert_radar_rig(state, sensor);
     }
     if state.rig.is_empty() && state.lidars.is_empty() && state.radars.is_empty() {
-        return WireResponse::error(
+        return Err(WireResponse::error(
             i,
             "render_bundle: no sensors registered (send `cameras`, `lidars`, or `radars` once)",
-        );
+        ));
     }
     let mark = std::time::Instant::now();
     if let Some(index) = tick_index {
-        if let Err(error) = apply_scene_tick(state, index) {
-            return WireResponse::error(i, error);
-        }
+        apply_scene_tick(state, index).map_err(|error| WireResponse::error(i, error))?;
     }
     stages.apply_ms = ms(mark);
     let mark = std::time::Instant::now();
     let rig = state.rig.clone();
     let lidar_rig = state.lidars.clone();
     let radar_rig = state.radars.clone();
-    if let Err(error) = sync_rig(state, &rig) {
-        return WireResponse::error(i, error);
-    }
+    sync_rig(state, &rig).map_err(|error| WireResponse::error(i, error))?;
     stages.rig_ms = ms(mark);
     let host_keys = capture_keys(&rig, want);
     for sensor_id in &device_sensors {
         if !rig.iter().any(|cam| cam.sensor_id == *sensor_id) {
-            return WireResponse::error(i, format!("render_bundle: device sensor {sensor_id:?} is not in the rig"));
+            return Err(WireResponse::error(i, format!("render_bundle: device sensor {sensor_id:?} is not in the rig")));
         }
     }
     // The sky of this capture: its simulation time (pinned clock only).
@@ -1976,45 +2114,84 @@ fn render_bundle_op(
     if !pinned || state.needs_settle {
         match state.app.wait_for_capture_ready() {
             Ok(updates) => stages.readiness_updates = updates,
-            Err(error) => return WireResponse::error(i, format!("capture readiness: {error:#}")),
+            Err(error) => return Err(WireResponse::error(i, format!("capture readiness: {error:#}"))),
         }
         state.needs_settle = false;
     }
     stages.readiness_ms = ms(mark);
     let sensors_wanted = !lidar_rig.is_empty() || !radar_rig.is_empty();
-    let policy_host = policy_host_frame(state);
-    let mut early_work = None;
     if sensors_wanted {
         let mark = std::time::Instant::now();
         state.ensure_sensor_scenes();
         stages.sensor_scenes_ms = ms(mark);
-        if state.overlap_sensors {
-            let mark = std::time::Instant::now();
-            match prepare_sensor_work(state, &lidar_rig, &radar_rig, policy_host) {
-                Ok(work) => early_work = Some(work),
-                Err(error) => return WireResponse::error(i, error),
-            }
-            stages.sensor_setup_ms = ms(mark);
-        }
     }
     let mark = std::time::Instant::now();
-    // Lidar/radar for this tick run on their own thread (the ray pool) while
-    // the GPU renders and reads back the cameras.
-    let scenes = state.sensor_scenes.clone();
-    let (captured, early_result) = std::thread::scope(|scope| {
-        let scan = match (&early_work, &scenes) {
-            (Some(work), Some(scenes)) => Some(scope.spawn(move || run_sensor_work(&scenes.static_scene, work))),
-            _ => None,
-        };
-        let captured = capture_bundle(state, sim_tick, &host_keys, &device_sensors);
-        (captured, scan.map(|handle| handle.join().expect("sensor scan thread panicked")))
-    });
-    drop(scenes);
-    let captured = match captured {
-        Ok(captured) => captured,
-        Err(error) => return WireResponse::error(i, format!("render: {error:#}")),
-    };
+    // Device outputs keep the blocking path (their slots are armed by the
+    // submission); host frames are collected in `finish_bundle`.
+    let ticket = if device_sensors.is_empty() {
+        state.app.capture_begin(sim_tick, &host_keys)
+    } else {
+        capture_bundle(state, sim_tick, &host_keys, &device_sensors).map(render_core::engine::CaptureTicket::Ready)
+    }
+    .map_err(|error| WireResponse::error(i, format!("render: {error:#}")))?;
     stages.capture_ms = ms(mark);
+    // The world is now exactly as the capture drew it: snapshot the scan
+    // inputs here and let the scans run while the GPU works.
+    let policy_host = policy_host_frame(state);
+    let mut sensor_to_policy = std::collections::BTreeMap::new();
+    let mut scan = None;
+    if sensors_wanted {
+        let mark = std::time::Instant::now();
+        let work = prepare_sensor_work(state, &lidar_rig, &radar_rig, policy_host).map_err(|error| WireResponse::error(i, error))?;
+        stages.sensor_setup_ms = ms(mark);
+        sensor_to_policy = work.sensor_to_policy.clone();
+        let scenes = state.sensor_scenes.clone().expect("sensor scenes built");
+        if state.overlap_sensors {
+            stages.sensors_overlapped = true;
+            scan = Some(
+                std::thread::Builder::new()
+                    .name("sensor-scan".into())
+                    .spawn(move || run_sensor_work(&scenes.static_scene, &work))
+                    .map_err(|error| WireResponse::error(i, format!("spawn sensor scan: {error}")))?,
+            );
+        } else {
+            let result = run_sensor_work(&scenes.static_scene, &work);
+            scan = Some(std::thread::spawn(move || result));
+        }
+    }
+    let observed = observe.then(|| (state.current_tick, observe_actors(state)));
+    Ok(BundleInFlight {
+        i,
+        sim_tick,
+        rig,
+        published: PassSet { rgb: want.rgb, id: want_id_output, depth: want.depth },
+        want_semantic,
+        ticket,
+        scan,
+        sensor_to_policy,
+        observed,
+        stages,
+        begin_ms: t0.elapsed().as_secs_f64() * 1000.0,
+    })
+}
+
+/// Second half: wait for the capture's readback and the scans, publish the
+/// bundle and answer.
+pub(crate) fn finish_bundle(state: &mut ServiceState, flight: BundleInFlight) -> WireResponse {
+    let t0 = std::time::Instant::now();
+    let BundleInFlight { i, sim_tick, rig, published, want_semantic, ticket, scan, sensor_to_policy, observed, mut stages, begin_ms } = flight;
+    let ms = |since: std::time::Instant| since.elapsed().as_secs_f64() * 1000.0;
+    let mark = std::time::Instant::now();
+    let captured = match state.app.capture_finish(ticket) {
+        Ok(captured) => captured,
+        Err(error) => {
+            if let Some(scan) = scan {
+                let _ = scan.join();
+            }
+            return WireResponse::error(i, format!("render: {error:#}"));
+        }
+    };
+    stages.capture_ms += ms(mark);
     {
         let capture = state.app.last_capture_stats();
         stages.capture_attempts = capture.attempts;
@@ -2025,12 +2202,9 @@ fn render_bundle_op(
         stages.accumulation_frames = capture.accumulation_frames;
     }
     let mark = std::time::Instant::now();
-
     let start_cursor = state.shm.cursor_total();
     let mut frames: Vec<FrameRecord> = Vec::new();
-    let mut sensor_to_policy=std::collections::BTreeMap::new();
     let mut entries: Vec<BundleEntry> = Vec::new();
-    let published = PassSet { rgb: want.rgb, id: want_id_output, depth: want.depth };
     for cam in &rig {
         let planned = match plan_camera_passes(state, &captured, cam, published, want_semantic) {
             Ok(planned) => planned,
@@ -2046,36 +2220,16 @@ fn render_bundle_op(
         }
     }
     stages.publish_cameras_ms = ms(mark);
-    let mut sensor_payload_mark = None;
-    if sensors_wanted {
-        // The scans read the world as the capture left it. An overlapped scan
-        // ran on a snapshot taken before the capture; it is published only
-        // when that snapshot is bit-identical to one taken now, else the
-        // scans rerun serially on the current world.
+    if let Some(scan) = scan {
         let mark = std::time::Instant::now();
-        let current = match prepare_sensor_work(state, &lidar_rig, &radar_rig, policy_host) {
-            Ok(work) => work,
-            Err(error) => return WireResponse::error(i, error),
+        let result = match scan.join() {
+            Ok(result) => result,
+            Err(_) => return WireResponse::error(i, "sensor scan thread panicked"),
         };
-        stages.sensor_setup_ms += ms(mark);
-        let result = match (early_work, early_result) {
-            (Some(work), Some(result)) if work.same_as(&current) => {
-                stages.sensors_overlapped = true;
-                result
-            }
-            (early, _) => {
-                if early.is_some() {
-                    stages.sensor_resnapshots = 1;
-                }
-                let static_scene = &state.sensor_scenes.as_ref().expect("sensor scenes built").static_scene;
-                run_sensor_work(static_scene, &current)
-            }
-        };
+        stages.sensor_wait_ms = ms(mark);
         stages.actor_scene_ms = result.actor_scene_ms;
         stages.lidar_ms = result.lidar_ms;
         stages.radar_ms = result.radar_ms;
-        sensor_to_policy = current.sensor_to_policy;
-        sensor_payload_mark = Some(std::time::Instant::now());
         for SensorPayload { sensor_id, pass, format_tag, format_name, count, data } in result.payloads {
             if let Err(error) = publish_bundle_frame(
                 state, &sensor_id, pass, count, 1, format_tag, format_name, sim_tick, &data, &mut entries,
@@ -2097,9 +2251,13 @@ fn render_bundle_op(
             ),
         );
     }
-    let publish_mark = sensor_payload_mark.unwrap_or_else(std::time::Instant::now);
+    let mark = std::time::Instant::now();
     let published_bundle = state.shm.publish_bundle(sim_tick, start_cursor, &entries);
-    stages.publish_sensors_ms = ms(publish_mark);
+    stages.publish_sensors_ms = ms(mark);
+    let (observed_tick, observed_actors) = match observed {
+        Some((tick, actors)) => (tick, Some(actors)),
+        None => (None, None),
+    };
     match published_bundle {
         Ok((bundle_offset, bundle_len)) => WireResponse {
             i,
@@ -2112,8 +2270,10 @@ fn render_bundle_op(
                 frames,
                 device: captured.device,
                 sensor_to_policy,
-                server_ms: t0.elapsed().as_secs_f64() * 1000.0,
+                server_ms: begin_ms + t0.elapsed().as_secs_f64() * 1000.0,
                 stages: Some(stages),
+                observed_tick,
+                observed_actors,
             },
         },
         Err(error) => WireResponse::error(i, format!("publish bundle: {error}")),
@@ -2165,64 +2325,6 @@ struct SensorWork {
     lidars: Vec<LidarJob>,
     radars: Vec<RadarJob>,
     sensor_to_policy: std::collections::BTreeMap<String, render_core::coordinates::PolicyFromSensor>,
-}
-
-fn same_f32(a: f32, b: f32) -> bool {
-    a.to_bits() == b.to_bits()
-}
-
-fn same_vec3(a: Vec3, b: Vec3) -> bool {
-    same_f32(a.x, b.x) && same_f32(a.y, b.y) && same_f32(a.z, b.z)
-}
-
-fn same_quat(a: Quat, b: Quat) -> bool {
-    same_f32(a.x, b.x) && same_f32(a.y, b.y) && same_f32(a.z, b.z) && same_f32(a.w, b.w)
-}
-
-fn same_triangles(a: &[SensorTriangle], b: &[SensorTriangle]) -> bool {
-    a.len() == b.len()
-        && a.iter().zip(b).all(|(x, y)| {
-            x.instance_id == y.instance_id
-                && x.a.iter().chain(&x.b).chain(&x.c).zip(y.a.iter().chain(&y.b).chain(&y.c)).all(|(p, q)| same_f32(*p, *q))
-        })
-}
-
-impl SensorWork {
-    /// Bit-for-bit equality of every scan input (floats by bit pattern).
-    fn same_as(&self, other: &SensorWork) -> bool {
-        let lidar = |a: &LidarJob, b: &LidarJob| {
-            a.sensor_id == b.sensor_id
-                && a.binary == b.binary
-                && same_vec3(a.origin, b.origin)
-                && same_quat(a.rotation, b.rotation)
-                && a.config.channels == b.config.channels
-                && a.config.points_per_second == b.config.points_per_second
-                && same_f32(a.config.rotation_frequency_hz, b.config.rotation_frequency_hz)
-                && same_f32(a.config.vfov_deg, b.config.vfov_deg)
-                && same_f32(a.config.hfov_deg, b.config.hfov_deg)
-                && same_f32(a.config.range_m, b.config.range_m)
-        };
-        let radar = |a: &RadarJob, b: &RadarJob| {
-            a.sensor_id == b.sensor_id
-                && same_vec3(a.origin, b.origin)
-                && same_quat(a.rotation, b.rotation)
-                && same_vec3(a.host_velocity, b.host_velocity)
-                && same_f32(a.config.hfov_deg, b.config.hfov_deg)
-                && same_f32(a.config.vfov_deg, b.config.vfov_deg)
-                && same_f32(a.config.range_m, b.config.range_m)
-                && a.config.azimuth_rays == b.config.azimuth_rays
-                && a.config.elevation_rows == b.config.elevation_rows
-        };
-        std::sync::Arc::ptr_eq(&self.static_classes, &other.static_classes)
-            && self.actor_classes == other.actor_classes
-            && self.instance_velocities.len() == other.instance_velocities.len()
-            && self.instance_velocities.iter().all(|(id, v)| other.instance_velocities.get(id).is_some_and(|w| same_vec3(*v, *w)))
-            && self.lidars.len() == other.lidars.len()
-            && self.lidars.iter().zip(&other.lidars).all(|(a, b)| lidar(a, b))
-            && self.radars.len() == other.radars.len()
-            && self.radars.iter().zip(&other.radars).all(|(a, b)| radar(a, b))
-            && same_triangles(&self.actor_triangles, &other.actor_triangles)
-    }
 }
 
 /// One published lidar/radar payload.
@@ -2601,46 +2703,21 @@ mod tests {
     }
 
     #[test]
-    fn overlapped_scans_publish_only_a_bit_identical_snapshot_and_match_the_serial_scan() {
+    fn scans_on_the_sensor_thread_match_the_serial_scan_byte_for_byte() {
         let mut map = Vec::new();
         map.extend(quad(-50.0, -50.0, 100.0, 0.0, 1));
         for (i, x) in [10.0f32, -12.0, 0.0].into_iter().enumerate() {
             map.extend(quad(x, 8.0, 2.0, 0.5, 1 + i as u32));
         }
-        let scenes = build_map_sensor_scenes(map, &HashMap::new());
+        let scenes = std::sync::Arc::new(build_map_sensor_scenes(map, &HashMap::new()));
         let actor = quad(5.0, -3.0, 2.0, 1.0, 7).to_vec();
-        let early = sensor_work(actor.clone());
-        // Production snapshots share the service's one cached class map.
-        let with_shared_classes = |mut work: super::SensorWork| {
-            work.static_classes = early.static_classes.clone();
-            work
-        };
-        let now = with_shared_classes(sensor_work(actor.clone()));
-        assert!(early.same_as(&now));
-        assert!(!early.same_as(&sensor_work(actor.clone())), "a rebuilt class map is not the same snapshot");
-        // Overlapped (another thread) and serial scans are the same bytes.
-        let threaded = std::thread::scope(|scope| scope.spawn(|| super::run_sensor_work(&scenes.static_scene, &early)).join().unwrap());
-        let serial = super::run_sensor_work(&scenes.static_scene, &now);
+        let serial = super::run_sensor_work(&scenes.static_scene, &sensor_work(actor.clone()));
+        let shared = scenes.clone();
+        let work = sensor_work(actor);
+        let threaded = std::thread::spawn(move || super::run_sensor_work(&shared.static_scene, &work)).join().unwrap();
         let bytes = |result: &super::SensorResult| result.payloads.iter().map(|p| (p.sensor_id.clone(), p.count, p.data.clone())).collect::<Vec<_>>();
         assert_eq!(bytes(&threaded), bytes(&serial));
         assert!(threaded.payloads.iter().any(|p| p.count > 0), "fixture must produce hits");
-        // One flipped mantissa bit in an actor triangle, a moved mount or a
-        // new actor class is a different snapshot: the serial scan reruns.
-        let mut moved = actor.clone();
-        moved[0].a[0] = f32::from_bits(moved[0].a[0].to_bits() ^ 1);
-        assert!(!early.same_as(&with_shared_classes(sensor_work(moved))));
-        let mut remounted = with_shared_classes(sensor_work(actor.clone()));
-        remounted.lidars[0].origin.y = f32::from_bits(remounted.lidars[0].origin.y.to_bits() ^ 1);
-        assert!(!early.same_as(&remounted));
-        let mut reclassed = with_shared_classes(sensor_work(actor.clone()));
-        reclassed.actor_classes.insert(7, SemanticClass::Pedestrian);
-        assert!(!early.same_as(&reclassed));
-        // Signed zero is a different bit pattern (never treated as equal).
-        let mut signed = actor;
-        signed[0].a[1] = if signed[0].a[1] == 0.0 { -0.0 } else { signed[0].a[1] };
-        if signed[0].a[1].to_bits() != early.actor_triangles[0].a[1].to_bits() {
-            assert!(!early.same_as(&with_shared_classes(sensor_work(signed))));
-        }
     }
 
     #[test]

@@ -964,6 +964,44 @@ struct CaptureRequest {
     keys: Vec<String>,
     #[cfg(feature = "gpu-interop")]
     device: Vec<DeviceCopy>,
+    /// Staging slot the copies land in ([`READBACK_SLOTS`] alternate, so one
+    /// capture's readback can be in flight while the next one renders).
+    slot: usize,
+    /// Map the slot without waiting ([`SceneApp::capture_begin`]); the host
+    /// collects it in [`SceneApp::capture_finish`].
+    deferred: bool,
+}
+
+/// Staging slots per readback target: one capture in flight plus the one
+/// being rendered.
+const READBACK_SLOTS: usize = 2;
+
+/// The deferred map of one capture's slot, filled by the render world.
+struct DeferredMap {
+    generation: u64,
+    slot: usize,
+    expected: usize,
+    done: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    failed: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+
+#[derive(Resource, Clone, Default)]
+struct DeferredMaps(std::sync::Arc<std::sync::Mutex<Vec<DeferredMap>>>);
+
+/// A capture submitted by [`SceneApp::capture_begin`].
+pub enum CaptureTicket {
+    /// Collected already (the submission needed a settle/retry, or device
+    /// outputs were requested): the frame the blocking path produced.
+    Ready(CapturedFrame),
+    /// On the GPU; [`SceneApp::capture_finish`] waits for and copies it.
+    Pending(PendingCapture),
+}
+
+pub struct PendingCapture {
+    identity: FrameIdentity,
+    slot: usize,
+    keys: Vec<String>,
+    stats: CaptureStats,
 }
 
 /// One persistent GPU->CPU staging buffer in the render world. Exists only
@@ -977,6 +1015,8 @@ struct StagingBuffer {
     height: u32,
     padded_row: usize,
     buffer: Buffer,
+    /// Readback slot (see [`READBACK_SLOTS`]).
+    slot: usize,
     /// Set by `copy_passes` when a copy from this submission was encoded;
     /// `receive_passes` maps only those and clears the flag.
     copied: bool,
@@ -1841,6 +1881,10 @@ pub struct SceneApp {
     capture_clock: CaptureClock,
     /// Shared with the render world's seed/jitter overrides.
     pinned_sample: PinnedSample,
+    /// Deferred readbacks the render world started ([`Self::capture_begin`]).
+    deferred_maps: DeferredMaps,
+    /// Staging slot of the next capture.
+    next_slot: usize,
     /// Scene-state actors: id -> (cuboid entity, allocated instance id).
     actors: HashMap<String, (Entity, u32)>,
     /// Dynamic actor id -> (loaded catalog GLB root, authored scale, mesh count).
@@ -2041,10 +2085,12 @@ impl SceneApp {
 
         let readback_clock = ReadbackClock::default();
         let pinned_sample = PinnedSample::default();
+        let deferred_maps = DeferredMaps::default();
         let render_app = app.get_sub_app_mut(RenderApp).unwrap();
         render_app
             .insert_resource(RenderSender(tx))
             .insert_resource(readback_clock.clone())
+            .insert_resource(deferred_maps.clone())
             .insert_resource(pinned_sample.clone())
             .add_systems(
                 Render,
@@ -2105,6 +2151,8 @@ impl SceneApp {
             readback_clock,
             capture_clock: CaptureClock::Free,
             pinned_sample,
+            deferred_maps,
+            next_slot: 0,
             actors: HashMap::new(),
             actor_models: HashMap::new(),
             actor_id_clones: HashMap::new(),
@@ -4287,7 +4335,165 @@ impl SceneApp {
         self.capture_request(sim_tick, CaptureRequest { keys: keys.to_vec(), device, ..Default::default() })
     }
 
-    fn capture_request(&mut self, sim_tick: u64, request: CaptureRequest) -> Result<CapturedFrame> {
+    /// Submit a host capture and return without waiting for the GPU, so the
+    /// caller can queue the next frame's CPU work while this one renders.
+    /// Same contract as [`Self::capture`]: when the submission is not a
+    /// complete, settled frame (pipelines compiling, a view not extracted)
+    /// it is withdrawn and the blocking path produces the frame, returned
+    /// as [`CaptureTicket::Ready`]. At most [`READBACK_SLOTS`] tickets may
+    /// be pending: a caller begins capture N+1 and then finishes capture N.
+    pub fn capture_begin(&mut self, sim_tick: u64, keys: &[String]) -> Result<CaptureTicket> {
+        let registered = self.expected_keys();
+        if let Some(unknown) = keys.iter().find(|k| !registered.contains(k)) {
+            bail!("capture: pass {unknown:?} is not registered");
+        }
+        if self.deferred_maps.0.lock().expect("deferred maps").len() >= READBACK_SLOTS {
+            bail!("capture_begin: every readback slot holds a pending capture; finish one first");
+        }
+        // Instance-ID views render only when requested (as in `capture`).
+        let id_activity: Vec<(Entity, bool)> = self
+            .groups
+            .iter()
+            .filter_map(|g| Some((g.id_entity?, keys.iter().any(|k| *k == format!("{}:id", g.spec.sensor_id)))))
+            .collect();
+        {
+            let world = self.app.world_mut();
+            for (entity, active) in id_activity {
+                if let Some(mut camera) = world.get_mut::<Camera>(entity) {
+                    if camera.is_active != active {
+                        camera.is_active = active;
+                    }
+                }
+            }
+        }
+        self.drain_outputs();
+        let slot = self.free_slot();
+        let mut stats = CaptureStats::default();
+        let submitted = Instant::now();
+        if let CaptureClock::Pinned { samples } = self.capture_clock {
+            let taa = self.reset_taa_history();
+            let lead = if taa { samples.max(1) - 1 } else { 0 };
+            for sample in 0..lead {
+                self.pinned_sample.set(Some(sample));
+                self.submit(CaptureRequest::default());
+                stats.accumulation_frames += 1;
+            }
+            self.pinned_sample.set(Some(lead));
+        }
+        let generation = self.submit(CaptureRequest { keys: keys.to_vec(), slot, deferred: true, ..Default::default() });
+        if self.capture_clock != CaptureClock::Free {
+            self.pinned_sample.set(Some(0));
+        }
+        stats.attempts = 1;
+        stats.submit_ms = submitted.elapsed().as_secs_f64() * 1000.0;
+        let settled = self.app.world().resource::<GpuPending>().is_idle();
+        let started = {
+            let maps = self.deferred_maps.0.lock().expect("deferred maps");
+            maps.iter().find(|m| m.generation == generation).map_or(0, |m| m.expected)
+        };
+        let pending = PendingCapture {
+            identity: FrameIdentity {
+                sim_tick,
+                scene_revision: self.scene_revision,
+                rig_revision: self.rig_revision,
+                generation,
+            },
+            slot,
+            keys: keys.to_vec(),
+            stats,
+        };
+        if settled && started == keys.len() {
+            return Ok(CaptureTicket::Pending(pending));
+        }
+        // Not a complete frame of the resident scene: drop it and let the
+        // blocking path settle and resubmit (its retries restart from
+        // sample 0 under a pinned clock).
+        let _ = self.collect_deferred(&pending);
+        let frame = self.capture(sim_tick, keys)?;
+        self.last_capture.submit_ms += stats.submit_ms;
+        self.last_capture.accumulation_frames += stats.accumulation_frames;
+        Ok(CaptureTicket::Ready(frame))
+    }
+
+    /// Wait for a [`CaptureTicket`]'s readback and return its frame.
+    pub fn capture_finish(&mut self, ticket: CaptureTicket) -> Result<CapturedFrame> {
+        match ticket {
+            CaptureTicket::Ready(frame) => Ok(frame),
+            CaptureTicket::Pending(pending) => {
+                let (passes, wait_ms, copy_ms, bytes) = self.collect_deferred(&pending)?;
+                if let Some(missing) = pending.keys.iter().find(|k| !passes.contains_key(*k)) {
+                    bail!("capture incomplete: generation {} missing {missing:?}", pending.identity.generation);
+                }
+                self.last_capture = CaptureStats {
+                    readback_wait_ms: wait_ms,
+                    readback_copy_ms: copy_ms,
+                    readback_bytes: bytes,
+                    ..pending.stats
+                };
+                Ok(CapturedFrame { identity: pending.identity, passes, device: HashMap::new() })
+            }
+        }
+    }
+
+    /// Poll (without blocking the queue on later work) until the deferred
+    /// maps of `pending` complete, then copy them out and unmap.
+    fn collect_deferred(&mut self, pending: &PendingCapture) -> Result<(HashMap<String, CapturedPass>, f64, f64, u64)> {
+        let generation = pending.identity.generation;
+        let map = {
+            let mut maps = self.deferred_maps.0.lock().expect("deferred maps");
+            let index = maps.iter().position(|m| m.generation == generation);
+            index.map(|index| maps.remove(index))
+        };
+        let Some(map) = map else { return Ok((HashMap::new(), 0.0, 0.0, 0)) };
+        let waited = Instant::now();
+        let deadline = waited + Duration::from_secs(120);
+        let device = self.app.world().resource::<RenderDevice>().clone();
+        while map.done.load(std::sync::atomic::Ordering::Acquire) < map.expected {
+            // `Poll` only reaps finished work; it never waits for frames
+            // queued after this capture.
+            device.poll(PollType::Poll).map_err(|error| anyhow::anyhow!("poll device: {error}"))?;
+            if map.done.load(std::sync::atomic::Ordering::Acquire) >= map.expected {
+                break;
+            }
+            if Instant::now() > deadline {
+                bail!("capture readback of generation {generation} did not complete within 120 s");
+            }
+            std::thread::sleep(Duration::from_micros(250));
+        }
+        let wait_ms = waited.elapsed().as_secs_f64() * 1000.0;
+        let failed = map.failed.load(std::sync::atomic::Ordering::Acquire);
+        let copied = Instant::now();
+        let mut passes = HashMap::with_capacity(map.expected);
+        let mut bytes = 0u64;
+        let render_world = self.app.get_sub_app_mut(RenderApp).expect("render app").world_mut();
+        let mut staging = render_world.resource_mut::<Staging>();
+        for b in staging.0.iter_mut().filter(|b| b.copied && b.slot == map.slot) {
+            if !failed {
+                let data = b.buffer.slice(..).get_mapped_range().to_vec();
+                bytes += data.len() as u64;
+                passes.insert(
+                    b.key.clone(),
+                    CapturedPass { width: b.width, height: b.height, padded_row: b.padded_row, bytes: data },
+                );
+                b.buffer.unmap();
+            }
+            b.copied = false;
+        }
+        if failed {
+            bail!("capture readback of generation {generation} failed to map");
+        }
+        Ok((passes, wait_ms, copied.elapsed().as_secs_f64() * 1000.0, bytes))
+    }
+
+    /// A staging slot no deferred capture is holding.
+    fn free_slot(&self) -> usize {
+        let busy: Vec<usize> = self.deferred_maps.0.lock().expect("deferred maps").iter().map(|m| m.slot).collect();
+        (0..READBACK_SLOTS).find(|slot| !busy.contains(slot)).unwrap_or(0)
+    }
+
+    fn capture_request(&mut self, sim_tick: u64, mut request: CaptureRequest) -> Result<CapturedFrame> {
+        request.slot = self.free_slot();
+        request.deferred = false;
         let registered = self.expected_keys();
         if let Some(unknown) = request.keys.iter().find(|k| !registered.contains(k)) {
             bail!("capture: pass {unknown:?} is not registered");
@@ -4764,12 +4970,13 @@ fn sync_staging(
             .iter()
             .any(|t| t.src_image == b.src_image && t.depth == b.depth && t.key == b.key)
     });
+    let slot = capture.0.slot;
     for target in targets.0.iter() {
         if !capture.0.keys.iter().any(|k| *k == target.key)
             || staging
                 .0
                 .iter()
-                .any(|b| b.src_image == target.src_image && b.depth == target.depth)
+                .any(|b| b.src_image == target.src_image && b.depth == target.depth && b.slot == slot)
         {
             continue;
         }
@@ -4791,6 +4998,7 @@ fn sync_staging(
             height,
             padded_row,
             buffer: make_buffer(&device, padded_row * height as usize),
+            slot,
             copied: false,
         });
     }
@@ -4824,7 +5032,7 @@ fn copy_passes(
     if capture.0.keys.is_empty() {
         return;
     }
-    for b in staging.0.iter_mut() {
+    for b in staging.0.iter_mut().filter(|b| b.slot == capture.0.slot) {
         b.copied = false;
         if !capture.0.keys.iter().any(|k| *k == b.key) {
             continue;
@@ -4870,15 +5078,45 @@ fn receive_passes(
     sender: Res<RenderSender>,
     capture: Res<ExtractedCapture>,
     clock: Res<ReadbackClock>,
+    deferred: Res<DeferredMaps>,
     mut staging: ResMut<Staging>,
 ) {
-    let pending = staging.0.iter().filter(|b| b.copied).count();
+    // Frames without a capture request copy nothing; a deferred slot keeps
+    // its `copied` flags until the host collects it.
+    if capture.0.keys.is_empty() {
+        return;
+    }
+    let slot = capture.0.slot;
+    let pending = staging.0.iter().filter(|b| b.copied && b.slot == slot).count();
     if pending == 0 {
+        return;
+    }
+    if capture.0.deferred {
+        // Start the maps and return: the host collects them after it has
+        // queued more work (`SceneApp::capture_finish`).
+        let done = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let failed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        for b in staging.0.iter().filter(|b| b.copied && b.slot == slot) {
+            let (done, failed) = (done.clone(), failed.clone());
+            b.buffer.slice(..).map_async(MapMode::Read, move |res| {
+                if res.is_err() {
+                    failed.store(true, std::sync::atomic::Ordering::Release);
+                }
+                done.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+            });
+        }
+        deferred.0.lock().expect("deferred maps").push(DeferredMap {
+            generation: capture.0.generation,
+            slot,
+            expected: pending,
+            done,
+            failed,
+        });
         return;
     }
     let waited = Instant::now();
     let (s, r) = crossbeam_channel::bounded::<()>(pending);
-    for b in staging.0.iter().filter(|b| b.copied) {
+    for b in staging.0.iter().filter(|b| b.copied && b.slot == slot) {
         let tx = s.clone();
         b.buffer.slice(..).map_async(MapMode::Read, move |res| {
             res.expect("map readback buffer");
@@ -4894,7 +5132,7 @@ fn receive_passes(
     let wait_ms = waited.elapsed().as_secs_f64() * 1000.0;
     let copied = Instant::now();
     let mut bytes = 0u64;
-    for b in staging.0.iter_mut().filter(|b| b.copied) {
+    for b in staging.0.iter_mut().filter(|b| b.copied && b.slot == slot) {
         let data = b.buffer.slice(..).get_mapped_range().to_vec();
         bytes += data.len() as u64;
         b.buffer.unmap();

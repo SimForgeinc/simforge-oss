@@ -52,7 +52,7 @@ export interface NativeServiceSession {
 }
 
 const DEFAULT_STARTUP_TIMEOUT_MS = 300_000;
-const DEFAULT_SHM_SIZE_MB = 512;
+export const DEFAULT_SHM_SIZE_MB = 512;
 const KILL_AFTER_MS = 10_000;
 /** SIGKILL lands within `KILL_AFTER_MS`; this is the slack after it before `close()` stops waiting. */
 const EXIT_WAIT_MS = KILL_AFTER_MS + 5_000;
