@@ -556,8 +556,9 @@ function Stage({ job, stage, label, roadFraction, complete, selectedCount, selec
   return (
     <section {...stylex.props(hairline.all, styles.stage)} aria-label="Download progress" data-testid="map-downloads-stage" data-stage-map={stage?.id ?? ""}>
       <div {...stylex.props(styles.stageHead)}>
-        <p {...stylex.props(typography.title, textLayout.truncate, styles.stageName, styles.title)} data-testid="map-downloads-stage-headline">
-          {complete ? <Check {...stylex.props(styles.icon)} aria-hidden="true" /> : null} {headline}
+        <p {...stylex.props(typography.title, styles.stageName, styles.title)} data-testid="map-downloads-stage-headline">
+          {complete ? <Check {...stylex.props(styles.icon, styles.headlineIcon)} aria-hidden="true" /> : null}
+          <span {...stylex.props(textLayout.truncate)}>{headline}</span>
         </p>
         {progress ? (
           <MetaLabel data-testid="map-downloads-stage-map-bytes">
