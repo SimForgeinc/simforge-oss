@@ -2722,6 +2722,12 @@ fn prepare_sensor_work(
                 format!("[native_actor_class_missing] actor {} has no class in the world", actor.id)
             })?;
             actor_classes.insert(instance_id, sensors::taxonomy::SemanticClass::try_from_actor_class(class)?);
+            // A ridden two-wheeler's rider is its own instance (class `rider`)
+            // moving with the bike.
+            if let Some(rider_id) = state.app.actor_rider_instance_id(&actor.id) {
+                instance_velocities.insert(rider_id, Vec3::from_array(actor.velocity));
+                actor_classes.insert(rider_id, sensors::taxonomy::SemanticClass::Rider);
+            }
         }
     }
     let binary = state.episode.as_ref().is_some_and(|episode| {
