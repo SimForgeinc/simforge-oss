@@ -93,7 +93,10 @@ const HOLD_PROCESS_TITLE_SOURCE =
  * process still alive.
  *
  * `process.ppid` is read from the OS on every access, so a reparented child
- * sees a different parent than the one it was spawned under and exits. Node
+ * sees a different parent than the one it was spawned under and exits. It
+ * exits by signalling itself SIGTERM rather than `process.exit`, so the
+ * server's shutdown hook still closes the local database cleanly (a process
+ * with no handler terminates on the signal just the same). Node
  * has no `PR_SET_PDEATHSIG` binding and the watch must work on every
  * platform, so this is a poll; the timer is unref'd, so it never keeps an
  * otherwise-finished process alive. Children forked by a child inherit it
@@ -101,7 +104,7 @@ const HOLD_PROCESS_TITLE_SOURCE =
  */
 const PARENT_DEATH_WATCH_SOURCE =
   'const parent = process.ppid;'
-  + 'setInterval(() => { if (process.ppid !== parent) process.exit(1); }, 1000).unref();';
+  + 'setInterval(() => { if (process.ppid !== parent) process.kill(process.pid, "SIGTERM"); }, 1000).unref();';
 
 /**
  * Both concerns ride in one `data:` module. Node re-serializes a child's
@@ -139,6 +142,25 @@ function spawnHostCommand(command: HostCommand, extraEnv: Record<string, string>
       ...extraEnv,
     },
   });
+}
+
+/**
+ * Lets the server close its database before it exits on SIGTERM.
+ *
+ * Next installs its own SIGTERM handler that ends in `process.exit(143)` once
+ * the HTTP server has closed, racing the database module's asynchronous
+ * `PGlite.close()`; and `next dev` SIGKILLs its server process 100 ms after
+ * forwarding the signal. Either way every stop left the PGlite directory
+ * uncleanly shut down. `NEXT_MANUAL_SIG_HANDLE` is Next's documented switch
+ * for an application that handles the signal itself (studio/app/lib/db/
+ * data-api.ts closes PGlite, then exits), and `NEXT_EXIT_TIMEOUT_MS` gives
+ * `next dev` time for that close. An operator's own values win.
+ */
+export function serverShutdownEnv(env: NodeJS.ProcessEnv): Record<string, string> {
+  return {
+    NEXT_MANUAL_SIG_HANDLE: env.NEXT_MANUAL_SIG_HANDLE ?? "1",
+    NEXT_EXIT_TIMEOUT_MS: env.NEXT_EXIT_TIMEOUT_MS ?? "60000",
+  };
 }
 
 function processAlive(pid: number): boolean {
@@ -246,7 +268,13 @@ export async function runLocalHost(plan: LocalHostPlan, config: LocalHostConfig 
     await plan.bootstrap();
     if (ownershipError) throw ownershipError;
 
-    const server = spawnHostCommand(plan.server, { ...runtimeEnv, ...accessEnv, PORT: String(port), HOSTNAME: hostname });
+    const server = spawnHostCommand(plan.server, {
+      ...runtimeEnv,
+      ...accessEnv,
+      ...serverShutdownEnv(process.env),
+      PORT: String(port),
+      HOSTNAME: hostname,
+    });
     children.push(server);
     if (withWorker) {
       const worker = spawnHostCommand(plan.worker, {
