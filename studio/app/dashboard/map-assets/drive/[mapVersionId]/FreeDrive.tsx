@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as stylex from "@stylexjs/stylex";
 import type { CityViewer } from "@simforge-oss/viewer";
-import { renderingPreferenceQuality, useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
+import { DEFAULT_RENDERING_PREFERENCE, renderingPreferenceQuality, useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import type {
   ScenarioWorldState,
   ScenarioWorldTarget,
@@ -36,7 +36,7 @@ function ignoreActorRenderer(): void {}
  */
 export function FreeDrive({ map }: { map: ScenarioMapDescriptorDto }) {
   const router = useRouter();
-  const quality = renderingPreferenceQuality(useRenderingPreference() ?? "medium");
+  const quality = renderingPreferenceQuality(useRenderingPreference() ?? DEFAULT_RENDERING_PREFERENCE);
   const [viewer, setViewer] = useState<CityViewer | null>(null);
   const [worldState, setWorldState] = useState<ScenarioWorldState>(EMPTY_WORLD_STATE);
   const entry = useMemo(() => driveMapEntry(map), [map]);
