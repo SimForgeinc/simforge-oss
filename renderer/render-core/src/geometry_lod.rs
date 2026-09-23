@@ -17,8 +17,11 @@
 //! of the rig and `px` the pixel-error budget (1 by default). Ranges are
 //! abrupt (no dithered cross-fade), so a frame is a pure function of the
 //! camera pose: deterministic, with a bounded, documented error. Distance is
-//! measured to the instance origin (Bevy's `VisibilityRange`), which the
-//! ingest builder's switch distances are conservative for.
+//! measured, as the manifest defines it, to the world-space centre of the
+//! mesh's bounding sphere: every chain member (RGB and ID) carries that
+//! sphere's box as its `Aabb` (with `NoAutoAabb`) and ranges use it
+//! (`use_aabb`), so all primitives of a node switch together. The box is
+//! also a conservative frustum-culling bound.
 //!
 //! The ID pass clones every level with the master's ID material and the same
 //! ranges, so the instance-ID and semantic outputs switch with RGB. The
@@ -46,9 +49,18 @@ pub struct Manifest {
 pub struct ManifestMesh {
     pub mesh: u32,
     pub name: String,
+    /// Mesh-local bounding sphere; its world centre is where the selection
+    /// distance is measured to.
+    pub bounds: ManifestBounds,
     pub levels: Vec<ManifestLevel>,
     #[serde(default)]
     pub impostor: Option<ManifestImpostor>,
+}
+
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
+pub struct ManifestBounds {
+    pub center: [f32; 3],
+    pub radius: f32,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -158,7 +170,16 @@ fn range_for(member: &LodMember, scale: f32, f_px: f32, pixel_error_px: f32) -> 
     let end = member
         .end_error_m
         .map_or(f32::INFINITY, |error| switch_distance(error, scale, f_px, pixel_error_px));
-    VisibilityRange::abrupt(start, end)
+    VisibilityRange { start_margin: start..start, end_margin: end..end, use_aabb: true }
+}
+
+/// The selection bound every chain member carries.
+fn bounds_aabb(bounds: &ManifestBounds) -> (bevy::camera::primitives::Aabb, bevy::camera::visibility::NoAutoAabb) {
+    let center = Vec3::from_array(bounds.center);
+    (
+        bevy::camera::primitives::Aabb::from_min_max(center - Vec3::splat(bounds.radius), center + Vec3::splat(bounds.radius)),
+        bevy::camera::visibility::NoAutoAabb,
+    )
 }
 
 /// Spawn the level entities for every master primitive the manifest covers
@@ -205,9 +226,10 @@ pub(crate) fn spawn_levels(
             )
         };
         let first_error = entry.levels.first().map(|l| l.geometric_error_m).or(entry.impostor.as_ref().map(|i| i.geometric_error_m));
-        world.entity_mut(*master).insert(LodMember { start_error_m: 0.0, end_error_m: first_error });
+        let bound = bounds_aabb(&entry.bounds);
+        world.entity_mut(*master).insert((LodMember { start_error_m: 0.0, end_error_m: first_error }, bound.clone()));
         if let Some((clone, _)) = id_clones.get(master) {
-            world.entity_mut(*clone).insert(LodMember { start_error_m: 0.0, end_error_m: first_error });
+            world.entity_mut(*clone).insert((LodMember { start_error_m: 0.0, end_error_m: first_error }, bound.clone()));
         }
         let mut chain: Vec<(Handle<Mesh>, Handle<StandardMaterial>, f32, Option<f32>, bool)> = Vec::new();
         for (k, level) in entry.levels.iter().enumerate() {
@@ -237,7 +259,7 @@ pub(crate) fn spawn_levels(
         }
         for (mesh, level_material, start, end, casts_shadow) in chain {
             let member = LodMember { start_error_m: start, end_error_m: end };
-            let mut cmd = world.spawn((Mesh3d(mesh.clone()), MeshMaterial3d(level_material), transform, member.clone()));
+            let mut cmd = world.spawn((Mesh3d(mesh.clone()), MeshMaterial3d(level_material), transform, member.clone(), bound.clone()));
             if let Some(parent) = parent {
                 cmd.insert(ChildOf(parent));
             }
@@ -256,6 +278,7 @@ pub(crate) fn spawn_levels(
                     RenderLayers::layer(1),
                     transform,
                     member,
+                    bound.clone(),
                 ));
                 if let Some(parent) = parent {
                     clone.insert(ChildOf(parent));
