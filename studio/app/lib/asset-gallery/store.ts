@@ -388,6 +388,13 @@ export async function completeGalleryAssetVersion(
   return asset ? { kind: "ready", asset } : { kind: "not_found" };
 }
 
+/**
+ * A scenario references a gallery actor by its exact version (`<slug>.v<N>`), and a version is
+ * immutable once verified. Resolution is therefore by that exact version, whatever happened to
+ * the asset since: an asset that was later removed, rejected or superseded still resolves its
+ * verified versions, so unpublishing an asset never changes what an existing scenario simulates.
+ * Only an id with no verified version is missing.
+ */
 export async function resolveGalleryCatalogIds(
   catalogIds: string[],
 ): Promise<{ entries: GalleryCatalogEntryDto[]; missing: string[] }> {
@@ -401,9 +408,7 @@ export async function resolveGalleryCatalogIds(
        v.source_key, v.source_sha256, v.animation::text AS animation_json
      FROM asset_gallery.assets a
      JOIN asset_gallery.asset_versions v ON v.asset_id = a.id
-     WHERE a.status = 'ready'
-       AND a.visibility = 'public'
-       AND v.verification_state = 'verified'
+     WHERE v.verification_state = 'verified'
        AND (a.catalog_slug || '.v' || v.version::text) IN (
          SELECT jsonb_array_elements_text(CAST(:catalog_ids AS JSONB))
        )`,
@@ -441,6 +446,28 @@ export async function resolveGalleryCatalogIds(
   );
 
   return { entries, missing: uniqueIds.filter((catalogId) => !rowById.has(catalogId)) };
+}
+
+/** A scenario names a gallery actor version that does not exist (or never verified). */
+export class GalleryCatalogResolutionError extends Error {
+  readonly code = "actor_catalog_entry_missing";
+  constructor(readonly missing: readonly string[]) {
+    super(
+      `actor_catalog_entry_missing: gallery actor version${missing.length === 1 ? "" : "s"} ${missing.join(", ")} `
+      + "cannot be resolved; the scenario cannot be simulated or compiled until the actor is replaced.",
+    );
+    this.name = "GalleryCatalogResolutionError";
+  }
+}
+
+/**
+ * Every entry `catalogIds` names, or a `GalleryCatalogResolutionError`. Simulation and compilation
+ * use this: dropping an unresolved actor would silently change the scenario's motion.
+ */
+export async function requireGalleryCatalogEntries(catalogIds: string[]): Promise<GalleryCatalogEntryDto[]> {
+  const { entries, missing } = await resolveGalleryCatalogIds(catalogIds);
+  if (missing.length > 0) throw new GalleryCatalogResolutionError(missing);
+  return entries;
 }
 
 /**

@@ -35,7 +35,7 @@ import type {
   ScenarioSimulationTrafficProvider,
 } from "@simforge-oss/studio-host";
 
-import { resolveGalleryCatalogIds } from "@/app/lib/asset-gallery/store";
+import { GalleryCatalogResolutionError, requireGalleryCatalogEntries } from "@/app/lib/asset-gallery/store";
 import { queryOne, queryRows, withTransaction, type Transaction } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import { getPresignedGetUrl, getPresignedPutUrl, headS3Object } from "@/app/lib/s3/s3-presign";
@@ -119,8 +119,9 @@ type RequestIdentity = {
 };
 
 async function catalogEntriesFor(content: unknown) {
-  const gallery = await resolveGalleryCatalogIds(collectGalleryCatalogIds(content as Record<string, unknown>));
-  return gallery.entries.map(galleryCatalogEntry);
+  // Exact versions or a loud `actor_catalog_entry_missing` (a scenario error: the request fails).
+  const entries = await requireGalleryCatalogEntries(collectGalleryCatalogIds(content as Record<string, unknown>));
+  return entries.map(galleryCatalogEntry);
 }
 
 async function requestIdentity(subject: SimulationSubject): Promise<RequestIdentity & { catalogEntries: Awaited<ReturnType<typeof catalogEntriesFor>> }> {
@@ -792,9 +793,9 @@ export async function claimSimulationJob(input: { workerId: string; leaseSeconds
         workspaceId: candidate.workspace_id,
         requestKey: candidate.request_key,
         fenceToken: claim.fenceToken,
-        code: "simulation_claim_map_unavailable",
+        code: error instanceof GalleryCatalogResolutionError ? error.code : "simulation_claim_map_unavailable",
         message: error instanceof Error ? error.message : String(error),
-        retryable: true,
+        retryable: !(error instanceof GalleryCatalogResolutionError),
       });
     }
   }
