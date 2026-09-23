@@ -1318,6 +1318,8 @@ export type {
 } from "./parity";
 export {
   isScenarioParityEvidenceAccepted,
+  isScenarioRenderEvidence,
+  scenarioParityEvidencePolicyFailure,
   SCENARIO_NATIVE_PHYSICS_ACCEPTANCE_LIMITS,
   SCENARIO_PARITY_EVIDENCE_VERSION,
   SCENARIO_REFERENCE_EQUIVALENCE_LIMITS,
@@ -1331,8 +1333,26 @@ export {
   ScenarioRenderWorkerIdentitySchema,
 } from "./scenario-render-control";
 export type {
+  RenderEvidenceRejection,
   ScenarioParityEvidenceV1,
   ScenarioRenderResourceRequest,
   ScenarioRenderHardwareProfile,
   ScenarioRenderWorkerIdentity,
 } from "./scenario-render-control";
+export {
+  CARLA_ACTOR_BODY_SUBSTITUTION,
+  carlaRuntimeEvidencePolicyFailure,
+  carlaSubstitutionVerdict,
+  nativeEvidencePolicyFailure,
+  RENDER_CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK,
+  RENDER_CONTROL_FEATURE_NATIVE_ENCODER,
+  RENDER_CONTROL_FEATURE_NATIVE_PARITY,
+  RENDER_CONTROL_FEATURE_NATIVE_SCENE_SOURCE,
+  RENDER_CONTROL_FEATURE_NATIVE_STAGE_TIMINGS,
+  RENDER_CONTROL_FEATURE_RENDER_SUBSTITUTIONS,
+  RENDER_CONTROL_FEATURE_REQUIREMENTS,
+  RENDER_SUBSTITUTION_GRANT_FIELD,
+  RenderSubstitutionRecordSchema,
+  renderSubstitutionsVerdict,
+} from "./render-evidence-policy";
+export type { RenderSubstitutionRecord, SubstitutionVerdict } from "./render-evidence-policy";

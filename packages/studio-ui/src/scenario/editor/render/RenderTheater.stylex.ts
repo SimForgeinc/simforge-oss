@@ -140,6 +140,17 @@ export const styles = stylex.create({
     lineHeight: text.lineXs,
     color: colors.danger,
   },
+  // What the job result records beside the video: allowed substitutions and engine warnings.
+  resultNotes: {
+    display: "flex",
+    flexDirection: "column",
+    gap: space.s1,
+  },
+  resultNote: {
+    fontSize: text.sizeXs,
+    lineHeight: text.lineXs,
+    color: colors.warning,
+  },
   // min-h-0 flex-1
   fillShrinkable: {
     minHeight: "0px",

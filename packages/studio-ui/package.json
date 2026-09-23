@@ -1103,6 +1103,6 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run && tsx --test src/scenario/editor/clipboard/actor-clipboard.test.ts src/scenario/editor/scene-time.test.ts"
+    "test": "vitest run && node --conditions=development --import tsx --test src/scenario/editor/clipboard/actor-clipboard.test.ts src/scenario/editor/scene-time.test.ts"
   }
 }

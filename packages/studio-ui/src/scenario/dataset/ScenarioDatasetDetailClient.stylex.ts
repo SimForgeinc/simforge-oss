@@ -61,18 +61,28 @@ export const styles = stylex.create({
     flexShrink: 0,
     opacity: 0.7,
   },
-  /** Search, filter, tags and add, in the top-right corner of the header. */
+  /** Search, filter and tags, in the top-right corner of the header. */
   headerActions: {
     display: "flex",
     flexShrink: 0,
     alignItems: "center",
     gap: space.s1,
   },
-  headerAdd: {
+  /** The description, then the dataset's primary action at the row's end. */
+  descriptionRow: {
+    display: "flex",
+    minWidth: 0,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: space.s2,
+  },
+  headerNew: {
     flexShrink: 0,
   },
   description: {
     margin: 0,
+    minWidth: 0,
+    flex: "1 1 0%",
     fontSize: text.sizeXs,
     lineHeight: text.lineXs,
     color: colors.inkSecondary,

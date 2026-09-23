@@ -264,20 +264,18 @@ def test_env_cannot_bind_or_approve_a_refused_source(monkeypatch):
         backend_module.approved_cooked_xodr_digests(SR_PHASE2)
 
 
-@pytest.mark.parametrize("policy", ["exact", "allow-approximate"])
-def test_load_opendrive_refuses_a_known_unbound_source_before_touching_carla(monkeypatch, policy):
+def test_load_opendrive_refuses_a_known_unbound_source_before_touching_carla(monkeypatch):
     body = b"<OpenDRIVE needs-recook/>"
     sha = hashlib.sha256(body).hexdigest()
     monkeypatch.setattr(backend_module, "UNBINDABLE_COOKED_SOURCES", {
         sha: world_manifest.Refusal(sha, "needs-recook", "Belmont_Office_Park_Belmont_CA", "road network differs", "Belmont"),
     })
-    monkeypatch.setenv("SIMFORGE_CARLA_MAP_BINDING", policy)
-    monkeypatch.setenv("SIMFORGE_CARLA_ALLOW_GENERATED_XODR", "1")
+    monkeypatch.delenv("SIMFORGE_CARLA_MAP_BINDING", raising=False)
     backend = object.__new__(CarlaBackend)
     backend.client = type("Client", (), {
         "get_available_maps": lambda _self: pytest.fail("a refused source must not reach the server"),
     })()
-    with pytest.raises(RuntimeError, match="needs-recook: road network differs"):
+    with pytest.raises(RuntimeError, match=r"\[carla_map_world_unbound\] .*needs-recook: road network differs"):
         backend.load_opendrive("Belmont_Office_Park_Belmont_CA", body, 0.02)
 
 

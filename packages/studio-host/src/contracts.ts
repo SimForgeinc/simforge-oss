@@ -18,7 +18,13 @@ export const SCENARIO_AUTHORING_QUALITY_IDS = [
   "medium",
 ] as const;
 export type ScenarioAuthoringQuality = (typeof SCENARIO_AUTHORING_QUALITY_IDS)[number];
-export const DEFAULT_SCENARIO_AUTHORING_QUALITY_ID = "medium" satisfies ScenarioAuthoringQuality;
+/**
+ * Texture tier a new document starts with: the tier of the default browser
+ * rendering profile (studio-ui `DEFAULT_RENDERING_PREFERENCE`, "Low · no
+ * foliage"), so a fresh scenario never asks for sharper textures than the
+ * default profile downloads.
+ */
+export const DEFAULT_SCENARIO_AUTHORING_QUALITY_ID = "low" satisfies ScenarioAuthoringQuality;
 
 export const SCENARIO_DATASET_VISIBILITIES = ["workspace", "organization", "public"] as const;
 export type ScenarioDatasetVisibility = (typeof SCENARIO_DATASET_VISIBILITIES)[number];
@@ -780,6 +786,24 @@ export type ScenarioPresignedArtifactDto = ScenarioRenderArtifactDto & {
   expiresInSeconds: number;
 };
 
+/** An engine warning a render attempt reported. Render-affecting conditions fail the job instead. */
+export type ScenarioRenderWarningDto = {
+  code: string;
+  message: string;
+};
+
+/**
+ * A substitution the render intent explicitly allowed (`allowSubstitutions`)
+ * and the engine made, e.g. a CARLA actor rendered with another body.
+ */
+export type ScenarioRenderSubstitutionDto = {
+  kind: string;
+  subject: string;
+  requested: string;
+  rendered: string;
+  allowedBy: string;
+};
+
 export type ScenarioRenderJobDetailDto = {
   id: string;
   revisionId: string;
@@ -799,7 +823,12 @@ export type ScenarioRenderJobDetailDto = {
   attemptCount: number;
   maxAttempts: number;
   failureCode: string | null;
+  /** The failure message, when the code names what is missing (`render.native_*`, `render.carla_*`, `render.render_*`). */
   failureDetail: string | null;
+  /** Warnings the current attempt's engine reported, oldest first. */
+  warnings?: ScenarioRenderWarningDto[];
+  /** Substitutions the intent allowed and the engine made in the succeeded attempt. */
+  substitutions?: ScenarioRenderSubstitutionDto[];
   billingMode: string;
   estimatedCostCents: number;
   renderSpecSha256: string;

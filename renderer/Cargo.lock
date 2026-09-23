@@ -5384,12 +5384,14 @@ dependencies = [
  "bevy",
  "crc32fast",
  "image",
+ "libc",
  "memmap2",
  "render-core",
  "rmp-serde",
  "sensors",
  "serde",
  "serde_json",
+ "sha2",
  "windows-sys 0.61.2",
 ]
 

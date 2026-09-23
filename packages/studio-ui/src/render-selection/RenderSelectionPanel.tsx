@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import * as stylex from "@stylexjs/stylex";
-import { RENDERING_PREFERENCE_CHOICES, type RenderingPreference } from "../components/rendering-preference";
+import { RENDERING_PREFERENCE_CHOICES, renderingPreferenceChoiceLabel, type RenderingPreference } from "../components/rendering-preference";
 import { styles } from "./RenderSelectionPanel.stylex";
 import { hairline, textLayout } from "../stylex/recipes.stylex";
 
@@ -19,7 +19,7 @@ export function RenderSelectionPanel({ currentQuality, onChoose, titleId, descri
       <div {...stylex.props(styles.content)} data-testid="render-selection-content">
         <header {...stylex.props(styles.header)}>
           <h2 id={titleId} {...stylex.props(styles.title)}>Render settings</h2>
-          <p id={descriptionId} {...stylex.props([textLayout.truncate, styles.lede])} title="The initial setting follows this device’s GPU capabilities. Texture targets may be reduced by the viewer when memory or format support is limited. Render jobs have their own quality settings.">
+          <p id={descriptionId} {...stylex.props([textLayout.truncate, styles.lede])} title="Low · no foliage is the default until you choose another setting. Texture targets may be reduced by the viewer when memory or format support is limited. Render jobs have their own quality settings.">
             Graphics for this device. Change any time.
           </p>
         </header>
@@ -29,12 +29,12 @@ export function RenderSelectionPanel({ currentQuality, onChoose, titleId, descri
               key={choice.id}
               type="button"
               onClick={() => onChoose(choice.id)}
-              aria-label={`Use ${choice.label}`}
+              aria-label={`Use ${renderingPreferenceChoiceLabel(choice.id)}`}
               aria-pressed={choice.id === currentQuality}
               title={choice.description}
               {...stylex.props([hairline.all, hairline.strong, styles.choice], choice.id === currentQuality && styles.choiceCurrent)}
             >
-              <span {...stylex.props(styles.choiceLabel)}>{choice.label}</span>
+              <span {...stylex.props(styles.choiceLabel)}>{renderingPreferenceChoiceLabel(choice.id)}</span>
               <span {...stylex.props(styles.choiceCopy)}>{choice.description}</span>
               <span {...stylex.props(styles.choiceTag)}>{choice.id === currentQuality ? "Current" : "Select"}</span>
             </button>

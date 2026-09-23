@@ -1,4 +1,4 @@
-import { RENDER_INTENT_MAX_ASSETS, RENDER_INTENT_V1_SCHEMA, RenderSpecV3Schema, type RenderSpecV3 } from "@simforge-oss/scenario";
+import { RENDER_INTENT_MAX_ASSETS, RENDER_INTENT_V1_SCHEMA, RENDER_MOTION_SOURCES, RENDER_SUBSTITUTION_KINDS, RenderSpecV3Schema, type RenderSpecV3 } from "@simforge-oss/scenario";
 import { z } from "zod";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -50,6 +50,10 @@ export const ScenarioRenderIntentSchema = z.strictObject({
     sizeBytes: z.number().int().nonnegative(),
   })).max(RENDER_INTENT_MAX_ASSETS),
   seed: z.number().int().nonnegative(),
+  /** Substitutions the requester explicitly accepts (`RenderIntentV1.allowSubstitutions`); absent means none. */
+  allowSubstitutions: z.array(z.enum(RENDER_SUBSTITUTION_KINDS)).min(1).max(RENDER_SUBSTITUTION_KINDS.length).optional(),
+  /** `RenderIntentV1.motionSource`: `original-xosc` is the explicit legacy replay. */
+  motionSource: z.enum(RENDER_MOTION_SOURCES).optional(),
 }).superRefine((intent, context) => {
   const hostBySourceId = new Map(intent.sensorHosts.map((host) => [host.sourceId, host]));
   if (hostBySourceId.size !== intent.sensorHosts.length) {
@@ -96,6 +100,12 @@ export const SubmitScenarioRenderIntentSchema = z.strictObject({
   renderSpec: LocalRenderSpecV3Schema,
   idempotencyKey: z.string().trim().min(1).max(200),
   priority: z.number().int().min(-100).max(100).optional(),
+  /**
+   * Where the motion comes from (`RenderIntentV1.motionSource`). Only an
+   * explicit `original-xosc` renders a revision that has no stored trace, as
+   * the labelled legacy OpenSCENARIO replay; nothing selects it implicitly.
+   */
+  motionSource: z.enum(RENDER_MOTION_SOURCES).optional(),
 }).superRefine((input, context) => {
   if (input.engine !== "native" && (input.renderProfile !== undefined || input.nativeVramBudgetBytes !== undefined)) {
     context.addIssue({ code: "custom", path: ["renderProfile"], message: "Render and ML profiles require the native engine." });

@@ -15,8 +15,10 @@ import {
 } from "@simforge-oss/compiler/node";
 import { PINNED_SUMO_RUNTIME_VERSION, type SumoRuntimeFile } from "@simforge-oss/engine/node";
 import { buildRenderTimeline } from "@simforge-oss/render/timeline";
+import { HostOrigin, hostPath } from "@simforge-oss/studio-host";
 
 import { simforgeEnv } from "../lib/simforge-env";
+import { hostObjectUrl } from "./object-url";
 
 /**
  * The CPU runner lane of worker-authoritative simulation for this worker.
@@ -96,7 +98,7 @@ export function claimMemberFetcher(claim: SimulationJobClaim, base: string, host
     if (!url.href.startsWith(base)) throw new Error(`simulation member outside the claimed closure: ${url.href}`);
     const member = members.get(decodeURIComponent(url.href.slice(base.length)));
     if (!member) return new Response(null, { status: 404 });
-    const response = await fetchImpl(new URL(member.downloadUrl, hostUrl), { redirect: "follow", signal: AbortSignal.timeout(120_000) });
+    const response = await fetchImpl(new URL(hostObjectUrl(member.downloadUrl, hostUrl)), { redirect: "follow", signal: AbortSignal.timeout(120_000) });
     if (!response.ok) return response;
     // An object store's presigned GET carries no digest header: verify the
     // bytes against the digest the claim pins, then attest it to the loader.
@@ -157,7 +159,7 @@ async function download(url: URL, fetchImpl: typeof fetch, label: string): Promi
 async function claimMember(claim: SimulationJobClaim, relativePath: string, hostUrl: URL, fetchImpl: typeof fetch): Promise<Uint8Array> {
   const member = claim.map.members.find((candidate) => candidate.relativePath === relativePath);
   if (!member) throw new Error(`simulation_map_member_missing:${relativePath}`);
-  const bytes = await download(new URL(member.downloadUrl, hostUrl), fetchImpl, relativePath);
+  const bytes = await download(new URL(hostObjectUrl(member.downloadUrl, hostUrl)), fetchImpl, relativePath);
   if (createHash("sha256").update(bytes).digest("hex") !== member.sha256) {
     throw new Error(`simulation_map_member_digest_mismatch:${relativePath}`);
   }
@@ -175,14 +177,19 @@ export function claimTrafficStep(claim: SimulationJobClaim, hostUrl: URL, fetchI
         const source = claim.sumoRuntime?.find((candidate) => candidate.file === file);
         if (!source) throw new Error(`sumo_runtime_unavailable:${file}`);
         // The runtime is verified against the pinned digests when it loads.
-        return download(new URL(source.downloadUrl, hostUrl), fetchImpl, file);
+        return download(new URL(hostObjectUrl(source.downloadUrl, hostUrl)), fetchImpl, file);
       },
     ),
   });
 }
 
-/** Simulate a claim and derive its render timeline, exactly as a host does inline. */
-export async function simulateClaim(claim: SimulationJobClaim, hostUrl: URL, fetchImpl: typeof fetch = fetch): Promise<{ simulation: AuthoritativeSimulation; timeline: SimulationTimeline | null }> {
+/**
+ * Simulate a claim and derive its render timeline, exactly as a host does
+ * inline. The timeline is the render contract every renderer samples: a
+ * simulation whose timeline cannot be built fails
+ * (`render_timeline_build_failed`) instead of completing without one.
+ */
+export async function simulateClaim(claim: SimulationJobClaim, hostUrl: URL, fetchImpl: typeof fetch = fetch): Promise<{ simulation: AuthoritativeSimulation; timeline: SimulationTimeline }> {
   const closure = await closureFor(claim, hostUrl, fetchImpl);
   const simulation = simulateAuthoritative({
     canonicalContent: claim.canonicalContent,
@@ -190,24 +197,30 @@ export async function simulateClaim(claim: SimulationJobClaim, hostUrl: URL, fet
     catalogEntries: claim.catalogEntries as never,
     trafficStep: await claimTrafficStep(claim, hostUrl, fetchImpl),
   });
-  let timeline: SimulationTimeline | null = null;
+  let timeline: SimulationTimeline;
   try {
     timeline = await buildRenderTimeline({ trace: simulation.trace, xodr: closure.xodr, topology: closure.topology, catalogDigest: null });
   } catch (error) {
-    process.stderr.write(`${JSON.stringify({ component: "simforge-local-simulator", event: "timeline.unavailable", simKey: simulation.simKey, error: error instanceof Error ? error.message : String(error) })}\n`);
+    throw new Error(`render_timeline_build_failed: simulation ${simulation.simKey}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
   return { simulation, timeline };
 }
 
 export class SimulationJobClient {
+  private readonly host: HostOrigin;
+
   constructor(
     readonly baseUrl: URL,
     private readonly token: string,
     private readonly fetchImpl: typeof fetch = fetch,
-  ) {}
+  ) {
+    // Same trust decision as the CPU-job client (http-client.ts): the worker
+    // was pointed at this host explicitly.
+    this.host = HostOrigin.fromConfigured(baseUrl.origin, "packaged", { plaintextNetworkAcknowledged: true });
+  }
 
   private post(path: string, body: JsonObject): Promise<Response> {
-    return this.fetchImpl(new URL(path, this.baseUrl), {
+    return this.fetchImpl(this.host.toURL(hostPath(path)), {
       method: "POST",
       headers: { authorization: `Bearer ${this.token}`, "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -236,7 +249,7 @@ export class SimulationJobClient {
     if (!reservation?.uploadRequired || !bytes || !sha256) return;
     if (!reservation.uploadUrl) throw new Error("sim_job_upload_url_missing");
     // Same-origin local-object reservations are root-relative; presigned object-store URLs are absolute.
-    const response = await this.fetchImpl(new URL(reservation.uploadUrl, this.baseUrl), {
+    const response = await this.fetchImpl(new URL(hostObjectUrl(reservation.uploadUrl, this.baseUrl)), {
       method: "PUT",
       headers: {
         "content-type": reservation.mediaType,

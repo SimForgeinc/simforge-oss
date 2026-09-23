@@ -7,7 +7,7 @@
  *
  * | Document | Producer / owner | Why it is mirrored here |
  * |---|---|---|
- * | `ComputeJob*`, `ComputeEstimate`, `Upload*` | SimCloud, `@simcloud/shared` (`packages/shared/src/compute-jobs.ts`), served under `/api/simforge/compute` | `@simcloud/shared` is a private Cloud workspace package; the OSS desktop app cannot depend on it. The DTOs are structurally identical, so a Cloud page may pass its own typed DTOs straight into these components. |
+ * | `ComputeJob*`, `ComputeEstimate`, `Upload*` | SimCloud's private shared workspace package (`packages/shared/src/compute-jobs.ts` there), served under `/api/simforge/compute` | That package is private to the Cloud repository; the OSS desktop app cannot depend on it. The DTOs are structurally identical, so a Cloud page may pass its own typed DTOs straight into these components. |
  * | `EvalResultManifest`, `OpenLoopResult`, `EvalArtifactRole` | `@simforge-oss/evaluation` (`src/protocol/**`) | The web portal must not import that package: its episode runner reaches `node:child_process`, which would drag a Node-only graph into a browser bundle. The desktop app, which already depends on it, may import the canonical types directly. |
  * | `ModelCatalogEntry` and friends | model-runtime workstream, in `./model-catalog` | Owned in this package precisely so there is exactly one table. |
  *

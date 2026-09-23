@@ -24,3 +24,16 @@ it.each([false, true])('refuses writes into installed maps before creating any d
     await rm(home, { recursive: true, force: true });
   }
 });
+
+it('refuses to transcode below its free-space floor and rejects a negative floor', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'texture-tier-headroom-'));
+  try {
+    const output = path.join(root, 'out');
+    await expect(buildTextureTiers({ sourceRoot: root, outputRoot: output, minFreeBytes: Number.MAX_SAFE_INTEGER }))
+      .rejects.toThrow(/Texture derivatives require at least \d+ GB of free disk space/);
+    await expect(buildTextureTiers({ sourceRoot: root, outputRoot: output, minFreeBytes: -1 }))
+      .rejects.toThrow('minFreeBytes must be a non-negative number of bytes');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

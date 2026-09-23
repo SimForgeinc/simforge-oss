@@ -116,6 +116,7 @@ impl WindowMode {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NightControls {
     #[serde(default = "default_year")]
     pub utc_year: i32,
@@ -214,6 +215,7 @@ impl Default for NightControls {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NightFixture {
     pub source_id: String,
     pub source_name: String,

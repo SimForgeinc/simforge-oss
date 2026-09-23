@@ -79,6 +79,17 @@ pub struct PlaybackArgs {
     /// Warmup frames (shader compile) before tick 0 is captured.
     #[arg(long, default_value_t = 30)]
     pub warmup: u32,
+    /// Explicitly render actors that have no catalog model (no models
+    /// directory, or an id the catalog lacks) as procedural primitives.
+    /// Without it such an actor is an error (no-silent-fallbacks policy);
+    /// every primitive actor is logged as `primitive-actor:`.
+    #[arg(long, default_value_t = false)]
+    pub allow_primitive_actors: bool,
+    /// Explicitly give generic pedestrians a deterministic walker from the
+    /// pedestrian catalog when their catalog id has no model. Logged per
+    /// actor as `actor-model-substitution:`.
+    #[arg(long, default_value_t = false)]
+    pub allow_pedestrian_substitution: bool,
     /// Override terrain-following placement with a fixed road-surface elevation.
     #[arg(long)]
     pub ground_y: Option<f32>,
@@ -438,11 +449,23 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
     let mut pending_models: Vec<(String, VehicleModelEntry)> = Vec::new();
     let mut model_assignments = HashMap::new();
     let mut seen_recipes = HashSet::new();
-    if args.vehicle_models.is_none() && doc.actors.iter().any(|actor| is_vehicle_class(&actor.actor_class)) {
-        eprintln!("actor-models-unconfigured: no --vehicle-models directory; vehicle actors will render as procedural primitives, not CARLA GLBs");
+    let primitive = |actor: &str, reason: String| -> Result<()> {
+        if args.allow_primitive_actors {
+            eprintln!("primitive-actor: {actor} renders as a procedural primitive (--allow-primitive-actors): {reason}");
+            Ok(())
+        } else {
+            anyhow::bail!("actor {actor}: {reason} (pass --allow-primitive-actors to render it as a primitive explicitly)")
+        }
+    };
+    if args.vehicle_models.is_none() {
+        for actor in doc.actors.iter().filter(|actor| is_vehicle_class(&actor.actor_class)) {
+            primitive(&actor.id, "no --vehicle-models directory".into())?;
+        }
     }
-    if args.pedestrian_models.is_none() && doc.actors.iter().any(|actor| actor.actor_class == "pedestrian") {
-        eprintln!("actor-models-unconfigured: no --pedestrian-models directory; pedestrian actors will render as procedural primitives, not CARLA GLBs");
+    if args.pedestrian_models.is_none() {
+        for actor in doc.actors.iter().filter(|actor| actor.actor_class == "pedestrian") {
+            primitive(&actor.id, "no --pedestrian-models directory".into())?;
+        }
     }
     if let Some(dir) = &args.vehicle_models {
         let catalog = VehicleModelCatalog::load(dir)?;
@@ -451,16 +474,20 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
                 continue;
             }
             if let Some(entry) = catalog.resolve(&desc.catalog_id) {
-                model_assignments.insert(desc.id.clone(), desc.catalog_id.clone());
-                if seen_recipes.insert(desc.catalog_id.clone()) && entry.glb_path.is_file() {
-                    pending_models.push((desc.catalog_id.clone(), entry.clone()));
-                } else if !entry.glb_path.is_file() {
-                    eprintln!(
-                        "vehicle model for {} missing on disk: {} (primitive fallback)",
+                if !entry.glb_path.is_file() {
+                    anyhow::bail!(
+                        "vehicle model for {} ({}) missing on disk: {}",
+                        desc.id,
                         desc.catalog_id,
                         entry.glb_path.display()
                     );
                 }
+                model_assignments.insert(desc.id.clone(), desc.catalog_id.clone());
+                if seen_recipes.insert(desc.catalog_id.clone()) {
+                    pending_models.push((desc.catalog_id.clone(), entry.clone()));
+                }
+            } else {
+                primitive(&desc.id, format!("catalog id {} has no model in {}", desc.catalog_id, dir.display()))?;
             }
         }
     }
@@ -477,6 +504,9 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
                 // identity-equivalent model. Any future explicit procedural pedestrian
                 // choice must bypass this substitution rather than enter the walker pool.
                 .or_else(|| {
+                    if !args.allow_pedestrian_substitution {
+                        return None;
+                    }
                     let substitute = catalog.resolve_deterministic(&desc.id);
                     if let Some((recipe, _)) = substitute {
                         eprintln!(
@@ -487,18 +517,20 @@ pub fn run(mut args: PlaybackArgs) -> Result<()> {
                     substitute
                 });
             let Some((recipe_key, entry)) = resolved else {
+                primitive(&desc.id, format!(
+                    "pedestrian catalog id {} has no model in {} (--allow-pedestrian-substitution picks a walker)",
+                    desc.catalog_id,
+                    dir.display()
+                ))?;
                 continue;
             };
+            if !entry.glb_path.is_file() {
+                anyhow::bail!("pedestrian model for {} missing on disk: {}", desc.id, entry.glb_path.display());
+            }
             let recipe_key = recipe_key.to_string();
             model_assignments.insert(desc.id.clone(), recipe_key.clone());
-            if seen_recipes.insert(recipe_key.clone()) && entry.glb_path.is_file() {
+            if seen_recipes.insert(recipe_key.clone()) {
                 pending_models.push((recipe_key, entry.clone()));
-            } else if !entry.glb_path.is_file() {
-                eprintln!(
-                    "pedestrian model for {} missing on disk: {} (primitive fallback)",
-                    desc.id,
-                    entry.glb_path.display()
-                );
             }
         }
     }
@@ -827,7 +859,7 @@ fn startup_setup(
         &mut images,
         pb.args.width,
         pb.args.height,
-        TextureFormat::Rgba8UnormSrgb,
+        crate::engine::ID_PASS_FORMAT,
     );
     commands.spawn(PassCopier {
         buffer: readback::make_buffer(&device, rgba_row),
@@ -847,8 +879,7 @@ fn startup_setup(
             far: pb.args.far,
             ..default()
         }),
-        Msaa::Off,
-        Tonemapping::None,
+        crate::engine::id_pass_camera(),
         Transform::from_translation(eye).looking_at(target, Vec3::Y),
         RenderTarget::Image(id_image.into()),
         RenderLayers::layer(1),
@@ -1334,12 +1365,7 @@ fn on_scene_ready(
     });
     for (i, (name, _, _, _, mesh_h, parent, transform)) in entries.into_iter().enumerate() {
         let id = (i + 1) as u32;
-        let bytes = id.to_le_bytes();
-        let mat = materials.add(StandardMaterial {
-            base_color: Color::srgb_u8(bytes[0], bytes[1], bytes[2]),
-            unlit: true,
-            ..default()
-        });
+        let mat = materials.add(crate::engine::instance_id_material(id));
         let mut cmd = commands.spawn((
             IdClone,
             Mesh3d(mesh_h),
@@ -1424,12 +1450,7 @@ fn spawn_actor_if_needed(
         return;
     };
     let instance_id = registry.instance_ids[id];
-    let bytes = instance_id.to_le_bytes();
-    let id_mat = materials.add(StandardMaterial {
-        base_color: Color::srgb_u8(bytes[0], bytes[1], bytes[2]),
-        unlit: true,
-        ..default()
-    });
+    let id_mat = materials.add(crate::engine::instance_id_material(instance_id));
     let mv_handle = mv_materials.add(MotionVectorMaterial {});
     let dims = actor_dims(desc);
     let (l, w, h) = (dims.l as f32, dims.w as f32, dims.h as f32);

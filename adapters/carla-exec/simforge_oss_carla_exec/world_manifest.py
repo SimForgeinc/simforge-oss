@@ -33,6 +33,7 @@ class Binding:
     runtime_xodr_sha256: str
     signal_id_map: Mapping[str, str]
     origin: str  # "<sourceFolder>" or "legacy:<note>"
+    unowned_signal_ids: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -105,11 +106,13 @@ def bindings(manifest: Mapping[str, Any] | None = None) -> dict[str, Binding]:
         if entry["status"] in BINDABLE:
             sha = entry["xodr"]["sha256"]
             out[sha] = Binding(sha, entry["carlaWorld"], entry["cookedXodrSha256"],
-                               dict(entry.get("signalIdMap", {})), entry["sourceFolder"])
+                               dict(entry.get("signalIdMap", {})), entry["sourceFolder"],
+                               frozenset(entry.get("unownedCookedSignalIds", ())))
     for legacy in m.get("legacySources", []):
         sha = legacy["sourceXodrSha256"]
         out[sha] = Binding(sha, legacy["carlaWorld"], legacy["cookedXodrSha256"],
-                           dict(legacy.get("signalIdMap", {})), f"legacy:{legacy['note']}")
+                           dict(legacy.get("signalIdMap", {})), f"legacy:{legacy['note']}",
+                           frozenset(legacy.get("unownedCookedSignalIds", ())))
     return out
 
 
@@ -147,6 +150,14 @@ def signal_id_maps(manifest: Mapping[str, Any] | None = None) -> dict[tuple[str,
     return {
         (b.world, sha, b.runtime_xodr_sha256): b.signal_id_map
         for sha, b in bindings(manifest).items() if b.signal_id_map
+    }
+
+
+def unowned_cooked_signals(manifest: Mapping[str, Any] | None = None) -> dict[tuple[str, str, str], frozenset[str]]:
+    """(world, source sha256, runtime sha256) -> heads the world ships beyond the source."""
+    return {
+        (b.world, sha, b.runtime_xodr_sha256): b.unowned_signal_ids
+        for sha, b in bindings(manifest).items() if b.unowned_signal_ids
     }
 
 

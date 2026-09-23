@@ -35,7 +35,7 @@ impl TmercOrigin {
             let rest = &geo_ref[idx..];
             let end = rest
                 .find(|c: char| c.is_whitespace() || c == '+')
-                .unwrap_or(rest.len());
+                .unwrap_or(rest.len()); // fallback-ok: token end: the value runs to the end of the string
             rest[..end].trim().parse().ok()
         };
         // Only tmerc is supported by our maps' exports.
@@ -45,9 +45,9 @@ impl TmercOrigin {
         Some(TmercOrigin {
             lat0_rad: get("lat_0")?.to_radians(),
             lon0_rad: get("lon_0")?.to_radians(),
-            k: get("k").unwrap_or(1.0),
+            k: get("k").unwrap_or(1.0), // fallback-ok: PROJ tmerc parameter defaults (k=1, x_0=y_0=0) per the PROJ definition
             x0: get("x_0").unwrap_or(0.0),
-            y0: get("y_0").unwrap_or(0.0),
+            y0: get("y_0").unwrap_or(0.0), // fallback-ok: PROJ tmerc parameter defaults
         })
     }
 
