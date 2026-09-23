@@ -335,10 +335,13 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     evaluateSimulation(simKey, filters, signal) {
       return call(documents.evaluateSimulation, { params: { simKey }, body: filters ? { filters } : {}, signal });
     },
-    resolveRevisionSimulation(revisionId, opts = {}) {
-      return call(documents.resolveRevisionSimulation, {
+    getRevisionMotion(revisionId, signal) {
+      return call(documents.getRevisionMotion, { params: { revisionId }, signal });
+    },
+    resimulateRevision(revisionId, opts = {}) {
+      return call(documents.resimulateRevision, {
         params: { revisionId },
-        body: opts.waitMs === undefined ? {} : { waitMs: opts.waitMs },
+        body: opts.waitMs === undefined ? { action: "resimulate" } : { action: "resimulate", waitMs: opts.waitMs },
         signal: opts.signal,
       });
     },

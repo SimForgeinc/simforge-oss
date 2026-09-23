@@ -6,6 +6,7 @@ import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput, assertNativeMapMe
 import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import type { ScenarioRenderJobDto } from "./contracts";
+import type { ScenarioMotionSource } from "@simforge-oss/studio-host";
 import {
   ScenarioRenderIntentSchema,
   type SubmitScenarioRenderIntent,
@@ -63,6 +64,7 @@ type InsertedJob = {
   sim_key: string | null;
   trace_sha256: string | null;
   timeline_sha256: string | null;
+  motion_source?: ScenarioMotionSource | null;
   created_at: string;
   updated_at: string;
 };
@@ -340,7 +342,9 @@ export async function createRenderIntentJob(
    * The revision's authoritative simulation (resolved by the caller): the job
    * records the trace and render timeline every renderer replays.
    */
-  simulation: { simKey: string; traceSha256: string; timelineSha256: string | null; timelineSizeBytes: number | null } | null = null,
+  simulation: { simKey: string; traceSha256: string; timelineSha256: string | null; timelineSizeBytes: number | null; engineSemVer?: string } | null = null,
+  /** Which motion the render replays (`render_jobs.motion_source`). */
+  motionSource: ScenarioMotionSource | null = null,
 ): Promise<ScenarioRenderJobDto | null> {
   const renderSpec = input.renderSpec;
   const resources = deriveRenderIntentResources(renderSpec);
@@ -351,7 +355,7 @@ export async function createRenderIntentJob(
     });
     const existing = await tx.queryOne<InsertedJob & { intent_sha256: string; renderer_engine: string; render_spec_sha256: string; render_textures: string | null; native_vram_budget: string | null }>(
       `SELECT id, revision_id, execution_package_id, job_mode, job_state, progress,
-              sim_key, trace_sha256, timeline_sha256,
+              sim_key, trace_sha256, timeline_sha256, motion_source,
               intent_sha256, renderer_engine, render_spec_sha256,
               render_intent->>'renderTextures' AS render_textures,
               render_intent->>'nativeVramBudgetBytes' AS native_vram_budget,
@@ -367,7 +371,9 @@ export async function createRenderIntentJob(
         || existing.renderer_engine !== input.engine
         || (input.engine === "native" && existing.render_textures !== nativeRenderTextureTier(input.renderProfile, renderSpec.sources))
         || (input.engine === "native" && (existing.native_vram_budget === null ? undefined : Number(existing.native_vram_budget)) !== input.nativeVramBudgetBytes)
-        || existing.render_spec_sha256 !== canonicalJsonSha256(renderSpec)) {
+        || existing.render_spec_sha256 !== canonicalJsonSha256(renderSpec)
+        || (existing.motion_source ?? null) !== motionSource
+        || (existing.sim_key ?? null) !== (simulation?.simKey ?? null)) {
         throw new Error("uniscenario_render_intent_idempotency_conflict");
       }
       return existing;
@@ -484,6 +490,12 @@ export async function createRenderIntentJob(
     }
     // The render timeline every renderer samples, bound into the intent as the
     // `render.timeline` input (its bytes are the stored canonical JSON).
+    // The explicit legacy replay (`original-xosc`) renders the revision's
+    // OpenSCENARIO motion and binds no timeline; every other render binds one.
+    if (motionSource === "original-xosc" && simulation) throw new Error("render_motion_source_conflict");
+    if (motionSource !== null && motionSource !== "original-xosc" && !(simulation?.timelineSha256 && simulation.timelineSizeBytes)) {
+      throw new Error("render_timeline_missing");
+    }
     const timelineAssets: NativeAsset[] = simulation?.timelineSha256 && simulation.timelineSizeBytes
       ? [{ assetId: RENDER_TIMELINE_INPUT_ID, kind: "other" as const, sha256: simulation.timelineSha256, sizeBytes: simulation.timelineSizeBytes }]
       : [];
@@ -501,16 +513,16 @@ export async function createRenderIntentJob(
          render_spec, render_spec_sha256, render_intent, intent_sha256, renderer_engine,
          parity_thresholds, resource_request, request_contract_version,
          job_mode, billing_mode, estimated_cost_cents, priority, idempotency_key, requested_by_user_id,
-         sim_key, trace_sha256, timeline_sha256
+         sim_key, trace_sha256, timeline_sha256, motion_source
        ) VALUES (
          :id, :workspace_id, :revision_id, :execution_package_id, :control_sha256,
          CAST(:render_spec AS jsonb), :render_spec_sha256, CAST(:render_intent AS jsonb), :intent_sha256, :renderer_engine,
          CAST(:parity_thresholds AS jsonb), CAST(:resource_request AS jsonb), :request_contract_version,
          :job_mode, 'free', 0, :priority, :idempotency_key, :user_id,
-         :sim_key, :trace_sha256, :timeline_sha256
+         :sim_key, :trace_sha256, :timeline_sha256, :motion_source
        )
        RETURNING id, revision_id, execution_package_id, job_mode, job_state, progress,
-                 sim_key, trace_sha256, timeline_sha256,
+                 sim_key, trace_sha256, timeline_sha256, motion_source,
                  created_at::text AS created_at, updated_at::text AS updated_at`,
       {
         id: scenarioId("usrj"),
@@ -535,6 +547,7 @@ export async function createRenderIntentJob(
         sim_key: simulation?.simKey ?? null,
         trace_sha256: simulation?.traceSha256 ?? null,
         timeline_sha256: simulation?.timelineSha256 ?? null,
+        motion_source: motionSource,
       },
     );
     return rows[0] ?? null;
@@ -559,8 +572,14 @@ export async function createRenderIntentJob(
     failureCode: null,
     failureDetail: null,
     simulation: inserted.sim_key && inserted.trace_sha256
-      ? { simKey: inserted.sim_key, traceSha256: inserted.trace_sha256, timelineSha256: inserted.timeline_sha256 ?? null }
+      ? {
+          simKey: inserted.sim_key,
+          traceSha256: inserted.trace_sha256,
+          timelineSha256: inserted.timeline_sha256 ?? null,
+          engineSemVer: simulation?.simKey === inserted.sim_key ? simulation.engineSemVer ?? null : null,
+        }
       : null,
+    motionSource: inserted.motion_source ?? null,
     createdAt: inserted.created_at,
     updatedAt: inserted.updated_at,
   };

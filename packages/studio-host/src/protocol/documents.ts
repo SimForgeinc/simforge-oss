@@ -15,6 +15,8 @@ import {
   type ScenarioRatingAggregateDto,
   type ScenarioRevisionDto,
   type ScenarioRevisionEvidenceDto,
+  type ScenarioRevisionMotionDto,
+  type ScenarioRevisionResimulationDto,
   type ScenarioSimulationPreviewDto,
   type ScenarioSimulationResultDto,
   type ScenarioSimulationStatusDto,
@@ -577,10 +579,24 @@ export const documentsProtocol = {
     path: ({ simKey }) => `${SIMULATIONS}/${encodeURIComponent(simKey)}/evaluation`,
     response: passthrough<SimulationEvaluationDto>(),
   }),
-  /** The authoritative simulation a revision renders and is evaluated against (lazily re-simulated if needed). */
-  resolveRevisionSimulation: endpoint<{ revisionId: string }, void, { waitMs?: number }, ScenarioSimulationStatusDto>({
+  /**
+   * Which motion a revision's renders replay: its active (original) result
+   * under whatever engine produced it, the other stored results and whether
+   * the legacy OpenSCENARIO replay exists. Never simulates.
+   */
+  getRevisionMotion: endpoint<{ revisionId: string }, void, void, ScenarioRevisionMotionDto>({
+    method: "GET",
+    path: ({ revisionId }) => `/api/simforge/revisions/${encodeURIComponent(revisionId)}/simulation`,
+    response: passthrough<ScenarioRevisionMotionDto>(),
+  }),
+  /**
+   * Explicitly re-simulate a revision under the current engine. Adds a result
+   * to the revision (it does not change which one renders by default) and
+   * reports the motion diff against the active result.
+   */
+  resimulateRevision: endpoint<{ revisionId: string }, void, { action: "resimulate"; waitMs?: number }, ScenarioRevisionResimulationDto>({
     method: "POST",
     path: ({ revisionId }) => `/api/simforge/revisions/${encodeURIComponent(revisionId)}/simulation`,
-    response: passthrough<ScenarioSimulationStatusDto>(),
+    response: passthrough<ScenarioRevisionResimulationDto>(),
   }),
 } as const;

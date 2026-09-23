@@ -244,15 +244,88 @@ export type ScenarioSimulationResultDto = {
   createdAt: string;
 };
 
-/**
- * Where the authoritative simulation for a document version (or revision)
- * stands. `resimulated` marks a revision whose result was produced after it
- * was committed, under the current engine semantics.
- */
+/** Where the authoritative simulation for a document version (or revision) stands. */
 export type ScenarioSimulationStatusDto =
-  | { state: "succeeded"; requestKey: string; result: ScenarioSimulationResultDto; resimulated?: boolean }
+  | { state: "succeeded"; requestKey: string; result: ScenarioSimulationResultDto }
   | { state: "queued" | "running"; requestKey: string }
   | { state: "failed"; requestKey: string; failureCode: string; message: string | null };
+
+/**
+ * Where a render's motion comes from (`RenderIntentV1.motionSource`):
+ * `original` is the revision's active simulation (its original result, under
+ * whatever engine produced it), `resimulated` an explicitly chosen
+ * re-simulation, `original-xosc` the labelled legacy OpenSCENARIO replay for
+ * revisions that have no stored trace.
+ */
+export type ScenarioMotionSource = "original" | "resimulated" | "original-xosc";
+
+/** Why a revision's active simulation is the one it is. */
+export type ScenarioActiveSimulationReason = "commit" | "backfill-commit" | "backfill-resimulated" | "user";
+
+/**
+ * Motion difference between two stored traces of one scenario: presence and
+ * world pose at matching ticks, within the render parity tolerance.
+ */
+export type ScenarioMotionDiffDto = {
+  schema: "simforge.motion-diff/v1";
+  identical: boolean;
+  tolerance: { positionM: number; headingDeg: number };
+  comparedTicks: number;
+  /** Ticks present in only one of the two traces (different clip or step). */
+  unmatchedTicks: number;
+  maxPositionDeltaM: number;
+  maxHeadingDeltaDeg: number;
+  worst: { actorId: string; t: number } | null;
+  firstDivergenceS: number | null;
+  actorsChanged: string[];
+  actorsOnlyInBase: string[];
+  actorsOnlyInCandidate: string[];
+  base: { traceSha256: string; engineSemVer: string };
+  candidate: { traceSha256: string; engineSemVer: string };
+};
+
+/** One stored simulation result bound to a revision. */
+export type ScenarioRevisionSimulationEntryDto = {
+  simKey: string;
+  engineSemVer: string;
+  traceSha256: string;
+  /** `commit`: simulated when the revision was committed; `lazy`: re-simulated later. */
+  origin: "commit" | "lazy";
+  createdAt: string;
+  active: boolean;
+};
+
+/**
+ * Which motion a revision's renders replay. Renders replay `active` by
+ * default, under any engine version; nothing re-simulates implicitly.
+ * `active` is null when the revision has no stored result (committed before
+ * worker simulation): its original motion survives only as the legacy
+ * OpenSCENARIO export (`legacyXoscAvailable`), and the user chooses between
+ * that and an explicit re-simulation.
+ */
+export type ScenarioRevisionMotionDto = {
+  revisionId: string;
+  currentEngineSemVer: string;
+  active: null | {
+    simKey: string;
+    engineSemVer: string;
+    traceSha256: string;
+    reason: ScenarioActiveSimulationReason;
+    /** True when the active result is the one simulated at commit (the original motion). */
+    original: boolean;
+    setAt: string;
+  };
+  results: ScenarioRevisionSimulationEntryDto[];
+  legacyXoscAvailable: boolean;
+};
+
+/** An explicit re-simulation under the current engine, with its motion diff against the active result. */
+export type ScenarioRevisionResimulationDto = {
+  status: ScenarioSimulationStatusDto;
+  motion: ScenarioRevisionMotionDto;
+  /** Null until the re-simulation succeeded, or when the revision has no active result to compare. */
+  motionDiff: ScenarioMotionDiffDto | null;
+};
 
 /** The editor's comparison of its local preview against the authoritative trace. */
 export type ScenarioSimulationVerificationDto = {
@@ -496,7 +569,15 @@ export type ScenarioRenderJobDto = {
    * timeline, once derived) every renderer samples. Absent on jobs submitted
    * before worker-authoritative simulation.
    */
-  simulation?: { simKey: string; traceSha256: string; timelineSha256: string | null } | null;
+  simulation?: {
+    simKey: string;
+    traceSha256: string;
+    timelineSha256: string | null;
+    /** The engine semantics the replayed motion was simulated under. */
+    engineSemVer?: string | null;
+  } | null;
+  /** Which motion the render replayed; null on jobs submitted before this was recorded. */
+  motionSource?: ScenarioMotionSource | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -625,6 +706,10 @@ export type ScenarioRenderIntentSubmission = {
   renderProfile?: "render" | "ml";
   nativeVramBudgetBytes?: number;
   idempotencyKey: string;
+  /** Absent means `original`: the revision's active simulation, never an implicit re-simulation. */
+  motionSource?: ScenarioMotionSource;
+  /** With `motionSource: "resimulated"`: which of the revision's results to render. */
+  simKey?: string;
   [key: string]: unknown;
 };
 
@@ -815,6 +900,13 @@ export type ScenarioRenderJobDetailDto = {
   startedAt: string | null;
   completedAt: string | null;
   cancelRequestedAt: string | null;
+  /**
+   * Where the rendered motion came from. `source` is null on jobs submitted
+   * before it was recorded (those re-simulated under the engine current at
+   * submission); `engineSemVer` is the engine that simulated the replayed
+   * trace, null for the legacy OpenSCENARIO replay.
+   */
+  motion?: { source: ScenarioMotionSource | null; engineSemVer: string | null; simKey: string | null; traceSha256: string | null } | null;
   attempts: ScenarioRenderAttemptDto[];
   events: ScenarioJobEventDto[];
   artifacts: ScenarioRenderArtifactDto[];

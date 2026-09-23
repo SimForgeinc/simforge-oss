@@ -34,8 +34,13 @@ import {
   getSimulationResult,
   recordSimulationVerification,
   reserveSimulationJobOutputs,
-  resolveRevisionSimulation,
+  linkRevisionSimulation,
+  resimulateRevision,
+  resolveRevisionReplay,
   resolveSimulation,
+  revisionMotion,
+  RevisionReplayError,
+  setRevisionActiveSimulation,
   setSimulationExecutorForTests,
   simulationObjectKeys,
   type SimulationSubject,
@@ -53,7 +58,8 @@ const MAP_VERSION = "usmapv_sim";
 const DIGEST = (c: string) => c.repeat(64);
 const graph = syntheticGraph();
 
-function fakeSimulation(seed: string, overrides: { simKeySeed?: string; speed?: number } = {}): AuthoritativeSimulation {
+function fakeSimulation(seed: string, overrides: { simKeySeed?: string; speed?: number; engineSemVer?: string } = {}): AuthoritativeSimulation {
+  const engineSemVer = overrides.engineSemVer ?? "0.8.0";
   const input = scenario({
     seed,
     actors: [vehicle(graph, { id: "ego", rsl: LANE_LEFT, s: 60, speedMps: overrides.speed ?? 10, cruiseSpeedMps: overrides.speed ?? 10 })],
@@ -73,8 +79,8 @@ function fakeSimulation(seed: string, overrides: { simKeySeed?: string; speed?: 
   const key = computeSimKey({
     resolvedInputDigest: overrides.simKeySeed ? contentHash({ forced: overrides.simKeySeed }) : resolvedInputDigest,
     mapClosureDigest: DIGEST("e"),
-    engineSemVer: "0.8.0",
-    solverVer: "0.8.0",
+    engineSemVer,
+    solverVer: engineSemVer,
     traceSchema: TRACE_SCHEMA,
   });
   return {
@@ -84,8 +90,8 @@ function fakeSimulation(seed: string, overrides: { simKeySeed?: string; speed?: 
     trafficStepKey: null,
     resolvedInputDigest,
     mapClosureDigest: DIGEST("e"),
-    engineSemVer: "0.8.0",
-    solverVer: "0.8.0",
+    engineSemVer,
+    solverVer: engineSemVer,
     traceSchema: TRACE_SCHEMA,
     engineBuild: { engineVersion: "test" },
     provider: "off",
@@ -337,35 +343,102 @@ test("authoritative simulation results", async (t) => {
     assert.equal(recovered.state, "succeeded");
   });
 
-  await t.test("a revision without a result is simulated lazily once and reports re-simulation", async () => {
-    let executions = 0;
-    const simulation = fakeSimulation("revision");
-    setSimulationExecutorForTests(async () => { executions += 1; return simulation; });
-    const content = { roles: [], meta: { name: "revision" } };
+  await t.test("renders replay a revision's original result; re-simulation is explicit and never moves it", async () => {
     await execute(`INSERT INTO simforge.datasets (id, workspace_id, name) VALUES ('usds_sim', :ws, 'sim') ON CONFLICT (id) DO NOTHING`, { ws: WORKSPACE });
     await execute(
       `INSERT INTO simforge.documents (id, workspace_id, dataset_id, title, schema_version, map_version_id)
        VALUES ('usdoc_sim', :ws, 'usds_sim', 'Sim', 'simforge.scenario/v1', :map) ON CONFLICT (id) DO NOTHING`,
       { ws: WORKSPACE, map: MAP_VERSION },
     );
-    await execute(
+    const revision = async (id: string, number: number, content: Record<string, unknown>) => execute(
       `INSERT INTO simforge.revisions (id, workspace_id, document_id, revision_number, source_draft_version, schema_version,
          canonical_content, content_sha256, map_version_id, compiler_version)
-       VALUES ('usrev_sim', :ws, 'usdoc_sim', 1, 1, 'simforge.scenario/v1', CAST(:content AS jsonb), :sha, :map, 'test')
+       VALUES (:id, :ws, 'usdoc_sim', :number, :number, 'simforge.scenario/v1', CAST(:content AS jsonb), :sha, :map, 'test')
        ON CONFLICT (id) DO NOTHING`,
-      { ws: WORKSPACE, content, sha: contentHash(content), map: MAP_VERSION },
+      { id, number, ws: WORKSPACE, content, sha: contentHash(content), map: MAP_VERSION },
     );
-    const first = await resolveRevisionSimulation({ workspaceId: WORKSPACE, userId: USER }, "usrev_sim");
-    assert.equal(first?.state, "succeeded");
-    assert.equal(first?.state === "succeeded" && first.resimulated, true);
-    // Ten renders of one revision: one simulation.
-    for (let render = 0; render < 10; render += 1) {
-      const again = await resolveRevisionSimulation({ workspaceId: WORKSPACE, userId: USER }, "usrev_sim");
-      assert.equal(again?.state === "succeeded" && again.result.simKey, simulation.simKey);
-    }
+    const context = { workspaceId: WORKSPACE, userId: USER };
+    const { TIMELINE_SAMPLER_VERSION } = await import("@simforge-oss/render/timeline");
+    const registerTimeline = async (traceSha256: string, simKey: string, sampler: string, seedChar: string) => execute(
+      `INSERT INTO simforge.sim_timelines (workspace_id, timeline_key, trace_sha256, height_field_digest, sampler_version,
+         timeline_sha256, byte_length, storage_bucket, storage_key, stored_byte_length, stored_sha256, source_sim_key, producer)
+       VALUES (:ws, :key, :trace, 'test-height', :sampler, :sha, 10, 'local-artifacts', :object, 10, :sha, :sim, 'test')`,
+      { ws: WORKSPACE, key: DIGEST(seedChar), trace: traceSha256, sampler, sha: DIGEST(seedChar), object: `timelines/${seedChar}`, sim: simKey },
+    );
+
+    // A revision committed before worker simulation has no stored result:
+    // rendering it is refused, and nothing is simulated behind the user's back.
+    let executions = 0;
+    const legacyContent = { roles: [], meta: { name: "legacy" } };
+    await revision("usrev_legacy", 1, legacyContent);
+    setSimulationExecutorForTests(async () => { executions += 1; return fakeSimulation("legacy"); });
+    await assert.rejects(resolveRevisionReplay(context, "usrev_legacy"), (error: unknown) =>
+      error instanceof RevisionReplayError && error.code === "original_simulation_missing");
+    assert.equal(executions, 0);
+    assert.equal((await revisionMotion(WORKSPACE, "usrev_legacy"))?.active, null);
+    // The legacy OpenSCENARIO replay is explicit, and only offered when an export exists.
+    await assert.rejects(resolveRevisionReplay(context, "usrev_legacy", { motionSource: "original-xosc" }), (error: unknown) =>
+      error instanceof RevisionReplayError && error.code === "legacy_xosc_unavailable");
+
+    // Explicit re-simulation adds a result without making it the default.
+    const explicit = await resimulateRevision(context, "usrev_legacy");
+    assert.equal(explicit?.status.state, "succeeded");
     assert.equal(executions, 1);
-    const link = await queryOne<{ origin: string }>(`SELECT origin FROM simforge.revision_simulations WHERE revision_id = 'usrev_sim'`);
-    assert.equal(link?.origin, "lazy");
+    assert.equal(explicit?.motion.active, null);
+    assert.equal(explicit?.motionDiff, null);
+    const bound = explicit?.status.state === "succeeded" ? explicit.status.result.simKey : "";
+    assert.equal(explicit?.motion.results.length, 1);
+    // Its render is explicit too, and needs a timeline: none can be derived
+    // for this test map, and that is an error, never an xosc fallback.
+    await assert.rejects(resolveRevisionReplay(context, "usrev_legacy", { motionSource: "resimulated", simKey: bound }), (error: unknown) =>
+      error instanceof RevisionReplayError && error.code === "render_timeline_unavailable");
+
+    // A committed revision: its commit result is the active one.
+    const original = fakeSimulation("original", { engineSemVer: "0.9.0", speed: 8 });
+    const content = { roles: [], meta: { name: "original" } };
+    await revision("usrev_original", 2, content);
+    setSimulationExecutorForTests(async () => original);
+    const committed = await resolveSimulation(subject(content));
+    assert.equal(committed.state, "succeeded");
+    await linkRevisionSimulation(null, { workspaceId: WORKSPACE, revisionId: "usrev_original", simKey: original.simKey, engineSemVer: "0.9.0", origin: "commit" });
+    await registerTimeline(original.traceSha256, original.simKey, TIMELINE_SAMPLER_VERSION, "a");
+    // A timeline of an older sampler for the same trace is never rendered.
+    await registerTimeline(original.traceSha256, original.simKey, "simforge.timeline-sampler/0", "9");
+    const replay = await resolveRevisionReplay(context, "usrev_original");
+    assert.equal(replay.kind, "simulation");
+    assert.equal(replay.kind === "simulation" && replay.motionSource, "original");
+    assert.equal(replay.kind === "simulation" && replay.result.simKey, original.simKey);
+    assert.equal(replay.kind === "simulation" && replay.timeline.timelineSha256, DIGEST("a"));
+
+    // A newer engine: re-simulating is explicit, reports the motion diff and
+    // leaves the original as what renders.
+    const newer = fakeSimulation("original", { engineSemVer: "0.10.0", speed: 11 });
+    setSimulationExecutorForTests(async () => newer);
+    // A new engine build changes the request key; stand in for it by
+    // retiring the memoized request of this content.
+    await execute(`DELETE FROM simforge.sim_requests WHERE workspace_id = :ws AND content_sha256 = :sha`, { ws: WORKSPACE, sha: contentHash(content) });
+    const resim = await resimulateRevision(context, "usrev_original");
+    assert.equal(resim?.status.state, "succeeded");
+    assert.equal(resim?.motion.active?.simKey, original.simKey);
+    assert.equal(resim?.motion.active?.original, true);
+    assert.equal(resim?.motionDiff?.identical, false);
+    assert.ok((resim?.motionDiff?.maxPositionDeltaM ?? 0) > 0.001);
+    assert.equal(resim?.motionDiff?.base.engineSemVer, "0.9.0");
+    assert.equal(resim?.motionDiff?.candidate.engineSemVer, "0.10.0");
+    const again = await resolveRevisionReplay(context, "usrev_original");
+    assert.equal(again.kind === "simulation" && again.result.simKey, original.simKey);
+    // A commit never overrides the pointer; the user can move it, only to a bound result.
+    await linkRevisionSimulation(null, { workspaceId: WORKSPACE, revisionId: "usrev_original", simKey: newer.simKey, engineSemVer: "0.10.0", origin: "commit" });
+    assert.equal((await revisionMotion(WORKSPACE, "usrev_original"))?.active?.simKey, original.simKey);
+    await assert.rejects(
+      setRevisionActiveSimulation(null, { workspaceId: WORKSPACE, revisionId: "usrev_original", simKey: bound, reason: "user", userId: USER }),
+      (error: unknown) => error instanceof RevisionReplayError && error.code === "revision_simulation_not_bound",
+    );
+    await setRevisionActiveSimulation(null, { workspaceId: WORKSPACE, revisionId: "usrev_original", simKey: newer.simKey, reason: "user", userId: USER });
+    const moved = await revisionMotion(WORKSPACE, "usrev_original");
+    assert.equal(moved?.active?.simKey, newer.simKey);
+    assert.equal(moved?.active?.original, false);
+    assert.equal(moved?.active?.reason, "user");
   });
 
   await t.test("the editor's verification is recorded as verified or as a mismatch", async () => {
