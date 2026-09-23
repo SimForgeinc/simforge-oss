@@ -529,19 +529,24 @@ function leafCondition(resolved: ResolvedAsamScenario, condition: Condition): Le
     case 'distance':
       return {
         triggeringActor: actor(condition.a),
-        // OSC has rising-edge conditions but no distance dead-band. Export the
-        // exact deterministic entry threshold used by the native engine.
-        xml: `<RelativeDistanceCondition entityRef="${xml(actor(condition.b))}" relativeDistanceType="${condition.mode === 'euclidean' ? 'euclidianDistance' : 'longitudinal'}" freespace="false" rule="${mapRule(condition.cmp)}" value="${finite(condition.cmp === 'lt' || condition.cmp === 'lte' ? Math.max(0, condition.value - (condition.hysteresis ?? 0)) : condition.value + (condition.hysteresis ?? 0))}" coordinateSystem="${condition.mode === 'euclidean' ? 'entity' : 'road'}"/>`,
+        // OSC has no distance dead-band. Export the exact deterministic entry
+        // threshold used by the native engine. The engine measures gaps between
+        // bodies, not between reference points, so the OSC reading is
+        // freespace="true" (along-lane: bumper to bumper along the route;
+        // euclidean: see the approximation warning in `analyzeAsamCapabilities`).
+        xml: `<RelativeDistanceCondition entityRef="${xml(actor(condition.b))}" relativeDistanceType="${condition.mode === 'euclidean' ? 'euclidianDistance' : 'longitudinal'}" freespace="true" rule="${mapRule(condition.cmp)}" value="${finite(condition.cmp === 'lt' || condition.cmp === 'lte' ? Math.max(0, condition.value - (condition.hysteresis ?? 0)) : condition.value + (condition.hysteresis ?? 0))}" coordinateSystem="${condition.mode === 'euclidean' ? 'entity' : 'road'}"/>`,
       };
     case 'ttc':
       return {
         triggeringActor: actor(condition.a),
-        xml: `<TimeToCollisionCondition freespace="false" rule="${mapRule(condition.cmp)}" value="${finite(condition.value)}"><TimeToCollisionConditionTarget><EntityRef entityRef="${xml(actor(condition.b))}"/></TimeToCollisionConditionTarget></TimeToCollisionCondition>`,
+        // Swept-footprint time of impact: the body gap over the closing speed.
+        xml: `<TimeToCollisionCondition freespace="true" rule="${mapRule(condition.cmp)}" value="${finite(condition.value)}"><TimeToCollisionConditionTarget><EntityRef entityRef="${xml(actor(condition.b))}"/></TimeToCollisionConditionTarget></TimeToCollisionCondition>`,
       };
     case 'headway':
       return {
         triggeringActor: actor(condition.a),
-        xml: `<TimeHeadwayCondition entityRef="${xml(actor(condition.b))}" freespace="false" rule="${mapRule(condition.cmp)}" value="${finite(condition.value)}" coordinateSystem="road" relativeDistanceType="longitudinal"/>`,
+        // Along-route bumper gap over the follower's speed.
+        xml: `<TimeHeadwayCondition entityRef="${xml(actor(condition.b))}" freespace="true" rule="${mapRule(condition.cmp)}" value="${finite(condition.value)}" coordinateSystem="road" relativeDistanceType="longitudinal"/>`,
       };
     case 'speed':
       return { triggeringActor: actor(condition.actorId), xml: `<SpeedCondition rule="${mapRule(condition.cmp)}" value="${finite(condition.value)}"/>` };
@@ -574,11 +579,26 @@ function leafCondition(resolved: ResolvedAsamScenario, condition: Condition): Le
   }
 }
 
+/**
+ * A SimForge `when` trigger fires on the first tick its condition holds, even
+ * if it already holds when first checked, and fires once. That is OSC
+ * `conditionEdge="none"` on a `maximumExecutionCount="1"` event. `rising`
+ * would differ in two ways (ASAM OSC XML 1.4.0 §7.6.2/§7.6.4): a condition
+ * that is true on its first check never fires, and an AND of rising edges only
+ * fires if every member rises on the same tick.
+ */
 function conditionElement(name: string, leaf: LeafConditionXml): string {
   if (leaf.triggeringActor) {
-    return `<Condition name="${xml(name)}" delay="0" conditionEdge="rising"><ByEntityCondition><TriggeringEntities triggeringEntitiesRule="any"><EntityRef entityRef="${xml(leaf.triggeringActor)}"/></TriggeringEntities><EntityCondition>${leaf.xml}</EntityCondition></ByEntityCondition></Condition>`;
+    return `<Condition name="${xml(name)}" delay="0" conditionEdge="none"><ByEntityCondition><TriggeringEntities triggeringEntitiesRule="any"><EntityRef entityRef="${xml(leaf.triggeringActor)}"/></TriggeringEntities><EntityCondition>${leaf.xml}</EntityCondition></ByEntityCondition></Condition>`;
   }
-  return `<Condition name="${xml(name)}" delay="0" conditionEdge="rising"><ByValueCondition>${leaf.xml}</ByValueCondition></Condition>`;
+  return `<Condition name="${xml(name)}" delay="0" conditionEdge="none"><ByValueCondition>${leaf.xml}</ByValueCondition></Condition>`;
+}
+
+/** The engine evaluates triggers only from clip time 0; gate each group to the end of the warm-up. */
+function warmupGate(name: string, warmupSeconds: number): string {
+  return warmupSeconds > 0
+    ? `<Condition name="${xml(name)}" delay="0" conditionEdge="none"><ByValueCondition><SimulationTimeCondition value="${finite(warmupSeconds)}" rule="greaterOrEqual"/></ByValueCondition></Condition>`
+    : '';
 }
 
 function whenGroups(
@@ -604,7 +624,7 @@ function whenGroups(
       if ('code' in rendered) return { ...rendered, path: `interactions.${interaction.id}.trigger.condition` };
       leaves.push(conditionElement(`${interaction.id}_${groupIndex}_${leafIndex}`, rendered));
     }
-    output.push(`<ConditionGroup>${leaves.join('')}</ConditionGroup>`);
+    output.push(`<ConditionGroup>${leaves.join('')}${warmupGate(`${interaction.id}_${groupIndex}_clip`, resolved.input.warmupSeconds)}</ConditionGroup>`);
   }
   if (interaction.trigger.ifNever === 'fire') {
     output.push(`<ConditionGroup><Condition name="${xml(`${interaction.id}_latest`)}" delay="0" conditionEdge="none"><ByValueCondition><SimulationTimeCondition value="${finite(resolved.input.warmupSeconds + Math.max(0, interaction.trigger.byLatest))}" rule="greaterOrEqual"/></ByValueCondition></Condition></ConditionGroup>`);
@@ -625,7 +645,11 @@ function startTrigger(resolved: ResolvedAsamScenario, interaction: Interaction):
   }
   if (trigger.kind === 'after') {
     const parent = resolved.interactionNames.get(trigger.interactionId)!;
-    return `<StartTrigger><ConditionGroup><Condition name="${xml(`${interaction.id}_after`)}" delay="${finite(trigger.delayS)}" conditionEdge="rising"><ByValueCondition><StoryboardElementStateCondition storyboardElementRef="${xml(parent)}" storyboardElementType="event" state="completeState"/></ByValueCondition></Condition></ConditionGroup></StartTrigger>`;
+    // `event` defaults to 'start' in the engine: start = the parent's
+    // startTransition, end = its completeState (reached by end or stop).
+    const state = trigger.event === 'end' ? 'completeState' : 'startTransition';
+    const edge = trigger.event === 'end' ? 'rising' : 'none';
+    return `<StartTrigger><ConditionGroup><Condition name="${xml(`${interaction.id}_after`)}" delay="${finite(trigger.delayS)}" conditionEdge="${edge}"><ByValueCondition><StoryboardElementStateCondition storyboardElementRef="${xml(parent)}" storyboardElementType="event" state="${state}"/></ByValueCondition></Condition></ConditionGroup></StartTrigger>`;
   }
   if (trigger.kind === 'when') {
     const groups = whenGroups(resolved, interaction as never);
@@ -1064,8 +1088,12 @@ export function exportOpenScenarioXml14(
       if (!Array.isArray(actions)) issues.push(actions);
       if (typeof trigger !== 'string') issues.push(trigger);
       if (!Array.isArray(actions) || typeof trigger !== 'string') continue;
+      // SimForge preempts per control axis, never across axes. In OSC that is
+      // `parallel` events whose actions override each other only when they
+      // act on the same domain (ASAM OSC XML 1.4.0 §7.5.1); `override` would
+      // stop every running event of the actor's Maneuver (§8.4.2.2).
       actorEvents.get(interaction.actorId)!.push([
-        `<Event name="${xml(name)}" priority="overwrite" maximumExecutionCount="1">`,
+        `<Event name="${xml(name)}" priority="parallel" maximumExecutionCount="1">`,
         ...actions.map((action, i) => lines(`<Action name="${xml(`${name}_action_${i}`)}">${action}</Action>`, 2)),
         lines(trigger, 2),
         '</Event>',
@@ -1089,7 +1117,7 @@ export function exportOpenScenarioXml14(
       }
       const trigger = `<StartTrigger><ConditionGroup><Condition name="${xml(`${interaction.id}_replay`)}" delay="0" conditionEdge="none"><ByValueCondition><SimulationTimeCondition value="${finite(input.warmupSeconds + fired.t)}" rule="greaterOrEqual"/></ByValueCondition></Condition></ConditionGroup></StartTrigger>`;
       actorEvents.get(interaction.actorId)!.push([
-        `<Event name="${xml(name)}" priority="overwrite" maximumExecutionCount="1">`,
+        `<Event name="${xml(name)}" priority="override" maximumExecutionCount="1">`,
         ...actions.map((action, i) => lines(`<Action name="${xml(`${name}_action_${i}`)}">${action}</Action>`, 2)),
         lines(trigger, 2),
         '</Event>',
@@ -1111,7 +1139,7 @@ export function exportOpenScenarioXml14(
         const at = input.warmupSeconds + trace.ticks.t[index]!;
         const trigger = `<StartTrigger><ConditionGroup><Condition name="${xml(`${name}_start`)}" delay="0" conditionEdge="none"><ByValueCondition><SimulationTimeCondition value="${finite(at)}" rule="greaterOrEqual"/></ByValueCondition></Condition></ConditionGroup></StartTrigger>`;
         actorEvents.get(actor.id)!.push([
-          `<Event name="${xml(name)}" priority="overwrite" maximumExecutionCount="1">`,
+          `<Event name="${xml(name)}" priority="override" maximumExecutionCount="1">`,
           lines(`<Action name="${xml(`${name}_action`)}">${action}</Action>`, 2),
           lines(trigger, 2),
           '</Event>',
@@ -1171,7 +1199,7 @@ export function exportOpenScenarioXml14(
         const at = input.warmupSeconds + trace.ticks.t[index]!;
         const trigger = `<StartTrigger><ConditionGroup><Condition name="${xml(`${name}_start`)}" delay="0" conditionEdge="none"><ByValueCondition><SimulationTimeCondition value="${finite(at)}" rule="greaterOrEqual"/></ByValueCondition></Condition></ConditionGroup></StartTrigger>`;
         actorEvents.get(signalEventActor)!.push([
-          `<Event name="${xml(name)}" priority="overwrite" maximumExecutionCount="1">`,
+          `<Event name="${xml(name)}" priority="override" maximumExecutionCount="1">`,
           ...actions.map((action, actionIndex) => lines(`<Action name="${xml(`${name}_action_${actionIndex}`)}">${action}</Action>`, 2)),
           lines(trigger, 2),
           '</Event>',

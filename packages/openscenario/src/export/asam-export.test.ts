@@ -361,7 +361,8 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
     expect(result.content).toContain('<MiscObject mass="1" name="uniscenarios_occluder"');
     expect(result.content).toContain('<Route name="route_ego" closed="false">');
     expect(result.content).toContain('storyboardElementRef="event_accelerate"');
-    expect(result.content).toContain('storyboardElementType="event" state="completeState"');
+    // `after` without `event` means the parent's start in the engine.
+    expect(result.content).toContain('storyboardElementType="event" state="startTransition"');
     expect(result.content).toContain('<SimulationTimeCondition value="12" rule="greaterOrEqual"/>');
     expect(result.warnings).toContainEqual(expect.objectContaining({
       code: 'field_omitted',
@@ -588,6 +589,77 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
     expect(content).toContain('<LaneOffsetAction continuous="false">');
     expect(content).toContain('<AbsoluteTargetLaneOffset value="0.35"/>');
     expect(content).toContain('<RelativeTargetLane entityRef="actor_lead" value="0"/>');
+  });
+});
+
+describe('XML 1.4 storyboard mapping of engine trigger semantics (docs/engineering/openscenario-conformance.md)', () => {
+  const twoActor = () => {
+    const base = fixture();
+    return { ...base, actors: [...base.actors, { ...base.actors[0]!, id: 'target' }] };
+  };
+  const when = (id: string, condition: unknown, extra: Record<string, unknown> = {}) => ({
+    id, actorId: 'ego', verb: 'speed', target: { mode: 'stop' },
+    dynamics: { shape: 'linear', constraint: 'time', value: 1 },
+    trigger: { kind: 'when', condition, byLatest: 10, ifNever: 'fire' }, ...extra,
+  });
+  const distance = { kind: 'distance', a: 'ego', b: 'target', mode: 'euclidean', cmp: 'lt', value: 10 };
+
+  it('exports `when` conditions as level-triggered (conditionEdge="none"), like the engine', () => {
+    const input = parseSimScenarioInput({ ...twoActor(), interactions: [when('near', { kind: 'and', of: [distance, { ...distance, value: 20 }] })] });
+    const content = exportOpenScenarioXml14(input, { engine: engine(), graph, executionMode: 'actions' }).content;
+    // A rising edge would never fire for a condition already true on its first
+    // check (ASAM §7.6.4), and an AND of rising edges needs both to rise on one tick.
+    expect(content).not.toContain('conditionEdge="rising"><ByEntityCondition>');
+    expect(content.match(/conditionEdge="none"><ByEntityCondition>/g)).toHaveLength(2);
+  });
+
+  it('distinguishes `after` start (startTransition) from `after` end (completeState)', () => {
+    const base = fixture();
+    const input = parseSimScenarioInput({
+      ...base,
+      interactions: [
+        base.interactions[0]!,
+        { ...base.interactions[1]!, id: 'on-start', trigger: { kind: 'after', interactionId: 'accelerate', event: 'start', delayS: 1 } },
+        { ...base.interactions[1]!, id: 'on-end', trigger: { kind: 'after', interactionId: 'accelerate', event: 'end', delayS: 0.5 } },
+      ],
+    });
+    const content = exportOpenScenarioXml14(input, { engine: engine(), graph, executionMode: 'actions' }).content;
+    expect(content).toContain('<Condition name="on-start_after" delay="1" conditionEdge="none"><ByValueCondition><StoryboardElementStateCondition storyboardElementRef="event_accelerate" storyboardElementType="event" state="startTransition"/>');
+    expect(content).toContain('<Condition name="on-end_after" delay="0.5" conditionEdge="rising"><ByValueCondition><StoryboardElementStateCondition storyboardElementRef="event_accelerate" storyboardElementType="event" state="completeState"/>');
+  });
+
+  it('keeps per-axis preemption: action events are parallel, never override, and nothing is deprecated', () => {
+    const actions = exportOpenScenarioXml14(fixture(), { engine: engine(), graph, executionMode: 'actions' }).content;
+    // `override` would stop every running event of the actor's Maneuver, e.g. a
+    // speed ramp when a light switches on; same-domain actions still override
+    // each other through ASAM §7.5.1.
+    expect(actions).not.toMatch(/priority="(override|overwrite)"/);
+    expect(actions.match(/<Event [^>]*priority="parallel"/g)?.length).toBe(2);
+    const replay = exportOpenScenarioXml14(fixture(), { engine: engine(), graph, executionMode: 'trajectory-replay' }).content;
+    expect(replay).not.toContain('priority="overwrite"');
+  });
+
+  it('labels engine body-gap measures as freespace and flags the euclidean circle approximation', () => {
+    const input = parseSimScenarioInput({
+      ...twoActor(),
+      interactions: [
+        when('lane', { ...distance, mode: 'alongLane' }),
+        when('ttc', { kind: 'ttc', a: 'ego', b: 'target', cmp: 'lt', value: 3 }),
+        when('headway', { kind: 'headway', a: 'ego', b: 'target', cmp: 'lt', value: 2 }),
+        when('euclid', distance),
+      ],
+    });
+    const result = exportOpenScenarioXml14(input, { engine: engine(), graph, executionMode: 'actions' });
+    expect(result.content).not.toContain('freespace="false"');
+    expect(result.content.match(/freespace="true"/g)).toHaveLength(4);
+    expect(result.warnings.filter((warning) => warning.code === 'distance_metric_approximated').map((warning) => warning.path))
+      .toEqual(['interactions.euclid.trigger.condition']);
+  });
+
+  it('does not let exported conditions fire during the warm-up the engine never evaluates', () => {
+    const input = parseSimScenarioInput({ ...twoActor(), warmupSeconds: 2, interactions: [when('near', distance)] });
+    const content = exportOpenScenarioXml14(input, { engine: engine(), graph, executionMode: 'actions' }).content;
+    expect(content).toMatch(/<ConditionGroup><Condition name="near_0_0"[^]*?<Condition name="near_0_clip" delay="0" conditionEdge="none"><ByValueCondition><SimulationTimeCondition value="2" rule="greaterOrEqual"\/>/);
   });
 });
 
