@@ -79,6 +79,13 @@ export async function POST(request: Request) {
         { status: 422 },
       );
     }
+    if (error instanceof Error && error.message === "uniscenario_carla_map_binding_missing") {
+      const detail = (error as Error & { detail?: unknown }).detail;
+      return NextResponse.json(
+        { error: "carla_map_not_bound", ...(typeof detail === "string" ? { detail } : {}) },
+        { status: 422 },
+      );
+    }
     if (error instanceof Error && error.message === "uniscenario_render_intent_idempotency_conflict") {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }

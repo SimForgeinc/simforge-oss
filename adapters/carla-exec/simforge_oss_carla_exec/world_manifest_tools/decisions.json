@@ -1,0 +1,10 @@
+{
+ "$comment": [
+  "Human rulings the generator cannot derive. Keyed by NAS source folder.",
+  "  primaryXodr: which XODR of a multi-XODR folder is the source (default: the one matching the GLB).",
+  "  world: force the cooked world instead of the geoReference/extent match.",
+  "  acceptDecisionItems: exact decisionRequired strings a human accepted; any new item re-opens the decision.",
+  "  hold: keep an otherwise bindable source unbound, with the reason.",
+  "Every entry must say who decided and when (decidedBy, date)."
+ ]
+}
