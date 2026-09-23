@@ -80,7 +80,10 @@ impl Profile {
 /// Scene lighting configuration, resolved through the shared lighting spec
 /// (docs/lighting-calibration.md) at rung ≥ 2. `sun_lux`/`ambient` are the
 /// spike-calibrated legacy values consumed only at rung < 2.
+/// Unknown keys are refused: a misspelt or camelCase key would otherwise be
+/// dropped and its default rendered instead.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Lighting {
     #[serde(default = "default_sun_elev")]
     pub sun_elev_deg: f32,
@@ -331,6 +334,41 @@ pub struct ResolvedLighting {
 }
 
 impl Lighting {
+    /// What SceneApp cannot render as declared fails here, before any
+    /// relight, instead of being clamped (docs/engineering/no-silent-fallbacks.md).
+    pub fn validate_for_scene_app(&self) -> Result<()> {
+        if self.rung > 3 {
+            bail!("[native_lighting_unsupported] lighting rung {} (4 = PCSS) is not deterministic in SceneApp; use rung <= 3", self.rung);
+        }
+        let night = &self.night;
+        if night.fixture_budget > 12 {
+            bail!("[native_lighting_unsupported] night fixture budget {} exceeds the renderer's 12 lights", night.fixture_budget);
+        }
+        if night.fixture_shadow_budget > 2 {
+            bail!("[native_lighting_unsupported] night fixture shadow budget {} exceeds the renderer's 2 shadowed lights", night.fixture_shadow_budget);
+        }
+        if !(0.0..=0.5).contains(&night.urban_skyglow_lux) {
+            bail!("[native_lighting_unsupported] urban skyglow {} lux is outside the calibrated 0..0.5", night.urban_skyglow_lux);
+        }
+        if !(0.001..=0.003).contains(&night.natural_ambient_lux) {
+            bail!("[native_lighting_unsupported] natural night ambient {} lux is outside the calibrated 0.001..0.003", night.natural_ambient_lux);
+        }
+        for (index, fixture) in night.fixtures.iter().enumerate() {
+            let out = |what: &str, value: f32, lo: f32, hi: f32| -> Result<()> {
+                if (lo..=hi).contains(&value) {
+                    Ok(())
+                } else {
+                    bail!("[native_lighting_unsupported] night fixture {index} {what} {value} is outside the calibrated {lo}..{hi}")
+                }
+            };
+            out("lumens", fixture.lumens, 2_000.0, 8_000.0)?;
+            out("range_m", fixture.range_m, 15.0, 90.0)?;
+            out("cct_k", fixture.cct_k, 2_200.0, 4_000.0)?;
+            out("outer_angle_deg", fixture.outer_angle_deg, 1.0, 89.0)?;
+        }
+        Ok(())
+    }
+
     /// The physical atmosphere state this lighting authors, weather label
     /// seeding anything the caller left unset.
     ///
@@ -347,11 +385,11 @@ impl Lighting {
         let haze = self.haze.clamp(0.0, 1.0);
         crate::atmosphere::AtmosphereInputs {
             sun_elevation_deg: self.sun_elev_deg,
-            turbidity: self.turbidity.unwrap_or(seed.turbidity) + 6.0 * haze,
+            turbidity: self.turbidity.unwrap_or(seed.turbidity) + 6.0 * haze, // fallback-ok: optional atmosphere overrides; None means the documented weather-preset value
             ozone_du: self.ozone_du.unwrap_or(crate::atmosphere::REFERENCE_OZONE_DU),
-            air_density: self.air_density.unwrap_or(1.0),
+            air_density: self.air_density.unwrap_or(1.0), // fallback-ok: optional override; None is the documented standard density
             visibility_m: self.visibility_m.unwrap_or(seed.visibility_m),
-            deck: self.cloud_deck.unwrap_or(seed.deck),
+            deck: self.cloud_deck.unwrap_or(seed.deck), // fallback-ok: optional override of the weather preset
             cloud_cover: self.cloud_cover.unwrap_or(seed.cloud_cover),
             cloud_base_m: self.night.cloud_base_m,
             cloud_beam_transmittance,
@@ -368,7 +406,7 @@ impl Lighting {
     pub fn cloud_params(&self, time_s: f32) -> crate::clouds::CloudParams {
         let cover = self
             .cloud_cover
-            .unwrap_or_else(|| self.weather.atmosphere().cloud_cover)
+            .unwrap_or_else(|| self.weather.atmosphere().cloud_cover) // fallback-ok: optional override of the weather preset
             .clamp(0.0, 1.0);
         let night = &self.night;
         crate::clouds::CloudParams {
@@ -436,7 +474,7 @@ impl Lighting {
         // above it.
         let night_lx = night_ledger_illuminance_lx(self);
         let (incident_ev, highlight_ev) = meter_readings(&readback, night_lx);
-        let ev100 = (incident_ev.max(highlight_ev.unwrap_or(f32::NEG_INFINITY))
+        let ev100 = (incident_ev.max(highlight_ev.unwrap_or(f32::NEG_INFINITY)) // fallback-ok: no highlight reading means the incident meter alone (max identity)
             + self.night.exposure_offset_stops.clamp(-6.0, 12.0)
             + self.ev100_bias)
             .clamp(CAMERA_EV100_FLOOR, 20.0);
@@ -516,14 +554,14 @@ impl Lighting {
             return self.resolve_atmosphere(far_plane_m, cloud_beam_transmittance);
         }
         let base = self.weather.lighting_plan(None, self.sun_elev_deg);
-        let cloud = self.cloud_cover.unwrap_or(0.0).clamp(0.0, 1.0);
+        let cloud = self.cloud_cover.unwrap_or(0.0).clamp(0.0, 1.0); // fallback-ok: legacy cubemap path: absent cover is clear sky by definition
         let sun_color = match self.sun_temperature_k {
             Some(k) if k > 0.0 => crate::lighting::kelvin_to_rgb(k.clamp(1000.0, 20000.0)),
             _ => base.sun_color,
         };
         let ev100 = base
             .ev100_fixed
-            .unwrap_or_else(|| self.weather.sensor_ev100(self.sun_elev_deg))
+            .unwrap_or_else(|| self.weather.sensor_ev100(self.sun_elev_deg)) // fallback-ok: optional fixed exposure; None is the documented weather-derived EV
             + self.ev100_bias;
         let plan = crate::lighting::LightingPlan {
             sun_lux: base.sun_lux * self.sun_scale.max(0.0) * (1.0 - 0.85 * cloud),
@@ -583,7 +621,7 @@ impl Lighting {
         let color = match self.fog_color {
             Some([r, g, b]) => Color::linear_rgb(r, g, b),
             None => {
-                let ev100 = plan.ev100_fixed.unwrap_or(15.0);
+                let ev100 = plan.ev100_fixed.unwrap_or(15.0); // fallback-ok: fog tint reference exposure constant, not scene data
                 let exposure = 1.0 / (2.0f32.powf(ev100) * 1.2);
                 // Aerial perspective is slightly cooler than the sky disc.
                 let level = (plan.skybox_brightness * exposure).clamp(0.0, 1.6);
@@ -1503,11 +1541,12 @@ fn spawn_night_sources(
             let head_mesh = meshes.add(
                 SphereMeshBuilder::new(0.16, SphereKind::Uv { sectors: 12, stacks: 8 }).build(),
             );
-            let _ = &lighting;
+            let _ = &lighting; // fallback-ok: borrow marker only
             let mut commands = world.commands();
             for (idx, fixture) in fixtures.iter().enumerate() {
                 let position = Vec3::from_array(fixture.position);
-                let color = lighting::kelvin_to_rgb(fixture.cct_k.clamp(2200.0, 4000.0));
+                // Values are validated to the calibrated ranges up front.
+                let color = lighting::kelvin_to_rgb(fixture.cct_k);
                 let head_material = materials.add(StandardMaterial {
                     base_color: color,
                     emissive: color.to_linear() * (45.0 * internal_scale.sqrt()),
@@ -1524,11 +1563,13 @@ fn spawn_night_sources(
                     commands.spawn((
                         SpotLight {
                             color,
-                            intensity: fixture.lumens.clamp(2_000.0, 8_000.0) * internal_scale,
-                            range: fixture.range_m.clamp(15.0, 90.0),
+                            intensity: fixture.lumens * internal_scale,
+                            range: fixture.range_m,
                             radius: 0.12,
-                            inner_angle: 46.0_f32.to_radians(),
-                            outer_angle: 80.0_f32.to_radians(),
+                            // The authored cone, with the qualified 46/80
+                            // inner/outer falloff ratio.
+                            inner_angle: (fixture.outer_angle_deg * 46.0 / 80.0).to_radians(),
+                            outer_angle: fixture.outer_angle_deg.to_radians(),
                             shadow_maps_enabled: idx < shadow_budget,
                             ..default()
                         },
@@ -1541,7 +1582,7 @@ fn spawn_night_sources(
     });
     world.flush();
 }
-fn update_physical_windows(world: &mut World, enabled: bool, internal_scale: f32) -> u32 {
+fn update_physical_windows(world: &mut World, enabled: bool, internal_scale: f32) -> Result<u32> {
     let restores: Vec<(Entity, Handle<StandardMaterial>)> = {
         let mut q = world.query::<(Entity, &NightWindowOriginal)>();
         q.iter(world).map(|(e, o)| (e, o.0.clone())).collect()
@@ -1552,34 +1593,45 @@ fn update_physical_windows(world: &mut World, enabled: bool, internal_scale: f32
             .remove::<NightWindowOriginal>();
     }
     if !enabled {
-        return 0;
+        return Ok(0);
     }
-    let targets: Vec<(Entity, Handle<StandardMaterial>, String)> = {
+    // Occupancy must not depend on entity allocation (async load order):
+    // targets are ordered by material name, material asset path and world
+    // position, and occupancy is a function of that order alone.
+    let mut targets: Vec<(Entity, Handle<StandardMaterial>, String, String, [u32; 3])> = {
         let mut q = world.query::<(
             Entity,
             &GltfMaterialName,
             &MeshMaterial3d<StandardMaterial>,
+            Option<&GlobalTransform>,
         )>();
         q.iter(world)
-            .filter_map(|(entity, name, material)| {
+            .filter_map(|(entity, name, material, global)| {
                 let label = (&**name).to_lowercase();
                 let positive = label.contains("window")
                     || (label.contains("glass")
                         && !["bulb", "signal", "streetlight", "train", "hydrant"]
                             .iter().any(|token| label.contains(token)));
-                positive.then(|| (entity, material.0.clone(), label))
+                let path = material.0.path().map(|p| p.to_string()).unwrap_or_default(); // fallback-ok: sort key only; an unlabelled material sorts first, deterministically
+                let position = global.map(|g| g.translation().to_array().map(f32::to_bits)).unwrap_or([0; 3]); // fallback-ok: sort key only
+                positive.then(|| (entity, material.0.clone(), label, path, position))
             })
             .collect()
     };
+    targets.sort_by(|a, b| (&a.2, &a.3, a.4).cmp(&(&b.2, &b.3, b.4)));
     let mut applied = 0u32;
+    let mut missing: Option<String> = None;
     world.resource_scope(|world, mut materials: Mut<Assets<StandardMaterial>>| {
-        for (ordinal, (entity, source, _)) in targets.into_iter().enumerate() {
+        for (ordinal, (entity, source, label, _, _)) in targets.into_iter().enumerate() {
             // 30% deterministic occupancy at primitive granularity: a
             // residential street around 22:00, not an office block.
-            if (ordinal * 73 + entity.to_bits() as usize * 17) % 100 >= 30 {
+            if (ordinal * 73) % 100 >= 30 {
                 continue;
             }
-            let Some(mut material) = materials.get(&source).cloned() else { continue };
+            let Some(mut material) = materials.get(&source).cloned() else {
+                missing.get_or_insert(label);
+                continue;
+            };
             let cct = 2_200.0 + ((ordinal * 317) % 1_800) as f32;
             // Same street-side luminance model as the synthetic façades.
             let roll = ((ordinal * 47) % 100) as f32 / 100.0;
@@ -1598,7 +1650,10 @@ fn update_physical_windows(world: &mut World, enabled: bool, internal_scale: f32
             applied += 1;
         }
     });
-    applied
+    if let Some(label) = missing {
+        bail!("night windows: window material {label:?} is not loaded");
+    }
+    Ok(applied)
 }
 
 
@@ -2159,7 +2214,8 @@ impl SceneApp {
         // sensor RGB hashes differ between identical replays, so mixed
         // SceneApp lighting is capped at deterministic hard cascades.
         // The standalone cinematic CLI still exposes rung-4 PCSS.
-        let rung = LightingRung(lighting.rung.min(3));
+        lighting.validate_for_scene_app()?;
+        let rung = LightingRung(lighting.rung);
         let (plan, _resolved) = lighting.resolve();
         let sun_dir = sun_direction(lighting.sun_elev_deg, lighting.sun_azim_deg);
         // Black, not a sky colour: under the physical atmosphere the sky
@@ -2323,6 +2379,27 @@ impl SceneApp {
         }
         app.finish();
         app.cleanup();
+        // A CPU or virtual adapter (lavapipe, llvmpipe, SwiftShader) renders a
+        // different image than the qualified GPU: never silently. It is an
+        // explicit, logged opt-in for tests and tooling.
+        if let Some(info) = app.world().get_resource::<bevy::render::renderer::RenderAdapterInfo>() {
+            let info = &info.0;
+            eprintln!(
+                "render-adapter: {} ({:?}, {:?}, driver {} {})",
+                info.name, info.device_type, info.backend, info.driver, info.driver_info
+            );
+            let device_type = format!("{:?}", info.device_type);
+            if matches!(device_type.as_str(), "Cpu" | "VirtualGpu")
+                && std::env::var("SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER").as_deref() != Ok("1")
+            {
+                bail!(
+                    "[native_gpu_adapter_software] adapter {} is a {:?} device; set SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1 to render on it explicitly",
+                    info.name, info.device_type
+                );
+            }
+        } else {
+            bail!("[native_gpu_adapter_unknown] the render device reported no adapter information");
+        }
         Ok(Self {
             app,
             receiver: rx,
@@ -2742,8 +2819,9 @@ impl SceneApp {
         profile_config: RenderProfileConfig,
     ) -> Result<ResolvedLighting> {
         profile_config.cinematic.validate()?;
+        lighting.validate_for_scene_app()?;
         self.scene_revision += 1;
-        let rung = LightingRung(lighting.rung.min(3));
+        let rung = LightingRung(lighting.rung);
         let Relight {
             plan,
             mut resolved,
@@ -2886,7 +2964,7 @@ impl SceneApp {
             lighting.sun_elev_deg <= NIGHT_SOURCES_ELEVATION_DEG
                 && night_controls.window_mode != crate::night::WindowMode::Off,
             internal_scale,
-        );
+        )?;
         if physical_window_primitives > 0 {
             night_environment.source_ledger.push(crate::night::SourceLedgerEntry {
                 id: "selective-windows".into(),
@@ -3079,6 +3157,7 @@ impl SceneApp {
         lighting: &Lighting,
         profile_config: RenderProfileConfig,
     ) -> Result<(ResolvedLighting, bool)> {
+        lighting.validate_for_scene_app()?;
         let tier = ladder_tier(lighting.sun_elev_deg);
         self.scene_revision += 1;
         let same_ladder = {
@@ -4356,6 +4435,11 @@ impl SceneApp {
             self.app.update();
             updates += 1;
             let world = self.app.world_mut();
+            if let Some(errors) = world.get_resource::<crate::veg::VegErrors>() {
+                if !errors.0.is_empty() {
+                    bail!("vegetation failed to load: {}", errors.0.join("; "));
+                }
+            }
             let pending_loads = {
                 let mut q = world.query_filtered::<&TileLoad, Without<SceneSpawned>>();
                 q.iter(world).count()
@@ -4571,7 +4655,16 @@ impl SceneApp {
             }
             legend.push(LegendEntry { id, name });
         }
+        // Dynamic actors take ids above the static legend: before this, the
+        // first actors reused ids 1..N of static meshes, so the ID/semantic
+        // passes, lidar/radar classes and radar velocities confused an actor
+        // with a static mesh.
+        let static_max = legend.iter().map(|entry| entry.id).max().unwrap_or(0); // fallback-ok: an empty legend has no ids to stay above
         world.resource_mut::<Legend>().0 = legend;
+        if !self.actors.is_empty() {
+            bail!("actors were spawned before the static instance-ID legend was frozen");
+        }
+        self.next_instance_id = static_max;
 
         // One update so the newly spawned ID clones are extracted before the
         // first real render request.
@@ -5920,6 +6013,100 @@ mod tests {
         // Bevy's async asset tasks can still hold the test-only wgpu device
         // when the process tears down; the production service intentionally
         // lives for the process lifetime.
+        std::mem::forget(app);
+    }
+
+    /// The ray sensors see the meshes the camera draws: every visible GLB
+    /// node (never the hidden cuboid), CPU-posed skins that follow the
+    /// animation clock, and an instance-ID pass drawn from the model.
+    /// Runs on a GPU, or on lavapipe with
+    /// `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1`.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn actor_sensor_meshes_are_the_drawn_catalog_meshes() {
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let pedestrian = repo.join("catalog/pedestrians-carla/models/pedestrian_0015.glb");
+        let mut app = SceneApp::new(&Lighting::default()).unwrap();
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+        app.add_camera(
+            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera("cam", 128, 96) },
+            Profile::Sensor,
+        );
+        app.wait_until_ready().unwrap();
+
+        let body = [0.0, 0.8, -20.0];
+        app.upsert_actor("car", "car", body, Quat::IDENTITY, [4.5, 1.6, 1.8], [0.5, 0.5, 0.5], false);
+        let legend_max = app.legend().iter().map(|entry| entry.id).max().unwrap();
+        assert!(app.actor_instance_id("car").unwrap() > legend_max, "actor ids never reuse static legend ids");
+        // Before a model is attached the cuboid is what the camera draws.
+        let cuboid = app.actor_sensor_meshes().unwrap();
+        assert_eq!(cuboid.len(), 1);
+        let ActorSensorGeometry::Rigid { mesh, .. } = &cuboid[0].geometry else { panic!("cuboid is rigid") };
+        assert_eq!(app.mesh_asset_triangles(mesh, "cuboid").unwrap().len(), 12);
+
+        app.attach_actor_asset("car", &vehicle, 1.0, None, None, 0.0).unwrap();
+        app.set_actor_asset_pose("car", [0.0, 0.0, -20.0], Quat::IDENTITY).unwrap();
+        app.warmup(2);
+        let meshes = app.actor_sensor_meshes().unwrap();
+        assert_eq!(meshes.len(), app.actor_model_mesh_count("car"), "one sensor mesh per drawn model node");
+        let mut triangles = 0;
+        for mesh in &meshes {
+            assert_eq!(mesh.actor_id, "car");
+            let ActorSensorGeometry::Rigid { mesh: handle, world } = &mesh.geometry else { panic!("vehicle meshes are rigid") };
+            triangles += app.mesh_asset_triangles(handle, &mesh.label).unwrap().len();
+            // Every node sits on the actor (world translation within the body).
+            let t = world.w_axis.truncate();
+            assert!((t - Vec3::new(0.0, 0.0, -20.0)).length() < 4.0, "{} at {t}", mesh.label);
+        }
+        assert!(triangles > 1_000, "the sedan GLB, not a 12-triangle box ({triangles})");
+
+        // The ID pass draws the model: the silhouette differs from the box
+        // (the box also fills the space above the hood and under the body).
+        app.set_pose("cam", &[6.0, 1.2, -20.0], &[0.0, 0.9, -20.0]).unwrap();
+        let frame = app.render_once(1).unwrap();
+        let id = &frame.passes["cam:id"].bytes;
+        let actor_id = app.actor_instance_id("car").unwrap().to_le_bytes();
+        let hits = id.chunks_exact(4).filter(|px| px[..3] == actor_id[..3]).count();
+        assert!(hits > 200, "the actor is visible in the ID pass ({hits} px)");
+        let box_px = {
+            let cols = 128usize;
+            // Projected cuboid footprint is a solid rectangle; the car's is
+            // not: some pixels inside the actor's ID bounding box are not the actor.
+            let rows: Vec<usize> = id.chunks_exact(4).enumerate().filter(|(_, px)| px[..3] == actor_id[..3]).map(|(i, _)| i).collect();
+            let (x0, x1) = rows.iter().fold((usize::MAX, 0), |(a, b), i| (a.min(i % cols), b.max(i % cols)));
+            let (y0, y1) = rows.iter().fold((usize::MAX, 0), |(a, b), i| (a.min(i / cols), b.max(i / cols)));
+            (x1 - x0 + 1) * (y1 - y0 + 1)
+        };
+        assert!(hits < box_px * 95 / 100, "ID silhouette is the car, not a filled box ({hits} of {box_px})");
+
+        // A walking pedestrian's skin is posed on the CPU and follows the clip.
+        app.upsert_actor("ped", "pedestrian", [3.0, 0.9, -20.0], Quat::IDENTITY, [0.5, 1.8, 0.5], [0.5, 0.5, 0.5], false);
+        app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("walk"), 0.0).unwrap();
+        app.set_actor_asset_pose("ped", [3.0, 0.0, -20.0], Quat::IDENTITY).unwrap();
+        app.warmup(2);
+        let posed = |app: &mut SceneApp| -> Vec<[Vec3; 3]> {
+            app.actor_sensor_meshes().unwrap().into_iter()
+                .filter(|mesh| mesh.actor_id == "ped")
+                .flat_map(|mesh| match mesh.geometry {
+                    ActorSensorGeometry::Skinned { triangles, .. } => triangles,
+                    ActorSensorGeometry::Rigid { .. } => Vec::new(),
+                })
+                .collect()
+        };
+        let at_zero = posed(&mut app);
+        assert!(!at_zero.is_empty(), "the walker is skinned geometry");
+        app.set_actor_animation_time("ped", 0.4).unwrap();
+        app.warmup(2);
+        let at_later = posed(&mut app);
+        assert_eq!(at_zero.len(), at_later.len());
+        assert!(at_zero.iter().zip(&at_later).any(|(a, b)| (a[0] - b[0]).length() > 0.01), "the skin follows the walk clip");
+
+        // Rebinding the model (idle <-> walk GLB) keeps one ID clone set.
+        app.detach_actor_asset("ped").unwrap();
+        assert!(app.actor_sensor_meshes().is_err(), "an actor whose model was detached has no visible geometry");
+        app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("idle"), 0.0).unwrap();
+        assert!(!posed(&mut app).is_empty());
         std::mem::forget(app);
     }
 

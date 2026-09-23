@@ -43,6 +43,11 @@ COPY --from=python-build /wheels /tmp/wheels
 RUN python3 -m pip install --no-cache-dir /home/carla/PythonAPI/carla/dist/carla-*.whl /tmp/wheels/*.whl && rm -rf /tmp/wheels
 # SIMFORGE_SOURCE_REVISION is the engine version a CARLA worker registers with;
 # the control plane only approves a CARLA node whose version is this commit.
+# SIMFORGE_CARLA_VERSION/SIMFORGE_ENGINE_VERSION are the pinned base image's
+# runtime (0.10.0 on UE5.5): the render attests them, and never invents them.
+# No setting here may change render output (no generated-XODR worlds, no
+# approximate map binding, no z offsets, no signal remaps): the adapter
+# refuses those (carla_forbidden_worker_config).
 ENV NODE_ENV=production \
     PORT=8080 \
     SIMFORGE_SOURCE_REVISION=$SOURCE_REVISION \
@@ -51,6 +56,8 @@ ENV NODE_ENV=production \
     SIMFORGE_CARLA_BLUEPRINT_ID=vehicle.kia.carnival \
     SIMFORGE_CARLA_BLUEPRINT_CLASS=/Game/Carla/Blueprints/Vehicles/KiaCarnival2025/BP_KiaCarnival2025.BP_KiaCarnival2025_C \
     SIMFORGE_CARLA_IMAGE_MANIFEST_SHA256=baed0d038437c55efe0abe52a762d352aeb21acdeeff5b11a15f6bd8a648de64 \
+    SIMFORGE_CARLA_VERSION=0.10.0 \
+    SIMFORGE_ENGINE_VERSION=UE5.5 \
     SIMFORGE_CACHE_DIR=/cache \
     SIMFORGE_GPU_LOCK=/run/simforge/gpu.lock \
     NVIDIA_VISIBLE_DEVICES=all \

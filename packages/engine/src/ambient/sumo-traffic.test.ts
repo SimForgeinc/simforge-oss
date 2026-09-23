@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { sha256Bytes } from '../core/hash.js';
 import type { SimTrace } from '../trace/trace.js';
 import { resolveAmbientTrafficProfile } from './profile.js';
-import { sumoVehicleId, type SumoNetworkManifest } from './sumo.js';
+import {
+  SUMO_VEHICLE_BODIES, buildSumoRouteDemand, buildSumoRouteDocument, sumoVehicleClassFor, sumoVehicleId, type SumoNetworkManifest,
+} from './sumo.js';
 import { sumoIdHash, type SumoRuntime, type SumoWasmModule } from './sumo-runtime.js';
 import {
   prepareSumoTraffic,
@@ -13,7 +15,7 @@ import {
   sumoTrafficKey,
   type SumoTrafficInput,
 } from './sumo-traffic.js';
-import { mergeSumoTrafficIntoTrace } from './sumo-trace-merge.js';
+import { mergeSumoTrafficIntoTrace, sumoTraceActorMetadata } from './sumo-trace-merge.js';
 
 const NETWORK_XML = `<net>
     <location netOffset="0,0" convBoundary="0.00,0.00,400.00,20.00"/>
@@ -67,7 +69,8 @@ class FakeSumo implements SumoWasmModule {
   }
   _us_sumo_start(_net: number, _netLength: number, routes: number, routesLength: number): number {
     const xml = new TextDecoder().decode(this.HEAPU8.subarray(routes, routes + routesLength));
-    this.vehicles = [...xml.matchAll(/<(?:vehicle|flow) id="([^"]+)"/g)].map((match, index) => ({ id: match[1]!, x: 5 * index }));
+    // SUMO names a flow's vehicles `<flowId>.<n>`; this stand-in inserts each flow's first.
+    this.vehicles = [...xml.matchAll(/<(vehicle|flow) id="([^"]+)"/g)].map((match, index) => ({ id: match[1] === 'flow' ? `${match[2]!}.0` : match[2]!, x: 5 * index }));
     this.log.push(`start routes=${this.vehicles.length} proxyRoute=${/<route id="proxy-route" edges="([^"]+)"/.exec(xml)?.[1]}`);
     this.pack();
     return 0;
@@ -181,7 +184,8 @@ function input(overrides: Partial<SumoTrafficInput> = {}): SumoTrafficInput {
     sourceInputDigest: 'd'.repeat(64),
     signalPrograms: [],
     roadControls: [],
-    profile: resolveAmbientTrafficProfile({ version: 1, preset: 'city', seed: 'unit', maxActors: 4 }),
+    // SUMO generates vehicles only: the profile asks for no pedestrians or cyclists.
+    profile: resolveAmbientTrafficProfile({ version: 1, preset: 'city', seed: 'unit', maxActors: 4, pedestrianShare: 0, cyclistShare: 0 }),
     network: { bytes: NETWORK_BYTES, manifest: MANIFEST },
     map: { assetId: 'unit-map', versionId: 'usmap_unit' },
     ...overrides,
@@ -225,7 +229,8 @@ describe('worker SUMO traffic step', () => {
   it('records quantized scene poses under stable hash ids', async () => {
     const result = await runSumoTraffic(runtimeWith([]), input());
     const [actor] = result.artifact.artifact.actors;
-    expect(actor!.id).toBe(sumoTrafficActorIdFor(sumoVehicleId('unit', 0)));
+    // Slot 0 is a replenishing flow: SUMO's first member is `<flowId>.0`.
+    expect(actor!.id).toBe(sumoTrafficActorIdFor(`${sumoVehicleId('unit', 0)}.0`));
     expect(actor!.id).toMatch(/^sumo-[0-9a-f]{8}$/);
     // URL-safe: render intents accept it as a sensor host id.
     expect(actor!.id).toMatch(/^[0-9A-Za-z][0-9A-Za-z_-]{0,63}$/);
@@ -295,6 +300,24 @@ describe('worker SUMO traffic step', () => {
       .rejects.toThrow(/float32/);
   });
 
+  it('refuses a profile asking for pedestrians or cyclists, which SUMO demand cannot produce', async () => {
+    const profile = resolveAmbientTrafficProfile({ version: 1, preset: 'city', seed: 'unit', maxActors: 4 });
+    expect(profile.pedestrianShare + profile.cyclistShare).toBeGreaterThan(0);
+    await expect(runSumoTraffic(runtimeWith([]), input({ profile })))
+      .rejects.toMatchObject({ code: 'sumo_road_user_share_unsupported' });
+  });
+
+  it('records the class the demand drew for every actor, and refuses a vehicle it did not plan', async () => {
+    const trucks = resolveAmbientTrafficProfile({
+      version: 1, preset: 'custom', seed: 'unit', maxActors: 4, pedestrianShare: 0, cyclistShare: 0,
+      vehicleMix: { car: 0, van: 0, truck: 1, bus: 0, motorcycle: 0 },
+    });
+    const modules: FakeSumo[] = [];
+    const result = await runSumoTraffic(runtimeWith(modules), input({ profile: trucks }));
+    expect(Object.values(result.vehicleClasses)).toEqual(['truck']);
+    expect(result.key).not.toBe((await runSumoTraffic(runtimeWith([]), input())).key);
+  });
+
   it('runs a prepared module exactly once', async () => {
     const prepared = await prepareSumoTraffic(runtimeWith([]));
     prepared.run(input());
@@ -306,24 +329,69 @@ describe('merging SUMO traffic into the authoritative trace', () => {
   it('adds render-ready ambient actors with an explicit origin and leaves authored tracks alone', async () => {
     const trace = authoredTrace();
     const result = await runSumoTraffic(runtimeWith([]), input());
-    const merged = mergeSumoTrafficIntoTrace(trace, result.artifact);
+    const merged = mergeSumoTrafficIntoTrace(trace, result.artifact, result.vehicleClasses);
     const [id] = result.artifact.artifact.actors.map((actor) => actor.id);
     expect(merged.ticks.actors.ego).toEqual(trace.ticks.actors.ego);
     expect(merged.header.actorIds).toEqual(['ego', id].sort());
     expect(merged.header.ambientActorIds).toEqual([id]);
     expect(merged.header.materializedTrafficDigest).toBe(result.artifact.sha256);
+    const vehicleClass = result.vehicleClasses[id!]!;
     expect(merged.header.actorMetadata?.[id!]).toEqual({
-      kind: 'car',
-      dims: { l: 4.55, w: 1.82, h: 1.48 },
+      kind: vehicleClass,
+      dims: { ...SUMO_VEHICLE_BODIES[vehicleClass].dims },
       static: false,
-      tags: ['ambient', 'catalog:vehicle.sedan', 'sumo'],
+      tags: ['ambient', `catalog:${SUMO_VEHICLE_BODIES[vehicleClass].catalogId}`, 'sumo'],
       origin: 'sumo',
+    });
+    expect(sumoTraceActorMetadata('car')).toEqual({
+      kind: 'car', dims: { l: 4.55, w: 1.82, h: 1.48 }, static: false, tags: ['ambient', 'catalog:vehicle.sedan', 'sumo'], origin: 'sumo',
     });
     const track = merged.ticks.actors[id!]!;
     // Scene z → xodr-local y = -z.
     expect(track.y[0]).toBe(-41.75);
     expect(track.motionDirection?.every((direction) => direction === 1)).toBe(true);
     expect(track.s[50]).toBeCloseTo(10, 6);
-    expect(() => mergeSumoTrafficIntoTrace(merged, result.artifact)).toThrow(/already carries/);
+    expect(() => mergeSumoTrafficIntoTrace(merged, result.artifact, result.vehicleClasses)).toThrow(/already carries/);
+  });
+
+  it('never assumes a body: an actor without its simulated class is refused', async () => {
+    const result = await runSumoTraffic(runtimeWith([]), input());
+    expect(() => mergeSumoTrafficIntoTrace(authoredTrace(), result.artifact, {})).toThrow(/sumo_vehicle_class_unknown/);
+  });
+});
+
+describe('SUMO demand vehicle mix', () => {
+  const candidates = Array.from({ length: 400 }, (_, index) => [`e${index}`]);
+  const profile = (vehicleMix: Record<'car' | 'van' | 'truck' | 'bus' | 'motorcycle', number>) => resolveAmbientTrafficProfile({
+    version: 1, preset: 'custom', seed: 'mix', maxActors: 128, pedestrianShare: 0, cyclistShare: 0, vehicleMix,
+  });
+
+  it('draws each slot\'s class deterministically from the mix, one vType per class', () => {
+    const mixed = profile({ car: 0.5, van: 0.2, truck: 0.1, bus: 0.1, motorcycle: 0.1 });
+    const first = buildSumoRouteDemand(candidates, mixed, { vehicleMix: true, replenishmentPeriodSeconds: 40, replenishmentStride: 4, flowEndSeconds: 3600 });
+    const second = buildSumoRouteDemand(candidates, mixed, { vehicleMix: true, replenishmentPeriodSeconds: 40, replenishmentStride: 4, flowEndSeconds: 3600 });
+    expect(second.document).toBe(first.document);
+    const counts = new Map<string, number>();
+    for (const slot of first.slots) counts.set(slot.vehicleClass, (counts.get(slot.vehicleClass) ?? 0) + 1);
+    expect(counts.get('car')! / first.slots.length).toBeGreaterThan(0.35);
+    expect(counts.get('car')! / first.slots.length).toBeLessThan(0.65);
+    for (const vehicleClass of ['van', 'truck', 'bus', 'motorcycle']) expect(counts.get(vehicleClass)).toBeGreaterThan(0);
+    expect(first.document).toContain(`<vType id="ambient-truck" `);
+    expect(first.document).toContain(`length="${SUMO_VEHICLE_BODIES.bus.dims.l}"`);
+    // Flow members resolve to their flow's class.
+    const flow = first.slots.find((slot) => slot.element === 'flow')!;
+    expect(first.classesByIdHash!.get(sumoIdHash(`${flow.id}.3`))).toBe(flow.vehicleClass);
+  });
+
+  it('writes an all-car demand exactly as the single-vType document, so car-only traffic is unchanged', () => {
+    const cars = profile({ car: 1, van: 0, truck: 0, bus: 0, motorcycle: 0 });
+    const legacy = buildSumoRouteDocument(candidates, cars, {
+      vehicleDimensions: { lengthM: 4.55, widthM: 1.82, heightM: 1.48 },
+    });
+    expect(buildSumoRouteDemand(candidates, cars, { vehicleMix: true }).document).toBe(legacy);
+  });
+
+  it('refuses a mix that names no vehicle', () => {
+    expect(() => sumoVehicleClassFor('s', 'v', { car: 0, van: 0, truck: 0, bus: 0, motorcycle: 0 })).toThrow(/sumo_vehicle_mix_empty/);
   });
 });

@@ -142,7 +142,7 @@ export async function runWorkerSumo(options: {
     map: options.map,
     ...(options.signalAuthority ? { signalAuthority: options.signalAuthority } : {}),
   });
-  const trace = mergeSumoTrafficIntoTrace(authoredTrace, traffic.artifact);
+  const trace = mergeSumoTrafficIntoTrace(authoredTrace, traffic.artifact, traffic.vehicleClasses);
   const signalAudit = auditSumoSignalCompliance({
     trace,
     networkXml: new TextDecoder().decode(network.bytes),

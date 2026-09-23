@@ -38,7 +38,8 @@ async function sumoDocument() {
     extensions: {
       ...template.extensions,
       'studio.ambientTraffic.provider.v1': 'sumo',
-      'studio.ambientTraffic.profile.v1': { version: 1, preset: 'city', seed: 'ambient-1', maxActors: 24 },
+      // SUMO demand is vehicles only: no pedestrian or cyclist share.
+      'studio.ambientTraffic.profile.v1': { version: 1, preset: 'city', seed: 'ambient-1', maxActors: 24, pedestrianShare: 0, cyclistShare: 0 },
     },
   };
 }

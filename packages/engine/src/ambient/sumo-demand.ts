@@ -10,8 +10,9 @@
 
 import type { ResolvedAmbientTrafficProfile } from './profile.js';
 import {
-  buildSumoRouteDocument,
+  buildSumoRouteDemand,
   sumoSceneToNetwork,
+  type SumoVehicleClass,
   type SumoNetworkWorldTransform,
   type SumoRouteDocumentOptions,
   type SumoScenePoint,
@@ -122,6 +123,8 @@ export function selectActorCenteredSumoDemand(
 
 export interface SumoDemandPlan {
   readonly routeDocument: string;
+  /** Class of every SUMO vehicle id the demand can insert, by bridge id hash (with `vehicleMix`). */
+  readonly classesByIdHash?: ReadonlyMap<number, SumoVehicleClass>;
   readonly selectedRoutes: number;
   readonly nearbyRouteStarts: number;
   /** Candidates dropped because they drive along an authored actor's lanes. */
@@ -190,8 +193,10 @@ export function planSumoDemand(
     : candidates.filter((route) => !route.some((edge) => excludedEdges.has(edge)));
   const localized = localizeSumoRouteCandidates(eligible, networkXml, transform, focuses);
   const demand = focuses.length > 0 ? selectActorCenteredSumoDemand(localized, profile.maxActors) : localized.candidates;
+  const routes = buildSumoRouteDemand(demand, profile, routeOptions);
   return {
-    routeDocument: buildSumoRouteDocument(demand, profile, routeOptions),
+    routeDocument: routes.document,
+    ...(routes.classesByIdHash ? { classesByIdHash: routes.classesByIdHash } : {}),
     selectedRoutes: Math.max(0, Math.min(profile.maxActors, demand.length)),
     nearbyRouteStarts: localized.nearbyRouteStarts,
     authoredCorridorRejects: candidates.length - eligible.length,

@@ -29,7 +29,7 @@ from simforge_oss_carla_exec.runtime.backend import (
     VEHICLE_DOOR_MEMBERS,
     VEHICLE_LIGHT_BITS,
     CarlaBackend,
-    apply_supported_blueprint_attributes,
+    apply_blueprint_attributes,
     resolve_signal_lamp,
     runtime_asset_bindings,
 )
@@ -48,6 +48,7 @@ from simforge_oss_carla_exec.runtime.parity import ParityAccumulator
 from simforge_oss_carla_exec.runtime.materialized_traffic import merge_materialized_traffic, parse_materialized_traffic
 from simforge_oss_carla_exec.runtime.executor import CancellationRequested, LeaseDeadlineExceeded, execute_lease
 from simforge_oss_carla_exec.runtime.validation import validate_xosc14
+from simforge_oss_carla_exec.runtime.policy import RenderPolicy
 
 
 def test_sensor_frame_timeout_defaults_to_cold_start_safe_window(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -124,7 +125,10 @@ def test_sensor_listen_does_not_retry_an_unrelated_runtime_failure(monkeypatch) 
     assert sensor.calls == 1
 
 
-def test_optional_camera_grade_attributes_never_block_a_supported_sensor() -> None:
+def test_a_camera_grade_attribute_the_blueprint_lacks_fails_the_render() -> None:
+    """Formerly: unsupported grade attributes were skipped and only recorded,
+    leaving the camera at the image's default for them. Now the render fails
+    before any attribute is set."""
     class Blueprint:
         def __init__(self) -> None:
             self.attributes: dict[str, str] = {}
@@ -136,14 +140,11 @@ def test_optional_camera_grade_attributes_never_block_a_supported_sensor() -> No
             self.attributes[name] = value
 
     blueprint = Blueprint()
-    applied, unsupported = apply_supported_blueprint_attributes(
-        blueprint,
-        {"temp": "5250", "exposure_compensation": "-0.4"},
-    )
-
-    assert applied == {"exposure_compensation": "-0.4"}
-    assert unsupported == ["temp"]
-    assert blueprint.attributes == applied
+    with pytest.raises(ContractError, match=r"\[carla_sensor_attribute_unsupported\].*temp"):
+        apply_blueprint_attributes(blueprint, {"temp": "5250", "exposure_compensation": "-0.4"}, "rgb sensor front")
+    assert blueprint.attributes == {}
+    applied = apply_blueprint_attributes(blueprint, {"exposure_compensation": "-0.4"}, "rgb sensor front")
+    assert applied == blueprint.attributes == {"exposure_compensation": "-0.4"}
 
 
 def test_archive_sensor_data_preserves_relative_frame_paths(tmp_path: Path) -> None:
@@ -184,7 +185,7 @@ CATALOG = json.dumps({
         "class": "vehicle",
         "runtimeBindings": {
             "browser": {"mode": "procedural-generator", "generatorId": "vehicle.sedan", "fidelity": "exact"},
-            "carla": {"mode": "native-blueprint", "blueprintId": "vehicle.lincoln.mkz", "fidelity": "semantic-class", "availability": "runtime-catalog-verified"},
+            "carla": {"mode": "native-blueprint", "blueprintId": "vehicle.lincoln.mkz", "fidelity": "native-blueprint", "availability": "runtime-catalog-verified"},
         },
     }],
 }).encode()
@@ -348,6 +349,13 @@ def _sensor_artifact_name(sensor):
     return f"{sensor['role']}:{actor}:{sensor['sensorId']}:{sensor['modality']}"
 
 
+#: Every field is required: CARLA no longer fills a missing one with a default sun.
+LEASE_ENVIRONMENT = {
+    "cloudiness": 0, "precipitation": 0, "deposits": 0, "wind": 0,
+    "sunAzimuth": 0, "sunAltitude": 45, "fogDensity": 0, "fogDistance": 0, "wetness": 0,
+}
+
+
 DEFAULT_LEASE_SENSORS = [{
     "role": "primary",
     "actorId": "ego",
@@ -419,6 +427,7 @@ def lease_value(outputs=None, uploads=None, sensors=None, formats=None, executio
                 "outputs": selected_outputs,
                 "executionMode": execution_mode,
                 "quality": "high",
+                "environment": dict(LEASE_ENVIRONMENT),
                 **({"formats": formats} if formats is not None else {}),
             },
             "parityThresholds": {"positionM": 0.01, "headingDeg": 0.01, "speedMps": 0.01},
@@ -575,12 +584,15 @@ def test_carla_spawn_preserves_absolute_xosc_elevation_and_coordinate_sign():
     Carla.Location, Carla.Rotation, Carla.Transform = Location, Rotation, Transform
     class Library:
         def find(self, blueprint_id):
-            if blueprint_id == "vehicle.lincoln.mkz":
-                raise RuntimeError("not cooked under the CARLA 0.10 id")
+            if blueprint_id == "vehicle.ue4.chevrolet.impala":
+                raise RuntimeError("not in this cook")
             return blueprint_id
+    class Box:
+        location, extent = Location(z=0.0), Location(z=0.0)
     class Actor:
         id = 1
-        type_id = "vehicle.ue4.chevrolet.impala"
+        type_id = "vehicle.lincoln.mkz"
+        bounding_box = Box()
         def destroy(self): return True
     class World:
         def __init__(self): self.transform = None
@@ -603,13 +615,20 @@ def test_carla_spawn_preserves_absolute_xosc_elevation_and_coordinate_sign():
     assert spawned.location.y == pytest.approx(338.977)
     assert spawned.location.z == pytest.approx(62.046)
     assert spawned.rotation.yaw == pytest.approx(5.782)
+    # Formerly vehicle.lincoln.mkz was always aliased to the Impala; the
+    # catalog body is now spawned as bound, and a body the image lacks fails.
     assert backend.actor_asset_evidence["ego"] == {
         "catalogId": "vehicle.sedan",
         "requestedBlueprintId": "vehicle.lincoln.mkz",
-        "observedBlueprintId": "vehicle.ue4.chevrolet.impala",
+        "observedBlueprintId": "vehicle.lincoln.mkz",
         "verification": "runtime-type-id-readback",
-        "runtimeBlueprintAlias": "vehicle.ue4.chevrolet.impala",
     }
+    missing = object.__new__(CarlaBackend)
+    missing.carla, missing.world, missing.actors, missing.execution_mode = Carla, World(), {}, "native-physics"
+    with pytest.raises(ContractError, match=r"\[carla_blueprint_unavailable\].*vehicle.ue4.chevrolet.impala"):
+        missing.spawn({"ego": ActorBinding("ego", "actor_ego", "car", "vehicle.sedan")}, frame, {
+            "vehicle.sedan": {"blueprintId": "vehicle.ue4.chevrolet.impala"},
+        })
 
 
 def test_native_prepare_settles_before_t0_and_resets_linear_and_angular_velocity():
@@ -862,7 +881,7 @@ def test_capture_waits_for_all_delayed_sensors_on_the_exact_world_frame(tmp_path
             thread.start()
             threads.append(thread)
     backend = _capture_backend(tmp_path, callbacks)
-    backend.tick({"outputFrameIndex": 7, "scheduledTimeS": 7 / 30})
+    backend.tick({"outputFrameIndex": 7, "scheduledTimeS": 7 / 30, "contentTimeS": 7 / 30})
     for thread in threads: thread.join()
     assert [(item["sensorId"], item["carlaFrame"], item["outputFrameIndex"], item["relativePath"]) for item in backend.sensor_manifest()] == [
         ("hero", 42, 7, "hero/stream.mp4"), ("rear", 42, 7, "rear/stream.mp4"),
@@ -877,7 +896,7 @@ def test_capture_fails_closed_when_one_sensor_times_out(tmp_path):
     backend = _capture_backend(tmp_path, lambda value: value._receive_sensor_frame("hero", _SensorImage(42)))
     backend.sensor_timeout_s = 0.01
     with pytest.raises(RuntimeError, match="sensor frame timeout.*rear"):
-        backend.tick({"outputFrameIndex": 0, "scheduledTimeS": 0.0})
+        backend.tick({"outputFrameIndex": 0, "scheduledTimeS": 0.0, "contentTimeS": 0.0})
 
 
 def test_capture_enforces_incremental_bookkeeping_disk_quota(tmp_path):
@@ -887,7 +906,7 @@ def test_capture_enforces_incremental_bookkeeping_disk_quota(tmp_path):
     backend = _capture_backend(tmp_path, callbacks)
     backend.max_capture_disk_bytes = 4098
     with pytest.raises(ContractError, match="incremental temporary-disk quota"):
-        backend.tick({"outputFrameIndex": 0, "scheduledTimeS": 0.0})
+        backend.tick({"outputFrameIndex": 0, "scheduledTimeS": 0.0, "contentTimeS": 0.0})
     assert backend.sensor_records == []
 
 
@@ -899,7 +918,7 @@ def test_capture_rejects_duplicate_and_out_of_order_callbacks(tmp_path, frames, 
         backend._receive_sensor_frame("rear", _SensorImage(42))
     backend = _capture_backend(tmp_path, callbacks)
     with pytest.raises(RuntimeError, match=message):
-        backend.tick({"outputFrameIndex": 0, "scheduledTimeS": 0.0})
+        backend.tick({"outputFrameIndex": 0, "scheduledTimeS": 0.0, "contentTimeS": 0.0})
 
 
 def test_native_smoke_contract_never_teleports_after_t0():
@@ -1084,7 +1103,7 @@ def test_physics_validation_captures_are_labelled_with_the_post_step_time():
 def test_signed_manifest_shape_resolves_only_nested_exact_carla_bindings():
     manifest = json.loads(CATALOG)
     assert runtime_asset_bindings(manifest, expected_catalog_version_id="uscatalog-1") == {
-        "vehicle.sedan": {"blueprintId": "vehicle.lincoln.mkz"},
+        "vehicle.sedan": {"blueprintId": "vehicle.lincoln.mkz", "fidelity": "native-blueprint"},
     }
     with pytest.raises(ContractError, match="version does not match"):
         runtime_asset_bindings(manifest, expected_catalog_version_id="uscatalog-other")
@@ -1096,158 +1115,183 @@ def test_signed_manifest_shape_resolves_only_nested_exact_carla_bindings():
     ) == {"vehicle.sedan": {}}
 
 
+def test_a_carla_binding_without_a_fidelity_fails_instead_of_passing_as_exact():
+    manifest = json.loads(CATALOG)
+    del manifest["entries"][0]["runtimeBindings"]["carla"]["fidelity"]
+    with pytest.raises(ContractError, match=r"\[carla_catalog_binding_incomplete\].*vehicle.sedan"):
+        runtime_asset_bindings(manifest, expected_catalog_version_id="uscatalog-1")
+
+
 def test_historical_asset_catalog_namespace_is_accepted_at_runtime_boundary():
     manifest = {**json.loads(CATALOG), "contractVersion": "uniscenario.asset-catalog/v1"}
     assert runtime_asset_bindings(manifest, expected_catalog_version_id="uscatalog-1") == {
-        "vehicle.sedan": {"blueprintId": "vehicle.lincoln.mkz"},
+        "vehicle.sedan": {"blueprintId": "vehicle.lincoln.mkz", "fidelity": "native-blueprint"},
     }
+
+
+#: The intent allows `carla-actor-body` and the lease can record it.
+ALLOW_BODY = RenderPolicy(frozenset({"carla-actor-body"}), frozenset({"render-evidence.substitutions"}))
+
+
+def _body(blueprint, actor_class, l, w, h, fidelity="native-blueprint"):
+    return {"blueprintId": blueprint, "actorClass": actor_class, "dims": {"l": l, "w": w, "h": h}, "fidelity": fidelity}
+
 
 def test_native_vehicle_keeps_authored_binding_for_any_sensor_rig() -> None:
     xosc = XOSC.replace(b"catalog:vehicle.sedan", b"catalog:vehicle.ambulance")
     plan = compile_xosc14(xosc)
     catalog = {
-        "vehicle.ambulance": {
-            "blueprintId": "vehicle.ambulance.ford",
-            "actorClass": "van",
-            "dims": {"l": 6.1, "w": 2.1, "h": 2.65},
-        },
-        "vehicle.kia.carnival": {
-            "blueprintId": "vehicle.kia.carnival",
-            "actorClass": "van",
-            "dims": {"l": 5.15, "w": 2.0, "h": 1.78},
-        },
+        "vehicle.ambulance": _body("vehicle.ambulance.ford", "van", 6.1, 2.1, 2.65),
+        "vehicle.kia.carnival": _body("vehicle.kia.carnival", "van", 5.15, 2.0, 1.78, "exact"),
     }
 
-    resolved, fallbacks = worker_runner._apply_actor_fallbacks(plan, catalog)
+    resolved, substitutions = worker_runner._resolve_actor_bodies(plan, catalog, RenderPolicy())
 
     assert resolved is plan
     assert resolved.actors["ego"].catalog_name == "vehicle.ambulance"
-    assert fallbacks == ()
+    assert substitutions == ()
     worker_runner._preflight_asset_semantics(resolved, catalog)
 
 
-def test_generated_vehicle_uses_nearest_same_class_fallback_with_provenance() -> None:
+def test_a_generated_vehicle_body_fails_unless_the_intent_allows_a_substitution() -> None:
+    """Formerly the nearest same-class body was substituted silently (the
+    notice was dropped before the job events). Without `carla-actor-body` the
+    render now fails; with it the substitution is made and recorded."""
     xosc = XOSC.replace(b"catalog:vehicle.sedan", b"catalog:vehicle.generated_van")
     plan = compile_xosc14(xosc)
     original_sha256 = plan.sha256
     catalog = {
-        "vehicle.generated_van": {
-            "blueprintId": "static.simforge.vehicle.generated_van",
-            "actorClass": "van",
-            "dims": {"l": 5.4, "w": 2.05, "h": 2.1},
-        },
-        "vehicle.kia.carnival": {
-            "blueprintId": "vehicle.kia.carnival",
-            "actorClass": "van",
-            "dims": {"l": 5.15, "w": 2.0, "h": 1.78},
-        },
-        "vehicle.sedan": {
-            "blueprintId": "vehicle.lincoln.mkz",
-            "actorClass": "car",
-            "dims": {"l": 4.7, "w": 1.82, "h": 1.45},
-        },
+        "vehicle.generated_van": _body("static.simforge.vehicle.generated_van", "van", 5.4, 2.05, 2.1, "exact-generated-geometry"),
+        "vehicle.kia.carnival": _body("vehicle.kia.carnival", "van", 5.15, 2.0, 1.78),
+        "vehicle.sedan": _body("vehicle.lincoln.mkz", "car", 4.7, 1.82, 1.45),
     }
 
-    substituted, fallbacks = worker_runner._apply_actor_fallbacks(plan, catalog)
+    with pytest.raises(ContractError, match=r"\[carla_blueprint_unavailable\] actor ego .*no native CARLA body"):
+        worker_runner._resolve_actor_bodies(plan, catalog, RenderPolicy())
+
+    substituted, substitutions = worker_runner._resolve_actor_bodies(plan, catalog, ALLOW_BODY)
 
     assert substituted.actors["ego"].catalog_name == "vehicle.kia.carnival"
     assert substituted.sha256 != original_sha256
-    assert fallbacks == ({
-        "actorId": "ego",
-        "authoredCatalogId": "vehicle.generated_van",
-        "fallbackCatalogId": "vehicle.kia.carnival",
-        "vehicleClass": "van",
-        "lengthDeltaM": 5.15 - 5.4,
-        "widthDeltaM": 2.0 - 2.05,
-        "heightDeltaM": 1.78 - 2.1,
-    },)
+    assert len(substitutions) == 1
+    record = substitutions[0]
+    assert {key: record[key] for key in ("kind", "subject", "requested", "rendered", "allowedBy")} == {
+        "kind": "carla-actor-body", "subject": "ego", "requested": "vehicle.generated_van",
+        "rendered": "vehicle.kia.carnival", "allowedBy": "allowSubstitutions",
+    }
+    assert record["details"]["lengthDeltaM"] == pytest.approx(5.15 - 5.4)
+    assert record["details"]["heightDeltaM"] == pytest.approx(1.78 - 2.1)
     worker_runner._preflight_asset_semantics(substituted, catalog)
 
 
-def test_vehicle_fallback_fails_only_when_same_class_blueprint_is_absent() -> None:
+def test_an_allowed_substitution_still_fails_when_no_same_class_body_exists() -> None:
     xosc = XOSC.replace(b"catalog:vehicle.sedan", b"catalog:vehicle.generated_van")
     plan = compile_xosc14(xosc)
     catalog = {
-        "vehicle.generated_van": {
-            "blueprintId": "static.simforge.vehicle.generated_van",
-            "actorClass": "van",
-            "dims": {"l": 5.4, "w": 2.05, "h": 2.1},
-        },
-        "vehicle.sedan": {
-            "blueprintId": "vehicle.lincoln.mkz",
-            "actorClass": "car",
-            "dims": {"l": 4.7, "w": 1.82, "h": 1.45},
-        },
+        "vehicle.generated_van": _body("static.simforge.vehicle.generated_van", "van", 5.4, 2.05, 2.1, "exact-generated-geometry"),
+        "vehicle.sedan": _body("vehicle.lincoln.mkz", "car", 4.7, 1.82, 1.45),
     }
 
-    with pytest.raises(ContractError, match="no same-class native CARLA fallback"):
-        worker_runner._apply_actor_fallbacks(plan, catalog)
+    with pytest.raises(ContractError, match=r"\[carla_blueprint_unavailable\].*no same-class"):
+        worker_runner._resolve_actor_bodies(plan, catalog, ALLOW_BODY)
 
 
-def test_uncooked_native_blueprint_is_substituted_within_its_class() -> None:
+def test_an_allowed_substitution_without_dimensions_fails_instead_of_picking_alphabetically() -> None:
+    """Formerly: no dims gave distance inf, the alphabetically first body won
+    and the record said lengthDeltaM 0.0."""
+    xosc = XOSC.replace(b"catalog:vehicle.sedan", b"catalog:vehicle.generated_van")
+    plan = compile_xosc14(xosc)
+    catalog = {
+        "vehicle.generated_van": {"blueprintId": "static.simforge.vehicle.generated_van", "actorClass": "van", "fidelity": "exact-generated-geometry"},
+        "vehicle.kia.carnival": _body("vehicle.kia.carnival", "van", 5.15, 2.0, 1.78),
+    }
+    with pytest.raises(ContractError, match=r"\[carla_blueprint_unavailable\].*no\s+dimensions"):
+        worker_runner._resolve_actor_bodies(plan, catalog, ALLOW_BODY)
+
+
+def test_uncooked_native_blueprint_fails_or_is_substituted_within_its_class() -> None:
     """A cook can register a blueprint it cannot place.
 
     `blueprint_library.find()` resolves the id and `try_spawn_actor` then
-    returns None with no diagnostic, so trusting the authored id because it
-    looks native loses the actor at spawn. Given the set the runtime was
-    observed to place, the actor must move to the nearest body of its own
-    class.
+    returns None with no diagnostic. Given the set the runtime was observed to
+    place, the actor fails, or with `carla-actor-body` moves to the nearest
+    body of its own class.
     """
     plan = compile_xosc14(XOSC)
     catalog = {
-        "vehicle.sedan": {
-            "blueprintId": "vehicle.ambulance.ford",
-            "actorClass": "car",
-            "dims": {"l": 4.7, "w": 1.82, "h": 1.45},
-        },
-        "vehicle.honda_civic": {
-            "blueprintId": "vehicle.lincoln.mkz",
-            "actorClass": "car",
-            "dims": {"l": 4.67, "w": 1.8, "h": 1.42},
-        },
-        "vehicle.bus": {
-            "blueprintId": "vehicle.fuso.mitsubishi",
-            "actorClass": "bus",
-            "dims": {"l": 10.17, "w": 3.93, "h": 4.24},
-        },
+        "vehicle.sedan": _body("vehicle.ambulance.ford", "car", 4.7, 1.82, 1.45),
+        "vehicle.honda_civic": _body("vehicle.lincoln.mkz", "car", 4.67, 1.8, 1.42),
+        "vehicle.bus": _body("vehicle.fuso.mitsubishi", "bus", 10.17, 3.93, 4.24),
     }
 
-    # Without the observed set, the authored id is trusted and nothing moves.
-    kept, none_moved = worker_runner._apply_actor_fallbacks(plan, catalog)
+    # Before the world is loaded the authored id is trusted and nothing moves.
+    kept, none_moved = worker_runner._resolve_actor_bodies(plan, catalog, RenderPolicy())
     assert kept.actors["ego"].catalog_name == "vehicle.sedan"
     assert none_moved == ()
 
     placeable = frozenset({"vehicle.lincoln.mkz", "vehicle.fuso.mitsubishi"})
-    substituted, fallbacks = worker_runner._apply_actor_fallbacks(
-        plan, catalog, spawnable=placeable,
-    )
+    with pytest.raises(ContractError, match=r"\[carla_blueprint_unavailable\].*cannot place vehicle.ambulance.ford"):
+        worker_runner._resolve_actor_bodies(plan, catalog, RenderPolicy(), spawnable=placeable)
+    substituted, substitutions = worker_runner._resolve_actor_bodies(plan, catalog, ALLOW_BODY, spawnable=placeable)
 
     assert substituted.actors["ego"].catalog_name == "vehicle.honda_civic"
-    assert [item["vehicleClass"] for item in fallbacks] == ["car"]
+    assert [item["details"]["actorClass"] for item in substitutions] == ["car"]
     # The bus body is placeable and dimensionally far: a car must never take it.
-    assert all(item["fallbackCatalogId"] != "vehicle.bus" for item in fallbacks)
+    assert all(item["rendered"] != "vehicle.bus" for item in substitutions)
 
 
 def test_substitution_refuses_to_cross_actor_class() -> None:
     """A bicycle may not become an ambulance, even when nothing else is placeable."""
     plan = compile_xosc14(XOSC)
     catalog = {
-        "vehicle.sedan": {
-            "blueprintId": "vehicle.diamondback.century",
-            "actorClass": "bicycle",
-            "dims": {"l": 1.75, "w": 0.5, "h": 1.71},
-        },
-        "vehicle.ambulance": {
-            "blueprintId": "vehicle.ambulance.ford",
-            "actorClass": "van",
-            "dims": {"l": 6.1, "w": 2.1, "h": 2.65},
-        },
+        "vehicle.sedan": _body("vehicle.diamondback.century", "bicycle", 1.75, 0.5, 1.71),
+        "vehicle.ambulance": _body("vehicle.ambulance.ford", "van", 6.1, 2.1, 2.65),
     }
 
-    with pytest.raises(ContractError, match="no same-class native CARLA fallback"):
-        worker_runner._apply_actor_fallbacks(
-            plan, catalog, spawnable=frozenset({"vehicle.ambulance.ford"}),
+    with pytest.raises(ContractError, match=r"\[carla_blueprint_unavailable\].*no same-class"):
+        worker_runner._resolve_actor_bodies(
+            plan, catalog, ALLOW_BODY, spawnable=frozenset({"vehicle.ambulance.ford"}),
         )
+
+
+def test_a_catalog_declared_substitute_body_is_a_substitution() -> None:
+    """A `semantic-substitute` binding (e.g. CARLA's construction cone for the
+    authored traffic cone) renders a different body: it needs the allowance
+    and is recorded."""
+    plan = compile_xosc14(XOSC)
+    catalog = {"vehicle.sedan": _body("vehicle.lincoln.mkz", "car", 4.7, 1.82, 1.45, "semantic-substitute")}
+    with pytest.raises(ContractError, match=r"\[carla_blueprint_unavailable\].*semantic-substitute"):
+        worker_runner._resolve_actor_bodies(plan, catalog, RenderPolicy())
+    kept, substitutions = worker_runner._resolve_actor_bodies(plan, catalog, ALLOW_BODY)
+    assert kept.actors["ego"].catalog_name == "vehicle.sedan"
+    assert [(item["requested"], item["rendered"]) for item in substitutions] == [("vehicle.sedan", "vehicle.lincoln.mkz")]
+
+
+def test_a_child_walker_becomes_an_adult_only_when_the_intent_allows_it() -> None:
+    xosc = (
+        XOSC.replace(b"catalog:vehicle.sedan", b"catalog:pedestrian.child")
+        .replace(b'value="car"/>', b'value="pedestrian"/>')
+    )
+    plan = compile_xosc14(xosc)
+    catalog = {
+        "pedestrian.child": _body("walker.pedestrian.0050", "pedestrian", 0.24, 0.35, 1.2),
+        "pedestrian.adult": _body("walker.pedestrian.0016", "pedestrian", 0.32, 0.5, 1.75),
+    }
+    placeable = frozenset({"walker.pedestrian.0016"})
+    with pytest.raises(ContractError, match=r"\[carla_blueprint_unavailable\].*walker.pedestrian.0050"):
+        worker_runner._resolve_actor_bodies(plan, catalog, RenderPolicy(), spawnable=placeable)
+    substituted, substitutions = worker_runner._resolve_actor_bodies(plan, catalog, ALLOW_BODY, spawnable=placeable)
+    assert substituted.actors["ego"].catalog_name == "pedestrian.adult"
+    assert substitutions[0]["requested"] == "pedestrian.child"
+    assert substitutions[0]["details"]["heightDeltaM"] == pytest.approx(0.55)
+
+
+def test_substitutions_need_the_control_feature_that_records_them() -> None:
+    with pytest.raises(ContractError, match=r"\[carla_substitutions_unreportable\]"):
+        RenderPolicy(frozenset({"carla-actor-body"}), frozenset())
+    with pytest.raises(ContractError, match=r"\[carla_substitution_kind_unsupported\]"):
+        RenderPolicy(frozenset({"lighting-site"}), frozenset({"render-evidence.substitutions"}))
+
 
 def test_compiles_canonical_init_follow_trajectory_action():
     plan = compile_xosc14(trajectory_in_init())
@@ -1312,7 +1356,7 @@ def test_compiler_enforces_actor_cap_before_sampling_and_honors_sampling_abort()
 
 def test_compiler_inner_vertex_sample_and_digest_loops_are_abortible():
     vertices = "".join(
-        f'<Vertex time="{index}"><Position><WorldPosition x="{index}" y="0"/></Position><Motion speed_longitudinal="1"/></Vertex>'
+        f'<Vertex time="{index}"><Position><WorldPosition x="{index}" y="0" z="0" h="0" p="0" r="0"/></Position><Motion speed_longitudinal="1"/></Vertex>'
         for index in range(1024)
     )
     action = ET.fromstring(
@@ -1540,86 +1584,33 @@ def test_materialized_traffic_rejects_tamper_bad_signal_coverage_and_actor_order
         parse_traffic(noncanonical_absence)
 
 
-def test_materialized_traffic_preserves_absence_lifecycle_and_indicator_bits():
-    value = json.loads(materialized_traffic())
-    value["actors"][0]["states"][1] = {
-        "t": 0.02, "present": False, "x": 0, "z": 0, "headingRad": 0,
-        "speedMps": 0, "accelerationMps2": 0, "signals": 0,
-    }
-    body = canonical_json(value).encode()
-    merged = merge_materialized_traffic(compile_xosc14(XOSC), parse_traffic(body))
-    assert [frame.actors["background-1"].lifecycle for frame in merged.frames] == ["spawn", "absent", "spawn"]
-    assert merged.frames[0].actors["background-1"].appearance == {
-        "light.indicatorRight": "on", "light.indicatorLeft": "on", "light.warningLights": "on",
-    }
+def test_materialized_traffic_actors_fail_instead_of_rendering_at_zero_height():
+    """Formerly every materialized actor rendered at z=0 (floating or buried
+    on a non-flat map) with a body chosen by kind (an obstacle became a
+    sedan). The format carries no elevation, attitude or catalog body, so
+    CARLA now refuses it; ambient traffic renders only as authored actors."""
+    with pytest.raises(ContractError, match=r"\[carla_ambient_traffic_unsupported\].*background-1"):
+        merge_materialized_traffic(compile_xosc14(XOSC), parse_traffic(materialized_traffic()))
 
 
-def test_materialized_traffic_overrides_canonical_ambient_actor_without_rebinding_it():
+def test_materialized_signal_states_merge_into_the_plan():
+    traffic = parse_traffic(materialized_traffic(actors=False))
+    merged = merge_materialized_traffic(compile_xosc14(XOSC), traffic)
+    assert [frame.signals["traffic-light-1"] for frame in merged.frames] == ["green", "green", "yellow"]
+    assert set(merged.actors) == {"ego"}
+
+
+def test_materialized_traffic_overlapping_any_actor_is_refused():
     base = compile_xosc14(XOSC)
-    ambient_id = "ambient:native:0000"
-    ambient_binding = ActorBinding(ambient_id, "canonical_ambient_0000", "vehicle", "vehicle.sedan", True)
-    ambient_frames = tuple(
-        PlanFrame(
-            frame.index,
-            frame.t,
-            {
-                **frame.actors,
-                ambient_id: ActorFrame("spawn" if frame.index == 0 else "active", -100.0, 0.0, 0.0, 0.0, 0.0, {}),
-            },
-            frame.signals,
-        )
-        for frame in base.frames
-    )
-    plan = ExecutionPlan(base.schema, base.fixed_timestep_s, {**base.actors, ambient_id: ambient_binding}, ambient_frames, base.sha256)
-    value = json.loads(materialized_traffic())
-    value["actors"][0]["id"] = ambient_id
-    traffic = parse_traffic(canonical_json(value).encode())
-
-    merged = merge_materialized_traffic(plan, traffic, frozenset({ambient_id}))
-
-    assert merged.actors[ambient_id] == ambient_binding
-    assert [frame.actors[ambient_id].x for frame in merged.frames] == [10.0, 10.02, 10.04]
-
-
-def test_materialized_traffic_still_rejects_authored_actor_overlap():
-    value = json.loads(materialized_traffic())
-    value["actors"][0]["id"] = "ego"
-    traffic = parse_traffic(canonical_json(value).encode())
-    with pytest.raises(ContractError, match="collide with authored actors: ego"):
-        merge_materialized_traffic(compile_xosc14(XOSC), traffic)
-
-
-def test_materialized_traffic_rejects_forged_ambient_prefix_without_compiler_provenance():
-    base = compile_xosc14(XOSC)
-    ambient_id = "ambient:authored-forgery"
-    binding = ActorBinding(ambient_id, "authored_ambient_prefix", "vehicle", "vehicle.sedan")
-    frames = tuple(PlanFrame(frame.index, frame.t, {
-        **frame.actors,
-        ambient_id: ActorFrame("spawn" if frame.index == 0 else "active", 0, 0, 0, 0, 0, {}),
-    }, frame.signals) for frame in base.frames)
-    plan = ExecutionPlan(base.schema, base.fixed_timestep_s, {**base.actors, ambient_id: binding}, frames, base.sha256)
-    value = json.loads(materialized_traffic())
-    value["actors"][0]["id"] = ambient_id
-    with pytest.raises(ContractError, match="collide with authored actors"):
-        merge_materialized_traffic(plan, parse_traffic(canonical_json(value).encode()))
-
-
-def test_materialized_traffic_rejects_forged_xosc_origin_outside_signed_manifest_membership():
-    ambient_id = "ambient:forged-xosc"
-    forged = XOSC.replace(
-        b'<Property name="uniscenario.actorId" value="ego"/>',
-        f'<Property name="uniscenario.actorId" value="{ambient_id}"/><Property name="uniscenarios.actorOrigin" value="canonical-ambient"/>'.encode(),
-    )
-    plan = compile_xosc14(forged)
-    assert plan.actors[ambient_id].materialized_traffic_eligible is True
-    value = json.loads(materialized_traffic())
-    value["actors"][0]["id"] = ambient_id
-    with pytest.raises(ContractError, match="collide with authored actors"):
-        merge_materialized_traffic(plan, parse_traffic(canonical_json(value).encode()), frozenset())
+    for actor_id in ("ego", "ambient:native:0000", "ambient:authored-forgery"):
+        value = json.loads(materialized_traffic())
+        value["actors"][0]["id"] = actor_id
+        with pytest.raises(ContractError, match=r"\[carla_ambient_traffic_unsupported\]"):
+            merge_materialized_traffic(base, parse_traffic(canonical_json(value).encode()), frozenset({actor_id}))
 
 
 def test_materialized_traffic_requires_every_signed_overlap_member_in_the_artifact():
-    traffic = parse_traffic(materialized_traffic())
+    traffic = parse_traffic(materialized_traffic(actors=False))
     with pytest.raises(ContractError, match="overlap membership"):
         merge_materialized_traffic(
             compile_xosc14(XOSC), traffic, frozenset({"ambient:signed-but-missing"}),
@@ -1637,8 +1628,7 @@ def test_disabled_materialized_traffic_contract_is_canonical_empty():
         parse_traffic(populated, provider_id="disabled", provider_version="none", provider_seed="")
 
 
-def test_materialized_traffic_executes_exact_background_paths_and_signals():
-    traffic = materialized_traffic()
+def _native_traffic_lease(traffic: bytes):
     traffic_digest = digest(traffic)
     ambient_control = {
         "ambientMode": "native", "runtimeVersion": "carla-0.10.0", "seed": "native-1",
@@ -1654,25 +1644,34 @@ def test_materialized_traffic_executes_exact_background_paths_and_signals():
     manifest = execution_manifest(ambient=ambient_manifest, traffic=traffic)
     value = lease_value()
     value["job"]["executionPackage"]["ambient"] = ambient_control
-    lease = parse_lease(seal_lease(value, manifest))
-    backend = FakeBackend()
-    uploaded = []
     assets = {
         "memory:manifest": manifest, "memory:xosc": XOSC, "memory:xodr": XODR,
         "memory:catalog": CATALOG, "memory:traffic": traffic,
     }
+    return parse_lease(seal_lease(value, manifest)), assets
+
+
+def test_materialized_traffic_executes_exact_signals_and_refuses_its_actors():
+    validator = lambda body: {"valid": True, "xmlSha256": digest(body), "xsdSha256": OFFICIAL_XSD_SHA256}
+    lease, assets = _native_traffic_lease(materialized_traffic())
+    backend = FakeBackend()
+    with pytest.raises(ContractError, match=r"\[carla_ambient_traffic_unsupported\]"):
+        execute_lease(lease, backend, validator, downloader=lambda url, _limit: assets[url], uploader=lambda *_args: None)
+    assert not any(call[0] == "spawn" for call in backend.calls)
+
+    signals_only = materialized_traffic(actors=False)
+    lease, assets = _native_traffic_lease(signals_only)
+    backend = FakeBackend()
+    uploaded = []
     result = execute_lease(
-        lease, backend,
-        lambda body: {"valid": True, "xmlSha256": digest(body), "xsdSha256": OFFICIAL_XSD_SHA256},
+        lease, backend, validator,
         downloader=lambda url, _limit: assets[url],
         uploader=lambda _url, body, _media_type, _headers: uploaded.append(artifact_bytes(body)),
     )
     trace = json.loads(gzip.decompress(uploaded[0]))
-    assert ("spawn", ["background-1", "ego"]) in backend.calls
-    assert [frame["actors"]["background-1"]["x"] for frame in trace["frames"]] == [10, 10.02, 10.04]
+    assert ("spawn", ["ego"]) in backend.calls
     assert [frame["signals"]["traffic-light-1"] for frame in trace["frames"]] == ["green", "green", "yellow"]
-    assert backend.frame.actors["background-1"].appearance["light.warningLights"] == "on"
-    assert trace["materializedTrafficDigest"] == result["materializedTrafficDigest"] == traffic_digest
+    assert trace["materializedTrafficDigest"] == result["materializedTrafficDigest"] == digest(signals_only)
 
 
 def test_rejects_fake_or_incomplete_ambient_provenance():
@@ -1692,7 +1691,7 @@ def test_versioned_render_spec_supports_all_native_sensors_quality_environment_a
     camera = {"width": 1280, "height": 720, "fov": 82}
     lidar = {
         "channels": 64, "rangeM": 120, "pointsPerSecond": 1_000_000,
-        "rotationFrequencyHz": 24, "upperFovDeg": 10, "lowerFovDeg": -30,
+        "rotationFrequencyHz": 25, "upperFovDeg": 10, "lowerFovDeg": -30, "horizontalFovDeg": 360,
     }
     radar = {"horizontalFovDeg": 40, "verticalFovDeg": 20, "rangeM": 100, "pointsPerSecond": 20_000}
     modalities = ["rgb", "depth", "semantic", "instance", "normals", "lidar", "semantic-lidar", "radar"]
@@ -1709,9 +1708,14 @@ def test_versioned_render_spec_supports_all_native_sensors_quality_environment_a
         sensors=sensors,
         formats=["json", "jsonl", "ply", "csv"],
     )
+    partial = copy.deepcopy(value)
+    partial["job"]["renderSpec"]["environment"] = {"cloudiness": 70, "precipitation": 25, "wetness": 50, "sunAltitude": 12}
+    # Formerly the omitted fields silently became 0 (and a missing sun 45 deg).
+    with pytest.raises(ContractError, match="environment must carry exactly.*missing deposits, fogDensity"):
+        parse_lease(seal_lease(partial))
     value["job"]["renderSpec"].update({
         "quality": "cinematic",
-        "environment": {"cloudiness": 70, "precipitation": 25, "wetness": 50, "sunAltitude": 12},
+        "environment": {**LEASE_ENVIRONMENT, "cloudiness": 70, "precipitation": 25, "wetness": 50, "sunAltitude": 12},
     })
     lease = parse_lease(seal_lease(value))
     assert [sensor.modality for sensor in lease.render_spec.sensors] == modalities
@@ -1832,10 +1836,13 @@ class _StreamingSensorBackend(FakeBackend):
                     (target / "stream.mp4").write_bytes(b"mp4-stream")
                     relative = f"{sensor_key}/stream.mp4"
                 elif sensor.modality == "radar":
-                    (target / f"{output_index:08d}.csv").write_text("depth,azimuth,altitude,velocity\n10,0,0,1\n")
+                    (target / f"{output_index:08d}.csv").write_text("depth_m,azimuth_rad,altitude_rad,velocity_mps\n10,0,0,1\n")
                     relative = f"{sensor_key}/{output_index:08d}.csv"
                 else:
-                    (target / f"{output_index:08d}.ply").write_text("ply\nend_header\n1 2 0.5 0.9\n")
+                    (target / f"{output_index:08d}.ply").write_text(
+                        "ply\nformat ascii 1.0\nelement vertex 1\nproperty float32 x\nproperty float32 y\n"
+                        "property float32 z\nproperty float32 I\nend_header\n1 2 0.5 0.9\n"
+                    )
                     relative = f"{sensor_key}/{output_index:08d}.ply"
                 self.records.append({
                     "artifactName": sensor_key,
@@ -1873,7 +1880,7 @@ VIDEO_TEST_SENSORS = [
     {"role": "roof", "actorId": "ego", "sensorId": "lidar-1", "modality": "lidar",
      "transform": {"x": 0, "y": 0, "z": 2.4, "pitch": 0, "yaw": 0, "roll": 0},
      "config": {"channels": 32, "rangeM": 120, "pointsPerSecond": 100_000,
-                "rotationFrequencyHz": 25, "upperFovDeg": 10, "lowerFovDeg": -30}},
+                "rotationFrequencyHz": 25, "upperFovDeg": 10, "lowerFovDeg": -30, "horizontalFovDeg": 360}},
     {"role": "bumper", "actorId": "ego", "sensorId": "radar-1", "modality": "radar",
      "transform": {"x": 2.2, "y": 0, "z": 0.6, "pitch": 0, "yaw": 0, "roll": 0},
      "config": {"horizontalFovDeg": 40, "verticalFovDeg": 20, "rangeM": 100, "pointsPerSecond": 20_000}},
@@ -1935,6 +1942,14 @@ def test_every_authored_camera_uploads_its_own_video_and_no_frame_archive_exists
     assert len(camera_uploads) == 3
     data_uploads = [body for _url, body, media_type, _headers in uploads if media_type == "application/zip"]
     assert len(data_uploads) == 2 and all(body.startswith(b"PK") for body in data_uploads)
+    # Encoder and visualization scales are recorded, never implicit.
+    assert primary["metadata"]["encoderArgs"][:2] == ["-c:v", "libx264"]
+    radar_viz = next(item for item in result["artifacts"] if item["kind"] == "sensorVideo:bumper:ego:radar-1:radar")
+    assert radar_viz["metadata"]["velocityScaleMps"] == 20.0 and radar_viz["metadata"]["viewRangeM"] == 100.0
+    lidar_data = next(item for item in result["artifacts"] if item["kind"] == "sensorData:roof:ego:lidar-1:lidar")
+    assert lidar_data["metadata"]["sweep"] == {
+        "policy": "latest-full-revolution", "ticksPerRevolution": 2, "motionCompensation": "none",
+    }
 
 
 def test_render_spec_rejects_frames_output_everywhere():
@@ -2554,7 +2569,7 @@ def test_carla_missing_sensor_wait_checks_abort_at_most_every_quarter_second():
         if checks == 2:
             raise LeaseDeadlineExceeded("expired in sensor wait")
     with pytest.raises(LeaseDeadlineExceeded, match="sensor wait"):
-        backend._capture_world_frame(42, {"outputFrameIndex": 0, "scheduledTimeS": 0.0}, abort)
+        backend._capture_world_frame(42, {"outputFrameIndex": 0, "scheduledTimeS": 0.0, "contentTimeS": 0.0}, abort)
     assert waits == [0.25]
 
 
@@ -2597,7 +2612,7 @@ def test_slow_heartbeat_never_blocks_arriving_sensor_callback(tmp_path):
         def save_to_disk(self, target): Path(target).write_bytes(b"png")
     def run_capture():
         try:
-            backend._capture_world_frame(42, {"outputFrameIndex": 0, "scheduledTimeS": 1.25}, abort)
+            backend._capture_world_frame(42, {"outputFrameIndex": 0, "scheduledTimeS": 1.25, "contentTimeS": 1.25}, abort)
         except BaseException as exc:  # noqa: BLE001 - propagate thread failure to the test.
             errors.append(exc)
     capture = Thread(target=run_capture)
@@ -2638,7 +2653,7 @@ def test_cancellation_after_sensor_wait_does_not_lock_out_callback():
             raise CancellationRequested("cancelled after sensor wait")
     def run_capture():
         try:
-            backend._capture_world_frame(42, {"outputFrameIndex": 0, "scheduledTimeS": 0.0}, abort)
+            backend._capture_world_frame(42, {"outputFrameIndex": 0, "scheduledTimeS": 0.0, "contentTimeS": 0.0}, abort)
         except BaseException as exc:  # noqa: BLE001 - propagate thread failure to the test.
             errors.append(exc)
     capture = Thread(target=run_capture)
@@ -3331,6 +3346,10 @@ def _placement_carla():
 class _PlacementActor:
     def __init__(self, type_id="vehicle.lincoln.mkz", actor_id=1):
         self.type_id, self.id = type_id, actor_id
+        # Every CARLA actor has a bounding box; the render is grounded by it.
+        self.bounding_box = type("Box", (), {
+            "location": type("L", (), {"z": 0.0})(), "extent": type("E", (), {"z": 0.0})(),
+        })()
     def destroy(self): return True
 
 
@@ -3441,69 +3460,32 @@ def test_spawn_falls_back_to_waypoint_elevation_and_rejects_far_surfaces():
     assert far.spawn_placement_report()["actors"]["ego"]["groundSource"] == "authored-z"
 
 
-def test_spawn_overlap_nudges_along_the_lane_and_records_the_placement():
+def test_an_overlapping_actor_fails_instead_of_being_nudged_along_its_lane():
+    """Formerly the second body was moved up to 4.5 m along its lane and the
+    render succeeded; any move changes the scene, so it now fails."""
     backend = _placement_backend(_PlacementWorld())
     frame = PlanFrame(0, 0, {
         "a": ActorFrame("spawn", 0.0, 0.0, 0.0, 0.0, 0),
         "b": ActorFrame("spawn", 4.0, 0.0, 0.0, 0.0, 0),
     }, {})
-    backend.spawn({"a": _vehicle_binding("a"), "b": _vehicle_binding("b")}, frame, _PLACEMENT_CATALOG)
-    report = backend.spawn_placement_report()
-    assert report["actors"]["a"]["outcome"] == "placed"
-    assert report["actors"]["b"]["outcome"] == "nudged"
-    assert report["actors"]["b"]["nudgeAlongHeadingM"] == pytest.approx(1.5)
-    assert report["nudgedActorIds"] == ["b"]
-    assert backend.world.transforms[1].location.x == pytest.approx(5.5)
-    assert backend.spawn_planar_targets["b"] == (pytest.approx(5.5), pytest.approx(0.0))
-
-
-def test_spawn_drops_an_unplaceable_actor_instead_of_stacking():
-    backend = _placement_backend(_PlacementWorld())
-    frame = PlanFrame(0, 0, {
-        "a": ActorFrame("spawn", 0.0, 0.0, 0.0, 0.0, 0),
-        "b": ActorFrame("spawn", 0.0, 0.0, 0.0, 0.0, 0),
-    }, {})
-    backend.spawn({"a": _vehicle_binding("a"), "b": _vehicle_binding("b")}, frame, _PLACEMENT_CATALOG)
-    assert set(backend.actors) == {"a"}
-    assert backend.dropped_actor_ids == {"b"}
+    with pytest.raises(ContractError, match=r"\[carla_actor_spawn_refused\] b overlaps"):
+        backend.spawn({"a": _vehicle_binding("a"), "b": _vehicle_binding("b")}, frame, _PLACEMENT_CATALOG)
     # The overlapping body was never handed to CARLA at all: no stacking.
     assert len(backend.world.transforms) == 1
-    report = backend.spawn_placement_report()
-    assert report["droppedActorIds"] == ["b"]
-    assert report["actors"]["b"]["outcome"] == "dropped"
-    assert "no collision-free spawn" in report["actors"]["b"]["reason"]
 
 
-def test_spawn_fails_closed_when_every_actor_is_unplaceable():
+def test_a_refused_spawn_fails_instead_of_dropping_the_actor():
+    """Formerly an unplaceable actor was dropped and the render succeeded
+    unless every actor was dropped."""
     backend = _placement_backend(_PlacementWorld(refuse_spawn=True))
     frame = PlanFrame(0, 0, {"ego": ActorFrame("spawn", 0.0, 0.0, 0.0, 0.0, 0)}, {})
-    with pytest.raises(RuntimeError, match="dropped every scenario actor"):
+    with pytest.raises(ContractError, match=r"\[carla_actor_spawn_refused\].*ego"):
         backend.spawn({"ego": _vehicle_binding("ego")}, frame, _PLACEMENT_CATALOG)
 
 
-def test_spawn_drops_execution_semantics_actors_with_a_recorded_reason():
-    backend = _placement_backend(_PlacementWorld())
-    backend.execution_drops = {"deer": "native physics cannot execute authored knockdown poses without post-spawn teleport repair"}
-    frame = PlanFrame(0, 0, {
-        "ego": ActorFrame("spawn", 0.0, 0.0, 0.0, 0.0, 0),
-        "deer": ActorFrame("spawn", 8.0, 0.0, 0.0, 0.0, 0, downed=True),
-    }, {})
-    backend.spawn({"ego": _vehicle_binding("ego"), "deer": _vehicle_binding("deer")}, frame, _PLACEMENT_CATALOG)
-    assert set(backend.actors) == {"ego"}
-    assert backend.dropped_actor_ids == {"deer"}
-    # The knocked-down body was never handed to CARLA.
-    assert len(backend.world.transforms) == 1
-    report = backend.spawn_placement_report()
-    assert report["droppedActorIds"] == ["deer"]
-    assert report["actors"]["deer"] == {
-        "outcome": "dropped",
-        "cause": "execution-semantics",
-        "reason": "native physics cannot execute authored knockdown poses without post-spawn teleport repair",
-        "authored": {"x": 8.0, "y": 0.0, "z": 0.0},
-    }
-
-
-def test_knockdown_pose_drops_the_actor_instead_of_failing_the_render():
+def test_physics_validation_fails_on_actors_it_cannot_execute_instead_of_dropping_them():
+    """Formerly a knocked-down (or cue-carrying, reversing, moving static)
+    actor was dropped from physics validation and the job succeeded."""
     lease = parse_lease(lease_value(execution_mode="native-physics"))
     plan = ExecutionPlan(
         "simforge.execution-plan/v1", 0.02,
@@ -3518,21 +3500,14 @@ def test_knockdown_pose_drops_the_actor_instead_of_failing_the_render():
             }, {}),
             PlanFrame(1, 0.02, {
                 "ego": ActorFrame("active", 0.02, 0, 0, 0, 1.0),
-                # Knocked down mid-scenario, and sliding: the drop must also
-                # exempt the actor from the moving-animal gate.
                 "deer": ActorFrame("active", 5.01, 0, 0, 0, 0.5, downed=True),
             }, {}),
         ), "a" * 64,
     )
-    drops = worker_runner._preflight_execution_semantics(lease, plan)
-    assert drops == {"deer": "native physics cannot execute authored knockdown poses without post-spawn teleport repair"}
-
-    # A knockdown-posed actor that hosts sensors cannot be dropped silently.
-    hosted = lease_value(execution_mode="native-physics")
-    hosted["job"]["renderSpec"]["sensors"][0]["actorId"] = "deer"
-    hosted_lease = parse_lease(seal_lease(hosted))
-    with pytest.raises(ContractError, match="cannot attach to actors dropped from execution"):
-        worker_runner._preflight_execution_semantics(hosted_lease, plan)
+    with pytest.raises(ContractError, match=r"\[carla_physics_validation_unsupported\].*deer: authored knockdown"):
+        worker_runner._preflight_execution_semantics(lease, plan)
+    # Trace replay renders the same plan: knockdowns are replayed poses.
+    assert worker_runner._preflight_execution_semantics(parse_lease(lease_value()), plan) == {}
 
 
 def test_cooked_map_registry_resolves_known_xodrs_and_env_extensions(monkeypatch):
@@ -3553,8 +3528,12 @@ def test_cooked_map_registry_resolves_known_xodrs_and_env_extensions(monkeypatch
         cooked_map_name_for_xodr(richmond)
 
 
-def test_cooked_xodr_never_falls_back_to_a_generated_world(monkeypatch):
-    monkeypatch.setenv("SIMFORGE_CARLA_ALLOW_GENERATED_XODR", "1")
+def test_no_map_ever_falls_back_to_a_generated_world(monkeypatch):
+    """Formerly an uncooked XODR rendered as a generated bare-OpenDRIVE world
+    (labelled exact) when SIMFORGE_CARLA_ALLOW_GENERATED_XODR=1. Now a cooked
+    world missing from the runtime and an uncooked map both fail, and the
+    worker setting itself is refused."""
+    monkeypatch.delenv("SIMFORGE_CARLA_ALLOW_GENERATED_XODR", raising=False)
     monkeypatch.delenv("SIMFORGE_CARLA_COOKED_MAPS_JSON", raising=False)
     richmond_xodr = b"richmond-source-xodr"
     monkeypatch.setattr(
@@ -3567,21 +3546,15 @@ def test_cooked_xodr_never_falls_back_to_a_generated_world(monkeypatch):
     })()
     backend.client = type("Client", (), {
         "get_available_maps": lambda _self: ["/Game/Carla/Maps/Town10HD_Opt"],
-        "generate_opendrive_world": lambda _self, *_args: pytest.fail("cooked maps must never regenerate from XODR"),
+        "generate_opendrive_world": lambda _self, *_args: pytest.fail("no map may be generated from XODR"),
     })()
-    with pytest.raises(RuntimeError, match="refusing the generated-OpenDRIVE fallback"):
+    with pytest.raises(RuntimeError, match=r"\[carla_map_not_cooked\].*Richmond_Field_Station_Richmond_CA"):
         backend.load_opendrive("Richmond_Field_Station_Richmond_CA", richmond_xodr, 0.02)
-    # An uncooked XODR keeps the explicitly enabled generated-world fallback.
-    class GeneratedWorld:
-        def get_map(self):
-            return type("M", (), {"name": "Carla/Maps/OpenDriveMap"})()
-        def get_settings(self):
-            return type("S", (), {"synchronous_mode": True, "fixed_delta_seconds": 0.02})()
-        def apply_settings(self, _settings): pass
-    backend.client.generate_opendrive_world = lambda *_args: GeneratedWorld()
-    backend.load_opendrive("uncooked-map", b"<OpenDRIVE/>", 0.02)
-    assert backend.map_evidence["source"] == "generated-opendrive-world"
-    assert backend.map_evidence["requestedMapName"] == "uncooked-map"
+    with pytest.raises(RuntimeError, match=r"\[carla_map_not_cooked\]"):
+        backend.load_opendrive("uncooked-map", b"<OpenDRIVE/>", 0.02)
+    monkeypatch.setenv("SIMFORGE_CARLA_ALLOW_GENERATED_XODR", "1")
+    with pytest.raises(RuntimeError, match=r"\[carla_forbidden_worker_config\]"):
+        backend.load_opendrive("uncooked-map", b"<OpenDRIVE/>", 0.02)
 
 
 def test_prepare_scenario_resets_a_nudged_actor_to_its_placed_position():
@@ -3845,7 +3818,12 @@ def _stepping_backend(accepts_delta):
     return backend
 
 
-def test_load_opendrive_verifies_the_stepping_contract_readback():
+def test_load_opendrive_verifies_the_stepping_contract_readback(monkeypatch):
+    # The fixture XODR is registered as the cooked world "fixture".
+    monkeypatch.setattr(
+        "simforge_oss_carla_exec.runtime.backend.cooked_map_name_for_xodr",
+        lambda sha: "fixture" if sha == hashlib.sha256(b"<OpenDRIVE/>").hexdigest() else None,
+    )
     honored = _stepping_backend(accepts_delta=True)
     honored.load_opendrive("fixture", b"<OpenDRIVE/>", 0.02)
     assert honored.streaming_evidence["appliedFixedDeltaS"] == pytest.approx(0.02)
@@ -3948,22 +3926,40 @@ def test_cooked_map_remap_freezes_unauthored_extra_heads_red_and_records_evidenc
 
     owned = Light(103, "421", "green")
     pedestrian = Light(101, "444", "green")
+    richmond = {
+        "schema": "simforge.carla-map-evidence/v1",
+        "loadedMapName": "Richmond_Field_Station_Richmond_CA",
+        "packageXodrSha256": "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643",
+        "runtimeXodrSha256": "1576737df37adb4caad6bef62210e060fcbf5c9a082ddd269515417616a36111",
+    }
     backend = object.__new__(CarlaBackend)
     backend.carla = Carla
     backend.world = World([owned, pedestrian])
     backend.signals, backend.signal_snapshots = {}, {}
     backend.sensors, backend.actors = [], {}
     backend.signal_id_map = {"367": "421"}
-    backend.map_evidence = {"schema": "simforge.carla-map-evidence/v1"}
+    backend.map_evidence = dict(richmond)
 
     backend.bind_signals(("367",))
     assert backend.signals == {"367": owned}
     assert owned.mutations == [("freeze", True)]
     assert pedestrian.mutations == [("state", "red"), ("freeze", True)]
     assert backend.map_evidence["unownedFrozenSignalIds"] == ["444"]
+    assert backend.map_evidence["unownedSignalApproval"] == "APPROVED_UNOWNED_COOKED_SIGNALS"
 
     backend.cleanup()
     assert (pedestrian.state, pedestrian.frozen) == ("green", False)
+
+    # A remapped world whose extra head is not on the approved per-map list
+    # fails: formerly any extra head under any cooked remap was forced red.
+    unapproved = object.__new__(CarlaBackend)
+    unapproved.carla = Carla
+    unapproved.world = World([Light(103, "421", "green"), Light(102, "447", "green")])
+    unapproved.signals, unapproved.signal_snapshots = {}, {}
+    unapproved.signal_id_map = {"367": "421"}
+    unapproved.map_evidence = dict(richmond)
+    with pytest.raises(RuntimeError, match=r"\[carla_signal_ownership_unapproved\].*extra: 447"):
+        unapproved.bind_signals(("367",))
 
     # Without a cooked identity the extra head still fails closed.
     strict = object.__new__(CarlaBackend)
@@ -3990,7 +3986,7 @@ def test_a_shipped_render_timeline_drives_trace_replay_through_the_shared_sample
             return Timeline()
 
         def props(self): return []
-        def poses(self, t): return {"ego": {"present": True, "x": 100 + t, "y": 0.0, "z": 0.0, "headingRad": 0.0, "pitchRad": 0.0, "rollRad": 0.0, "speedMps": 1.0}}
+        def poses(self, t): return {"ego": {"present": True, "x": 100 + t, "y": 0.0, "z": 0.0, "headingRad": 0.0, "pitchRad": 0.0, "rollRad": 0.0, "speedMps": 1.0, "downed": False}}
         def signals_at(self, t): return {}
         def light_modes_at(self, actor_id, t): return {}
 

@@ -39,7 +39,8 @@ pub struct SceneSpec {
     /// Vegetation prototype GLBs with sibling instance sidecars.
     #[serde(default)]
     pub veg_glbs: Vec<String>,
-    #[serde(default)]
+    /// Required: an absent lighting block would render the calibration
+    /// defaults (a fixed dawn), not the scene's.
     pub lighting: Lighting,
     pub profile: Profile,
     /// Advanced cinematic settings; ignored by sensor cameras.
@@ -98,7 +99,7 @@ impl SceneSpec {
         match self.capture_clock.as_deref() {
             None | Some("free") => Ok(render_core::engine::CaptureClock::Free),
             Some("pinned") => {
-                let samples = self.taa_samples.unwrap_or(4);
+                let samples = self.taa_samples.unwrap_or(4); // fallback-ok: documented pinned-clock default; the samples used are recorded in the capture manifest
                 anyhow::ensure!((1..=16).contains(&samples), "taaSamples must be 1..=16, got {samples}");
                 Ok(render_core::engine::CaptureClock::Pinned { samples })
             }
@@ -326,7 +327,7 @@ fn load_cached_sensor_scenes(dir: &Path, key: &str) -> Option<MapSensorScenes> {
             // Touch for the keep-newest pruning.
             let now = std::time::SystemTime::now();
             for path in [&static_path, &road_path] {
-                let _ = std::fs::File::options().append(true).open(path).and_then(|file| file.set_modified(now));
+                let _ = std::fs::File::options().append(true).open(path).and_then(|file| file.set_modified(now)); // fallback-ok: sensor-scene cache LRU touch; a cache is an optimisation, bytes are identical
             }
             Some(MapSensorScenes { static_scene, road })
         }
@@ -346,7 +347,7 @@ fn free_bytes(dir: &Path) -> Option<u64> {
     #[cfg(unix)]
     {
         use std::os::unix::ffi::OsStrExt;
-        let path = std::ffi::CString::new(dir.as_os_str().as_bytes()).ok()?;
+        let path = std::ffi::CString::new(dir.as_os_str().as_bytes()).ok()?; // fallback-ok: free-space probe for the optional sensor-scene cache
         let mut stat: libc::statvfs = unsafe { std::mem::zeroed() };
         if unsafe { libc::statvfs(path.as_ptr(), &mut stat) } != 0 {
             return None;
@@ -355,7 +356,7 @@ fn free_bytes(dir: &Path) -> Option<u64> {
     }
     #[cfg(not(unix))]
     {
-        let _ = dir;
+        let _ = dir; // fallback-ok: unused on this platform
         None
     }
 }
@@ -390,22 +391,22 @@ fn store_cached_sensor_scenes(dir: &Path, key: &str, scenes: &MapSensorScenes) -
             std::fs::rename(&tmp, &path)
         })();
         if let Err(error) = written {
-            let _ = std::fs::remove_file(&tmp);
+            let _ = std::fs::remove_file(&tmp); // fallback-ok: cache temp cleanup after a failed write (the error is returned)
             return Err(error);
         }
     }
     let mut entries: Vec<(std::time::SystemTime, String)> = std::fs::read_dir(dir)?
-        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| entry.ok()) // fallback-ok: cache pruning scan; unreadable entries are simply not pruned
         .filter_map(|entry| {
-            let name = entry.file_name().into_string().ok()?;
+            let name = entry.file_name().into_string().ok()?; // fallback-ok: cache pruning scan
             let key = name.strip_suffix(".static.bvh")?.to_string();
-            Some((entry.metadata().ok()?.modified().ok()?, key))
+            Some((entry.metadata().ok()?.modified().ok()?, key)) // fallback-ok: cache pruning scan
         })
         .collect();
     entries.sort_by(|a, b| b.0.cmp(&a.0));
     for (_, stale) in entries.into_iter().skip(SENSOR_SCENE_CACHE_KEEP) {
         for suffix in ["static", "road"] {
-            let _ = std::fs::remove_file(dir.join(format!("{stale}.{suffix}.bvh")));
+            let _ = std::fs::remove_file(dir.join(format!("{stale}.{suffix}.bvh"))); // fallback-ok: cache pruning; failure leaves an extra cache entry
         }
     }
     Ok(true)
@@ -501,16 +502,16 @@ pub(crate) fn build_actor_sensor_scene(instances: &[ActorSensorInstance]) -> Ins
 }
 
 impl Raycast for CombinedSensorScene<'_> {
+    /// Nearest hit; an equal-distance actor hit keeps the static one. The
+    /// actor layer is searched only up to the static hit: it can only win
+    /// strictly nearer, so the result is the same as searching both to
+    /// `max_distance`, without walking actors behind a wall.
     fn cast(&self, origin: Vec3, direction: Vec3, max_distance: f32) -> Option<Hit> {
-        match (
-            self.static_scene.cast(origin, direction, max_distance),
-            self.actor_scene.cast(origin, direction, max_distance),
-        ) {
-            (Some(static_hit), Some(actor_hit)) if actor_hit.distance < static_hit.distance => {
-                Some(actor_hit)
-            }
-            (Some(static_hit), _) => Some(static_hit),
-            (None, actor_hit) => actor_hit,
+        let static_hit = self.static_scene.cast(origin, direction, max_distance);
+        let reach = static_hit.map_or(max_distance, |hit| hit.distance);
+        match self.actor_scene.cast(origin, direction, reach) {
+            Some(actor_hit) if static_hit.is_none_or(|hit| actor_hit.distance < hit.distance) => Some(actor_hit),
+            _ => static_hit,
         }
     }
 }
@@ -678,7 +679,7 @@ impl ServiceState {
             if self.sync_sensor_cache_writes {
                 write();
             } else {
-                std::thread::Builder::new().name("sensor-cache-write".into()).spawn(write).ok();
+                std::thread::Builder::new().name("sensor-cache-write".into()).spawn(write).ok(); // fallback-ok: background cache write; a failure only loses the optimisation
             }
         }
         self.sensor_scenes = Some(scenes);
@@ -765,7 +766,7 @@ impl ServiceState {
             sensor_cache_dir: spec
                 .sensor_cache_dir
                 .clone()
-                .or_else(|| std::env::var("SIMFORGE_NATIVE_SENSOR_CACHE_DIR").ok().filter(|dir| !dir.is_empty()))
+                .or_else(|| std::env::var("SIMFORGE_NATIVE_SENSOR_CACHE_DIR").ok().filter(|dir| !dir.is_empty())) // fallback-ok: optional cache location from the environment
                 .map(PathBuf::from),
             overlap_sensors: std::env::var("SIMFORGE_NATIVE_SERIAL_SENSORS").map_or(true, |value| value.is_empty() || value == "0"),
             vehicle_models,
@@ -795,17 +796,17 @@ impl ServiceState {
 /// left the metering camera to the service and the heading, field or aspect
 /// moved since the last reading. An in-place advance (see
 /// `SceneApp::advance_lighting`): ~25 ms by day, and the TAA history is kept.
-fn auto_meter(state: &mut ServiceState, cam: &ServiceCamera, eye: &[f32; 3], target: &[f32; 3]) {
+fn auto_meter(state: &mut ServiceState, cam: &ServiceCamera, eye: &[f32; 3], target: &[f32; 3]) -> Result<(), String> {
     if !state.auto_meter
         || !state.lighting_authored.atmosphere
         || state.lighting_authored.meter_view.is_some()
     {
-        return;
+        return Ok(());
     }
     let forward = [target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]];
     let len = (forward[0] * forward[0] + forward[1] * forward[1] + forward[2] * forward[2]).sqrt();
     if len <= 1.0e-6 {
-        return;
+        return Err(format!("[native_camera_config_invalid] camera {} eye and target coincide", cam.sensor_id));
     }
     let view = render_core::atmosphere::MeterView {
         forward: [forward[0] / len, forward[1] / len, forward[2] / len],
@@ -821,18 +822,20 @@ fn auto_meter(state: &mut ServiceState, cam: &ServiceCamera, eye: &[f32; 3], tar
             && (previous.fov_y_deg - view.fov_y_deg).abs() < 1.0e-3
             && (previous.aspect - view.aspect).abs() < 1.0e-3
         {
-            return;
+            return Ok(());
         }
     }
     let mut lighting = state.lighting_authored.clone();
     lighting.meter_view = Some(view);
-    match state.app.advance_lighting(&lighting, state.profile_config) {
-        Ok(_) => {
-            state.auto_meter_view = Some(view);
-            state.cache.clear();
-        }
-        Err(error) => eprintln!("auto meter: {error:#}"),
-    }
+    // A failed re-meter would leave this view at another heading's
+    // exposure: the tick fails instead.
+    state
+        .app
+        .advance_lighting(&lighting, state.profile_config)
+        .map_err(|error| format!("[native_auto_meter_failed] camera {}: {error:#}", cam.sensor_id))?;
+    state.auto_meter_view = Some(view);
+    state.cache.clear();
+    Ok(())
 }
 
 /// Readiness record written to `--ready-file` once the endpoint is bound:
@@ -988,7 +991,7 @@ fn read_ready(connection: &mut crate::endpoint::Connection, buf: &mut [u8]) -> R
     }
     #[cfg(not(unix))]
     {
-        let _ = (connection, buf);
+        let _ = (connection, buf); // fallback-ok: unused on this platform
         Ok(None)
     }
 }
@@ -1000,7 +1003,7 @@ fn read_ready(connection: &mut crate::endpoint::Connection, buf: &mut [u8]) -> R
 fn pipelined_bundle(state: &ServiceState, request: &WireRequest) -> bool {
     match &request.body {
         RequestBody::RenderBundle { pipeline, device_sensors, passes, .. } => {
-            pipeline.unwrap_or(false)
+            pipeline.unwrap_or(false) // fallback-ok: documented optional request flag
                 && device_sensors.as_ref().is_none_or(Vec::is_empty)
                 && passes.as_ref().is_none_or(|passes| !passes.iter().any(|pass| pass == "semantic"))
                 && state.episode.is_none()
@@ -1014,7 +1017,7 @@ fn bundle_request(request: WireRequest) -> BundleRequest {
     match request.body {
         RequestBody::RenderBundle { sim_tick, cameras, lidars, radars, tick_index, passes, device_sensors, sim_time_s, observe, .. } => BundleRequest {
             i, sim_tick, cameras, lidars, radars, tick_index, passes,
-            device_sensors: device_sensors.unwrap_or_default(), sim_time_s, observe: observe.unwrap_or(false),
+            device_sensors: device_sensors.unwrap_or_default(), sim_time_s, observe: observe.unwrap_or(false), // fallback-ok: documented optional request fields (none requested)
         },
         _ => unreachable!("bundle_request on a non-bundle request"),
     }
@@ -1050,11 +1053,19 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
                 return WireResponse::error(i,"declared occupancy requires at least one lidar");
             }
             for camera in &mut cameras {
-                camera.width=episode.consumer.width;
-                camera.height=episode.consumer.height;
+                // The consumer product defines the policy image; a camera that
+                // asks for something else is refused, not silently rewritten.
+                if (camera.width,camera.height)!=(episode.consumer.width,episode.consumer.height)
+                    || camera.profile.is_some_and(|profile| profile!=Profile::Cinematic)
+                    || camera.semantic
+                    || camera.depth_encoding.is_some()
+                {
+                    return WireResponse::error(i,format!(
+                        "[native_episode_camera_conflict] camera {} asks for {}x{} {:?} semantic={} depth={:?}; policy episodes render {}x{} cinematic rgb (depth via the consumer spec)",
+                        camera.sensor_id,camera.width,camera.height,camera.profile,camera.semantic,camera.depth_encoding,
+                        episode.consumer.width,episode.consumer.height));
+                }
                 camera.profile=Some(Profile::Cinematic);
-                camera.semantic=false;
-                camera.depth_encoding=None;
                 if camera.attach.as_ref().is_some_and(|mount| mount.roll_deg!=0.0) {
                     return WireResponse::error(i,"SceneApp eye/target cameras do not support calibrated roll");
                 }
@@ -1177,7 +1188,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
         }
         RequestBody::SetLighting { lighting, profile_config, advance } => {
             let started = std::time::Instant::now();
-            let profile_config = profile_config.unwrap_or(state.profile_config);
+            let profile_config = profile_config.unwrap_or(state.profile_config); // fallback-ok: documented: a relight without settings keeps the ones in force
             let outcome = if advance {
                 state.app.advance_lighting(&lighting, profile_config)
             } else {
@@ -1239,7 +1250,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
         } => {
             let request = BundleRequest {
                 i, sim_tick, cameras, lidars, radars, tick_index, passes,
-                device_sensors: device_sensors.unwrap_or_default(), sim_time_s, observe: observe.unwrap_or(false),
+                device_sensors: device_sensors.unwrap_or_default(), sim_time_s, observe: observe.unwrap_or(false), // fallback-ok: documented optional request fields (none requested)
             };
             match begin_bundle(state, request) {
                 Ok(flight) => finish_bundle(state, flight),
@@ -1535,7 +1546,7 @@ fn apply_actor_model(
             format!(
                 "[native_actor_animation_missing] actor {} ({}) is {motion}ing but its catalog model binds no {motion:?} clip (has {:?})",
                 actor.id,
-                actor.catalog_id.as_deref().unwrap_or("-"),
+                actor.catalog_id.as_deref().unwrap_or("-"), // fallback-ok: error message text only
                 { let mut names: Vec<_> = model.animations.keys().collect(); names.sort(); names }
             )
         })?;
@@ -1800,7 +1811,7 @@ fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera) {
         far: state.far_m,
         passes: SERVICE_PASSES,
     };
-    let profile = cam.profile.unwrap_or(state.profile);
+    let profile = cam.profile.unwrap_or(state.profile); // fallback-ok: documented: a camera without a profile uses the scene profile
     if state.app.camera(&cam.sensor_id) == Some((&spec, profile)) {
         return;
     }
@@ -1837,7 +1848,7 @@ fn sync_rig(state: &mut ServiceState, cameras: &[ServiceCamera]) -> Result<(), S
             .set_pose(&cam.sensor_id, &eye, &target)
             .map_err(|error| format!("set pose: {error:#}"))?;
         if index == 0 {
-            auto_meter(state, cam, &eye, &target);
+            auto_meter(state, cam, &eye, &target)?;
         }
     }
     Ok(())
@@ -2062,7 +2073,11 @@ fn render_tick(
     }
     let server_ms = t0.elapsed().as_secs_f64() * 1000.0;
     if let Some(dir) = export_dir {
-        std::fs::create_dir_all(&dir).ok();
+        if let Err(error) = std::fs::create_dir_all(&dir) {
+            return WireResponse::error(i, format!("export_dir {dir}: {error}"));
+        }
+        // Debug PNG mirror of frames already published in the ring (the
+        // Python `render(export_dir=...)` aid); write errors are logged.
         std::thread::spawn(move || {
             async_export_pngs(&dir, tick_id, &export_payloads);
         });
@@ -2086,6 +2101,11 @@ fn encode_jpeg_op(state: &mut ServiceState, i: u64, items: Vec<JpegItem>) -> Wir
     let mut tick_id = 0;
     for item in &items {
         let key = format!("{}:{}", item.sensor_id, item.pass);
+        if item.pass != "rgb" {
+            return WireResponse::error(i, format!(
+                "[native_jpeg_pass_unsupported] {key}: only rgb passes encode as JPEG (id/depth/semantic bytes are not colour)"
+            ));
+        }
         let Some(cached) = state.cache.get(&key) else {
             return WireResponse::error(i, format!("no cached pass {key} (render first)"));
         };
@@ -2371,7 +2391,7 @@ pub(crate) fn begin_bundle(state: &mut ServiceState, request: BundleRequest) -> 
     let mut stages = crate::proto::BundleStages::default();
     let ms = |since: std::time::Instant| since.elapsed().as_secs_f64() * 1000.0;
     // Default rgb-only: the policy hot loop.
-    let requested = passes.unwrap_or_else(|| vec!["rgb".to_string()]);
+    let requested = passes.unwrap_or_else(|| vec!["rgb".to_string()]); // fallback-ok: documented protocol default: rgb-only bundles
     let (want, want_id_output, want_semantic) = parse_bundle_passes(&requested).map_err(|error| WireResponse::error(i, error))?;
     for cam in cameras.iter().flatten() {
         upsert_rig(state, cam).map_err(|error| WireResponse::error(i, error))?;
@@ -2490,7 +2510,7 @@ pub(crate) fn finish_bundle(state: &mut ServiceState, flight: BundleInFlight) ->
         Ok(captured) => captured,
         Err(error) => {
             if let Some(scan) = scan {
-                let _ = scan.join();
+                let _ = scan.join(); // fallback-ok: the render already failed; the scan result is discarded with it
             }
             return WireResponse::error(i, format!("render: {error:#}"));
         }
@@ -2839,6 +2859,54 @@ mod tests {
             SensorTriangle { a, b, c, instance_id },
             SensorTriangle { a, b: c, c: d, instance_id },
         ]
+    }
+
+    #[test]
+    fn combined_scene_prunes_actors_behind_static_hits_without_changing_results() {
+        // Static: ground at y=0 plus walls; actors: cars in front of, level
+        // with and behind the walls. The pruned cast must equal searching
+        // both layers to full range.
+        let mut map = Vec::new();
+        map.extend(quad(-60.0, -60.0, 120.0, 0.0, 1));
+        for (i, x) in [8.0f32, -14.0, 20.0].into_iter().enumerate() {
+            let id = 2 + i as u32;
+            map.push(SensorTriangle { a: [x, 0.0, -30.0], b: [x, 6.0, -30.0], c: [x, 0.0, 30.0], instance_id: id });
+            map.push(SensorTriangle { a: [x, 6.0, -30.0], b: [x, 6.0, 30.0], c: [x, 0.0, 30.0], instance_id: id });
+        }
+        let statics = build_sensor_scene(map);
+        let car = sensors::bvh::Blas::build(quad(-2.0, -1.0, 4.0, 1.4, 0).iter().map(|t| Tri {
+            a: Vec3::from_array(t.a), b: Vec3::from_array(t.b), c: Vec3::from_array(t.c), instance_id: 0,
+        }).chain([Tri { a: Vec3::new(-2.0, 0.0, 0.0), b: Vec3::new(-2.0, 1.4, 0.0), c: Vec3::new(-2.0, 0.0, 1.0), instance_id: 0 }]));
+        let instances: Vec<super::ActorSensorInstance> = [4.0f32, 8.0, 12.0, -9.0, -20.0]
+            .into_iter()
+            .enumerate()
+            .map(|(i, x)| super::ActorSensorInstance::Shared {
+                blas: car.clone(),
+                world: bevy::math::Mat4::from_translation(Vec3::new(x, 0.0, (i as f32) - 2.0)),
+                instance_id: 100 + i as u32,
+            })
+            .collect();
+        let actors = super::build_actor_sensor_scene(&instances);
+        let combined = CombinedSensorScene { static_scene: &statics, actor_scene: &actors };
+        let origin = Vec3::new(0.3, 1.1, 0.2);
+        let mut actor_hits = 0;
+        for step in 0..720 {
+            for ring in 0..8 {
+                let az = step as f32 / 720.0 * std::f32::consts::TAU;
+                let el = (-12.0 + 3.0 * ring as f32).to_radians();
+                let dir = Vec3::new(el.cos() * az.cos(), el.sin(), el.cos() * az.sin());
+                let full = match (statics.cast(origin, dir, 80.0), actors.cast(origin, dir, 80.0)) {
+                    (Some(s), Some(a)) if a.distance < s.distance => Some(a),
+                    (Some(s), _) => Some(s),
+                    (None, a) => a,
+                };
+                let pruned = sensors::bvh::Raycast::cast(&combined, origin, dir, 80.0);
+                let key = |hit: Option<sensors::bvh::Hit>| hit.map(|h| (h.distance.to_bits(), h.instance_id));
+                assert_eq!(key(pruned), key(full), "az {az} el {el}");
+                actor_hits += usize::from(full.is_some_and(|h| h.instance_id >= 100));
+            }
+        }
+        assert!(actor_hits > 50, "fixture must hit actors ({actor_hits})");
     }
 
     #[test]

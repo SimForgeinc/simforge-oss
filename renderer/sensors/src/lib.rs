@@ -33,7 +33,7 @@ pub mod taxonomy;
 /// four logical CPUs for the renderer and the frame loop.
 pub static RAY_POOL: std::sync::LazyLock<bevy::tasks::TaskPool> =
     std::sync::LazyLock::new(|| {
-        let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
+        let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4); // fallback-ok: thread-pool size only; results do not depend on it
         let threads = cores.saturating_sub(4).clamp(1, 16);
         bevy::tasks::TaskPoolBuilder::new()
             .num_threads(threads)
