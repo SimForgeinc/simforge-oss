@@ -63,12 +63,21 @@ impl SemanticClass {
 
     /// Classify a scenario-model actor class/kind string.
     pub fn from_actor_class(actor_class: &str) -> SemanticClass {
+        Self::try_from_actor_class(actor_class).unwrap_or(SemanticClass::Prop)
+    }
+
+    /// Strict actor-class mapping (every class the render engine emits:
+    /// `packages/render/src/native/lowering.ts` NATIVE_ACTOR_CLASSES). Vans,
+    /// SUVs, pickups and motorcycles are motor vehicles (`Car`); `prop` is
+    /// the prop class. Any other class is an error, never a silent `Prop`.
+    pub fn try_from_actor_class(actor_class: &str) -> Result<SemanticClass, String> {
         match actor_class {
-            "car" => SemanticClass::Car,
-            "truck" | "bus" => SemanticClass::Truck,
-            "pedestrian" => SemanticClass::Pedestrian,
-            "cyclist" => SemanticClass::Cyclist,
-            _ => SemanticClass::Prop,
+            "car" | "van" | "suv" | "pickup" | "motorcycle" => Ok(SemanticClass::Car),
+            "truck" | "bus" => Ok(SemanticClass::Truck),
+            "pedestrian" => Ok(SemanticClass::Pedestrian),
+            "cyclist" => Ok(SemanticClass::Cyclist),
+            "prop" => Ok(SemanticClass::Prop),
+            other => Err(format!("[native_actor_class_unmapped] actor class {other:?} has no semantic class")),
         }
     }
 

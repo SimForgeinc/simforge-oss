@@ -806,6 +806,91 @@ struct ReadbackTiming {
     bytes: u64,
 }
 
+/// How a capture's pixels depend on the frames rendered before it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CaptureClock {
+    /// Every rendered frame advances the sky clock and the shader noise /
+    /// jitter seed, and TAA carries history across frames: a capture depends
+    /// on how many frames were drawn before it (the rc.73 behaviour, kept
+    /// byte-identical for comparison and legacy re-renders).
+    Free,
+    /// A capture is a function of the scene at its simulation time only:
+    /// the sky clock is pinned to the capture's simulation time, the shader
+    /// noise seed and TAA jitter restart at sample 0 for every capture, and
+    /// TAA (when a view uses it) resets its history and accumulates exactly
+    /// `samples` jittered frames of the static capture pose. Extra frames
+    /// (readiness, retries, relights) cannot change the result.
+    Pinned { samples: u32 },
+}
+
+impl CaptureClock {
+    /// Frames one capture renders under this clock (views with TAA).
+    pub fn samples(self) -> u32 {
+        match self {
+            CaptureClock::Free => 1,
+            CaptureClock::Pinned { samples } => samples.max(1),
+        }
+    }
+}
+
+/// The pinned shader-noise / jitter sample index, shared with the render
+/// world. `None` leaves Bevy's frame count in charge ([`CaptureClock::Free`]).
+#[derive(Resource, Clone, Default)]
+struct PinnedSample(std::sync::Arc<std::sync::Mutex<Option<u32>>>);
+
+impl PinnedSample {
+    fn get(&self) -> Option<u32> {
+        *self.0.lock().expect("pinned sample")
+    }
+    fn set(&self, value: Option<u32>) {
+        *self.0.lock().expect("pinned sample") = value;
+    }
+}
+
+/// The TAA jitter sequence Bevy uses (Halton 2,3 minus 0.5), indexed by the
+/// pinned sample instead of the frame count.
+const TAA_HALTON: [Vec2; 8] = [
+    Vec2::new(0.0, 0.0),
+    Vec2::new(0.0, -0.16666666),
+    Vec2::new(-0.25, 0.16666669),
+    Vec2::new(0.25, -0.3888889),
+    Vec2::new(-0.375, -0.055555552),
+    Vec2::new(0.125, 0.2777778),
+    Vec2::new(-0.125, -0.2777778),
+    Vec2::new(0.375, 0.055555582),
+];
+
+/// Render world: jitter every TAA view by the pinned sample (after Bevy's
+/// frame-count jitter, before the view uniforms consume it).
+fn pin_taa_jitter(pinned: Res<PinnedSample>, mut views: Query<&mut bevy::render::camera::TemporalJitter>) {
+    let Some(sample) = pinned.get() else { return };
+    let offset = TAA_HALTON[sample as usize % TAA_HALTON.len()];
+    for mut jitter in &mut views {
+        jitter.offset = offset;
+    }
+}
+
+/// Render world: the shader globals' `frame_count` seeds SSAO, SSR, shadow
+/// and specular noise. Rewrite it with the pinned sample after Bevy wrote
+/// the frame count (the later queue write wins before the frame submits).
+/// The views' own `frame_count` (mesh-change timestamps) stays real.
+fn pin_shader_noise_seed(
+    pinned: Res<PinnedSample>,
+    device: Res<RenderDevice>,
+    queue: Res<bevy::render::renderer::RenderQueue>,
+    mut globals: ResMut<bevy::render::globals::GlobalsBuffer>,
+) {
+    let Some(sample) = pinned.get() else { return };
+    use bevy::reflect::structs::GetField;
+    let uniform = globals.buffer.get_mut();
+    let Some(frame_count) = uniform.get_field_mut::<u32>("frame_count") else {
+        // A Bevy upgrade renamed the field: fail loudly, never silently unpinned.
+        panic!("GlobalsUniform has no frame_count field to pin");
+    };
+    *frame_count = sample;
+    globals.buffer.write_buffer(&device, &queue);
+}
+
 /// Where the time of the last [`SceneApp::capture`] went (diagnostics; the
 /// service reports it per bundle).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -823,6 +908,9 @@ pub struct CaptureStats {
     pub readback_copy_ms: f64,
     /// Host bytes read back by the accepted submission.
     pub readback_bytes: u64,
+    /// Extra TAA accumulation frames rendered before the capture frames
+    /// ([`CaptureClock::Pinned`] with TAA views).
+    pub accumulation_frames: u32,
 }
 
 /// Outcome of one device-sink copy for one sensor in one submission.
@@ -876,6 +964,44 @@ struct CaptureRequest {
     keys: Vec<String>,
     #[cfg(feature = "gpu-interop")]
     device: Vec<DeviceCopy>,
+    /// Staging slot the copies land in ([`READBACK_SLOTS`] alternate, so one
+    /// capture's readback can be in flight while the next one renders).
+    slot: usize,
+    /// Map the slot without waiting ([`SceneApp::capture_begin`]); the host
+    /// collects it in [`SceneApp::capture_finish`].
+    deferred: bool,
+}
+
+/// Staging slots per readback target: one capture in flight plus the one
+/// being rendered.
+const READBACK_SLOTS: usize = 2;
+
+/// The deferred map of one capture's slot, filled by the render world.
+struct DeferredMap {
+    generation: u64,
+    slot: usize,
+    expected: usize,
+    done: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    failed: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+
+#[derive(Resource, Clone, Default)]
+struct DeferredMaps(std::sync::Arc<std::sync::Mutex<Vec<DeferredMap>>>);
+
+/// A capture submitted by [`SceneApp::capture_begin`].
+pub enum CaptureTicket {
+    /// Collected already (the submission needed a settle/retry, or device
+    /// outputs were requested): the frame the blocking path produced.
+    Ready(CapturedFrame),
+    /// On the GPU; [`SceneApp::capture_finish`] waits for and copies it.
+    Pending(PendingCapture),
+}
+
+pub struct PendingCapture {
+    identity: FrameIdentity,
+    slot: usize,
+    keys: Vec<String>,
+    stats: CaptureStats,
 }
 
 /// One persistent GPU->CPU staging buffer in the render world. Exists only
@@ -889,6 +1015,8 @@ struct StagingBuffer {
     height: u32,
     padded_row: usize,
     buffer: Buffer,
+    /// Readback slot (see [`READBACK_SLOTS`]).
+    slot: usize,
     /// Set by `copy_passes` when a copy from this submission was encoded;
     /// `receive_passes` maps only those and clears the flag.
     copied: bool,
@@ -1527,6 +1655,177 @@ pub struct SensorTriangle {
     pub instance_id: u32,
 }
 
+/// One visible actor mesh for the ray sensors (see
+/// [`SceneApp::actor_sensor_meshes`]).
+#[derive(Clone, Debug)]
+pub struct ActorSensorMesh {
+    pub actor_id: String,
+    /// `<actor id>/<glTF node name>` for error messages and diagnostics.
+    pub label: String,
+    /// The actor's instance id: every mesh of one actor reports it.
+    pub instance_id: u32,
+    pub geometry: ActorSensorGeometry,
+}
+
+#[derive(Clone, Debug)]
+pub enum ActorSensorGeometry {
+    /// A rigid mesh: model-local triangles (see
+    /// [`SceneApp::mesh_asset_triangles`], cacheable per asset) placed by
+    /// the world matrix the camera draws it with this tick.
+    Rigid { mesh: Handle<Mesh>, world: Mat4 },
+    /// A skinned mesh posed this tick in world space.
+    Skinned { mesh: AssetId<Mesh>, triangles: Vec<[Vec3; 3]> },
+}
+
+/// Triangle-list triangles of a mesh in its local space. Any layout the
+/// ray sensors cannot reproduce exactly is an error naming the mesh, never
+/// a silent skip or a reinterpretation.
+pub fn mesh_local_triangles(mesh: &Mesh, label: &str) -> Result<Vec<[Vec3; 3]>> {
+    use bevy::render::render_resource::PrimitiveTopology;
+    if mesh.primitive_topology() != PrimitiveTopology::TriangleList {
+        bail!("mesh {label} uses {:?}; the lidar/radar scene supports triangle lists only", mesh.primitive_topology());
+    }
+    if mesh.has_morph_targets() {
+        bail!("mesh {label} has morph targets, which the lidar/radar scene cannot pose");
+    }
+    let Some(attribute) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else {
+        bail!("mesh {label} has no POSITION attribute");
+    };
+    let bevy::mesh::VertexAttributeValues::Float32x3(vertices) = attribute else {
+        bail!("mesh {label} POSITION is not Float32x3");
+    };
+    let vertex = |index: usize| -> Result<Vec3> {
+        vertices.get(index).map(|v| Vec3::from(*v)).ok_or_else(|| anyhow::anyhow!(
+            "mesh {label} index {index} is out of range ({} vertices)", vertices.len()
+        ))
+    };
+    let indices: Vec<usize> = match mesh.indices() {
+        Some(bevy::mesh::Indices::U16(indices)) => indices.iter().map(|i| *i as usize).collect(),
+        Some(bevy::mesh::Indices::U32(indices)) => indices.iter().map(|i| *i as usize).collect(),
+        None => (0..vertices.len()).collect(),
+    };
+    if indices.len() % 3 != 0 {
+        bail!("mesh {label} has {} indices, not a whole number of triangles", indices.len());
+    }
+    indices
+        .chunks_exact(3)
+        .map(|tri| Ok([vertex(tri[0])?, vertex(tri[1])?, vertex(tri[2])?]))
+        .collect()
+}
+
+/// World-space triangles of a skinned mesh under `joints` (joint world
+/// matrix x inverse bindpose, as the skin extraction uploads them), blended
+/// the way `skinning.wgsl` blends: the weighted sum of joint matrices
+/// applied to the bind-pose position.
+pub fn skinned_world_triangles(mesh: &Mesh, joints: &[Mat4], label: &str) -> Result<Vec<[Vec3; 3]>> {
+    use bevy::mesh::VertexAttributeValues;
+    let local = mesh_local_triangles(mesh, label)?;
+    let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else {
+        bail!("mesh {label} POSITION is not Float32x3");
+    };
+    let joint_indices: Vec<[u16; 4]> = match mesh.attribute(Mesh::ATTRIBUTE_JOINT_INDEX) {
+        Some(VertexAttributeValues::Uint16x4(values)) => values.clone(),
+        Some(other) => bail!("skinned mesh {label} JOINTS_0 has unsupported format {:?}", bevy::mesh::VertexFormat::from(other)),
+        None => bail!("skinned mesh {label} has no JOINTS_0 attribute"),
+    };
+    let Some(VertexAttributeValues::Float32x4(weights)) = mesh.attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT) else {
+        bail!("skinned mesh {label} has no Float32x4 WEIGHTS_0 attribute");
+    };
+    if joint_indices.len() != positions.len() || weights.len() != positions.len() {
+        bail!("skinned mesh {label} joint attributes do not match its {} vertices", positions.len());
+    }
+    let mut posed = Vec::with_capacity(positions.len());
+    for ((position, index), weight) in positions.iter().zip(&joint_indices).zip(weights) {
+        let mut model = Mat4::ZERO;
+        for k in 0..4 {
+            let joint = joints.get(index[k] as usize).ok_or_else(|| anyhow::anyhow!(
+                "skinned mesh {label} references joint {} of {}", index[k], joints.len()
+            ))?;
+            model += *joint * weight[k];
+        }
+        posed.push(model.transform_point3(Vec3::from(*position)));
+    }
+    // Map each local triangle back onto posed vertices through the indices.
+    let indices: Vec<usize> = match mesh.indices() {
+        Some(bevy::mesh::Indices::U16(indices)) => indices.iter().map(|i| *i as usize).collect(),
+        Some(bevy::mesh::Indices::U32(indices)) => indices.iter().map(|i| *i as usize).collect(),
+        None => (0..positions.len()).collect(),
+    };
+    debug_assert_eq!(indices.len(), local.len() * 3);
+    Ok(indices.chunks_exact(3).map(|tri| [posed[tri[0]], posed[tri[1]], posed[tri[2]]]).collect())
+}
+
+#[cfg(test)]
+mod sensor_mesh_tests {
+    use super::*;
+    use bevy::asset::RenderAssetUsages;
+    use bevy::mesh::{Indices, VertexAttributeValues};
+    use bevy::render::render_resource::PrimitiveTopology;
+
+    fn quad(topology: PrimitiveTopology) -> Mesh {
+        let mut mesh = Mesh::new(topology, RenderAssetUsages::default());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]);
+        mesh.insert_indices(Indices::U16(vec![0, 1, 2, 0, 2, 3]));
+        mesh
+    }
+
+    #[test]
+    fn triangle_list_meshes_yield_their_triangles() {
+        let tris = mesh_local_triangles(&quad(PrimitiveTopology::TriangleList), "quad").unwrap();
+        assert_eq!(tris.len(), 2);
+        assert_eq!(tris[1], [Vec3::ZERO, Vec3::new(1.0, 1.0, 0.0), Vec3::new(0.0, 1.0, 0.0)]);
+    }
+
+    #[test]
+    fn unreadable_meshes_fail_instead_of_disappearing_from_lidar() {
+        let strip = mesh_local_triangles(&quad(PrimitiveTopology::TriangleStrip), "car/body").unwrap_err();
+        assert!(format!("{strip}").contains("car/body"), "{strip}");
+        let mut bad = quad(PrimitiveTopology::TriangleList);
+        bad.insert_indices(Indices::U16(vec![0, 1, 9]));
+        assert!(format!("{}", mesh_local_triangles(&bad, "car/wheel").unwrap_err()).contains("out of range"));
+        let mut partial = quad(PrimitiveTopology::TriangleList);
+        partial.insert_indices(Indices::U16(vec![0, 1]));
+        assert!(mesh_local_triangles(&partial, "x").is_err());
+        let mut no_position = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
+        no_position.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 1.0, 0.0]; 3]);
+        assert!(mesh_local_triangles(&no_position, "x").is_err());
+    }
+
+    fn skinned_quad() -> Mesh {
+        let mut mesh = quad(PrimitiveTopology::TriangleList);
+        // Bottom edge on joint 0, top edge on joint 1.
+        mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_INDEX, VertexAttributeValues::Uint16x4(vec![[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0]]));
+        mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, vec![[1.0f32, 0.0, 0.0, 0.0]; 4]);
+        mesh
+    }
+
+    #[test]
+    fn skinned_meshes_are_posed_by_their_joints() {
+        let mesh = skinned_quad();
+        let rest = skinned_world_triangles(&mesh, &[Mat4::IDENTITY, Mat4::IDENTITY], "ped").unwrap();
+        assert_eq!(rest, mesh_local_triangles(&mesh, "ped").unwrap());
+        // Lift joint 1 (the top edge) by 2 m and move the whole skin 5 m in x.
+        let base = Mat4::from_translation(Vec3::new(5.0, 0.0, 0.0));
+        let posed = skinned_world_triangles(&mesh, &[base, base * Mat4::from_translation(Vec3::Y * 2.0)], "ped").unwrap();
+        assert_eq!(posed[0], [Vec3::new(5.0, 0.0, 0.0), Vec3::new(6.0, 0.0, 0.0), Vec3::new(6.0, 3.0, 0.0)]);
+        // Blended weights interpolate the joint matrices.
+        let mut blended = mesh.clone();
+        blended.insert_attribute(Mesh::ATTRIBUTE_JOINT_INDEX, VertexAttributeValues::Uint16x4(vec![[0, 1, 0, 0]; 4]));
+        blended.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, vec![[0.5f32, 0.5, 0.0, 0.0]; 4]);
+        let half = skinned_world_triangles(&blended, &[Mat4::IDENTITY, Mat4::from_translation(Vec3::Y * 2.0)], "ped").unwrap();
+        assert_eq!(half[0][0], Vec3::new(0.0, 1.0, 0.0));
+    }
+
+    #[test]
+    fn skins_that_reference_missing_joints_fail() {
+        let error = skinned_world_triangles(&skinned_quad(), &[Mat4::IDENTITY], "ped/body").unwrap_err();
+        assert!(format!("{error}").contains("joint 1 of 1"), "{error}");
+        let mut unskinned = quad(PrimitiveTopology::TriangleList);
+        unskinned.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, vec![[1.0f32, 0.0, 0.0, 0.0]; 4]);
+        assert!(skinned_world_triangles(&unskinned, &[Mat4::IDENTITY], "x").is_err());
+    }
+}
+
 #[derive(Resource, Default)]
 struct Legend(Vec<LegendEntry>);
 
@@ -1678,9 +1977,15 @@ impl GroundField {
     /// Cells outside the mesh coverage use the nearest populated cell within
     /// 20 m, then the scene median, then 0.0 for an entirely empty scene.
     pub(crate) fn sample(&self, x: f32, z: f32) -> f32 {
+        self.sample_covered(x, z).or(self.median).unwrap_or(0.0)
+    }
+
+    /// [`Self::sample`] without the off-map median/zero: `None` when no
+    /// populated cell lies within 20 m.
+    pub(crate) fn sample_covered(&self, x: f32, z: f32) -> Option<f32> {
         let (cx, cz) = ((x / self.cell_m).floor() as i64, (z / self.cell_m).floor() as i64);
         if let Some(y) = self.min_y.get(&(cx, cz)) {
-            return *y;
+            return Some(*y);
         }
         for ring in 1..=10i64 {
             let mut best: Option<(i64, f32)> = None;
@@ -1698,10 +2003,10 @@ impl GroundField {
                 }
             }
             if let Some((_, y)) = best {
-                return y;
+                return Some(y);
             }
         }
-        self.median.unwrap_or(0.0)
+        None
     }
 
     /// Median per-cell ground height across the whole scene, or `None` for
@@ -1745,8 +2050,18 @@ pub struct SceneApp {
     ready: bool,
     /// Timing of the last capture (see [`CaptureStats`]).
     last_capture: CaptureStats,
+    /// Phases of the last [`Self::wait_until_ready`], seconds (diagnostics).
+    ready_phases: Vec<(&'static str, f64)>,
     /// Shared with the render world's `receive_passes`.
     readback_clock: ReadbackClock,
+    /// See [`CaptureClock`]; `Free` until the host pins it.
+    capture_clock: CaptureClock,
+    /// Shared with the render world's seed/jitter overrides.
+    pinned_sample: PinnedSample,
+    /// Deferred readbacks the render world started ([`Self::capture_begin`]).
+    deferred_maps: DeferredMaps,
+    /// Staging slot of the next capture.
+    next_slot: usize,
     /// Scene-state actors: id -> (cuboid entity, allocated instance id).
     actors: HashMap<String, (Entity, u32)>,
     /// Dynamic actor id -> (loaded catalog GLB root, authored scale, mesh count).
@@ -1950,10 +2265,21 @@ impl SceneApp {
         }
 
         let readback_clock = ReadbackClock::default();
+        let pinned_sample = PinnedSample::default();
+        let deferred_maps = DeferredMaps::default();
         let render_app = app.get_sub_app_mut(RenderApp).unwrap();
         render_app
             .insert_resource(RenderSender(tx))
             .insert_resource(readback_clock.clone())
+            .insert_resource(deferred_maps.clone())
+            .insert_resource(pinned_sample.clone())
+            .add_systems(
+                Render,
+                (
+                    pin_taa_jitter.in_set(RenderSystems::Queue),
+                    pin_shader_noise_seed.in_set(RenderSystems::PrepareBindGroups),
+                ),
+            )
             .init_resource::<Staging>()
             .init_resource::<ExtractedTargets>()
             .init_resource::<ExtractedCapture>()
@@ -1980,7 +2306,8 @@ impl SceneApp {
         );
 
         // Opt-in GPU pass timing (timestamp queries + pipeline statistics per
-        // Bevy render pass), read back through [`Self::take_gpu_pass_times`].
+        // Bevy render pass, plus a whole-frame timer), read back through
+        // [`Self::take_gpu_pass_times`] / [`Self::take_gpu_frame_times`].
         // Profiling only: the queries add encoder work, so production never
         // sets the variable.
         if crate::gpu_diagnostics::enabled() {
@@ -2011,7 +2338,12 @@ impl SceneApp {
             device_streams: HashMap::new(),
             ready: false,
             last_capture: CaptureStats::default(),
+            ready_phases: Vec::new(),
             readback_clock,
+            capture_clock: CaptureClock::Free,
+            pinned_sample,
+            deferred_maps,
+            next_slot: 0,
             actors: HashMap::new(),
             actor_models: HashMap::new(),
             actor_id_clones: HashMap::new(),
@@ -3284,7 +3616,7 @@ impl SceneApp {
                 if let Some(children) = world.get::<Children>(entity) {
                     stack.extend(children.iter());
                 }
-                if world.get::<Mesh3d>(entity).is_some() {
+                if world.get::<Mesh3d>(entity).is_some() && world.get::<IdClone>(entity).is_none() {
                     targets.push(entity);
                 }
             }
@@ -3311,8 +3643,36 @@ impl SceneApp {
     }
 
     /// Ground height under (x, z) from the readiness height field.
+    ///
+    /// Outside mesh coverage this is the scene median (or 0.0 for an empty
+    /// scene): fine for an atmosphere reference height, never for placing
+    /// geometry. Placement uses [`Self::ground_at_covered`].
     pub fn ground_at(&self, x: f32, z: f32) -> f32 {
         self.ground.sample(x, z)
+    }
+
+    /// Ground height under (x, z) when the map covers it: the cell itself or
+    /// the nearest populated cell within 20 m (cell-edge gaps). `None` off
+    /// the map, where a height would be invented.
+    pub fn ground_at_covered(&self, x: f32, z: f32) -> Option<f32> {
+        self.ground.sample_covered(x, z)
+    }
+
+    /// Remove an actor's catalog model (and its ID clones), keeping the
+    /// actor. Used to rebind a different model or animation GLB.
+    pub fn detach_actor_asset(&mut self, actor_id: &str) -> Result<()> {
+        let (model, _, _) = self
+            .actor_models
+            .remove(actor_id)
+            .ok_or_else(|| anyhow::anyhow!("actor {actor_id} has no attached catalog asset"))?;
+        self.actor_tint_materials.remove(actor_id);
+        self.actor_animations.remove(actor_id);
+        let world = self.app.world_mut();
+        world.despawn(model);
+        // The cuboid (and its ID clone) stay hidden: an actor is never shown
+        // as its proxy; the caller attaches the replacement in the same tick.
+        self.scene_revision += 1;
+        Ok(())
     }
 
     /// Apply a `simforge.road-detail/v1` sidecar (splat-blended asphalt
@@ -3646,6 +4006,48 @@ impl SceneApp {
         if model_mesh_count == 0 {
             bail!("actor model instantiated without mesh nodes: {}", glb_path.display());
         }
+        // The instance-ID pass must draw the model the RGB camera draws, not
+        // the canonical cuboid: every model mesh gets a layer-1 child clone
+        // under the actor's ID material (skinned meshes keep their skin so
+        // the clone follows the animated pose), and the cuboid's own ID
+        // clone is hidden.
+        {
+            let clone = *self
+                .actor_id_clones
+                .get(actor_id)
+                .ok_or_else(|| anyhow::anyhow!("actor {actor_id} has no instance-ID clone"))?;
+            let world = self.app.world_mut();
+            let id_material = world
+                .get::<MeshMaterial3d<StandardMaterial>>(clone)
+                .ok_or_else(|| anyhow::anyhow!("actor {actor_id} instance-ID clone has no material"))?
+                .0
+                .clone();
+            let mut stack = vec![model_root];
+            let mut sources = Vec::new();
+            while let Some(entity) = stack.pop() {
+                if let Some(children) = world.get::<Children>(entity) {
+                    stack.extend(children.iter());
+                }
+                if let Some(mesh) = world.get::<Mesh3d>(entity) {
+                    sources.push((entity, mesh.0.clone(), world.get::<SkinnedMesh>(entity).cloned()));
+                }
+            }
+            for (entity, mesh, skin) in sources {
+                let mut cmd = world.spawn((
+                    IdClone,
+                    Name::new(format!("actor-id:{actor_id}")),
+                    Mesh3d(mesh),
+                    MeshMaterial3d(id_material.clone()),
+                    RenderLayers::layer(1),
+                    Transform::IDENTITY,
+                    ChildOf(entity),
+                ));
+                if let Some(skin) = skin {
+                    cmd.insert(skin);
+                }
+            }
+            world.entity_mut(clone).insert(Visibility::Hidden);
+        }
         self.actor_models.insert(
             actor_id.to_string(),
             (model_root, uniform_scale, model_mesh_count),
@@ -3757,11 +4159,14 @@ impl SceneApp {
         self.actors.get(actor_id).map(|(_, instance_id)| *instance_id)
     }
 
-    /// Snapshot either static map geometry or dynamic actor geometry.
+    /// Snapshot the static map geometry (every instance-ID'd mesh that is not
+    /// a dynamic actor) as world-space triangles.
     ///
-    /// Static geometry is captured once by the long-lived service; only the
-    /// small actor snapshot is rebuilt after each applied scene tick.
-    pub fn sensor_triangles(&mut self, dynamic_actors: bool) -> Vec<SensorTriangle> {
+    /// Static geometry is captured once by the long-lived service. Actor
+    /// geometry is never snapshotted as triangles: see
+    /// [`Self::actor_sensor_meshes`]. A mesh the snapshot cannot read is an
+    /// error naming it; it is never silently left out of the sensor world.
+    pub fn static_sensor_triangles(&mut self) -> Result<Vec<SensorTriangle>> {
         let world = self.app.world_mut();
         let mut query = world.query_filtered::<
             (&Mesh3d, &GlobalTransform, &InstanceId, Option<&Name>),
@@ -3770,44 +4175,128 @@ impl SceneApp {
         let meshes = world.resource::<Assets<Mesh>>();
         let mut out = Vec::new();
         for (mesh3d, transform, instance_id, name) in query.iter(world) {
-            let is_actor = name.is_some_and(|name| name.as_str().starts_with("actor:"));
-            if is_actor != dynamic_actors {
+            if name.is_some_and(|name| name.as_str().starts_with("actor:")) {
                 continue;
             }
-            let Some(mesh) = meshes.get(&mesh3d.0) else { continue };
-            let Some(attribute) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { continue };
-            let bevy::mesh::VertexAttributeValues::Float32x3(vertices) = attribute else { continue };
+            let label = name.map(|name| name.as_str()).unwrap_or("unnamed static mesh");
+            let mesh = meshes.get(&mesh3d.0).ok_or_else(|| anyhow::anyhow!(
+                "static mesh {label} (instance {}) has no main-world mesh data for the lidar/radar scene",
+                instance_id.0
+            ))?;
             let matrix = transform.to_matrix();
-            let mut push = |indices: [usize; 3]| {
-                let point = |index: usize| matrix.transform_point3(Vec3::from(vertices[index])).to_array();
+            for [a, b, c] in mesh_local_triangles(mesh, label)? {
                 out.push(SensorTriangle {
-                    a: point(indices[0]),
-                    b: point(indices[1]),
-                    c: point(indices[2]),
+                    a: matrix.transform_point3(a).to_array(),
+                    b: matrix.transform_point3(b).to_array(),
+                    c: matrix.transform_point3(c).to_array(),
                     instance_id: instance_id.0,
                 });
-            };
-            match mesh.indices() {
-                Some(bevy::mesh::Indices::U16(indices)) => {
-                    for tri in indices.chunks_exact(3) {
-                        push([tri[0] as usize, tri[1] as usize, tri[2] as usize]);
-                    }
-                }
-                Some(bevy::mesh::Indices::U32(indices)) => {
-                    for tri in indices.chunks_exact(3) {
-                        push([tri[0] as usize, tri[1] as usize, tri[2] as usize]);
-                    }
-                }
-                None => {
-                    for first in (0..vertices.len()).step_by(3) {
-                        if first + 2 < vertices.len() {
-                            push([first, first + 1, first + 2]);
-                        }
-                    }
-                }
             }
         }
-        out
+        Ok(out)
+    }
+
+    /// The model-local triangles of one mesh asset, for the caller's
+    /// per-mesh BLAS cache (built once per asset, not per tick).
+    pub fn mesh_asset_triangles(&self, mesh: &Handle<Mesh>, label: &str) -> Result<Vec<[Vec3; 3]>> {
+        let meshes = self.app.world().resource::<Assets<Mesh>>();
+        let data = meshes.get(mesh).ok_or_else(|| anyhow::anyhow!(
+            "actor mesh {label} has no main-world mesh data for the lidar/radar scene"
+        ))?;
+        mesh_local_triangles(data, label)
+    }
+
+    /// Every visible actor mesh as the ray sensors must see it this tick:
+    /// exactly the geometry the RGB cameras draw. An actor with a catalog
+    /// model contributes each visible mesh node of that model (wheels and
+    /// other articulated nodes at their current world pose; skinned meshes
+    /// posed on the CPU the way the skinning shader poses them). An actor
+    /// without a model contributes the cuboid the cameras draw for it.
+    ///
+    /// Order is deterministic: actors by id, then model nodes in hierarchy
+    /// order. Reads propagated `GlobalTransform`s, so call it after the
+    /// tick's readiness/capture update (the same world the cameras drew).
+    pub fn actor_sensor_meshes(&mut self) -> Result<Vec<ActorSensorMesh>> {
+        let mut actor_ids: Vec<&String> = self.actors.keys().collect();
+        actor_ids.sort();
+        let world = self.app.world();
+        let meshes = world.resource::<Assets<Mesh>>();
+        let bindposes = world.resource::<Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>>();
+        let mut out = Vec::new();
+        for actor_id in actor_ids {
+            let (cuboid, instance_id) = self.actors[actor_id];
+            let mut entities = Vec::new();
+            match self.actor_models.get(actor_id) {
+                Some(&(root, _, _)) => {
+                    let mut stack = vec![root];
+                    while let Some(entity) = stack.pop() {
+                        if let Some(children) = world.get::<Children>(entity) {
+                            // Reverse so the depth-first walk visits children
+                            // in their declared order.
+                            stack.extend(children.iter().rev());
+                        }
+                        if world.get::<IdClone>(entity).is_none() && world.get::<Mesh3d>(entity).is_some() {
+                            entities.push(entity);
+                        }
+                    }
+                    if entities.is_empty() {
+                        bail!("actor {actor_id} has a catalog model with no mesh nodes for the lidar/radar scene");
+                    }
+                }
+                None => entities.push(cuboid),
+            }
+            let mut contributed = 0usize;
+            for entity in entities {
+                let visible = world
+                    .get::<InheritedVisibility>(entity)
+                    .ok_or_else(|| anyhow::anyhow!("actor {actor_id} mesh {entity:?} has no visibility state"))?
+                    .get();
+                if !visible {
+                    continue;
+                }
+                let label = world
+                    .get::<Name>(entity)
+                    .map(|name| format!("{actor_id}/{}", name.as_str()))
+                    .unwrap_or_else(|| format!("{actor_id}/{entity:?}"));
+                let handle = world.get::<Mesh3d>(entity).expect("filtered on Mesh3d").0.clone();
+                let world_matrix = world
+                    .get::<GlobalTransform>(entity)
+                    .ok_or_else(|| anyhow::anyhow!("actor mesh {label} has no world transform"))?
+                    .to_matrix();
+                let geometry = match world.get::<SkinnedMesh>(entity) {
+                    None => ActorSensorGeometry::Rigid { mesh: handle, world: world_matrix },
+                    Some(skin) => {
+                        let mesh = meshes.get(&handle).ok_or_else(|| anyhow::anyhow!(
+                            "skinned actor mesh {label} has no main-world mesh data for the lidar/radar scene"
+                        ))?;
+                        let inverse = bindposes.get(&skin.inverse_bindposes).ok_or_else(|| anyhow::anyhow!(
+                            "skinned actor mesh {label} has no inverse bindposes loaded"
+                        ))?;
+                        if inverse.len() < skin.joints.len() {
+                            bail!("skinned actor mesh {label} has {} joints but {} inverse bindposes", skin.joints.len(), inverse.len());
+                        }
+                        let mut joints = Vec::with_capacity(skin.joints.len());
+                        for (joint, inverse_bindpose) in skin.joints.iter().zip(inverse.iter()) {
+                            let global = world.get::<GlobalTransform>(*joint).ok_or_else(|| anyhow::anyhow!(
+                                "skinned actor mesh {label} joint {joint:?} has no world transform"
+                            ))?;
+                            // Same product the skin extraction uploads.
+                            joints.push(Mat4::from(global.affine()) * *inverse_bindpose);
+                        }
+                        ActorSensorGeometry::Skinned {
+                            mesh: handle.id(),
+                            triangles: skinned_world_triangles(mesh, &joints, &label)?,
+                        }
+                    }
+                };
+                out.push(ActorSensorMesh { actor_id: actor_id.clone(), label, instance_id, geometry });
+                contributed += 1;
+            }
+            if contributed == 0 {
+                bail!("actor {actor_id} has no visible geometry for the lidar/radar scene");
+            }
+        }
+        Ok(out)
     }
 
     /// Drop every registered camera group (respawn-on-view-change primitive:
@@ -3859,9 +4348,13 @@ impl SceneApp {
             return Ok(self.app.world().resource::<Legend>().0.clone());
         }
         let deadline = Instant::now() + Duration::from_secs(300);
+        let started = Instant::now();
+        let mut scene_spawned_s: Option<f64> = None;
+        let mut updates = 0u32;
         let mut gpu_idle_frames = 0u32;
         loop {
             self.app.update();
+            updates += 1;
             let world = self.app.world_mut();
             let pending_loads = {
                 let mut q = world.query_filtered::<&TileLoad, Without<SceneSpawned>>();
@@ -3903,6 +4396,7 @@ impl SceneApp {
                     // stay that way for a few frames (each frame can queue
                     // new permutations).
                     if all_ready {
+                        scene_spawned_s.get_or_insert(started.elapsed().as_secs_f64());
                         if world.resource::<GpuPending>().is_idle() {
                             gpu_idle_frames += 1;
                         } else {
@@ -3923,8 +4417,18 @@ impl SceneApp {
                 );
             }
         }
+        let gpu_ready_s = started.elapsed().as_secs_f64();
         self.finalize_scene()?;
+        let finalized_s = started.elapsed().as_secs_f64();
         self.ground = GroundField::build(&mut self.app, 2.0);
+        let spawned = scene_spawned_s.unwrap_or(gpu_ready_s);
+        self.ready_phases = vec![
+            ("assetsLoadedAndSpawned", spawned),
+            ("gpuPipelinesAndMaterials", gpu_ready_s - spawned),
+            ("instanceIdPass", finalized_s - gpu_ready_s),
+            ("groundField", started.elapsed().as_secs_f64() - finalized_s),
+            ("readinessFrames", f64::from(updates)),
+        ];
         // Now that tiles are loaded, put the planet surface on the scene's
         // own ground plane. The boundary-layer fog term has a 300 m scale
         // height, so a tens-of-metres offset would be visible.
@@ -4244,7 +4748,165 @@ impl SceneApp {
         self.capture_request(sim_tick, CaptureRequest { keys: keys.to_vec(), device, ..Default::default() })
     }
 
-    fn capture_request(&mut self, sim_tick: u64, request: CaptureRequest) -> Result<CapturedFrame> {
+    /// Submit a host capture and return without waiting for the GPU, so the
+    /// caller can queue the next frame's CPU work while this one renders.
+    /// Same contract as [`Self::capture`]: when the submission is not a
+    /// complete, settled frame (pipelines compiling, a view not extracted)
+    /// it is withdrawn and the blocking path produces the frame, returned
+    /// as [`CaptureTicket::Ready`]. At most [`READBACK_SLOTS`] tickets may
+    /// be pending: a caller begins capture N+1 and then finishes capture N.
+    pub fn capture_begin(&mut self, sim_tick: u64, keys: &[String]) -> Result<CaptureTicket> {
+        let registered = self.expected_keys();
+        if let Some(unknown) = keys.iter().find(|k| !registered.contains(k)) {
+            bail!("capture: pass {unknown:?} is not registered");
+        }
+        if self.deferred_maps.0.lock().expect("deferred maps").len() >= READBACK_SLOTS {
+            bail!("capture_begin: every readback slot holds a pending capture; finish one first");
+        }
+        // Instance-ID views render only when requested (as in `capture`).
+        let id_activity: Vec<(Entity, bool)> = self
+            .groups
+            .iter()
+            .filter_map(|g| Some((g.id_entity?, keys.iter().any(|k| *k == format!("{}:id", g.spec.sensor_id)))))
+            .collect();
+        {
+            let world = self.app.world_mut();
+            for (entity, active) in id_activity {
+                if let Some(mut camera) = world.get_mut::<Camera>(entity) {
+                    if camera.is_active != active {
+                        camera.is_active = active;
+                    }
+                }
+            }
+        }
+        self.drain_outputs();
+        let slot = self.free_slot();
+        let mut stats = CaptureStats::default();
+        let submitted = Instant::now();
+        if let CaptureClock::Pinned { samples } = self.capture_clock {
+            let taa = self.reset_taa_history();
+            let lead = if taa { samples.max(1) - 1 } else { 0 };
+            for sample in 0..lead {
+                self.pinned_sample.set(Some(sample));
+                self.submit(CaptureRequest::default());
+                stats.accumulation_frames += 1;
+            }
+            self.pinned_sample.set(Some(lead));
+        }
+        let generation = self.submit(CaptureRequest { keys: keys.to_vec(), slot, deferred: true, ..Default::default() });
+        if self.capture_clock != CaptureClock::Free {
+            self.pinned_sample.set(Some(0));
+        }
+        stats.attempts = 1;
+        stats.submit_ms = submitted.elapsed().as_secs_f64() * 1000.0;
+        let settled = self.app.world().resource::<GpuPending>().is_idle();
+        let started = {
+            let maps = self.deferred_maps.0.lock().expect("deferred maps");
+            maps.iter().find(|m| m.generation == generation).map_or(0, |m| m.expected)
+        };
+        let pending = PendingCapture {
+            identity: FrameIdentity {
+                sim_tick,
+                scene_revision: self.scene_revision,
+                rig_revision: self.rig_revision,
+                generation,
+            },
+            slot,
+            keys: keys.to_vec(),
+            stats,
+        };
+        if settled && started == keys.len() {
+            return Ok(CaptureTicket::Pending(pending));
+        }
+        // Not a complete frame of the resident scene: drop it and let the
+        // blocking path settle and resubmit (its retries restart from
+        // sample 0 under a pinned clock).
+        let _ = self.collect_deferred(&pending);
+        let frame = self.capture(sim_tick, keys)?;
+        self.last_capture.submit_ms += stats.submit_ms;
+        self.last_capture.accumulation_frames += stats.accumulation_frames;
+        Ok(CaptureTicket::Ready(frame))
+    }
+
+    /// Wait for a [`CaptureTicket`]'s readback and return its frame.
+    pub fn capture_finish(&mut self, ticket: CaptureTicket) -> Result<CapturedFrame> {
+        match ticket {
+            CaptureTicket::Ready(frame) => Ok(frame),
+            CaptureTicket::Pending(pending) => {
+                let (passes, wait_ms, copy_ms, bytes) = self.collect_deferred(&pending)?;
+                if let Some(missing) = pending.keys.iter().find(|k| !passes.contains_key(*k)) {
+                    bail!("capture incomplete: generation {} missing {missing:?}", pending.identity.generation);
+                }
+                self.last_capture = CaptureStats {
+                    readback_wait_ms: wait_ms,
+                    readback_copy_ms: copy_ms,
+                    readback_bytes: bytes,
+                    ..pending.stats
+                };
+                Ok(CapturedFrame { identity: pending.identity, passes, device: HashMap::new() })
+            }
+        }
+    }
+
+    /// Poll (without blocking the queue on later work) until the deferred
+    /// maps of `pending` complete, then copy them out and unmap.
+    fn collect_deferred(&mut self, pending: &PendingCapture) -> Result<(HashMap<String, CapturedPass>, f64, f64, u64)> {
+        let generation = pending.identity.generation;
+        let map = {
+            let mut maps = self.deferred_maps.0.lock().expect("deferred maps");
+            let index = maps.iter().position(|m| m.generation == generation);
+            index.map(|index| maps.remove(index))
+        };
+        let Some(map) = map else { return Ok((HashMap::new(), 0.0, 0.0, 0)) };
+        let waited = Instant::now();
+        let deadline = waited + Duration::from_secs(120);
+        let device = self.app.world().resource::<RenderDevice>().clone();
+        while map.done.load(std::sync::atomic::Ordering::Acquire) < map.expected {
+            // `Poll` only reaps finished work; it never waits for frames
+            // queued after this capture.
+            device.poll(PollType::Poll).map_err(|error| anyhow::anyhow!("poll device: {error}"))?;
+            if map.done.load(std::sync::atomic::Ordering::Acquire) >= map.expected {
+                break;
+            }
+            if Instant::now() > deadline {
+                bail!("capture readback of generation {generation} did not complete within 120 s");
+            }
+            std::thread::sleep(Duration::from_micros(250));
+        }
+        let wait_ms = waited.elapsed().as_secs_f64() * 1000.0;
+        let failed = map.failed.load(std::sync::atomic::Ordering::Acquire);
+        let copied = Instant::now();
+        let mut passes = HashMap::with_capacity(map.expected);
+        let mut bytes = 0u64;
+        let render_world = self.app.get_sub_app_mut(RenderApp).expect("render app").world_mut();
+        let mut staging = render_world.resource_mut::<Staging>();
+        for b in staging.0.iter_mut().filter(|b| b.copied && b.slot == map.slot) {
+            if !failed {
+                let data = b.buffer.slice(..).get_mapped_range().to_vec();
+                bytes += data.len() as u64;
+                passes.insert(
+                    b.key.clone(),
+                    CapturedPass { width: b.width, height: b.height, padded_row: b.padded_row, bytes: data },
+                );
+                b.buffer.unmap();
+            }
+            b.copied = false;
+        }
+        if failed {
+            bail!("capture readback of generation {generation} failed to map");
+        }
+        Ok((passes, wait_ms, copied.elapsed().as_secs_f64() * 1000.0, bytes))
+    }
+
+    /// A staging slot no deferred capture is holding.
+    fn free_slot(&self) -> usize {
+        let busy: Vec<usize> = self.deferred_maps.0.lock().expect("deferred maps").iter().map(|m| m.slot).collect();
+        (0..READBACK_SLOTS).find(|slot| !busy.contains(slot)).unwrap_or(0)
+    }
+
+    fn capture_request(&mut self, sim_tick: u64, mut request: CaptureRequest) -> Result<CapturedFrame> {
+        request.slot = self.free_slot();
+        request.deferred = false;
         let registered = self.expected_keys();
         if let Some(unknown) = request.keys.iter().find(|k| !registered.contains(k)) {
             bail!("capture: pass {unknown:?} is not registered");
@@ -4281,7 +4943,23 @@ impl SceneApp {
         for _ in 0..3 {
             *self.readback_clock.0.lock().expect("readback clock") = ReadbackTiming::default();
             let submitted = Instant::now();
+            // Pinned clock: TAA views restart their history and accumulate
+            // `samples` jittered frames of this pose; the last one is the
+            // capture. Each attempt starts again from sample 0.
+            if let CaptureClock::Pinned { samples } = self.capture_clock {
+                let taa = self.reset_taa_history();
+                let lead = if taa { samples.max(1) - 1 } else { 0 };
+                for sample in 0..lead {
+                    self.pinned_sample.set(Some(sample));
+                    self.submit(CaptureRequest::default());
+                    stats.accumulation_frames += 1;
+                }
+                self.pinned_sample.set(Some(lead));
+            }
             let generation = self.submit(request.clone());
+            if self.capture_clock != CaptureClock::Free {
+                self.pinned_sample.set(Some(0));
+            }
             stats.attempts += 1;
             stats.submit_ms += submitted.elapsed().as_secs_f64() * 1000.0;
             {
@@ -4407,9 +5085,68 @@ impl SceneApp {
         Ok(updates)
     }
 
+    /// Phases of the scene's readiness wait, seconds (diagnostics).
+    pub fn ready_phases(&self) -> &[(&'static str, f64)] {
+        &self.ready_phases
+    }
+
     /// Timing of the last [`Self::capture`] (diagnostics).
     pub fn last_capture_stats(&self) -> CaptureStats {
         self.last_capture
+    }
+
+    /// Select how captures depend on previously rendered frames (see
+    /// [`CaptureClock`]).
+    pub fn set_capture_clock(&mut self, clock: CaptureClock) {
+        self.capture_clock = clock;
+        match clock {
+            CaptureClock::Free => {
+                self.pinned_sample.set(None);
+                if let Some(mut sky) = self.app.world_mut().get_resource_mut::<crate::sky_pass::SkyClock>() {
+                    sky.pinned = None;
+                }
+            }
+            CaptureClock::Pinned { .. } => {
+                self.pinned_sample.set(Some(0));
+                let seconds = self
+                    .app
+                    .world()
+                    .get_resource::<crate::sky_pass::SkyClock>()
+                    .map_or(0.0, |sky| sky.seconds);
+                self.set_sim_time(seconds);
+            }
+        }
+    }
+
+    pub fn capture_clock(&self) -> CaptureClock {
+        self.capture_clock
+    }
+
+    /// Pin the sky (cloud drift) to simulation time `seconds` for every
+    /// frame until the next call. Only meaningful under
+    /// [`CaptureClock::Pinned`]; the free clock keeps advancing per frame.
+    pub fn set_sim_time(&mut self, seconds: f64) {
+        if self.capture_clock == CaptureClock::Free {
+            return;
+        }
+        if let Some(mut sky) = self.app.world_mut().get_resource_mut::<crate::sky_pass::SkyClock>() {
+            sky.pinned = Some(seconds);
+            sky.seconds = seconds;
+        }
+    }
+
+    /// Restart every TAA view's history (pinned captures).
+    fn reset_taa_history(&mut self) -> bool {
+        let entities: Vec<Entity> = self.groups.iter().map(|g| g.rgb_entity).collect();
+        let world = self.app.world_mut();
+        let mut any = false;
+        for entity in entities {
+            if let Some(mut taa) = world.get_mut::<TemporalAntiAliasing>(entity) {
+                taa.reset = true;
+                any = true;
+            }
+        }
+        any
     }
 
     /// Return device slots filled by a submission that will not be
@@ -4646,12 +5383,13 @@ fn sync_staging(
             .iter()
             .any(|t| t.src_image == b.src_image && t.depth == b.depth && t.key == b.key)
     });
+    let slot = capture.0.slot;
     for target in targets.0.iter() {
         if !capture.0.keys.iter().any(|k| *k == target.key)
             || staging
                 .0
                 .iter()
-                .any(|b| b.src_image == target.src_image && b.depth == target.depth)
+                .any(|b| b.src_image == target.src_image && b.depth == target.depth && b.slot == slot)
         {
             continue;
         }
@@ -4673,6 +5411,7 @@ fn sync_staging(
             height,
             padded_row,
             buffer: make_buffer(&device, padded_row * height as usize),
+            slot,
             copied: false,
         });
     }
@@ -4706,7 +5445,7 @@ fn copy_passes(
     if capture.0.keys.is_empty() {
         return;
     }
-    for b in staging.0.iter_mut() {
+    for b in staging.0.iter_mut().filter(|b| b.slot == capture.0.slot) {
         b.copied = false;
         if !capture.0.keys.iter().any(|k| *k == b.key) {
             continue;
@@ -4752,15 +5491,45 @@ fn receive_passes(
     sender: Res<RenderSender>,
     capture: Res<ExtractedCapture>,
     clock: Res<ReadbackClock>,
+    deferred: Res<DeferredMaps>,
     mut staging: ResMut<Staging>,
 ) {
-    let pending = staging.0.iter().filter(|b| b.copied).count();
+    // Frames without a capture request copy nothing; a deferred slot keeps
+    // its `copied` flags until the host collects it.
+    if capture.0.keys.is_empty() {
+        return;
+    }
+    let slot = capture.0.slot;
+    let pending = staging.0.iter().filter(|b| b.copied && b.slot == slot).count();
     if pending == 0 {
+        return;
+    }
+    if capture.0.deferred {
+        // Start the maps and return: the host collects them after it has
+        // queued more work (`SceneApp::capture_finish`).
+        let done = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let failed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        for b in staging.0.iter().filter(|b| b.copied && b.slot == slot) {
+            let (done, failed) = (done.clone(), failed.clone());
+            b.buffer.slice(..).map_async(MapMode::Read, move |res| {
+                if res.is_err() {
+                    failed.store(true, std::sync::atomic::Ordering::Release);
+                }
+                done.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+            });
+        }
+        deferred.0.lock().expect("deferred maps").push(DeferredMap {
+            generation: capture.0.generation,
+            slot,
+            expected: pending,
+            done,
+            failed,
+        });
         return;
     }
     let waited = Instant::now();
     let (s, r) = crossbeam_channel::bounded::<()>(pending);
-    for b in staging.0.iter().filter(|b| b.copied) {
+    for b in staging.0.iter().filter(|b| b.copied && b.slot == slot) {
         let tx = s.clone();
         b.buffer.slice(..).map_async(MapMode::Read, move |res| {
             res.expect("map readback buffer");
@@ -4776,7 +5545,7 @@ fn receive_passes(
     let wait_ms = waited.elapsed().as_secs_f64() * 1000.0;
     let copied = Instant::now();
     let mut bytes = 0u64;
-    for b in staging.0.iter_mut().filter(|b| b.copied) {
+    for b in staging.0.iter_mut().filter(|b| b.copied && b.slot == slot) {
         let data = b.buffer.slice(..).get_mapped_range().to_vec();
         bytes += data.len() as u64;
         b.buffer.unmap();
@@ -5223,6 +5992,60 @@ mod tests {
         assert!(app.remove_camera("cam"));
         assert!(app.capture(7, &["cam:rgb".into()]).is_err());
         assert!(app.render_once(8).unwrap().passes.is_empty());
+        std::mem::forget(app);
+    }
+
+    /// The pinned capture clock's contract: a capture is a function of the
+    /// scene and its simulation time only. Frames drawn before it (readiness,
+    /// warmup, retries, relights) must not change a single byte, for SMAA
+    /// and for explicit N-sample TAA; the free (rc.73) clock is expected to
+    /// drift with them, which is the determinism bug the pinned clock fixes.
+    fn pinned_scene(aa: crate::profiles::AntiAlias) -> SceneApp {
+        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let lighting = Lighting { atmosphere: true, cloud_cover: Some(0.6), ..Lighting::default() };
+        let mut config = RenderProfileConfig::default();
+        config.cinematic.aa = aa;
+        let mut app = SceneApp::new_with_profile_config(&lighting, config).unwrap();
+        app.apply_lighting(&lighting, config).unwrap();
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+        let mut spec = test_camera("cam", 160, 96);
+        spec.passes = PassSet { rgb: true, id: false, depth: false };
+        app.add_camera(spec, Profile::Cinematic);
+        app.wait_until_ready().unwrap();
+        app.set_pose("cam", &[6.0, 1.8, 6.0], &[0.0, 0.8, 0.0]).unwrap();
+        app
+    }
+
+    fn capture_after(app: &mut SceneApp, extra_frames: u32, sim_time: f64) -> Vec<u8> {
+        app.warmup(extra_frames);
+        app.set_sim_time(sim_time);
+        app.capture(1, &["cam:rgb".into()]).unwrap().passes["cam:rgb"].bytes.clone()
+    }
+
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn pinned_capture_does_not_depend_on_frames_drawn_before_it() {
+        use crate::profiles::AntiAlias;
+        for (aa, samples) in [(AntiAlias::SmaaHigh, 1), (AntiAlias::Taa, 4)] {
+            let mut app = pinned_scene(aa);
+            app.set_capture_clock(CaptureClock::Pinned { samples });
+            let first = capture_after(&mut app, 0, 12.5);
+            let after_three = capture_after(&mut app, 3, 12.5);
+            let after_eleven = capture_after(&mut app, 11, 12.5);
+            assert!(first == after_three && first == after_eleven, "{aa:?}: pinned capture changed with the frames drawn before it");
+            let stats = app.last_capture_stats();
+            assert_eq!(stats.accumulation_frames, samples - 1, "{aa:?}");
+            // The sky is simulation time: a later time is a different sky.
+            let later = capture_after(&mut app, 0, 40.0);
+            assert!(later != first, "{aa:?}: the sky did not follow simulation time");
+            std::mem::forget(app);
+        }
+        // The rc.73 clock drifts with every drawn frame (TAA history, jitter, clouds).
+        let mut app = pinned_scene(AntiAlias::Taa);
+        let first = capture_after(&mut app, 0, 12.5);
+        let after_three = capture_after(&mut app, 3, 12.5);
+        assert!(first != after_three, "free clock unexpectedly stable");
         std::mem::forget(app);
     }
 
