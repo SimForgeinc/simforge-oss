@@ -94,6 +94,24 @@ export const CONTROL_FEATURES_V1 = [
 export const WORKER_PREWARM_FEATURES_LABEL = 'prewarmFeatures' as const;
 export const CONTROL_FEATURE_PREWARM_DERIVATIVES = 'prewarm.derivatives' as const;
 export const WORKER_PREWARM_FEATURES = [CONTROL_FEATURE_PREWARM_DERIVATIVES] as const;
+/**
+ * The worker output keys each CONTROL_FEATURES_V1 feature unlocks, as
+ * `document:key.path` with documents from `WORKER_OUTPUT_DOCUMENTS`
+ * (contract/worker-output-contract.ts). The frozen contract snapshot and the
+ * N/N-1 contract job read this map: a key not listed here and not in the frozen
+ * baseline fails CI. A gated key covers its whole subtree.
+ */
+export const CONTROL_FEATURE_OUTPUTS: Readonly<Record<(typeof CONTROL_FEATURES_V1)[number], readonly string[]>> = {
+  [CONTROL_FEATURE_NATIVE_SCENE_SOURCE]: [
+    'native.manifest:sceneSource', 'native.manifest:timelineSha256',
+    'native.diagnostics:sceneSource', 'native.diagnostics:timelineSha256',
+  ],
+  [CONTROL_FEATURE_NATIVE_PARITY]: ['native.diagnostics:parity'],
+  [CONTROL_FEATURE_NATIVE_STAGE_TIMINGS]: ['native.diagnostics:timings.stages'],
+  [CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK]: ['native.manifest:capture'],
+  [CONTROL_FEATURE_RENDER_SUBSTITUTIONS]: ['render.artifact-manifest:substitutions'],
+  [CONTROL_FEATURE_NATIVE_ENCODER]: ['native.manifest:encoder'],
+};
 
 export const JobInputTransferSchema = z.strictObject({
   inputId: z.string().min(1).max(256),

@@ -1,0 +1,388 @@
+{
+  "schema": "simforge.worker-output-contract/v1",
+  "comment": [
+    "Frozen worker -> control plane output contract. GENERATED: pnpm --filter @simforge-oss/render contract:write.",
+    "A document baseline never grows: a new key must be gated by a CONTROL_FEATURE_* (worker-control.ts),",
+    "listed in CONTROL_FEATURE_OUTPUTS and CONTROL_FEATURES_V1, and written only when the lease offers it."
+  ],
+  "features": {
+    "native-evidence.capture-clock": {
+      "constant": "CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK",
+      "keys": [
+        "native.manifest:capture"
+      ]
+    },
+    "native-evidence.encoder": {
+      "constant": "CONTROL_FEATURE_NATIVE_ENCODER",
+      "keys": [
+        "native.manifest:encoder"
+      ]
+    },
+    "native-evidence.parity": {
+      "constant": "CONTROL_FEATURE_NATIVE_PARITY",
+      "keys": [
+        "native.diagnostics:parity"
+      ]
+    },
+    "native-evidence.scene-source": {
+      "constant": "CONTROL_FEATURE_NATIVE_SCENE_SOURCE",
+      "keys": [
+        "native.diagnostics:sceneSource",
+        "native.diagnostics:timelineSha256",
+        "native.manifest:sceneSource",
+        "native.manifest:timelineSha256"
+      ]
+    },
+    "native-evidence.stage-timings": {
+      "constant": "CONTROL_FEATURE_NATIVE_STAGE_TIMINGS",
+      "keys": [
+        "native.diagnostics:timings.stages"
+      ]
+    },
+    "render-evidence.substitutions": {
+      "constant": "CONTROL_FEATURE_RENDER_SUBSTITUTIONS",
+      "keys": [
+        "render.artifact-manifest:substitutions"
+      ]
+    }
+  },
+  "documents": {
+    "worker.register": {
+      "route": "workers/register",
+      "optionalRoute": false,
+      "baseline": [
+        "engine",
+        "engine.backend",
+        "engine.capabilities",
+        "engine.engineId",
+        "engine.engineVersion",
+        "engine.limits",
+        "engine.limits.maxFramesPerSecond",
+        "engine.limits.maxHeight",
+        "engine.limits.maxSimultaneousSensors",
+        "engine.limits.maxWidth",
+        "engine.modalities",
+        "engine.protocolVersion",
+        "engine.requiresGpu",
+        "engine.schema",
+        "instanceId",
+        "labels",
+        "schema",
+        "type",
+        "workerId"
+      ]
+    },
+    "job.claim": {
+      "route": "render-jobs/lease",
+      "optionalRoute": false,
+      "baseline": [
+        "registrationId",
+        "schema",
+        "type"
+      ]
+    },
+    "lease.heartbeat": {
+      "route": "render-jobs/*/heartbeat",
+      "optionalRoute": false,
+      "baseline": [
+        "fenceToken",
+        "leaseId",
+        "progressSequence",
+        "schema",
+        "type"
+      ]
+    },
+    "lease.progress": {
+      "route": "render-jobs/*/events",
+      "optionalRoute": false,
+      "baseline": [
+        "fenceToken",
+        "leaseId",
+        "records",
+        "records[].attempt",
+        "records[].code",
+        "records[].completed",
+        "records[].downloadedBytes",
+        "records[].event",
+        "records[].identity",
+        "records[].identity.actorId",
+        "records[].identity.modality",
+        "records[].identity.role",
+        "records[].identity.sensorId",
+        "records[].jobId",
+        "records[].mediaType",
+        "records[].message",
+        "records[].reason",
+        "records[].schema",
+        "records[].sequence",
+        "records[].sha256",
+        "records[].sizeBytes",
+        "records[].stage",
+        "records[].timestamp",
+        "records[].total",
+        "records[].totalBytes",
+        "records[].unit",
+        "schema",
+        "type"
+      ]
+    },
+    "artifact.reserve": {
+      "route": "render-jobs/*/artifacts",
+      "optionalRoute": false,
+      "baseline": [
+        "fenceToken",
+        "identity",
+        "identity.actorId",
+        "identity.modality",
+        "identity.role",
+        "identity.sensorId",
+        "leaseId",
+        "mediaType",
+        "schema",
+        "sha256",
+        "sizeBytes",
+        "type"
+      ]
+    },
+    "job.complete": {
+      "route": "render-jobs/*/complete",
+      "optionalRoute": false,
+      "baseline": [
+        "fenceToken",
+        "intentSha256",
+        "leaseId",
+        "manifest",
+        "manifest.artifacts",
+        "manifest.artifacts[].artifactId",
+        "manifest.artifacts[].identity",
+        "manifest.artifacts[].identity.actorId",
+        "manifest.artifacts[].identity.modality",
+        "manifest.artifacts[].identity.role",
+        "manifest.artifacts[].identity.sensorId",
+        "manifest.artifacts[].mediaType",
+        "manifest.artifacts[].sha256",
+        "manifest.artifacts[].sizeBytes",
+        "schema",
+        "type"
+      ]
+    },
+    "job.fail": {
+      "route": "render-jobs/*/fail",
+      "optionalRoute": false,
+      "baseline": [
+        "failure",
+        "failure.code",
+        "failure.details",
+        "failure.message",
+        "failure.retryable",
+        "fenceToken",
+        "intentSha256",
+        "leaseId",
+        "schema",
+        "type"
+      ]
+    },
+    "worker.drain": {
+      "route": "workers/*/state",
+      "optionalRoute": false,
+      "baseline": [
+        "registrationId",
+        "schema",
+        "type"
+      ]
+    },
+    "lease.input-urls": {
+      "route": "render-jobs/*/input-urls",
+      "optionalRoute": true,
+      "baseline": [
+        "fenceToken",
+        "inputIds",
+        "leaseId",
+        "schema",
+        "type"
+      ]
+    },
+    "worker.prewarm-manifest": {
+      "route": "workers/prewarm",
+      "optionalRoute": true,
+      "baseline": [
+        "schema",
+        "type"
+      ]
+    },
+    "worker.prewarm-members": {
+      "route": "workers/prewarm/members",
+      "optionalRoute": true,
+      "baseline": [
+        "after",
+        "schema",
+        "setId",
+        "type"
+      ]
+    },
+    "worker.blob-urls": {
+      "route": "workers/blob-urls",
+      "optionalRoute": true,
+      "baseline": [
+        "schema",
+        "setId",
+        "sha256s",
+        "type"
+      ]
+    },
+    "worker.cache-status": {
+      "route": "workers/*/cache",
+      "optionalRoute": true,
+      "baseline": [
+        "cache",
+        "cache.blobs",
+        "cache.blobs.cached",
+        "cache.blobs.wanted",
+        "cache.bytes",
+        "cache.bytes.budget",
+        "cache.bytes.cached",
+        "cache.bytes.diskFree",
+        "cache.bytes.wanted",
+        "cache.demand",
+        "cache.demand[].mapVersionId",
+        "cache.demand[].renderTextures",
+        "cache.demand[].sceneBytes",
+        "cache.demand[].textureBytes",
+        "cache.gpu",
+        "cache.gpu.freeBytes",
+        "cache.gpu.totalBytes",
+        "cache.lastError",
+        "cache.maps",
+        "cache.maps.ready",
+        "cache.maps.total",
+        "cache.state",
+        "cache.updatedAt",
+        "registrationId",
+        "schema",
+        "type"
+      ]
+    },
+    "native.manifest": {
+      "route": "artifact:manifest",
+      "optionalRoute": false,
+      "baseline": [
+        "actorAssetsSha256",
+        "executionPackageControlSha256",
+        "frameCount",
+        "intentSha256",
+        "look",
+        "look.autoMeter",
+        "look.lighting",
+        "look.profile",
+        "look.profileConfig",
+        "look.provenance",
+        "loweringSha256",
+        "schema",
+        "sourceXoscSha256",
+        "textureProfile",
+        "textureProfile.budgetBytes",
+        "textureProfile.cacheKey",
+        "textureProfile.capacityBytes",
+        "textureProfile.capacitySource",
+        "textureProfile.estimatedBytes",
+        "textureProfile.geometryBytes",
+        "textureProfile.memberCount",
+        "textureProfile.renderTextures",
+        "textureProfile.textureBytes",
+        "videos",
+        "videos[].actorId",
+        "videos[].frameCount",
+        "videos[].framesPerSecond",
+        "videos[].height",
+        "videos[].relativePath",
+        "videos[].sensor",
+        "videos[].sensor.label",
+        "videos[].sensor.modality",
+        "videos[].sensor.mount",
+        "videos[].sensor.mount.position",
+        "videos[].sensor.mount.position.x",
+        "videos[].sensor.mount.position.y",
+        "videos[].sensor.mount.position.z",
+        "videos[].sensor.mount.rotation",
+        "videos[].sensor.mount.rotation.pitchRad",
+        "videos[].sensor.mount.rotation.rollRad",
+        "videos[].sensor.mount.rotation.yawRad",
+        "videos[].sensor.role",
+        "videos[].sensorId",
+        "videos[].sha256",
+        "videos[].sizeBytes",
+        "videos[].width"
+      ]
+    },
+    "native.diagnostics": {
+      "route": "artifact:diagnostics",
+      "optionalRoute": false,
+      "baseline": [
+        "actorAssetsSha256",
+        "executionPackageControlSha256",
+        "fixedTimestepSeconds",
+        "frameCount",
+        "frames",
+        "frames[].generation",
+        "frames[].rigRevision",
+        "frames[].sceneRevision",
+        "frames[].simTick",
+        "intentSha256",
+        "loweringSha256",
+        "schema",
+        "service",
+        "service.binary",
+        "service.protocol",
+        "sourceXoscSha256",
+        "textureProfile",
+        "textureProfile.budgetBytes",
+        "textureProfile.cacheKey",
+        "textureProfile.capacityBytes",
+        "textureProfile.capacitySource",
+        "textureProfile.estimatedBytes",
+        "textureProfile.geometryBytes",
+        "textureProfile.memberCount",
+        "textureProfile.renderTextures",
+        "textureProfile.textureBytes",
+        "timings",
+        "timings.serverMs",
+        "timings.wallMs",
+        "traceSha256",
+        "videoCount",
+        "videos",
+        "videos[].actorId",
+        "videos[].frameCount",
+        "videos[].sensorId",
+        "videos[].sha256"
+      ]
+    },
+    "render.artifact-manifest": {
+      "route": "artifact:manifest",
+      "optionalRoute": false,
+      "baseline": [
+        "artifacts",
+        "artifacts[].frameCount",
+        "artifacts[].identity",
+        "artifacts[].identity.actorId",
+        "artifacts[].identity.modality",
+        "artifacts[].identity.role",
+        "artifacts[].identity.sensorId",
+        "artifacts[].mediaType",
+        "artifacts[].relativePath",
+        "artifacts[].sha256",
+        "artifacts[].sizeBytes",
+        "completedAt",
+        "engine",
+        "engine.backend",
+        "engine.engineId",
+        "engine.engineVersion",
+        "intentSha256",
+        "schema",
+        "startedAt",
+        "warnings",
+        "warnings[].code",
+        "warnings[].message"
+      ]
+    }
+  }
+}
