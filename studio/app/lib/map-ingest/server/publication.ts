@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Readable } from "node:stream";
 import { xodrGeometrySha256 } from "@simforge-oss/maps/node";
+import { groundDescriptor, type GroundDescriptor } from "./ground-descriptor";
 import { withTransaction } from "@/app/lib/db/data-api";
 import { streamLocalObject } from "@/app/lib/s3/s3-object";
 import { mapFootprintGeometry, type MapFootprintGeometry } from "@/app/lib/maps/footprint-geometry";
@@ -202,6 +203,17 @@ export async function publishUploadedMapVersion(
   // (docs/engineering/xodr-elevation-refit.md, document-pinning.md). A read
   // failure fails the publication.
   const geometrySha256 = xodr ? xodrGeometrySha256(await readAll(streamLocalObject(xodr.bucket, xodr.key))) : null;
+  // Ground derivative (engine 0.11 contact): the ingest validation recorded
+  // next to the mesh member it describes (`descriptor.ground`, read by
+  // listScenarioMapDescriptors). A manifest that names a different mesh
+  // fails the publication.
+  const groundManifestMember = plan.members.find((member) => member.relativePath === "derived/ground/ground-manifest.json");
+  const groundMeshMember = plan.members.find((member) => member.relativePath === "derived/ground/ground-mesh.bin");
+  let ground: GroundDescriptor | null = null;
+  if (groundManifestMember || groundMeshMember) {
+    if (!groundManifestMember || !groundMeshMember) throw new Error("ground_derivative_incomplete: derived/ground needs both ground-manifest.json and ground-mesh.bin");
+    ground = groundDescriptor(await readAll(streamLocalObject(groundManifestMember.bucket, groundManifestMember.key)), groundMeshMember.sha256);
+  }
   if (xodr) {
     try {
       footprint = mapFootprintGeometry(
@@ -369,6 +381,7 @@ export async function publishUploadedMapVersion(
         }
         : { state: "missing", reason: "This map revision was published without a SUMO road network." },
       ...(geometrySha256 ? { xodrGeometrySha256: geometrySha256 } : {}),
+      ...(ground ? { ground } : {}),
       artifactDigests: {
         xodrSha256: digest("map.xodr"),
         topologySha256: digest("topology-index.json.gz"),
