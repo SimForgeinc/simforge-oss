@@ -21,7 +21,10 @@ type RequestRow = {
   workspace_id: string;
   document_id: string | null;
   map_version_id: string;
-  preset: HifiPreviewPreset;
+  /** NULL only on a row an rc.75.1 writer inserted after migration 20260923140000. */
+  preset: HifiPreviewPreset | null;
+  /** Legacy column (dropped by the contract half of 20260923140000). */
+  profile: string | null;
   tick: number;
   request_json: CreateHifiPreviewInput | string;
   status: HifiPreviewStatus;
@@ -36,6 +39,44 @@ type RequestRow = {
   completed_at: string | null;
 };
 
+/**
+ * The render profile each preset replaced, written to the legacy `profile`
+ * column so the previous release (which reads only `profile`) keeps working
+ * during the rollout. Removed with the contract migration.
+ */
+export const LEGACY_PROFILE_OF_PRESET: Readonly<Record<HifiPreviewPreset, "cinematic" | "sensor">> = {
+  showcase: "cinematic",
+  training: "sensor",
+};
+
+const PRESET_OF_LEGACY_PROFILE: Readonly<Record<string, HifiPreviewPreset>> = {
+  cinematic: "showcase",
+  sensor: "training",
+};
+
+/**
+ * Migration shim (expand/contract of 20260923140000), not a fallback: a row an
+ * rc.75.1 writer inserted during the rollout carries `profile` and no
+ * `preset`. Its preset is the one old-name mapping the migration's backfill
+ * uses, and every such read is logged. A row with neither, or with a profile
+ * outside the old CHECK, is an error.
+ */
+export function presetOfRow(
+  row: Pick<RequestRow, "id" | "preset" | "profile">,
+  log: (event: string, detail: Record<string, unknown>) => void = (event, detail) =>
+    console.warn(JSON.stringify({ event, ...detail })),
+): HifiPreviewPreset {
+  if (row.preset) return row.preset;
+  const mapped = row.profile ? PRESET_OF_LEGACY_PROFILE[row.profile] : undefined;
+  if (!mapped) {
+    throw new Error(
+      `hifi preview ${row.id} has no preset and an unmappable legacy profile ${JSON.stringify(row.profile)}`,
+    );
+  }
+  log("hifi_preview.legacy_profile_row", { requestId: row.id, profile: row.profile, preset: mapped });
+  return mapped;
+}
+
 /** PGlite/pg hand back jsonb as objects; the Data API may hand back text. */
 function parseJsonb<T>(value: T | string | null): T | null {
   if (value === null || value === undefined) return null;
@@ -47,7 +88,7 @@ async function recordOf(row: RequestRow): Promise<HifiPreviewRecord> {
     id: row.id,
     documentId: row.document_id,
     mapVersionId: row.map_version_id,
-    preset: row.preset,
+    preset: presetOfRow(row),
     tick: row.tick,
     status: row.status,
     errorCode: row.error_code,
@@ -70,8 +111,8 @@ export async function createHifiPreviewRequest(
   const id = hifiPreviewRequestId();
   const row = await queryOne<RequestRow>(
     `INSERT INTO simforge.hifi_preview_requests
-       (id, workspace_id, document_id, map_version_id, preset, tick, request_json)
-     VALUES (:id, :workspace_id, :document_id, :map_version_id, :preset, :tick, :request)
+       (id, workspace_id, document_id, map_version_id, preset, profile, tick, request_json)
+     VALUES (:id, :workspace_id, :document_id, :map_version_id, :preset, :profile, :tick, :request)
      RETURNING *`,
     {
       id,
@@ -79,6 +120,7 @@ export async function createHifiPreviewRequest(
       document_id: input.documentId ?? null,
       map_version_id: input.mapVersionId,
       preset: input.preset,
+      profile: LEGACY_PROFILE_OF_PRESET[input.preset],
       tick: input.tick,
       request: input as unknown as Record<string, unknown>,
     },
@@ -125,10 +167,13 @@ export async function leaseNextHifiPreview(input: {
       { id: candidate.id, worker_id: input.workerId },
     );
     if (!updated) return null;
+    // The column is authoritative: a legacy row's request_json carries
+    // `profile`, not `preset`.
+    const request = parseJsonb(candidate.request_json)!;
     return {
       requestId: candidate.id,
       workspaceId: candidate.workspace_id,
-      request: parseJsonb(candidate.request_json)!,
+      request: { ...request, preset: presetOfRow(candidate) },
     };
   });
 }
