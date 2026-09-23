@@ -56,6 +56,13 @@ impl VegInstances {
     /// Flat column-major 4×4 matrices, one per instance in
     /// prototype/counts order.
     pub fn matrices(&self) -> Result<Vec<[f32; 16]>, String> {
+        if self.counts.len() != self.prototypes.len() {
+            return Err(format!(
+                "{} counts for {} prototypes",
+                self.counts.len(),
+                self.prototypes.len()
+            ));
+        }
         let total: usize = self.counts.iter().map(|&c| c as usize).sum();
         if self.transforms.len() != total * 16 {
             return Err(format!(
@@ -94,6 +101,11 @@ pub struct VegInstantiated;
 /// Permanently failed load (missing/invalid GLB or sidecar).
 #[derive(Component)]
 pub struct VegFailed;
+
+/// Vegetation that could not be placed. Readiness fails on any entry: a
+/// render must never silently lose trees (docs/engineering/no-silent-fallbacks.md).
+#[derive(bevy::prelude::Resource, Default, Debug)]
+pub struct VegErrors(pub Vec<String>);
 
 /// Sidecar path for a veg GLB: `<stem>[.lodN].glb` → `<stem>.instances.json`
 /// (the sidecars are LOD-independent: `veg_2_4.lod0.glb` →
@@ -145,6 +157,7 @@ pub fn load_veg_roots(
         let Some(scene) = gltf.default_scene.clone().or_else(|| gltf.scenes.first().cloned())
         else {
             error!("veg GLB without any scene: {}", load.1.display());
+            commands.queue(record_veg_error(format!("veg GLB without any scene: {}", load.1.display())));
             commands.entity(e).insert(VegFailed);
             continue;
         };
@@ -165,6 +178,7 @@ pub fn load_veg_roots(
             Ok(d) => d,
             Err(err) => {
                 error!("veg sidecar {}: {err}", load.1.display());
+                commands.queue(record_veg_error(format!("veg sidecar {}: {err}", load.1.display())));
                 commands.entity(e).insert(VegFailed);
                 continue;
             }
@@ -173,6 +187,7 @@ pub fn load_veg_roots(
             Ok(m) => m,
             Err(err) => {
                 error!("veg sidecar {}: {err}", load.1.display());
+                commands.queue(record_veg_error(format!("veg sidecar {}: {err}", load.1.display())));
                 commands.entity(e).insert(VegFailed);
                 continue;
             }
@@ -276,7 +291,8 @@ pub fn instantiate_veg(
         let mut offset = 0usize;
         let mut total_placed = 0usize;
         for (p, proto) in vr.prototypes.iter().enumerate() {
-            let count = vr.counts.get(p).copied().unwrap_or(0) as usize;
+            // `matrices()` already checked counts against the prototypes.
+            let count = vr.counts[p] as usize;
             offset += count;
             if count == 0 {
                 continue;
@@ -331,7 +347,8 @@ pub fn instantiate_veg(
             }
         }
         if !missing.is_empty() {
-            warn!("veg root {root_e}: prototypes without geometry: {missing:?}");
+            error!("veg root {root_e}: prototypes without geometry: {missing:?}");
+            commands.queue(record_veg_error(format!("vegetation prototypes without geometry: {missing:?}")));
         }
         // The authored subtrees are quantization-space; three.js never draws
         // them either — hide instead of despawn so handles stay shared.
@@ -374,5 +391,11 @@ mod tests {
             sidecar_path("/tiles/veg_2_4.glb"),
             PathBuf::from("/tiles/veg_2_4.instances.json")
         );
+    }
+}
+
+fn record_veg_error(message: String) -> impl FnOnce(&mut bevy::prelude::World) {
+    move |world: &mut bevy::prelude::World| {
+        world.get_resource_or_insert_with(VegErrors::default).0.push(message);
     }
 }
