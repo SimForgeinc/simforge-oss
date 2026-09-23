@@ -3,8 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, PINNED_ACTOR_ASSETS_DIGEST, PINNED_ACTOR_ASSETS_SIZE_BYTES } from './actor-assets.js';
 import {
+  NativeEvidenceSchemaError,
+  NativeRenderManifestSchema,
   NativeRunDiagnosticsSchema,
   nativeEvidenceFailure,
+  parseNativeRenderManifestForHost,
+  parseNativeRunDiagnosticsForHost,
   nativeRunExpectations,
   type NativeRenderManifest,
   type NativeReservedArtifact,
@@ -150,5 +154,82 @@ describe('native evidence acceptance', () => {
     const { diagnostics } = evidence();
     expect(NativeRunDiagnosticsSchema.safeParse({ ...diagnostics, service: { ...diagnostics.service, protocol: 2 } }).success).toBe(false);
     expect(NativeRunDiagnosticsSchema.safeParse(diagnostics).success).toBe(true);
+  });
+});
+
+/**
+ * What an rc.73 native worker uploads for a render-timeline run: the lineage
+ * binds the timeline it sampled, and diagnostics carry the observed-transform
+ * parity against the sampler. A control plane that parsed these strictly
+ * without knowing the fields refused every completion with a bare
+ * `artifact_verification_failed`.
+ */
+function timelineRunEvidence(): { manifest: NativeRenderManifest; diagnostics: NativeRunDiagnostics } {
+  const { manifest, diagnostics } = evidence();
+  const timeline = { sceneSource: 'render-timeline' as const, timelineSha256: HEX('7') };
+  const textureProfile = {
+    renderTextures: 'bc7-512' as const, memberCount: 812, textureBytes: 420_000_000, geometryBytes: 180_000_000,
+    estimatedBytes: 600_000_000, budgetBytes: 1_500_000_000, capacityBytes: 24 * 1024 ** 3, capacitySource: 'explicit' as const, cacheKey: HEX('3'),
+  };
+  return {
+    // The engine builds both through the strict producer schemas; so does this fixture.
+    manifest: NativeRenderManifestSchema.parse({ ...manifest, ...timeline, textureProfile }),
+    diagnostics: NativeRunDiagnosticsSchema.parse({
+      ...diagnostics, ...timeline, textureProfile,
+      parity: {
+        schema: 'simforge.render-parity/v1', pass: true, comparedPoses: 96,
+        maxPositionErrorM: 0.0004, maxHeadingErrorDeg: 0.01, maxPitchErrorDeg: 0.002, maxRollErrorDeg: null, presenceMismatches: 0,
+      },
+    }),
+  };
+}
+
+describe('the control plane parses a newer worker\'s evidence', () => {
+  it('accepts an rc.73 render-timeline run end to end through the host parsers', () => {
+    const { manifest, diagnostics } = timelineRunEvidence();
+    const hostManifest = parseNativeRenderManifestForHost(JSON.parse(JSON.stringify(manifest)));
+    const hostDiagnostics = parseNativeRunDiagnosticsForHost(JSON.parse(JSON.stringify(diagnostics)));
+    expect(hostManifest.ignoredFields).toEqual([]);
+    expect(hostDiagnostics.ignoredFields).toEqual([]);
+    expect(hostDiagnostics.value.sceneSource).toBe('render-timeline');
+    expect(hostDiagnostics.value.parity?.pass).toBe(true);
+    expect(nativeEvidenceFailure(reservations, hostManifest.value, hostDiagnostics.value, nativeRunExpectations(intent, lease))).toBeNull();
+  });
+
+  it('ignores and reports fields a still newer worker adds, at any depth, instead of refusing the run', () => {
+    const { manifest, diagnostics } = timelineRunEvidence();
+    const futureDiagnostics = {
+      ...diagnostics,
+      observedFramesSha256: HEX('9'),
+      parity: { ...diagnostics.parity, maxLateralErrorM: 0.0001 },
+      videos: diagnostics.videos.map((video, index) => (index === 0 ? { ...video, encoder: 'nvenc' } : video)),
+    };
+    const futureManifest = { ...manifest, cacheReport: { hits: 3 } };
+    // The producer stays strict: an engine can never emit a field it does not declare.
+    expect(NativeRunDiagnosticsSchema.safeParse(futureDiagnostics).success).toBe(false);
+    const hostDiagnostics = parseNativeRunDiagnosticsForHost(futureDiagnostics);
+    const hostManifest = parseNativeRenderManifestForHost(futureManifest);
+    expect([...hostDiagnostics.ignoredFields].sort()).toEqual(['observedFramesSha256', 'parity.maxLateralErrorM', 'videos.0.encoder']);
+    expect(hostManifest.ignoredFields).toEqual(['cacheReport']);
+    expect(hostDiagnostics.value).toEqual(diagnostics);
+    expect(nativeEvidenceFailure(reservations, hostManifest.value, hostDiagnostics.value, nativeRunExpectations(intent, lease))).toBeNull();
+  });
+
+  it('still refuses a real schema fault, with the issue that caused it', () => {
+    const { diagnostics } = timelineRunEvidence();
+    let caught: unknown;
+    try {
+      parseNativeRunDiagnosticsForHost({ ...diagnostics, frameCount: '48', futureField: true });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(NativeEvidenceSchemaError);
+    const failure = caught as NativeEvidenceSchemaError;
+    expect(failure.message).toBe('native_diagnostics_schema_invalid');
+    expect(failure.verificationDetails.document).toBe('diagnostics');
+    expect(failure.verificationDetails.issues.map((issue) => issue.path)).toContain('frameCount');
+    // A protocol this host does not speak is a fault, not an unknown field.
+    expect(() => parseNativeRunDiagnosticsForHost({ ...diagnostics, service: { ...diagnostics.service, protocol: 2 } }))
+      .toThrow('native_diagnostics_schema_invalid');
   });
 });

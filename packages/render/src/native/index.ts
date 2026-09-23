@@ -27,9 +27,10 @@ export type { NativeActorAppearance } from './lowering.js';
 export {
   NATIVE_RENDER_MANIFEST_V1_SCHEMA, NATIVE_RUN_DIAGNOSTICS_V1_SCHEMA,
   NativeRenderManifestSchema, NativeRunDiagnosticsSchema, nativeEvidenceFailure, nativeRunExpectations,
+  NativeEvidenceSchemaError, parseNativeRenderManifestForHost, parseNativeRunDiagnosticsForHost,
 } from './evidence.js';
 export type {
-  NativeEvidenceFailure, NativeRenderManifest, NativeReservedArtifact, NativeRunDiagnostics, NativeRunExpectations,
+  HostParsedEvidence, NativeEvidenceFailure, NativeRenderManifest, NativeReservedArtifact, NativeRunDiagnostics, NativeRunExpectations,
 } from './evidence.js';
 export { NATIVE_SERVICE_PROTOCOL, NativeServiceClient, NativeServiceTimeoutError, stripRgbaPadding } from './service-client.js';
 export type {

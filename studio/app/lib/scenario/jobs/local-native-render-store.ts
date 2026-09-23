@@ -15,8 +15,8 @@ import { MAP_CACHE_BUCKET } from "@/app/lib/cloud/map-registry";
 import { getRegisteredNativeMapSource, type RegisteredNativeMapMember } from "@/app/lib/map-ingest/native-map-source";
 import {
   NATIVE_ACTOR_ASSETS_INPUT_ID,
-  NativeRenderManifestSchema,
-  NativeRunDiagnosticsSchema,
+  parseNativeRenderManifestForHost,
+  parseNativeRunDiagnosticsForHost,
   actorAssetsClosureUrl,
   nativeActorAssetsInput,
   nativeEvidenceFailure,
@@ -688,7 +688,11 @@ export async function completeLocalNativeRender(
   const manifestReservation = reservations.find((item) => item.artifact_role === "manifest");
   const diagnosticsReservation = reservations.find((item) => item.artifact_role === "diagnostics");
   if (!manifestReservation || !diagnosticsReservation) throw new Error("native_artifact_evidence_incomplete");
-  const diagnostics = NativeRunDiagnosticsSchema.parse(await readReservedJson(diagnosticsReservation));
+  const parsedDiagnostics = parseNativeRunDiagnosticsForHost(await readReservedJson(diagnosticsReservation));
+  const parsedManifest = parseNativeRenderManifestForHost(await readReservedJson(manifestReservation));
+  const ignored = [...parsedDiagnostics.ignoredFields.map((field) => `diagnostics.${field}`), ...parsedManifest.ignoredFields.map((field) => `manifest.${field}`)];
+  if (ignored.length > 0) console.warn(`[local-native-render] accepted native evidence with fields this host does not know: ${ignored.join(", ")}`);
+  const diagnostics = parsedDiagnostics.value;
   const failure = nativeEvidenceFailure(
     reservations.map((item) => ({
       role: item.artifact_role,
@@ -698,7 +702,7 @@ export async function completeLocalNativeRender(
       sha256: item.expected_sha256,
       sizeBytes: Number(item.expected_size_bytes),
     })),
-    NativeRenderManifestSchema.parse(await readReservedJson(manifestReservation)),
+    parsedManifest.value,
     diagnostics,
     nativeRunExpectations(parseRenderIntent(intentValue), {
       intentSha256: input.intentSha256,

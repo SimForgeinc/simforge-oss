@@ -10,9 +10,9 @@ import {
 } from "@/app/lib/s3/s3-presign";
 import {
   NATIVE_ACTOR_ASSETS_INPUT_ID,
-  NativeRenderManifestSchema,
-  NativeRunDiagnosticsSchema,
   nativeActorAssetsInput,
+  parseNativeRenderManifestForHost,
+  parseNativeRunDiagnosticsForHost,
   assertNativeMapMemberCapacity,
   nativeEvidenceFailure,
   nativeRunExpectations,
@@ -1212,7 +1212,14 @@ async function verifyNativeCompletion(lease: ActiveLease, intentSha256: string, 
   const diagnosticsReservation = reservations.find((item) => item.artifact_role === "diagnostics");
   if (!manifestReservation || !diagnosticsReservation) throw new Error("native_artifact_evidence_incomplete");
   const intent = parseRenderIntentDocument(typeof lease.render_intent === "string" ? JSON.parse(lease.render_intent) : lease.render_intent);
-  const diagnostics = NativeRunDiagnosticsSchema.parse(await readReservedJson(diagnosticsReservation));
+  // Host-side parses: unknown fields from a newer worker are ignored (and
+  // logged); any other schema problem throws NativeEvidenceSchemaError, whose
+  // issues the completion route logs and returns.
+  const parsedDiagnostics = parseNativeRunDiagnosticsForHost(await readReservedJson(diagnosticsReservation));
+  const parsedManifest = parseNativeRenderManifestForHost(await readReservedJson(manifestReservation));
+  const ignored = [...parsedDiagnostics.ignoredFields.map((field) => `diagnostics.${field}`), ...parsedManifest.ignoredFields.map((field) => `manifest.${field}`)];
+  if (ignored.length > 0) console.warn(`[render-worker] ${lease.job_id}: accepted native evidence with fields this control plane does not know: ${ignored.join(", ")}`);
+  const diagnostics = parsedDiagnostics.value;
   const failure = nativeEvidenceFailure(
     reservations.map((item) => ({
       role: item.artifact_role,
@@ -1222,7 +1229,7 @@ async function verifyNativeCompletion(lease: ActiveLease, intentSha256: string, 
       sha256: item.expected_sha256,
       sizeBytes: Number(item.expected_size_bytes),
     })),
-    NativeRenderManifestSchema.parse(await readReservedJson(manifestReservation)),
+    parsedManifest.value,
     diagnostics,
     nativeRunExpectations(intent, { intentSha256, executionPackageControlSha256: lease.execution_package_control_sha256 }),
   );

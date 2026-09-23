@@ -130,6 +130,94 @@ export const NativeRunDiagnosticsSchema = NativeRunLineageSchema.extend({
 
 export type NativeRunDiagnostics = z.infer<typeof NativeRunDiagnosticsSchema>;
 
+/**
+ * A native evidence document the host could not accept, with the real parse
+ * issues. Hosts surface `verificationDetails` in the completion response and
+ * their logs instead of a bare `artifact_verification_failed`.
+ */
+export class NativeEvidenceSchemaError extends Error {
+  readonly verificationDetails: {
+    document: 'manifest' | 'diagnostics';
+    issues: Array<{ path: string; code: string; message: string }>;
+  };
+
+  constructor(document: 'manifest' | 'diagnostics', issues: readonly z.core.$ZodIssue[]) {
+    super(`native_${document}_schema_invalid`);
+    this.name = 'NativeEvidenceSchemaError';
+    this.verificationDetails = {
+      document,
+      issues: issues.slice(0, 20).map((issue) => ({
+        path: issue.path.map(String).join('.') || '(root)',
+        code: issue.code,
+        message: issue.message,
+      })),
+    };
+  }
+}
+
+export type HostParsedEvidence<T> = {
+  readonly value: T;
+  /** Fields a newer worker sent that this host does not know, as `path.key`. */
+  readonly ignoredFields: readonly string[];
+};
+
+function withoutKeys(value: unknown, path: readonly PropertyKey[], keys: readonly string[]): unknown {
+  if (path.length === 0) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+    const copy: Record<string, unknown> = { ...(value as Record<string, unknown>) };
+    for (const key of keys) delete copy[key];
+    return copy;
+  }
+  const [head, ...rest] = path;
+  if (Array.isArray(value)) {
+    const copy = [...value];
+    copy[head as number] = withoutKeys(copy[head as number], rest, keys);
+    return copy;
+  }
+  if (!value || typeof value !== 'object') return value;
+  const record = value as Record<string, unknown>;
+  return { ...record, [head as string]: withoutKeys(record[head as string], rest, keys) };
+}
+
+/**
+ * Host-side parse: the same strict schema the engine produced the document
+ * with, except that fields this host does not know yet are ignored (and
+ * reported) instead of failing the completion.
+ *
+ * The engine keeps parsing strictly, so a producer can never emit a typo; a
+ * newer worker that adds evidence (as rc.73's timeline-sourced runs added
+ * `sceneSource`, `timelineSha256` and `parity`) no longer has every completion
+ * refused by an older control plane. Anything other than an unknown key (a
+ * missing field, a wrong type, a literal or protocol mismatch, a failed
+ * cross-field check) still rejects, with the real issues attached.
+ */
+function parseForHost<T>(schema: z.ZodType<T>, document: 'manifest' | 'diagnostics', input: unknown): HostParsedEvidence<T> {
+  let candidate = input;
+  const ignoredFields: string[] = [];
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const parsed = schema.safeParse(candidate);
+    if (parsed.success) return { value: parsed.data, ignoredFields };
+    const issues = parsed.error.issues;
+    if (!issues.every((issue) => issue.code === 'unrecognized_keys')) {
+      throw new NativeEvidenceSchemaError(document, issues.filter((issue) => issue.code !== 'unrecognized_keys'));
+    }
+    for (const issue of issues) {
+      const keys = (issue as { keys: string[] }).keys;
+      ignoredFields.push(...keys.map((key) => [...issue.path.map(String), key].join('.')));
+      candidate = withoutKeys(candidate, issue.path, keys);
+    }
+  }
+  throw new NativeEvidenceSchemaError(document, schema.safeParse(candidate).error?.issues ?? []);
+}
+
+export function parseNativeRenderManifestForHost(input: unknown): HostParsedEvidence<NativeRenderManifest> {
+  return parseForHost(NativeRenderManifestSchema, 'manifest', input);
+}
+
+export function parseNativeRunDiagnosticsForHost(input: unknown): HostParsedEvidence<NativeRunDiagnostics> {
+  return parseForHost(NativeRunDiagnosticsSchema, 'diagnostics', input);
+}
+
 /** A reserved upload the host already verified against object storage. */
 export interface NativeReservedArtifact {
   readonly role: string;
