@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REMOVED_PATHS = [
@@ -31,19 +32,67 @@ const REMOVED_PATHS = [
   'packages/examiner',
 ];
 
-// Asset generation (studio/app/lib/meshy, asset-gallery/generation-*, the
-// generations routes) was product-only when this list was written (46f0ffb1).
-// It returned in be94c0ab as a local bring-your-own-key feature (the Meshy key
-// lives in the OS vault via ai-providers/settings.ts) and has been maintained
-// in Studio since, so it is no longer listed here.
+// Product-only surfaces: they live in the hosted SimCloud platform and must not
+// come back here, not even as a local bring-your-own-key variant.
+//
+// Asset generation (the provider client, the generation store/runner/routes
+// and UI, and the provider-key settings that only it used) was listed here in
+// 46f0ffb1, returned in be94c0ab as a local bring-your-own-key feature, and
+// was moved back out on 2026-09-22 by user decision: generation runs
+// server-side in SimCloud with the key held there. OSS Studio keeps only the
+// generic, empty-by-default gallery slot in studio/app/lib/host/asset-gallery-actions.ts.
 const PRODUCT_ONLY_PATHS = [
+  'studio/app/api/asset-gallery/generations',
   'studio/app/api/billing',
+  'studio/app/api/simforge/ai-providers',
   'studio/app/components/WorkspaceSwitcher.tsx',
+  'studio/app/dashboard/assets/AssetGenerateDialog.tsx',
+  'studio/app/dashboard/assets/AssetGenerateImagePicker.tsx',
+  'studio/app/dashboard/assets/asset-generation-images.ts',
+  'studio/app/host/local/AiProviderSettings.tsx',
   'studio/app/lib/admin',
+  'studio/app/lib/ai-providers',
+  'studio/app/lib/asset-gallery/generation-contracts.ts',
+  'studio/app/lib/asset-gallery/generation-runner.ts',
+  'studio/app/lib/asset-gallery/generation-storage.ts',
+  'studio/app/lib/asset-gallery/generation-store.ts',
+  'studio/app/lib/asset-gallery/glb-metadata.ts',
   'studio/app/lib/auth/capabilities.ts',
   'studio/app/lib/db/workspace-audit-log-store.ts',
   'studio/app/lib/db/workspace-store.ts',
   'studio/app/lib/experimental-features.ts',
+  ['studio/app/lib', 'mes' + 'hy'].join('/'),
+  ['tools', 'mes' + 'hy'].join('/'),
+  'docs/product/ai-providers.md',
+];
+
+/**
+ * Names of product-only services that must not appear anywhere in this
+ * repository: code, config, docs, tests, fixtures. Exported for the
+ * OSS-boundary check that will guard `oss/` inside the platform repository.
+ *
+ * The term is assembled rather than written, so this file does not match
+ * itself. `allowedIn` lists the only files that may carry it, each for a
+ * reason that is not the feature:
+ * - the release's third-party record, because 35 bundled catalog models were
+ *   made with the service and their CC BY 4.0 licence requires crediting it;
+ * - the native-migration qualification manifests, which are sealed records of
+ *   what was copied at the time and are not rewritten.
+ * Matching is case-exact on the three spellings, so an unrelated identifier
+ * such as a mesh's Y coordinate (`meshY`) is not a hit.
+ */
+const GENERATION_PROVIDER = ['Mes', 'hy'].join('');
+export const PRODUCT_ONLY_TERMS = [
+  {
+    term: GENERATION_PROVIDER,
+    pattern: new RegExp([GENERATION_PROVIDER, GENERATION_PROVIDER.toLowerCase(), GENERATION_PROVIDER.toUpperCase()].join('|'), 'u'),
+    why: 'asset generation is a SimCloud platform feature (server-side, platform-held key)',
+    allowedIn: [
+      'scripts/release/bundled-components.json',
+      'qualification/native-migration/manifest/intake-manifest.json',
+      'qualification/native-migration/manifest/source-inventory.json',
+    ],
+  },
 ];
 
 /** Where a registered stack package may live: one directory under one of these. */
@@ -65,6 +114,45 @@ function sourceFiles(root) {
       if (entry.isDirectory()) pending.push(path);
       else if (/\.(?:[cm]?[jt]sx?|json|ya?ml)$/u.test(entry.name)) files.push(path);
     }
+  }
+  return files;
+}
+
+/**
+ * Every text file the repository carries. In a git checkout that is what git
+ * tracks plus untracked files it does not ignore, so build output and caches
+ * never slow the scan or trip it; elsewhere (test fixtures) it is a walk.
+ */
+function repositoryTextFiles(root) {
+  let paths;
+  if (existsSync(join(root, '.git'))) {
+    const listed = execFileSync('git', ['-C', root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+      encoding: 'utf8',
+      maxBuffer: 256 * 1024 * 1024,
+    });
+    paths = listed.split('\0').filter(Boolean).map((path) => join(root, path));
+  } else {
+    paths = [];
+    const pending = [root];
+    const ignored = new Set(['.git', '.next', 'dist', 'node_modules', 'target']);
+    while (pending.length) {
+      const directory = pending.pop();
+      for (const entry of readdirSync(directory, { withFileTypes: true })) {
+        if (ignored.has(entry.name)) continue;
+        const path = join(directory, entry.name);
+        if (entry.isDirectory()) pending.push(path);
+        else if (entry.isFile()) paths.push(path);
+      }
+    }
+  }
+  const files = [];
+  for (const path of paths) {
+    let stats;
+    try { stats = statSync(path); } catch { continue; }
+    if (!stats.isFile() || stats.size > 64 * 1024 * 1024) continue;
+    const bytes = readFileSync(path);
+    if (bytes.includes(0)) continue;
+    files.push({ path, text: bytes.toString('utf8') });
   }
   return files;
 }
@@ -131,6 +219,15 @@ export function verifyRepositoryNaming(root) {
     if (legacyImport.test(source)) errors.push(`${relative(root, path)} imports the retired package scope`);
     if (legacyEngineImport.test(source)) errors.push(`${relative(root, path)} imports the retired @simforge package scope`);
     if (source.includes(productScopePrefix)) errors.push(`${relative(root, path)} contains the product-only package scope`);
+  }
+
+  const termFiles = repositoryTextFiles(root);
+  for (const { term, pattern, why, allowedIn } of PRODUCT_ONLY_TERMS) {
+    for (const { path, text } of termFiles) {
+      const name = relative(root, path).split(sep).join('/');
+      if (allowedIn.includes(name) || !pattern.test(text)) continue;
+      errors.push(`${name} names ${term}, which is product-only: ${why}`);
+    }
   }
 
   if (errors.length) throw new Error(`Repository naming verification failed:\n- ${errors.join('\n- ')}`);

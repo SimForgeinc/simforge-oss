@@ -5,11 +5,6 @@ dist
 /dev-assets
 /studio/public/map-bundles/
 
-# Meshy generation is resumable local work; source and smoke checks stay tracked.
-/tools/meshy/cache/
-/tools/meshy/state.json
-/tools/meshy/manifest.json
-/tools/meshy/REPORT.md
 # Versioned local map derivatives are reproducible and may be many gigabytes.
 **/3d/variants/
 # The golden-trace corpus commits the public map's static-collider derivative.

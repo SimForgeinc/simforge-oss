@@ -223,7 +223,7 @@ export type ExternalModelBinding =
       /** Clip names, when animated. */
       readonly clips?: { readonly idle?: string; readonly locomotion?: string };
       /**
-       * Standalone GLBs carrying deterministic named clips. Meshy animation
+       * Standalone GLBs carrying deterministic named clips. Generated animation
        * exports include the rigged scene as well as the clip, so renderers may
        * load the selected asset directly.
        */

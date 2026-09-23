@@ -32,7 +32,7 @@ export const NATIVE_ACTOR_ASSETS_CATALOG_PATH = 'catalog-models.json';
  *
  * `70dde8bb` carries the CARLA 0.10.0-UE5 vehicle and pedestrian geometry: 68
  * of its 165 catalog entries are `carla-0.10.0-ue5` (805.9 MiB of its 1,288.9
- * MiB of distinct blobs), and the 35 Meshy and 62 procedural entries no CARLA
+ * MiB of distinct blobs), and the 35 generated and 62 procedural entries no CARLA
  * model covers are carried over unchanged. It is not on the public origin: an
  * install resolves it from a packaged `share/actor-assets` directory or
  * `SIMFORGE_ACTOR_ASSETS_ROOT` until a maintainer uploads the closure document
