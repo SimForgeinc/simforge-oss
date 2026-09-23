@@ -148,6 +148,7 @@ impl Simulation {
             seed: input.seed.clone(),
             map_id: input.map_id.clone(),
             engine_graph_digest: self.graph.topology_digest().to_owned(),
+            ground_digest: self.options.ground.as_ref().map(|g| g.digest().to_owned()),
             dt: self.dt,
             clip_seconds: input.clip_seconds,
             warmup_seconds: input.warmup_seconds,
@@ -411,6 +412,13 @@ pub struct SimulationCheckpoint {
     /// Ids of live-mode spawns in registration order; their specs are part
     /// of `input.actors` and are re-registered after the document's actors.
     pub spawned_ids: Vec<String>,
+    /// Digest of the ground surface the checkpointed world stands on; a
+    /// restore must supply the same surface.
+    #[serde(default)]
+    pub ground_digest: Option<String>,
+    /// Per-actor contact state (registration order).
+    #[serde(default)]
+    pub contact: Vec<super::contact::ContactState>,
 }
 
 impl Simulation {
@@ -534,6 +542,8 @@ impl Simulation {
             doors: self.doors.clone(),
             arrival: self.arrival.clone(),
             spawned_ids: self.spawned.iter().map(|a| a.id.clone()).collect(),
+            ground_digest: self.options.ground.as_ref().map(|g| g.digest().to_owned()),
+            contact: self.contact.clone(),
         })
     }
 
@@ -551,6 +561,16 @@ impl Simulation {
                     "checkpoint graph digest {} does not match the supplied graph {}",
                     ckpt.graph_digest,
                     options.graph.topology_digest()
+                ),
+                Vec::new(),
+            ));
+        }
+        let supplied_ground = options.ground.as_ref().map(|g| g.digest().to_owned());
+        if ckpt.ground_digest != supplied_ground {
+            return Err(SimEngineError::new(
+                format!(
+                    "checkpoint ground digest {:?} does not match the supplied ground {:?}",
+                    ckpt.ground_digest, supplied_ground
                 ),
                 Vec::new(),
             ));
@@ -599,6 +619,19 @@ impl Simulation {
                 ),
                 Vec::new(),
             ));
+        }
+        if ckpt.ground_digest.is_some() {
+            if ckpt.contact.len() != sim.actors.len() {
+                return Err(SimEngineError::new(
+                    format!(
+                        "checkpoint carries {} contact states for {} actors",
+                        ckpt.contact.len(),
+                        sim.actors.len()
+                    ),
+                    Vec::new(),
+                ));
+            }
+            sim.contact = ckpt.contact.clone();
         }
         sim.options.guards = ckpt.options.guards;
         sim.options.resolve_arrival = ckpt.options.resolve_arrival;

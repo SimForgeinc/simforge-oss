@@ -50,15 +50,23 @@ pub struct Weather {
     pub wetness: f64,
 }
 
+/// The render service's actor class vocabulary (`actorClass` in
+/// scene-state.v1), the one table shared with `@simforge-oss/render`
+/// `NATIVE_ACTOR_CLASSES` and the service's semantic taxonomy
+/// (`renderer/sensors/src/taxonomy.rs`, which refuses any other class).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ActorClass {
     Car,
+    Van,
     Truck,
     Bus,
     Motorcycle,
-    Bicycle,
+    /// Bicycles and scooters with their rider.
+    Cyclist,
     Pedestrian,
+    /// Bodies with no class of their own (robots, drones, animals, static
+    /// objects): rendered from their catalog model.
     Prop,
 }
 
@@ -101,6 +109,27 @@ pub struct ActorTick {
     /// Backward finite difference of the velocity channel (carries the
     /// centripetal term when a body turns); zero on spawn.
     pub acceleration: [f64; 3],
+    /// Unwrapped wheel rotation since spawn (timeline `wheelSpinRad`), every
+    /// wheeled actor: `odometerM = wheelSpinRad * 0.35`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wheel_spin_rad: Option<f64>,
+    /// Four-wheelers: the sprung body's attitude over its wheels, applied to
+    /// the model's `body` node only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub body_attitude: Option<BodyAttitude>,
+    /// Four-wheelers: per-wheel drop `[FL, FR, RL, RR]`, metres, applied to
+    /// the `wheel_*` nodes along the body's up axis.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wheel_drop_m: Option<[f64; 4]>,
+}
+
+/// Body-node attitude (OpenSCENARIO signs: pitch positive nose down, roll
+/// positive right side down).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BodyAttitude {
+    pub pitch_rad: f64,
+    pub roll_rad: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -136,20 +165,46 @@ pub fn yaw_to_quaternion(yaw: f64) -> [f64; 4] {
 }
 
 pub fn actor_class_of(kind: ActorKind) -> ActorClass {
+    // Total, no wildcard: a new kind does not compile until it has a class.
     match kind {
+        ActorKind::Vehicle | ActorKind::Car => ActorClass::Car,
+        ActorKind::Van => ActorClass::Van,
         ActorKind::Truck => ActorClass::Truck,
         ActorKind::Bus => ActorClass::Bus,
         ActorKind::Motorcycle => ActorClass::Motorcycle,
-        ActorKind::Bicycle => ActorClass::Bicycle,
+        ActorKind::Bicycle | ActorKind::Scooter => ActorClass::Cyclist,
         ActorKind::Pedestrian => ActorClass::Pedestrian,
-        ActorKind::StaticObject => ActorClass::Prop,
-        ActorKind::Vehicle
-        | ActorKind::Car
-        | ActorKind::Van
-        | ActorKind::Scooter
-        | ActorKind::SidewalkRobot
+        ActorKind::SidewalkRobot
         | ActorKind::Drone
-        | ActorKind::Animal => ActorClass::Car,
+        | ActorKind::Animal
+        | ActorKind::StaticObject => ActorClass::Prop,
+    }
+}
+
+#[cfg(test)]
+mod actor_class_tests {
+    use super::*;
+
+    /// The same table as `packages/render/src/native/lowering.ts`
+    /// `NATIVE_ACTOR_CLASSES` for every engine kind, and only classes the
+    /// render service's taxonomy accepts.
+    #[test]
+    fn every_kind_maps_to_a_service_class() {
+        const SERVICE: [&str; 8] = ["car", "van", "truck", "bus", "motorcycle", "cyclist", "pedestrian", "prop"];
+        let expected = [
+            ("vehicle", "car"), ("car", "car"), ("van", "van"), ("truck", "truck"), ("bus", "bus"),
+            ("motorcycle", "motorcycle"), ("bicycle", "cyclist"), ("scooter", "cyclist"),
+            ("pedestrian", "pedestrian"), ("sidewalk_robot", "prop"), ("drone", "prop"),
+            ("animal", "prop"), ("static_object", "prop"),
+        ];
+        for (kind, class) in expected {
+            let kind = ActorKind::parse(kind).expect("engine kind");
+            let got = serde_json::to_value(actor_class_of(kind)).unwrap();
+            assert_eq!(got, class, "{kind:?}");
+            assert!(SERVICE.contains(&class));
+        }
+        // An unknown class never deserializes into a document.
+        assert!(serde_json::from_str::<ActorClass>("\"bicycle\"").is_err());
     }
 }
 
@@ -159,14 +214,23 @@ pub fn catalog_id_for(kind: ActorKind, tags: &[String]) -> String {
     if let Some(tag) = tags.iter().find_map(|t| t.strip_prefix("catalog:")) {
         return tag.to_owned();
     }
+    // Total and exhaustive (no wildcard): the documented kind defaults, the
+    // same table as `@simforge-oss/render` `NATIVE_KIND_DEFAULT_CATALOG_IDS`
+    // and `@simforge-oss/playback` `defaultCatalogIdForActorKind`. A new kind
+    // does not compile until it has a body of its own (engine 0.11.0 stopped
+    // drawing vans, scooters, robots, drones and animals as sedans).
     match kind {
-        ActorKind::Pedestrian => "pedestrian.adult",
-        ActorKind::Bicycle => "vehicle.bicycle",
-        ActorKind::Bus => "vehicle.bus",
+        ActorKind::Vehicle | ActorKind::Car => "vehicle.sedan",
         ActorKind::Truck => "vehicle.box_truck",
+        ActorKind::Bus => "vehicle.bus",
+        ActorKind::Van => "vehicle.van",
         ActorKind::Motorcycle => "vehicle.motorcycle",
+        ActorKind::Bicycle | ActorKind::Scooter => "vehicle.bicycle",
+        ActorKind::Pedestrian => "pedestrian.adult",
+        ActorKind::SidewalkRobot => "sidewalk_robot.delivery_rover",
+        ActorKind::Drone => "drone.camera_quadcopter",
+        ActorKind::Animal => "animal.dog",
         ActorKind::StaticObject => "hazard.cardboard_box",
-        _ => "vehicle.sedan",
     }
     .to_owned()
 }
@@ -363,6 +427,9 @@ fn actor_tick(
             0.0,
             quantize(acceleration[2], PRECISION),
         ],
+        wheel_spin_rad: None,
+        body_attitude: None,
+        wheel_drop_m: None,
     }
 }
 

@@ -60,12 +60,15 @@ pub use perception::{
     PerceptionMetrics, SensorPerceptionMetric, SensorTargetTrack, SensorTrack,
 };
 pub use recorder::{
-    ActorFrame, PhysicsFrame, RecordedTicks, SignalFrame, TraceCapture, TraceRecorder,
+    ActorFrame, ContactFrame, PhysicsFrame, RecordedTicks, SignalFrame, TraceCapture, TraceRecorder,
 };
 
-/// v4: mandatory lane-relative lateral-offset actor channel. Unknown versions
-/// fail closed.
-pub const TRACE_FORMAT_VERSION: u32 = 4;
+/// v5: optional ground-contact channels (`contact`: z, pitch, roll and
+/// per-wheel drop) and `header.groundDigest`, present when the simulation ran
+/// on a map ground surface (docs/engineering/ground-height.md). v4 added the
+/// mandatory lane-relative lateral-offset channel. Unknown versions fail
+/// closed.
+pub const TRACE_FORMAT_VERSION: u32 = 5;
 
 /// Decimal places each channel is quantised to before serialisation.
 pub mod precision {
@@ -78,6 +81,10 @@ pub mod precision {
     pub const METRIC: i32 = 6;
     pub const SENSOR_CONFIDENCE: i32 = 4;
     pub const SENSOR_RANGE: i32 = 3;
+    /// Ground-contact elevation and wheel drop, metres.
+    pub const ELEVATION: i32 = 4;
+    /// Road pitch / roll from the wheel-contact plane, radians.
+    pub const ATTITUDE: i32 = 6;
 }
 
 /// A trace document violated the current format contract.
@@ -119,6 +126,10 @@ pub enum TraceError {
     NonFiniteLateral { actor_id: String, tick: usize },
     #[error("recorder is in streaming capture mode and holds no accumulated trace")]
     StreamingCapture,
+    #[error("actor {actor_id}: contact channels must be present exactly when header.groundDigest is")]
+    ContactChannels { actor_id: String },
+    #[error("actor {actor_id} is recorded with contact channels but tick {tick} carries no contact frame")]
+    MissingContactFrame { actor_id: String, tick: usize },
     #[error("trace JSON: {0}")]
     Json(String),
     #[error(
@@ -166,6 +177,61 @@ pub struct ActorTrack {
     /// stayed on them. A scalar: the state is monotonic in a planar engine.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub down_since_s: Option<f64>,
+    /// Ground contact computed by the engine every tick (trace v5). Present
+    /// for every actor exactly when `header.groundDigest` is; zeros while the
+    /// actor is absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contact: Option<ActorContactTrack>,
+}
+
+/// Where a body stands: the engine grounds each body on the map's ground
+/// surface every tick (`engine::contact`). Renderers apply these values and
+/// never sample terrain themselves.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActorContactTrack {
+    /// Ground-contact elevation at the footprint centre (the bottom of the
+    /// body), xodr-local metres.
+    pub z: Vec<f64>,
+    /// Road pitch from the wheel-contact plane, positive nose down.
+    pub pitch_rad: Vec<f64>,
+    /// Road roll from the wheel-contact plane, positive right side down.
+    pub roll_rad: Vec<f64>,
+    /// Per wheel `[FL, FR, RL, RR]`: contact elevation minus the fitted plane
+    /// at that wheel (suspension travel, positive = wheel pushed up). Zero for
+    /// two-wheelers and point contacts.
+    pub wheel_drop_m: Vec<[f64; 4]>,
+}
+
+impl ActorContactTrack {
+    pub fn with_capacity(ticks: usize) -> Self {
+        Self {
+            z: Vec::with_capacity(ticks),
+            pitch_rad: Vec::with_capacity(ticks),
+            roll_rad: Vec::with_capacity(ticks),
+            wheel_drop_m: Vec::with_capacity(ticks),
+        }
+    }
+
+    fn validate(&self, actor_id: &str, ticks: usize) -> Result<(), TraceError> {
+        let channel = |name: &str| format!("ticks.actors.{actor_id}.contact.{name}");
+        for (name, values) in [("z", &self.z), ("pitchRad", &self.pitch_rad), ("rollRad", &self.roll_rad)] {
+            check_len(&channel(name), values.len(), ticks)?;
+            check_finite(&channel(name), values)?;
+        }
+        check_len(&channel("wheelDropM"), self.wheel_drop_m.len(), ticks)?;
+        let flat: Vec<f64> = self.wheel_drop_m.iter().flatten().copied().collect();
+        check_finite(&channel("wheelDropM"), &flat)
+    }
+
+    fn quantize(&mut self) {
+        quantize_all(&mut self.z, precision::ELEVATION);
+        quantize_all(&mut self.pitch_rad, precision::ATTITUDE);
+        quantize_all(&mut self.roll_rad, precision::ATTITUDE);
+        for drop in &mut self.wheel_drop_m {
+            quantize_all(drop, precision::ELEVATION);
+        }
+    }
 }
 
 impl ActorTrack {
@@ -182,6 +248,7 @@ impl ActorTrack {
             present: Vec::with_capacity(ticks),
             physics: physics.then(|| ActorPhysicsTrack::with_capacity(ticks)),
             down_since_s: None,
+            contact: None,
         }
     }
 
@@ -224,6 +291,9 @@ impl ActorTrack {
         if let Some(physics) = &self.physics {
             physics.validate(actor_id, ticks)?;
         }
+        if let Some(contact) = &self.contact {
+            contact.validate(actor_id, ticks)?;
+        }
         Ok(())
     }
 
@@ -236,6 +306,9 @@ impl ActorTrack {
         quantize_all(&mut self.s, precision::S);
         if let Some(physics) = &mut self.physics {
             physics.quantize();
+        }
+        if let Some(contact) = &mut self.contact {
+            contact.quantize();
         }
     }
 }
@@ -561,6 +634,11 @@ pub struct TraceHeader {
     pub map_id: String,
     /// Engine graph digest (source XODR sha256).
     pub engine_graph_digest: String,
+    /// sha256 of the map ground surface (`derived/ground/ground-mesh.bin`)
+    /// the engine grounded every body on. Present exactly when every actor
+    /// track carries `contact` (trace v5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ground_digest: Option<String>,
     pub dt: f64,
     pub clip_seconds: f64,
     pub warmup_seconds: f64,
@@ -713,6 +791,11 @@ impl SimTrace {
                 .is_some_and(|b| b.mode == ActorBackendMode::DynamicV1);
             if dynamic && track.physics.is_none() {
                 return Err(TraceError::MissingPhysicsChannels {
+                    actor_id: id.clone(),
+                });
+            }
+            if track.contact.is_some() != self.header.ground_digest.is_some() {
+                return Err(TraceError::ContactChannels {
                     actor_id: id.clone(),
                 });
             }

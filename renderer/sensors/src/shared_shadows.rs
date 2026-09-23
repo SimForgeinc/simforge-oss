@@ -32,7 +32,7 @@ fn union_cascades(
             let mut min = Vec3::splat(f32::INFINITY);
             let mut max = Vec3::splat(f32::NEG_INFINITY);
             for (transform, projection, camera, layers) in &cameras {
-                if !camera.is_active || !layers.unwrap_or_default().intersects(light_layers.unwrap_or_default()) { continue; }
+                if !camera.is_active || !layers.unwrap_or_default().intersects(light_layers.unwrap_or_default()) { continue; } // fallback-ok: Bevy semantics: no RenderLayers component means layer 0
                 let light_from_camera = light_from_world * transform.to_matrix();
                 for corner in projection.get_frustum_corners(-near, -far) {
                     let p = light_from_camera.transform_point3(Vec3::from(corner));

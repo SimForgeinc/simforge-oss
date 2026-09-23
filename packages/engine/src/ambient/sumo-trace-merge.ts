@@ -14,24 +14,33 @@ import {
   decodeMaterializedTrafficArtifact,
   type MaterializedTrafficArtifactEnvelope,
 } from './materialized-traffic.js';
-import { SUMO_TRAFFIC_ORIGIN, SUMO_TRAFFIC_VEHICLE } from './sumo-traffic.js';
+import { SUMO_VEHICLE_BODIES, SUMO_VEHICLE_CLASSES, type SumoVehicleClass } from './sumo.js';
+import { SUMO_TRAFFIC_ORIGIN } from './sumo-traffic.js';
 
-/** Render identity of one merged SUMO actor (plus the explicit origin). */
-export function sumoTraceActorMetadata(): TraceActorMetadata & { readonly origin: typeof SUMO_TRAFFIC_ORIGIN } {
+/** Render identity of one merged SUMO actor of `vehicleClass` (plus the explicit origin). */
+export function sumoTraceActorMetadata(vehicleClass: SumoVehicleClass): TraceActorMetadata & { readonly origin: typeof SUMO_TRAFFIC_ORIGIN } {
+  const body = SUMO_VEHICLE_BODIES[vehicleClass];
+  if (!body) throw new Error(`sumo_vehicle_class_unknown: ${String(vehicleClass)}`);
   return {
-    kind: SUMO_TRAFFIC_VEHICLE.kind,
-    dims: { ...SUMO_TRAFFIC_VEHICLE.dims },
+    kind: body.kind,
+    dims: { ...body.dims },
     static: false,
     // Tags survive every runtime that re-serializes the header, and the render
     // timeline derives `origin` from them (`sumo` wins over `ambient`).
-    tags: ['ambient', `catalog:${SUMO_TRAFFIC_VEHICLE.catalogId}`, SUMO_TRAFFIC_ORIGIN],
+    tags: ['ambient', `catalog:${body.catalogId}`, SUMO_TRAFFIC_ORIGIN],
     origin: SUMO_TRAFFIC_ORIGIN,
   };
 }
 
+/**
+ * Merge a SUMO run into the authored trace. `vehicleClasses` is the run's
+ * class per actor (`SumoTrafficResult.vehicleClasses`): every SUMO actor must
+ * have one, since no body is assumed.
+ */
 export function mergeSumoTrafficIntoTrace(
   trace: SimTrace,
   traffic: MaterializedTrafficArtifactEnvelope,
+  vehicleClasses: Readonly<Record<string, SumoVehicleClass>>,
 ): SimTrace {
   // Re-validate the exact canonical bytes; the merge never trusts a parsed object.
   const { artifact, sha256 } = decodeMaterializedTrafficArtifact(traffic.bytes);
@@ -66,7 +75,11 @@ export function mergeSumoTrafficIntoTrace(
       s: travelled(actor.states),
       present: actor.states.map((state) => (state.present ? 1 : 0)),
     };
-    actorMetadata[actor.id] = sumoTraceActorMetadata();
+    const vehicleClass = vehicleClasses[actor.id];
+    if (!vehicleClass || !(SUMO_VEHICLE_CLASSES as readonly string[]).includes(vehicleClass)) {
+      throw new Error(`sumo_vehicle_class_unknown: SUMO actor ${actor.id} has no simulated class`);
+    }
+    actorMetadata[actor.id] = sumoTraceActorMetadata(vehicleClass);
   }
   const sumoIds = artifact.actors.map((actor) => actor.id);
   return {

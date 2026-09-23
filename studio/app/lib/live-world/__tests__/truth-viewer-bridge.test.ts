@@ -72,6 +72,16 @@ function bridgeWithSpy(options: TruthViewerBridgeOptions = {}) {
 }
 
 describe('truth viewer bridge', () => {
+  it('carries each actor\'s travelled distance so ridden two-wheelers pedal by distance', () => {
+    const { bridge, sync, renderedX } = bridgeWithSpy();
+    // 1 m/s for 50 steps of 0.02 s after spawn = 1 m.
+    for (let tick = 0; tick <= 50; tick += 1) bridge.apply(frame(tick, tick * 0.02));
+    renderedX();
+    const drawn = sync.mock.calls.at(-1)?.[1].find((actor) => actor.id === 'ego');
+    expect(drawn?.odometerM).toBeCloseTo(1, 9);
+  });
+
+
   it('renders a rebuilt world from tick 0 only after an authoritative reset', () => {
     const { bridge, renderedX } = bridgeWithSpy();
     bridge.apply(frame(0, 0));

@@ -23,6 +23,8 @@ import {
   type SimulationCompletionRecord,
   type SimulationMapClosure,
   type SimulationTimeline,
+  SIMULATION_MAP_MEMBERS,
+  simulationMemberSqlPredicate,
 } from "@simforge-oss/compiler/node";
 import type {
   RevisionSimulationReason,
@@ -38,6 +40,9 @@ import type {
 } from "@simforge-oss/studio-host";
 
 import { GalleryCatalogResolutionError, requireGalleryCatalogEntries } from "@/app/lib/asset-gallery/store";
+/** Where a render timeline's heights came from (`render-timeline.md` §4). */
+type TimelineContactOrigin = "trace" | "derived-at-timeline-build" | "legacy-xodr-elevation";
+
 import { queryOne, queryRows, withTransaction, type Transaction } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import { getPresignedGetUrl, getPresignedPutUrl, headS3Object } from "@/app/lib/s3/s3-presign";
@@ -333,26 +338,25 @@ export function simulationObjectKeys(workspaceId: string, completion: Pick<Simul
 
 /**
  * The render timeline step (WS-B): trace + the map's height source → the
- * canonical timeline every renderer samples, recorded with the result. A
- * failure here never fails the simulation: a render derives the timeline
- * again from the stored trace (`resolveRenderTimeline`) and fails loudly if
- * it still can't, never falling back to the OpenSCENARIO export.
+ * canonical timeline every renderer samples. It is the render contract: no
+ * renderer re-derives poses from the XOSC, so a simulation whose timeline
+ * cannot be built fails (`render_timeline_build_failed`).
  */
 export async function buildSimulationTimeline(
   simulation: AuthoritativeSimulation,
-  closure: Pick<SimulationMapClosure, "xodr" | "topology">,
-): Promise<SimulationTimeline | null> {
+  closure: Pick<SimulationMapClosure, "xodr" | "topology" | "ground">,
+): Promise<SimulationTimeline> {
   try {
     const { buildRenderTimeline } = await import("@simforge-oss/render/timeline");
     return await buildRenderTimeline({
       trace: simulation.trace,
       xodr: closure.xodr,
       topology: closure.topology,
+      ground: closure.ground,
       catalogDigest: null,
     });
   } catch (error) {
-    console.warn(`[simulation] render timeline for ${simulation.simKey} unavailable: ${error instanceof Error ? error.message : String(error)}`);
-    return null;
+    throw new Error(`render_timeline_build_failed: simulation ${simulation.simKey}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }
 
@@ -745,14 +749,8 @@ export async function resolveSimulation(
 
 // ── CPU runner lane (/api/simforge/internal/sim-jobs) ─────────────────────────
 
-const MAP_MEMBER_PATHS = [
-  "3d/manifest.json",
-  "topology-index.json.gz",
-  "derived/topology-derived.json.gz",
-  "derived/locations.json.gz",
-  "map.xodr",
-  "signals.geojson.gz",
-] as const;
+/** The runner's presigned members: the simulation members plus the manifests that locate the collider derivative. */
+const MAP_MEMBER_PATHS = ["3d/manifest.json", ...SIMULATION_MAP_MEMBERS.exact] as const;
 
 /**
  * Claim the oldest claimable request for a CPU runner. The payload carries the
@@ -827,7 +825,7 @@ async function presignedMapMembers(mapVersionId: string, includeSumo: boolean) {
       WHERE mv.id = :map_version_id
         AND (bm.relative_path IN (${MAP_MEMBER_PATHS.map((_, index) => `:p${index}`).join(", ")})
              OR bm.relative_path = '3d/variants/manifest.json'
-             OR bm.relative_path LIKE '3d/variants/static-colliders%'
+             OR ${simulationMemberSqlPredicate("bm.relative_path")}
              OR (:include_sumo AND bm.relative_path LIKE 'derived/sumo/%'))`,
     { map_version_id: mapVersionId, include_sumo: includeSumo, ...Object.fromEntries(MAP_MEMBER_PATHS.map((path, index) => [`p${index}`, path])) },
   );
@@ -1088,10 +1086,10 @@ export async function resultMotionDiff(workspaceId: string, baseSimKey: string, 
 export async function resolveRenderTimeline(
   workspaceId: string,
   row: ResultRow,
-): Promise<{ timelineKey: string; timelineSha256: string; sizeBytes: number; samplerVersion: string; derived: boolean }> {
+): Promise<{ timelineKey: string; timelineSha256: string; sizeBytes: number; samplerVersion: string; derived: boolean; contactOrigin: TimelineContactOrigin | null }> {
   const { buildRenderTimeline, TIMELINE_SAMPLER_VERSION } = await import("@simforge-oss/render/timeline");
-  const existing = await queryOne<{ timeline_key: string; timeline_sha256: string; byte_length: number | string }>(
-    `SELECT timeline_key, timeline_sha256, byte_length FROM simforge.sim_timelines
+  const existing = await queryOne<{ timeline_key: string; timeline_sha256: string; byte_length: number | string; contact_origin: TimelineContactOrigin | null }>(
+    `SELECT timeline_key, timeline_sha256, byte_length, contact_origin FROM simforge.sim_timelines
       WHERE workspace_id = :workspace_id AND trace_sha256 = :trace_sha256 AND sampler_version = :sampler
         AND storage_encoding = 'identity'
       ORDER BY created_at, timeline_key LIMIT 1`,
@@ -1104,6 +1102,7 @@ export async function resolveRenderTimeline(
       sizeBytes: Number(existing.byte_length),
       samplerVersion: TIMELINE_SAMPLER_VERSION,
       derived: false,
+      contactOrigin: existing.contact_origin,
     };
   }
   const recorded = await adoptRecordedTimeline(workspaceId, row, TIMELINE_SAMPLER_VERSION);
@@ -1117,6 +1116,9 @@ export async function resolveRenderTimeline(
       trace: traceBytes,
       xodr: closure.xodr,
       topology: closure.topology,
+      // The map ground surface when the pinned version carries it
+      // (ground-contact/v1); otherwise the labelled legacy OpenDRIVE heights.
+      ground: closure.ground ?? null,
       catalogDigest: null,
       recordedTraceSha256: row.trace_sha256,
     });
@@ -1129,6 +1131,9 @@ export async function resolveRenderTimeline(
   }
   if (built.traceSha256 !== row.trace_sha256) {
     throw new RevisionReplayError("render_timeline_identity_mismatch", `timeline names trace ${built.traceSha256}, result ${row.sim_key} is ${row.trace_sha256}`, 500);
+  }
+  if (built.contactOrigin === "synthetic") {
+    throw new RevisionReplayError("render_timeline_synthetic_ground", `the render timeline of result ${row.sim_key} was built on a synthetic surface`, 500);
   }
   if (built.samplerVersion !== TIMELINE_SAMPLER_VERSION) {
     throw new RevisionReplayError(
@@ -1144,10 +1149,10 @@ export async function resolveRenderTimeline(
     `INSERT INTO simforge.sim_timelines (
        workspace_id, timeline_key, trace_sha256, height_field_digest, catalog_digest, sampler_version,
        timeline_sha256, byte_length, storage_bucket, storage_key, storage_encoding, stored_byte_length,
-       stored_sha256, source_sim_key, producer
+       stored_sha256, source_sim_key, producer, contact_origin
      ) VALUES (
        :workspace_id, :timeline_key, :trace_sha256, :height_field_digest, :catalog_digest, :sampler_version,
-       :timeline_sha256, :byte_length, :bucket, :key, 'identity', :byte_length, :timeline_sha256, :sim_key, :producer
+       :timeline_sha256, :byte_length, :bucket, :key, 'identity', :byte_length, :timeline_sha256, :sim_key, :producer, :contact_origin
      ) ON CONFLICT (workspace_id, timeline_key) DO NOTHING
      RETURNING timeline_key`,
     {
@@ -1163,6 +1168,7 @@ export async function resolveRenderTimeline(
       key,
       sim_key: row.sim_key,
       producer: `derive:${hostname()}`.slice(0, 200),
+      contact_origin: built.contactOrigin as TimelineContactOrigin,
     },
   );
   return {
@@ -1171,6 +1177,7 @@ export async function resolveRenderTimeline(
     sizeBytes: built.bytes.byteLength,
     samplerVersion: built.samplerVersion,
     derived: true,
+    contactOrigin: built.contactOrigin as TimelineContactOrigin,
   };
 }
 
@@ -1185,9 +1192,13 @@ async function adoptRecordedTimeline(workspaceId: string, row: ResultRow, sample
   if (bytes.byteLength !== Number(row.timeline_byte_length) || sha256(bytes) !== row.timeline_sha256) {
     throw new RevisionReplayError("render_timeline_corrupt", `stored timeline of result ${row.sim_key} does not match its recorded digest`, 500);
   }
-  const identity = (JSON.parse(Buffer.from(bytes).toString("utf8")) as {
+  const document = JSON.parse(Buffer.from(bytes).toString("utf8")) as {
     identity?: { samplerVersion?: string; heightFieldDigest?: string; catalogDigest?: string | null; timelineKey?: string; traceSha256?: string };
-  }).identity;
+    contactOrigin?: string;
+  };
+  const identity = document.identity;
+  const contactOrigin = (["trace", "derived-at-timeline-build", "legacy-xodr-elevation"] as const)
+    .find((origin) => origin === document.contactOrigin) ?? null;
   if (identity?.samplerVersion !== sampler) return null;
   if (identity.timelineKey !== row.timeline_key || identity.traceSha256 !== row.trace_sha256) {
     throw new RevisionReplayError("render_timeline_identity_mismatch", `stored timeline of result ${row.sim_key} names another trace or key`, 500);
@@ -1196,10 +1207,10 @@ async function adoptRecordedTimeline(workspaceId: string, row: ResultRow, sample
     `INSERT INTO simforge.sim_timelines (
        workspace_id, timeline_key, trace_sha256, height_field_digest, catalog_digest, sampler_version,
        timeline_sha256, byte_length, storage_bucket, storage_key, storage_encoding, stored_byte_length,
-       stored_sha256, source_sim_key, producer
+       stored_sha256, source_sim_key, producer, contact_origin
      ) VALUES (
        :workspace_id, :timeline_key, :trace_sha256, :height_field_digest, :catalog_digest, :sampler_version,
-       :timeline_sha256, :byte_length, :bucket, :key, 'identity', :byte_length, :timeline_sha256, :sim_key, 'completion'
+       :timeline_sha256, :byte_length, :bucket, :key, 'identity', :byte_length, :timeline_sha256, :sim_key, 'completion', :contact_origin
      ) ON CONFLICT (workspace_id, timeline_key) DO NOTHING
      RETURNING timeline_key`,
     {
@@ -1214,6 +1225,7 @@ async function adoptRecordedTimeline(workspaceId: string, row: ResultRow, sample
       bucket: row.storage_bucket,
       key: row.timeline_storage_key,
       sim_key: row.sim_key,
+      contact_origin: contactOrigin,
     },
   );
   return {
@@ -1222,6 +1234,7 @@ async function adoptRecordedTimeline(workspaceId: string, row: ResultRow, sample
     sizeBytes: Number(row.timeline_byte_length),
     samplerVersion: sampler,
     derived: false,
+    contactOrigin,
   };
 }
 
@@ -1230,7 +1243,7 @@ export type RevisionReplay =
       kind: "simulation";
       motionSource: "original" | "resimulated";
       result: ScenarioSimulationResultDto;
-      timeline: { timelineSha256: string; sizeBytes: number };
+      timeline: { timelineSha256: string; sizeBytes: number; contactOrigin: TimelineContactOrigin | null };
     }
   | { kind: "legacy-xosc"; motionSource: "original-xosc" };
 
@@ -1280,7 +1293,7 @@ export async function resolveRevisionReplay(
     kind: "simulation",
     motionSource: source === "resimulated" ? "resimulated" : "original",
     result: await resultDto(row),
-    timeline: { timelineSha256: timeline.timelineSha256, sizeBytes: timeline.sizeBytes },
+    timeline: { timelineSha256: timeline.timelineSha256, sizeBytes: timeline.sizeBytes, contactOrigin: timeline.contactOrigin },
   };
 }
 

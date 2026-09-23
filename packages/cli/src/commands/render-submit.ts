@@ -6,6 +6,7 @@ import {
   backendModalities,
   buildCanonicalRenderSpec,
   defaultModalities,
+  templateRenderDefaults,
   type SensorModalitySelection,
 } from '@simforge-oss/scenario';
 import { CliError, EXIT } from '../errors.js';
@@ -30,6 +31,8 @@ export type RenderSubmitOptions = {
   quality: RenderQuality;
   /** `actorId:sensorId` keys; every enabled authored sensor when empty. */
   sensors: readonly string[];
+  /** Whether --resolution / --fps were given: only then do they override each camera's authored capture. */
+  explicitCapture?: Partial<{ resolution: boolean; fps: boolean }>;
   timeOfDay?: Environment['timeOfDay'];
   timeout?: number;
   /** Ledger priority, -100..100; the host's default when omitted. */
@@ -49,32 +52,50 @@ export async function renderSubmit(options: RenderSubmitOptions): Promise<number
 
   const authored = authoredRenderSensors(content);
   const wanted = new Set(options.sensors);
-  const selections: SensorModalitySelection[] = authored
+  const missing = [...wanted].filter((key) => !authored.some((option) => `${option.actorId}:${option.sensor.id}` === key));
+  if (missing.length > 0) throw new CliError('bad_value', `Unknown sensors: ${missing.join(', ')}`, { path: '--sensors' });
+  const chosen = authored
     .filter((option) => wanted.size === 0 || wanted.has(`${option.actorId}:${option.sensor.id}`))
     .map((option) => ({
       actorId: option.actorId,
       sensorId: option.sensor.id,
       modalities: defaultModalities(option.sensor).filter((modality) => backendModalities(options.engine, option.sensor).includes(modality)),
-    }))
-    .filter((selection) => selection.modalities.length > 0);
+    }));
+  // A sensor the render would cover is never dropped silently: one this
+  // engine cannot capture fails the submission, naming it.
+  const uncapturable = chosen.filter((selection) => selection.modalities.length === 0);
+  if (uncapturable.length > 0) {
+    throw new CliError('unsupported_sensor', `The ${options.engine} engine cannot capture ${uncapturable.map((selection) => `${selection.actorId}:${selection.sensorId}`).join(', ')}; choose the sensors to render with --sensors.`, {
+      path: '--sensors',
+      detail: { engine: options.engine, sensors: uncapturable.map((selection) => `${selection.actorId}:${selection.sensorId}`) },
+    });
+  }
+  const selections: SensorModalitySelection[] = chosen;
   if (selections.length === 0) {
     throw new CliError('no_sensors', 'No enabled authored sensor renders on this engine.', {
       detail: { engine: options.engine, authored: authored.map((option) => `${option.actorId}:${option.sensor.id}`) },
     });
   }
-  const missing = [...wanted].filter((key) => !authored.some((option) => `${option.actorId}:${option.sensor.id}` === key));
-  if (missing.length > 0) throw new CliError('bad_value', `Unknown sensors: ${missing.join(', ')}`, { path: '--sensors' });
 
   const browser = options.engine === 'browser';
   const authoredEnvironment = content.environment ?? EnvironmentSchema.parse({});
+  // --resolution / --fps override each camera's authored capture only when
+  // given; otherwise the template's authored capture (and its authored video
+  // format) stands and the CLI's defaults fill only what nothing authored.
+  const explicit = options.explicitCapture ?? { resolution: true, fps: true };
+  const authoredVideo = templateRenderDefaults(content)?.video;
   const renderSpec = buildCanonicalRenderSpec({
     content,
     selections,
     clip: { startSeconds: options.startSeconds, endSeconds: options.endSeconds },
+    captureOverride: {
+      ...(explicit.resolution ? { width: options.width, height: options.height } : {}),
+      ...(explicit.fps ? { fps: options.fps } : {}),
+    },
     video: {
-          width: options.width,
-          height: options.height,
-          fps: options.fps,
+          width: explicit.resolution ? options.width : authoredVideo?.width ?? options.width,
+          height: explicit.resolution ? options.height : authoredVideo?.height ?? options.height,
+          fps: explicit.fps ? options.fps : authoredVideo?.fps ?? options.fps,
           container: browser ? 'webm' : 'mp4',
           codec: browser ? 'vp9' : 'h264',
           quality: options.quality === 'preview' ? 'draft' : options.quality === 'cinematic' ? 'high' : options.quality,
@@ -205,13 +226,15 @@ export async function renderSubmitCommand(argv: readonly string[]): Promise<numb
         if (!['preview', 'standard', 'high', 'cinematic'].includes(quality)) throw new CliError('bad_value', '--quality must be preview, standard, high, or cinematic', { path: '--quality' });
         const timeOfDay = optionalString(args, 'environment');
         if (timeOfDay !== undefined && !TIME_OF_DAY.includes(timeOfDay as TimeOfDay)) throw new CliError('bad_value', `--environment must be one of ${TIME_OF_DAY.join(', ')}`, { path: '--environment' });
-        const resolution = /^(\d+)x(\d+)$/.exec(optionalString(args, 'resolution') ?? '1280x720');
+        const explicitResolution = optionalString(args, 'resolution');
+        const resolution = /^(\d+)x(\d+)$/.exec(explicitResolution ?? '1280x720');
         if (!resolution) throw new CliError('bad_value', '--resolution must be WxH', { path: '--resolution' });
         const start = optionalNumber(args, 'start') ?? 0;
         const seconds = optionalNumber(args, 'seconds');
         if (seconds === undefined || seconds <= 0) throw new CliError('missing_argument', '--seconds <clip length> is required', { path: '--seconds' });
         if (!scenario) throw new CliError('missing_argument', '--scenario <documentId> (or --revision <revisionId>) is required', { path: '--scenario' });
-        const fps = optionalNumber(args, 'fps') ?? 20;
+        const explicitFps = optionalNumber(args, 'fps');
+        const fps = explicitFps ?? 20;
         const timeout = optionalNumber(args, 'timeout');
         if (start < 0 || !Number.isFinite(start + seconds)) throw new CliError('bad_value', '--start must be non-negative and the clip end finite');
         if (!Number.isInteger(fps) || fps <= 0 || Number(resolution[1]) <= 0 || Number(resolution[2]) <= 0) throw new CliError('bad_value', 'FPS and resolution dimensions must be positive integers');
@@ -228,6 +251,7 @@ export async function renderSubmitCommand(argv: readonly string[]): Promise<numb
           height: Number(resolution[2]),
           quality: quality as RenderQuality,
           sensors: (optionalString(args, 'sensors') ?? '').split(',').map((value) => value.trim()).filter(Boolean),
+          explicitCapture: { resolution: explicitResolution !== undefined, fps: explicitFps !== undefined },
           ...(timeOfDay === undefined ? {} : { timeOfDay: timeOfDay as TimeOfDay }),
           timeout,
           priority,

@@ -191,6 +191,11 @@ impl Default for SkyPass {
 pub struct SkyClock {
     pub seconds: f64,
     pub fixed_step: Option<f32>,
+    /// Simulation time the clock is pinned to (`SceneApp::set_sim_time`):
+    /// while set, rendering frames never moves the sky, so a capture's
+    /// clouds are a function of its scene time, not of how many frames the
+    /// renderer happened to draw before it.
+    pub pinned: Option<f64>,
     origin: Option<std::time::Instant>,
 }
 
@@ -199,6 +204,7 @@ impl Default for SkyClock {
         Self {
             seconds: 0.0,
             fixed_step: None,
+            pinned: None,
             origin: None,
         }
     }
@@ -210,6 +216,11 @@ impl SkyClock {
     /// frames in between. Recordings set `fixed_step` and the clock becomes a
     /// pure function of the frame index instead.
     pub fn advance(&mut self) -> f32 {
+        if let Some(seconds) = self.pinned {
+            let step = (seconds - self.seconds) as f32;
+            self.seconds = seconds;
+            return step;
+        }
         match self.fixed_step {
             Some(step) => {
                 self.seconds += step as f64;
@@ -330,7 +341,7 @@ fn select_dir(
 
 impl SkyAssetPaths {
     pub fn resolve() -> anyhow::Result<Self> {
-        let executable = std::env::current_exe().ok();
+        let executable = std::env::current_exe().ok(); // fallback-ok: search-path candidate only; a missing asset panics below
         let (dir, selection) = select_dir(
             env_path("SIMFORGE_SKY_ASSETS"),
             env_path("SIMFORGE_NATIVE_RUNTIME_ROOT"),
@@ -436,7 +447,7 @@ impl Plugin for SkyPassPlugin {
         for path in [star_path, moon_path] {
             provenance.entries.push((
                 path.display().to_string(),
-                crate::night::sha256_file(path).unwrap_or_else(|_| "unreadable".into()),
+                crate::night::sha256_file(path).unwrap_or_else(|_| "unreadable".into()), // fallback-ok: provenance record of an asset that already loaded
                 std::fs::metadata(path).map(|m| m.len()).unwrap_or(0),
             ));
         }

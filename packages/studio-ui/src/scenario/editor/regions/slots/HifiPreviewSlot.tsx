@@ -7,6 +7,7 @@ import { cameraStateReport } from "@simforge-oss/viewer";
 import type { EditorState, ScenarioMapEntry } from "@simforge-oss/editor";
 import { editorSourceMapId } from "@simforge-oss/editor";
 import { actorClassForCatalogEntry, getEntry, type CatalogActorClass } from "@simforge-oss/asset-catalog";
+import { sceneActorClassOfKind } from "@simforge-oss/scenario";
 import { SCENE_STATE_VERSION } from "@simforge-oss/engine/scene-state";
 import { Button } from "../../../../components/ui/button";
 import {
@@ -19,21 +20,8 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "./HifiPreviewSlot.stylex";
 import { motionRecipe, typography } from "../../../../stylex/recipes.stylex";
 
-/** Catalog physics families mapped to the scene-state actor classes. */
-const SCENE_ACTOR_CLASS: Record<CatalogActorClass, CreateHifiPreviewInput["scene"]["actors"][number]["actorClass"]> = {
-  car: "car",
-  van: "car",
-  truck: "truck",
-  bus: "bus",
-  motorcycle: "motorcycle",
-  scooter: "motorcycle",
-  bicycle: "bicycle",
-  pedestrian: "pedestrian",
-  sidewalk_robot: "prop",
-  drone: "prop",
-  animal: "prop",
-  static_object: "prop",
-};
+/** Catalog physics families mapped to the scene-state actor classes (the one shared table). */
+const SCENE_ACTOR_CLASS = (catalogClass: CatalogActorClass) => sceneActorClassOfKind(catalogClass);
 
 const POLL_INTERVAL_MS = 1_500;
 const POLL_TIMEOUT_MS = 5 * 60_000;
@@ -89,7 +77,7 @@ function buildRequest(
       id: actor.id,
       kind: "spawn" as const,
       catalogId: actor.catalogId,
-      actorClass: SCENE_ACTOR_CLASS[catalogClass],
+      actorClass: SCENE_ACTOR_CLASS(catalogClass),
       transform: {
         position: [actor.x, actor.y, actor.z] as [number, number, number],
         rotation: [0, Math.sin(actor.headingRad / 2), 0, Math.cos(actor.headingRad / 2)] as [

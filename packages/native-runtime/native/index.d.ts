@@ -80,6 +80,12 @@ export declare class MapBundle {
   get graph(): LaneGraph
   /** Bundle from in-memory sources: `sourcesJson = {mapId, derived?, locations?, searchIndex?, xodr?, signalsGeojson?}` plus the topology sidecar bytes. */
   static fromSources(sourcesJson: string, topology: Uint8Array): MapBundle
+  /**
+   * Attach the map's ground surface (`derived/ground/ground-mesh.bin`);
+   * returns its digest. Worlds built afterwards ground every body on it.
+   */
+  attachGround(groundMesh: Uint8Array): string
+  get groundDigest(): string | null
   /** `{signalPrograms, roadControls}` bound from the map's signal catalog. */
   controlPlanJson(): string
   /** The merged `TopologyIndex`. */

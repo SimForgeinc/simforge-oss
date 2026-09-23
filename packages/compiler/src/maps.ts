@@ -184,6 +184,8 @@ export async function readInstalledMapClosureFiles(
   if (typeof variant?.file !== 'string') {
     throw new CliError('map_not_present', `map "${mapId}" has no published static-collider derivative`, { path: dir });
   }
+  const groundFile = path.join(dir, 'derived', 'ground', 'ground-mesh.bin');
+  const ground = existsSync(groundFile) ? new Uint8Array(await readFile(groundFile)) : null;
   const verdictsFile = path.join(dir, ...AMBIENT_TURN_VERDICTS_PATH.split('/'));
   const shipped = existsSync(verdictsFile) ? await readFile(verdictsFile) : null;
   const ambientTurnVerdicts = shipped ? new Uint8Array(shipped[0] === 0x1f && shipped[1] === 0x8b ? gunzipSync(shipped) : shipped) : null;
@@ -196,7 +198,7 @@ export async function readInstalledMapClosureFiles(
     plain(path.join('3d', 'manifest.json')),
     plain(path.join('3d', 'variants', variant.file)),
   ]);
-  return { mapId, topology, derivedTopology, locations, xodr, signals, colliders: { sourceManifest, derivativeManifest, artifact }, ambientTurnVerdicts };
+  return { mapId, topology, derivedTopology, locations, xodr, signals, colliders: { sourceManifest, derivativeManifest, artifact }, ambientTurnVerdicts, ground };
 }
 
 /**

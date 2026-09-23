@@ -30,6 +30,8 @@ export type {
   ParamValue,
   PropClass,
   PropTag,
+  RiderBinding,
+  RiderColor,
 } from './types';
 export { CARLA_VEHICLE_MODELS } from './vehicles-carla.generated';
 export { CARLA_PEDESTRIAN_MODELS } from './pedestrians-carla.generated';

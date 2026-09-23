@@ -8,6 +8,7 @@ from dataclasses import dataclass, field, replace
 from typing import Callable, Mapping
 
 from .contract import MAX_ACTOR_COUNT, MAX_ACTOR_FRAME_STATES, MAX_DURATION_SECONDS, ContractError, reject_unsafe_xml_envelope
+from .policy import CarlaRenderError
 # historical name retained for stored-data compat
 
 STEP_SECONDS = 0.02
@@ -236,6 +237,14 @@ def _semantic_metadata(
     }
 
 
+def _world_attribute(position: ET.Element, name: str, label: str) -> float:
+    """A WorldPosition attribute the replay needs; absent is refused, not 0."""
+    raw = position.get(name)
+    if raw is None:
+        raise _incomplete(f"{label} WorldPosition lacks {name}; the trajectory-replay profile states x, y, z, h, p and r")
+    return _finite(raw, f"{label} {name}")
+
+
 def _finite(raw: str | None, label: str) -> float:
     try:
         result = float(raw)  # type: ignore[arg-type]
@@ -250,15 +259,23 @@ def _property_map(entity: ET.Element) -> dict[str, str]:
     return {item.get("name", ""): item.get("value", "") for item in entity.findall(".//Property")}
 
 
+def _incomplete(message: str) -> CarlaRenderError:
+    return CarlaRenderError("carla_xosc_unsupported_or_incomplete", message)
+
+
 def _kind(entity: ET.Element, properties: Mapping[str, str]) -> str:
-    explicit = properties.get("simforge.actorKind") or properties.get("uniscenario.actorKind") or properties.get("uniscenarios.actorKind")
-    if explicit:
-        return explicit
+    for name in ("simforge.actorKind", "uniscenario.actorKind", "uniscenarios.actorKind"):
+        if properties.get(name):
+            return properties[name]
     if entity.find("Vehicle") is not None:
         return "vehicle"
     if entity.find("Pedestrian") is not None:
         return "pedestrian"
-    return "static_object"
+    if entity.find("MiscObject") is not None:
+        return "static_object"
+    # A CatalogReference (or external object) states no kind; guessing
+    # static_object would render a road user as a prop.
+    raise _incomplete(f"ScenarioObject {entity.get('name')} declares no actor kind")
 
 
 def _entities(root: ET.Element, abort: Callable[[], None]) -> dict[str, ActorBinding]:
@@ -307,11 +324,11 @@ def _initial_positions(root: ET.Element, actors: Mapping[str, ActorBinding], abo
             result[actor_id] = (
                 _finite(position.get("x"), "initial x"),
                 _finite(position.get("y"), "initial y"),
-                _finite(position.get("z", "0"), "initial z"),
-                _finite(position.get("h", "0"), "initial heading"),
+                _world_attribute(position, "z", "initial"),
+                _world_attribute(position, "h", "initial"),
                 0.0,
-                _finite(position.get("p", "0"), "initial pitch"),
-                _finite(position.get("r", "0"), "initial roll"),
+                _world_attribute(position, "p", "initial"),
+                _world_attribute(position, "r", "initial"),
             )
     return result
 
@@ -344,11 +361,11 @@ def _trajectory_vertices(action: ET.Element, abort: Callable[[], None]) -> list[
             _finite(vertex.get("time"), "trajectory time"),
             _finite(world.get("x"), "trajectory x"),
             _finite(world.get("y"), "trajectory y"),
-            _finite(world.get("z", "0"), "trajectory z"),
-            _finite(world.get("h", "0"), "trajectory heading"),
+            _world_attribute(world, "z", "trajectory"),
+            _world_attribute(world, "h", "trajectory"),
             _finite(motion.get("speed_longitudinal"), "trajectory speed") if motion is not None else math.nan,
-            _finite(world.get("p", "0"), "trajectory pitch"),
-            _finite(world.get("r", "0"), "trajectory roll"),
+            _world_attribute(world, "p", "trajectory"),
+            _world_attribute(world, "r", "trajectory"),
         ))
     if not vertices:
         raise ContractError("trajectory Polyline must contain vertices")
@@ -725,11 +742,29 @@ def compile_xosc14(xml_bytes: bytes, abort: Callable[[], None] | None = None) ->
             and private_action.find("./AppearanceAction") is None
         ):
             raise ContractError("trajectory-replay Story may only contain FollowTrajectoryAction or AppearanceAction private actions")
+    # Init is read for teleports, trajectories and signal states only; any
+    # other Init action would be silently ignored, so it is refused. The Init
+    # EnvironmentAction the exporter writes is a lossy copy of the render
+    # intent's authoredEnvironment, which is the environment authority.
+    for private_action in root.findall("./Storyboard/Init/Actions/Private/PrivateAction"):
+        if private_action.find("./TeleportAction") is None and private_action.find("./RoutingAction/FollowTrajectoryAction") is None:
+            kinds = sorted(child.tag for child in private_action)
+            raise _incomplete(f"trajectory-replay Init private action {', '.join(kinds)} is not executable")
+    for global_action in root.findall("./Storyboard/Init/Actions/GlobalAction"):
+        if (
+            global_action.find("./InfrastructureAction/TrafficSignalAction/TrafficSignalStateAction") is None
+            and global_action.find("./EnvironmentAction") is None
+        ):
+            kinds = sorted(child.tag for child in global_action)
+            raise _incomplete(f"trajectory-replay Init global action {', '.join(kinds)} is not executable")
     check()
     actors = _entities(root, check)
     if len(actors) > MAX_ACTOR_COUNT:
         raise ContractError(f"compiled plan exceeds {MAX_ACTOR_COUNT} actors")
     semantic_metadata = _semantic_metadata(header_properties, actors)
+    unknown_knockdowns = sorted(set(knocked_down_at) - set(actors))
+    if unknown_knockdowns:
+        raise _incomplete("knockdown times name no actor: " + ", ".join(unknown_knockdowns))
     check()
     initial = _initial_positions(root, actors, check)
     check()

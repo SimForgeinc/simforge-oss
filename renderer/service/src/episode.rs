@@ -95,6 +95,10 @@ impl Episode {
             return Err("episode requires a nonempty, contiguous source interval".into());
         }
         let mut authored = Vec::with_capacity(document.frames.len());
+        // Odometer per actor, the render timeline's `wheelSpinRad` rule over this
+        // contiguous source interval: Σ signed speed·dt on ticks after spawn. It phases
+        // ridden two-wheelers deterministically from the document alone.
+        let mut odometer: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
         for frame in &document.frames {
             let mut actors = Vec::with_capacity(frame.actors.len());
             for pose in &frame.actors {
@@ -106,6 +110,22 @@ impl Episode {
                 if !desc.dims.is_some_and(|d| [d.l,d.w,d.h].iter().all(|v| v.is_finite() && *v>0.0)) {
                     return Err(format!("actor {} requires positive declared dimensions for collision/replay checks",pose.id));
                 }
+                let distance = odometer.entry(pose.id.clone()).or_insert(0.0);
+                if matches!(pose.kind, ActorTickKind::Update) {
+                    // Signed like the timeline's speed: travelling rear-first
+                    // (velocity against the body's +X) runs the odometer back.
+                    let [x, y, z, w] = pose.rotation;
+                    let forward = [1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y + z * w), 2.0 * (x * z - y * w)];
+                    let along: f64 = pose.velocity.iter().zip(forward).map(|(v, f)| v * f).sum();
+                    let speed = pose.velocity.iter().map(|v| v * v).sum::<f64>().sqrt();
+                    *distance += if along < 0.0 { -speed } else { speed } / hz;
+                }
+                // The document's own timeline channel when it carries one; an
+                // episode document without it gets the same rule derived here.
+                let wheel_spin_rad = match pose.wheel_spin_rad {
+                    Some(spin) => Some(spin),
+                    None => Some(*distance / render_core::vehicle_model::TIMELINE_WHEEL_RADIUS_M),
+                };
                 actors.push(ActorState {
                     id: pose.id.clone(),
                     kind: match pose.kind { ActorTickKind::Spawn => "spawn", ActorTickKind::Update => "update", ActorTickKind::Despawn => "despawn" }.into(),
@@ -113,6 +133,9 @@ impl Episode {
                     color: desc.color.clone(), dims: desc.dims.map(|d| ActorDims { l: d.l as f32, w: d.w as f32, h: d.h as f32 }),
                     transform: ActorTransform { position: pose.position.map(|v| v as f32), rotation: pose.rotation.map(|v| v as f32) },
                     velocity: pose.velocity.map(|v| v as f32),
+                    wheel_spin_rad,
+                    body_attitude: pose.body_attitude.map(|a| crate::scene::BodyAttitude { pitch_rad: a.pitch_rad as f32, roll_rad: a.roll_rad as f32 }),
+                    wheel_drop_m: pose.wheel_drop_m.map(|d| d.map(|v| v as f32)),
                 });
             }
             if !actors.iter().any(|a| a.id == ego_id && a.kind != "despawn") {

@@ -70,6 +70,7 @@ export function lowerRenderTimelineToNative(
   const stride = actors.length * SCENE_FRAME_RECORD_LEN;
   const previous = new Array<boolean>(actors.length).fill(false);
   const rendered = new Set<string>();
+  const classes = actors.map((actor) => nativeActorClass(actor.kind, `actor ${actor.id}`));
   const states = frameTimes.map((clipTime, tick): NativeSceneState => {
     const out: NativeSceneState['actors'][number][] = [];
     actors.forEach((actor, index) => {
@@ -83,7 +84,7 @@ export function lowerRenderTimelineToNative(
         id: actor.id,
         kind: present ? (was ? 'update' : 'spawn') : 'despawn',
         catalogId: actor.catalogId,
-        actorClass: nativeActorClass(actor.kind),
+        actorClass: classes[index]!,
         dims: actor.dims,
         ...(actor.color ? { color: actor.color } : {}),
         transform: {
@@ -93,6 +94,16 @@ export function lowerRenderTimelineToNative(
           rotation: [q(values[o + 4]!), q(values[o + 5]!), q(values[o + 6]!), q(values[o + 7]!)],
         },
         velocity: [q(values[o + 8]!), q(values[o + 9]!), q(values[o + 10]!)],
+        // sampler/2: the odometer every wheeled actor carries, and for
+        // four-wheelers the sprung body's attitude (the `body` node, never the
+        // actor transform, so the wheels stay on the ground) and wheel drop.
+        ...(present && !Number.isNaN(values[o + 12]!) ? { wheelSpinRad: q(values[o + 12]!) } : {}),
+        ...(present && !Number.isNaN(values[o + 13]!)
+          ? { bodyAttitude: { pitchRad: q(values[o + 13]!), rollRad: q(values[o + 14]!) } }
+          : {}),
+        ...(present && !Number.isNaN(values[o + 15]!)
+          ? { wheelDropM: [q(values[o + 15]!), q(values[o + 16]!), q(values[o + 17]!), q(values[o + 18]!)] as [number, number, number, number] }
+          : {}),
       });
     });
     const previousTime = tick === 0 ? frameTimes[1] ?? clipTime + header.dtS : frameTimes[tick - 1]!;
@@ -105,7 +116,7 @@ export function lowerRenderTimelineToNative(
   });
   const appearances = actors
     .filter((actor) => rendered.has(actor.id))
-    .map((actor): NativeActorAppearance => ({ actorId: actor.id, catalogId: actor.catalogId, authored: actor.catalogAuthored }));
+    .map((actor): NativeActorAppearance => ({ actorId: actor.id, kind: actor.kind, catalogId: actor.catalogId, authored: actor.catalogAuthored }));
   const timelineSha256 = timeline.sha256;
   const sha256 = createHash('sha256').update(canonicalSceneJson({ timelineSha256, states })).digest('hex');
   return {

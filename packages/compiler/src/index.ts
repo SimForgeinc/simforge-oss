@@ -9,6 +9,7 @@
  */
 
 export * from './errors.js';
+export * from './simulation-members.js';
 export * from './anchor/index.js';
 export * from './map-signals.js';
 export * from './materialize.js';

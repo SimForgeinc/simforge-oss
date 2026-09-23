@@ -6,7 +6,7 @@ import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput, assertNativeMapMe
 import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import type { ScenarioRenderJobDto } from "./contracts";
-import type { ScenarioMotionSource } from "@simforge-oss/studio-host";
+import type { ScenarioMotionSource, ScenarioTimelineContactOrigin } from "@simforge-oss/studio-host";
 import {
   ScenarioRenderIntentSchema,
   type SubmitScenarioRenderIntent,
@@ -65,6 +65,7 @@ type InsertedJob = {
   trace_sha256: string | null;
   timeline_sha256: string | null;
   motion_source?: ScenarioMotionSource | null;
+  timeline_contact_origin?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -309,6 +310,7 @@ function buildIntent(
       ...nativeAssets,
     ],
     seed: renderSeed(content, lineage.scenario_sha256),
+    ...(input.motionSource ? { motionSource: input.motionSource } : {}),
   });
 }
 
@@ -342,7 +344,15 @@ export async function createRenderIntentJob(
    * The revision's authoritative simulation (resolved by the caller): the job
    * records the trace and render timeline every renderer replays.
    */
-  simulation: { simKey: string; traceSha256: string; timelineSha256: string | null; timelineSizeBytes: number | null; engineSemVer?: string } | null = null,
+  simulation: {
+    simKey: string;
+    traceSha256: string;
+    timelineSha256: string | null;
+    timelineSizeBytes: number | null;
+    engineSemVer?: string;
+    /** Where the replayed timeline's heights came from; `legacy-xodr-elevation` is shown on the job. */
+    timelineContactOrigin?: "trace" | "derived-at-timeline-build" | "legacy-xodr-elevation" | null;
+  } | null = null,
   /** Which motion the render replays (`render_jobs.motion_source`). */
   motionSource: ScenarioMotionSource | null = null,
 ): Promise<ScenarioRenderJobDto | null> {
@@ -492,13 +502,22 @@ export async function createRenderIntentJob(
     // `render.timeline` input (its bytes are the stored canonical JSON).
     // The explicit legacy replay (`original-xosc`) renders the revision's
     // OpenSCENARIO motion and binds no timeline; every other render binds one.
-    if (motionSource === "original-xosc" && simulation) throw new Error("render_motion_source_conflict");
-    if (motionSource !== null && motionSource !== "original-xosc" && !(simulation?.timelineSha256 && simulation.timelineSizeBytes)) {
+    const legacyReplay = motionSource === "original-xosc" || input.motionSource === "original-xosc";
+    if (legacyReplay && simulation) throw new Error("render_motion_source_conflict");
+    if (motionSource !== null && !legacyReplay && !(simulation?.timelineSha256 && simulation.timelineSizeBytes)) {
       throw new Error("render_timeline_missing");
     }
-    const timelineAssets: NativeAsset[] = simulation?.timelineSha256 && simulation.timelineSizeBytes
+    const timelineAssets: NativeAsset[] = !legacyReplay && simulation?.timelineSha256 && simulation.timelineSizeBytes
       ? [{ assetId: RENDER_TIMELINE_INPUT_ID, kind: "other" as const, sha256: simulation.timelineSha256, sizeBytes: simulation.timelineSizeBytes }]
       : [];
+    // The native engine renders from the timeline, or from the explicitly
+    // requested legacy replay, and nothing else
+    // (docs/engineering/no-silent-fallbacks.md): a revision whose simulation
+    // has no timeline is refused here (the same code the engine would fail
+    // with) instead of a worker leasing it first.
+    if (input.engine === "native" && !legacyReplay && timelineAssets.length === 0) {
+      throw new Error("native_render_timeline_missing");
+    }
     const intent = buildIntent(input, lineage, [...nativeAssets, ...timelineAssets], fleetGpuBytes);
     const intentSha256 = hashRenderIntent(intent);
     const controlSha256 = canonicalJsonSha256({
@@ -513,16 +532,16 @@ export async function createRenderIntentJob(
          render_spec, render_spec_sha256, render_intent, intent_sha256, renderer_engine,
          parity_thresholds, resource_request, request_contract_version,
          job_mode, billing_mode, estimated_cost_cents, priority, idempotency_key, requested_by_user_id,
-         sim_key, trace_sha256, timeline_sha256, motion_source
+         sim_key, trace_sha256, timeline_sha256, motion_source, timeline_contact_origin
        ) VALUES (
          :id, :workspace_id, :revision_id, :execution_package_id, :control_sha256,
          CAST(:render_spec AS jsonb), :render_spec_sha256, CAST(:render_intent AS jsonb), :intent_sha256, :renderer_engine,
          CAST(:parity_thresholds AS jsonb), CAST(:resource_request AS jsonb), :request_contract_version,
          :job_mode, 'free', 0, :priority, :idempotency_key, :user_id,
-         :sim_key, :trace_sha256, :timeline_sha256, :motion_source
+         :sim_key, :trace_sha256, :timeline_sha256, :motion_source, :timeline_contact_origin
        )
        RETURNING id, revision_id, execution_package_id, job_mode, job_state, progress,
-                 sim_key, trace_sha256, timeline_sha256, motion_source,
+                 sim_key, trace_sha256, timeline_sha256, motion_source, timeline_contact_origin,
                  created_at::text AS created_at, updated_at::text AS updated_at`,
       {
         id: scenarioId("usrj"),
@@ -548,6 +567,7 @@ export async function createRenderIntentJob(
         trace_sha256: simulation?.traceSha256 ?? null,
         timeline_sha256: simulation?.timelineSha256 ?? null,
         motion_source: motionSource,
+        timeline_contact_origin: simulation?.timelineContactOrigin ?? null,
       },
     );
     return rows[0] ?? null;
@@ -580,6 +600,7 @@ export async function createRenderIntentJob(
         }
       : null,
     motionSource: inserted.motion_source ?? null,
+    ...(inserted.timeline_contact_origin ? { timelineContactOrigin: inserted.timeline_contact_origin as ScenarioTimelineContactOrigin } : {}),
     createdAt: inserted.created_at,
     updatedAt: inserted.updated_at,
   };

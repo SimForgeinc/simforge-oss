@@ -121,14 +121,14 @@ pub const CATALOG: &[CatalogEntry] = &[
         "vehicle",
         Some("motorcycle"),
         &[],
-        d(2.1, 0.75, 1.23),
+        d(2.1, 0.75, 1.51),
     ),
     e(
         "vehicle.bicycle",
         "vehicle",
         Some("bicycle"),
         &[],
-        d(1.75, 0.5, 1.71),
+        d(1.75, 0.62, 1.76),
     ),
     e(
         "vehicle.ambulance",

@@ -9,7 +9,7 @@ import type {
   ScenarioRenderArtifactDto,
 } from "../contracts";
 import { endpoint } from "./endpoint";
-import { array, nullable, number, object, optional, passthrough, record, string, tuple, type Shape } from "./schema";
+import { array, nullable, number, object, oneOf, optional, passthrough, record, string, tuple, type Shape } from "./schema";
 
 // ── DTO decoders ─────────────────────────────────────────────────────────────
 
@@ -32,6 +32,12 @@ export const ScenarioMapDescriptorSchema = object<ScenarioMapDescriptorDto>({
   sumoNetworkSha256: nullable(string()),
   sumoStatus: optional(nullable(object({ state: string(), reason: nullable(string()) }))),
   ambientTurnVerdicts: optional(nullable(object({ engineSemVer: string(), closureDigest: string(), sha256: string() }))),
+  ground: optional(nullable(object({
+    sha256: string(),
+    status: oneOf(['ok', 'flagged', 'no-xodr', 'unreported'] as const),
+    flags: array(string()),
+    warnings: array(string()),
+  }))),
   topologyArtifactUrl: string(),
   derivedTopologyUrl: nullable(string()),
   locationsUrl: nullable(string()),

@@ -15,9 +15,8 @@ pub struct SceneState {
     pub version: String,
     #[serde(rename = "mapId")]
     pub map_id: String,
-    #[serde(default)]
     pub tick: u32,
-    #[serde(rename = "tickHz", default)]
+    #[serde(rename = "tickHz")]
     pub tick_hz: f32,
     #[serde(default)]
     pub weather: Option<serde_json::Value>,
@@ -51,6 +50,25 @@ pub struct ActorState {
     pub transform: ActorTransform,
     #[serde(default)]
     pub velocity: [f32; 3],
+    /// Unwrapped wheel rotation since spawn (timeline `wheelSpinRad`), every
+    /// wheeled actor on the timeline path: `odometerM = wheelSpinRad * 0.35`.
+    #[serde(rename = "wheelSpinRad", default)]
+    pub wheel_spin_rad: Option<f64>,
+    /// Four-wheelers: sprung-body attitude, applied to the model's `body`
+    /// node only (the transform carries road attitude, wheels stay down).
+    #[serde(rename = "bodyAttitude", default)]
+    pub body_attitude: Option<BodyAttitude>,
+    /// Four-wheelers: per-wheel drop `[FL, FR, RL, RR]`, metres.
+    #[serde(rename = "wheelDropM", default)]
+    pub wheel_drop_m: Option<[f32; 4]>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub struct BodyAttitude {
+    #[serde(rename = "pitchRad")]
+    pub pitch_rad: f32,
+    #[serde(rename = "rollRad")]
+    pub roll_rad: f32,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -64,13 +82,9 @@ pub struct ActorDims {
 pub struct ActorTransform {
     /// World frame = tile GLB frame, metres; y is a ground hint only.
     pub position: [f32; 3],
-    /// Y-up quaternion [x, y, z, w].
-    #[serde(default = "identity_quat")]
+    /// Y-up quaternion [x, y, z, w]. Required: an absent attitude is not
+    /// "facing +X".
     pub rotation: [f32; 4],
-}
-
-fn identity_quat() -> [f32; 4] {
-    [0.0, 0.0, 0.0, 1.0]
 }
 
 impl SceneState {
@@ -80,6 +94,24 @@ impl SceneState {
                 "scene-state schema mismatch: expected {SCENE_STATE_SCHEMA}, got {}",
                 self.version
             ));
+        }
+        if !(self.tick_hz.is_finite() && self.tick_hz > 0.0) {
+            return Err(format!("[native_scene_tick_hz_invalid] tick {} has tickHz {}", self.tick, self.tick_hz));
+        }
+        for actor in &self.actors {
+            if actor.kind == "despawn" {
+                continue;
+            }
+            let rotation = actor.transform.rotation;
+            let norm = rotation.iter().map(|v| v * v).sum::<f32>().sqrt();
+            if !actor.transform.position.iter().chain(rotation.iter()).chain(actor.velocity.iter()).all(|v| v.is_finite())
+                || !(0.5..2.0).contains(&norm)
+            {
+                return Err(format!(
+                    "[native_actor_pose_invalid] actor {} at tick {} has a non-finite or non-unit pose",
+                    actor.id, self.tick
+                ));
+            }
         }
         Ok(())
     }
@@ -94,10 +126,11 @@ mod tests {
         let state: SceneState = serde_json::from_str(
             r##"{
                 "version":"simforge.scene-state.v1","mapId":"belmont-research-center",
+                "tick":0,"tickHz":20,
                 "actors":[{
                     "id":"mini","kind":"spawn","catalogId":"vehicle.hatchback",
                     "actorClass":"car","color":"#8f2f2f",
-                    "transform":{"position":[0,0,0]}
+                    "transform":{"position":[0,0,0],"rotation":[0,0,0,1]}
                 }]
             }"##,
         )

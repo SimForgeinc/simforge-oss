@@ -89,6 +89,96 @@ export function resolveEditorLightingOverrides(
   return resolved;
 }
 
+/**
+ * Why a render refuses an environment extension block: a renderer that
+ * honours authored lighting may not read a malformed block as "no block"
+ * (docs/engineering/no-silent-fallbacks.md). The editor keeps its lenient
+ * reading above for display; renders use {@link parseRenderLightingOverrides}
+ * and {@link parseRenderSceneMinutes}.
+ */
+export class EnvironmentExtensionError extends Error {
+  readonly code = "environment_extension_invalid" as const;
+  constructor(readonly extension: string, reason: string) {
+    super(`${extension}: ${reason}`);
+    this.name = "EnvironmentExtensionError";
+  }
+}
+
+/**
+ * The authored lighting block exactly as a renderer must honour it. Absent
+ * reads as preset lighting. Present, it must be a current-revision block
+ * (`scaleRevision: 2`) whose fields are known, finite and inside
+ * `LIGHTING_RANGES`: an older revision, an unknown field, a non-number or an
+ * out-of-range value is refused, never dropped or clamped.
+ */
+export function parseRenderLightingOverrides(environment: Environment): EditorLightingOverrides {
+  const block = environment.extensions?.[LIGHTING_EXTENSION_KEY];
+  if (block === undefined) return {};
+  if (typeof block !== "object" || block === null || Array.isArray(block)) {
+    throw new EnvironmentExtensionError(LIGHTING_EXTENSION_KEY, "is not an object");
+  }
+  const record = block as Record<string, unknown>;
+  if (record.scaleRevision !== LIGHTING_SCALE_REVISION) {
+    throw new EnvironmentExtensionError(
+      LIGHTING_EXTENSION_KEY,
+      `scaleRevision ${JSON.stringify(record.scaleRevision)} is not the current lighting scale (${LIGHTING_SCALE_REVISION}); re-save the scenario's lighting`,
+    );
+  }
+  const resolved: Partial<Record<LightingField, number>> = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (key === "scaleRevision") continue;
+    if (!(LIGHTING_FIELDS as readonly string[]).includes(key)) {
+      throw new EnvironmentExtensionError(LIGHTING_EXTENSION_KEY, `unknown field ${key}`);
+    }
+    const field = key as LightingField;
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      throw new EnvironmentExtensionError(LIGHTING_EXTENSION_KEY, `${field} is not a finite number`);
+    }
+    const { min, max } = LIGHTING_RANGES[field];
+    if (value < min || value > max) {
+      throw new EnvironmentExtensionError(LIGHTING_EXTENSION_KEY, `${field} ${value} is outside [${min}, ${max}]`);
+    }
+    resolved[field] = value;
+  }
+  return resolved;
+}
+
+/**
+ * The exact authored scene clock (`org.simforge.sceneTime.v1`), minutes past
+ * midnight in [0, 1440), or `null` when the scenario authored none (the
+ * time-of-day preset then decides). A present block without a finite
+ * `minutes` is refused.
+ */
+export function parseRenderSceneMinutes(environment: Environment): number | null {
+  const block = environment.extensions?.[SCENE_TIME_EXTENSION_KEY];
+  if (block === undefined) return null;
+  if (typeof block !== "object" || block === null || Array.isArray(block)) {
+    throw new EnvironmentExtensionError(SCENE_TIME_EXTENSION_KEY, "is not an object");
+  }
+  const minutes = (block as Record<string, unknown>).minutes;
+  if (typeof minutes !== "number" || !Number.isFinite(minutes)) {
+    throw new EnvironmentExtensionError(SCENE_TIME_EXTENSION_KEY, "has no finite minutes");
+  }
+  return ((minutes % 1440) + 1440) % 1440;
+}
+
+/**
+ * The sun angles Studio writes beside an exact scene clock
+ * (`withSceneMinutes`: a display sinusoid for exports, not an authored sun).
+ * A renderer that places the sun from the clock's solar model recognises
+ * them by this derivation; any other authored angles are an explicit sun.
+ * Must stay equal to studio-ui `sunAnglesForSceneMinutes`.
+ */
+export function sceneClockSunAngles(minutes: number): { readonly azimuthDeg: number; readonly elevationDeg: number } {
+  const value = ((Math.round(minutes) % 1440) + 1440) % 1440;
+  const daylightProgress = (value - 6 * 60) / (12 * 60);
+  const elevationDeg = Math.max(-12, 65 * Math.sin(Math.PI * daylightProgress));
+  return {
+    azimuthDeg: value / 4,
+    elevationDeg: Math.round(elevationDeg * 100) / 100,
+  };
+}
+
 export type EditorLightingRenderScales = EditorLightingOverrides & Readonly<{
   ambient: number;
   sun: number;

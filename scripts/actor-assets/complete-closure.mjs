@@ -380,7 +380,15 @@ async function resolveExternal(externalRoot, id, binding) {
   // back at this member and names the clip inside it, which is exactly what
   // `VehicleModelEntry::animations` carries and the service plays.
   let clips = null;
-  if (binding.animated) {
+  if (binding.rider) {
+    // A ridden two-wheeler plays one odometer-phased clip authored into the
+    // model; the service reads the rider contract, not a motion-state table.
+    const present = new Set((document.animations ?? []).map((animation) => animation?.name));
+    if (!present.has(binding.rider.clip)) fail(`${id}: ${file} has no rider clip ${JSON.stringify(binding.rider.clip)}`);
+    const tagged = (document.nodes ?? []).some((node) => node?.extras?.semanticClass === 'rider' && node.mesh !== undefined);
+    if (!tagged) fail(`${id}: ${file} declares a rider binding but has no mesh node tagged semanticClass "rider"`);
+    clips = { [binding.rider.clip]: binding.rider.clip };
+  } else if (binding.animated) {
     const declared = binding.clips ?? fail(`${id}: animated binding declares no clips; the closure cannot name a clip to play`);
     const present = new Set((document.animations ?? []).map((animation) => animation?.name).filter((name) => typeof name === 'string'));
     clips = {};
@@ -401,6 +409,7 @@ async function resolveExternal(externalRoot, id, binding) {
     scaleToDims: sidecarEntry.scaleToDims === true,
     convention: typeof convention === 'string' ? convention : null,
     clips,
+    rider: binding.rider ?? null,
     file,
   };
 }
@@ -489,8 +498,10 @@ for (const id of catalogIds) {
         ...(external.clips
           ? { animation: `clips authored into the bound model: ${Object.entries(external.clips).map(([key, clip]) => `${key}=${clip}`).join(', ')}` }
           : {}),
+        ...(external.rider ? { rider: 'ridden two-wheeler: rider clip phased by the timeline odometer (wheelSpinRad), palette by fnv1a32(actorId)' } : {}),
       },
       animations,
+      ...(external.rider ? { rider: external.rider } : {}),
     };
     (replacing ? rebound : externalBound).push(id);
     continue;
