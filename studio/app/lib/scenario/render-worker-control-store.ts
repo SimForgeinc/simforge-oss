@@ -19,6 +19,7 @@ import {
   type NativeRunDiagnostics,
 } from "@simforge-oss/render/native";
 import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
+import { CONTROL_FEATURES_V1, WORKER_CONTROL_FEATURES_V1 } from "@simforge-oss/render";
 import { RENDER_INTENT_V1_SCHEMA, RenderSpecV3Schema, captureScheduleFps, fixedStepFrameCount, hashRenderIntent, parseRenderIntent as parseRenderIntentDocument } from "@simforge-oss/scenario";
 import {
   isScenarioParityEvidenceAccepted,
@@ -237,6 +238,8 @@ export type WorkerRow = {
   input_urls?: string | null;
   /** Per-map, per-tier scene memory this worker measured from its cache (`cacheStatus.demand`). */
   cache_demand?: string | unknown[] | null;
+  /** `v1` when the worker understands `controlFeatures` on a lease. */
+  control_features?: string | null;
 };
 
 function parseObject(value: string | Record<string, unknown>) {
@@ -362,6 +365,8 @@ type Claimed = {
   inputs: ClaimedInput[];
   /** The worker signs stored inputs on demand (cache misses only): send no per-input URL. */
   lazyInputUrls: boolean;
+  /** The worker parses `controlFeatures`: tell it which newer output fields this plane accepts. */
+  controlFeatures: boolean;
 };
 
 type StoredInput = {
@@ -505,7 +510,8 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
                 metadata->>'baseImagePlatformDigest' AS base_image_platform_digest,
                 capabilities::text AS capabilities,
                 metadata->'labels'->>'inputUrls' AS input_urls,
-                metadata->'cacheStatus'->'demand' AS cache_demand
+                metadata->'cacheStatus'->'demand' AS cache_demand,
+                metadata->'labels'->>'controlFeatures' AS control_features
            FROM simforge.worker_nodes
           WHERE registration_id = :registration_id AND id = :worker_node_id AND environment = :environment
             AND registration_state = 'active'
@@ -736,6 +742,7 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
         executionPackageControlSha256: row.execution_package_control_sha256,
         inputs,
         lazyInputUrls: worker.input_urls === "batch-v1",
+        controlFeatures: worker.control_features === WORKER_CONTROL_FEATURES_V1,
       };
     }).catch((error: unknown): null => {
       // One job that cannot be leased (an incomplete map closure, a digest
@@ -774,6 +781,7 @@ export async function claimResponseV2(registrationId: string, workerNodeId: stri
     intent: claimed.intent,
     intentSha256: claimed.intentSha256,
     executionPackageControlSha256: claimed.executionPackageControlSha256,
+    ...(claimed.controlFeatures ? { controlFeatures: [...CONTROL_FEATURES_V1] } : {}),
     // A `batch-v1` worker gets identities only for stored inputs and signs
     // just its cache misses (`input-urls`): a large native map would
     // otherwise put thousands of signed URLs, each with a refresh block
@@ -1207,12 +1215,26 @@ async function readReservedJson(reservation: NativeReservation): Promise<unknown
  * the run's evidence: they bind the actor appearance closure, the lowering
  * and the service protocol the run actually rendered with.
  */
+/**
+ * Worker evidence parsed tolerantly at the top level: fields this control
+ * plane does not know (written by a newer worker) are dropped before the
+ * strict parse instead of failing the whole job. Every field this plane
+ * does know keeps its strict validation, so the lineage checks are intact.
+ */
+export function parseEvidenceTolerant<T>(schema: { shape: Record<string, unknown>; parse(value: unknown): T }, value: unknown): T {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return schema.parse(value);
+  const known = new Set(Object.keys(schema.shape));
+  const dropped = Object.keys(value).filter((key) => !known.has(key));
+  if (dropped.length > 0) console.error(JSON.stringify({ event: "render_evidence_unknown_fields_ignored", fields: dropped }));
+  return schema.parse(Object.fromEntries(Object.entries(value).filter(([key]) => known.has(key))));
+}
+
 async function verifyNativeCompletion(lease: ActiveLease, intentSha256: string, reservations: readonly NativeReservation[]): Promise<NativeRunDiagnostics> {
   const manifestReservation = reservations.find((item) => item.artifact_role === "manifest");
   const diagnosticsReservation = reservations.find((item) => item.artifact_role === "diagnostics");
   if (!manifestReservation || !diagnosticsReservation) throw new Error("native_artifact_evidence_incomplete");
   const intent = parseRenderIntentDocument(typeof lease.render_intent === "string" ? JSON.parse(lease.render_intent) : lease.render_intent);
-  const diagnostics = NativeRunDiagnosticsSchema.parse(await readReservedJson(diagnosticsReservation));
+  const diagnostics = parseEvidenceTolerant(NativeRunDiagnosticsSchema, await readReservedJson(diagnosticsReservation));
   const failure = nativeEvidenceFailure(
     reservations.map((item) => ({
       role: item.artifact_role,
@@ -1222,7 +1244,7 @@ async function verifyNativeCompletion(lease: ActiveLease, intentSha256: string, 
       sha256: item.expected_sha256,
       sizeBytes: Number(item.expected_size_bytes),
     })),
-    NativeRenderManifestSchema.parse(await readReservedJson(manifestReservation)),
+    parseEvidenceTolerant(NativeRenderManifestSchema, await readReservedJson(manifestReservation)),
     diagnostics,
     nativeRunExpectations(intent, { intentSha256, executionPackageControlSha256: lease.execution_package_control_sha256 }),
   );

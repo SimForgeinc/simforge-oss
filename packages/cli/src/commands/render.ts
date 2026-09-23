@@ -15,6 +15,7 @@ import {
   type BuiltinRenderEngineId,
   type RenderInputFile,
   type RenderProgressRecord,
+  CONTROL_FEATURES_V1,
 } from '@simforge-oss/render';
 
 import { CliError, EXIT } from '../errors.js';
@@ -150,6 +151,8 @@ export async function renderRun(options: RenderRunOptions): Promise<number> {
       workspace,
       signal: controller.signal,
       reportProgress,
+      // Standalone run: every current output field is understood.
+      controlFeatures: new Set(CONTROL_FEATURES_V1),
     }));
     if (manifest.intentSha256 !== intentSha256) throw new CliError('input_mismatch', 'engine returned a manifest for another intent');
     for (const artifact of manifest.artifacts) {

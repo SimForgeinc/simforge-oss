@@ -18,6 +18,7 @@ import {
   type RenderInputFile,
   type RenderInputSelectionContext,
 } from '../index.js';
+import { CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_SCENE_SOURCE } from '../worker-control.js';
 import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
 
 import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
@@ -117,6 +118,22 @@ export async function selectNativeRenderInputs(context: RenderInputSelectionCont
   });
   for (const uri of plan.members) selected.add(nativeMapMemberInputId(uri));
   return selected;
+}
+
+/**
+ * `sceneSource` / `timelineSha256` are newer than the baseline native
+ * evidence contract: written only when the control plane lists
+ * `native-evidence.scene-source` (an older plane parses manifests strictly
+ * and rejects the whole job on an unknown key). `parity` is gated the same
+ * way by `native-evidence.parity`.
+ */
+export function gatedSceneSourceEvidence(
+  features: ReadonlySet<string>,
+  sceneSource: 'render-timeline' | 'openscenario-legacy',
+  timelineSha256: string | undefined,
+): { sceneSource?: 'render-timeline' | 'openscenario-legacy'; timelineSha256?: string } {
+  if (!features.has(CONTROL_FEATURE_NATIVE_SCENE_SOURCE)) return {};
+  return { sceneSource, ...(timelineSha256 ? { timelineSha256 } : {}) };
 }
 
 export function resolveBinary(options: NativeRenderEngineOptions): string {
@@ -553,6 +570,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         mediaType: 'application/json', frameCount: lowering.states.length,
       });
 
+      // Evidence fields newer than the baseline contract are written only for
+      // a control plane that accepts them (an older one parses strictly and
+      // would reject the whole job). The trace file is not parsed upstream.
+      const features = context.controlFeatures ?? new Set<string>();
+      const sceneSourceEvidence = gatedSceneSourceEvidence(features, lowering.source, timelineSha256);
       const nativeManifestRelative = 'manifest/native-render.json';
       const nativeManifestPath = path.join(context.workspace, nativeManifestRelative);
       await writeJson(nativeManifestPath, NativeRenderManifestSchema.parse({
@@ -562,8 +584,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         executionPackageControlSha256: context.executionPackageControlSha256,
         sourceXoscSha256: xoscInput.sha256,
         loweringSha256: lowering.sha256,
-        sceneSource: lowering.source,
-        ...(timelineSha256 ? { timelineSha256 } : {}),
+        ...sceneSourceEvidence,
         actorAssetsSha256: actorAssets.digest,
         frameCount: lowering.states.length,
         look: {
@@ -591,8 +612,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         executionPackageControlSha256: context.executionPackageControlSha256,
         sourceXoscSha256: xoscInput.sha256,
         loweringSha256: lowering.sha256,
-        sceneSource: lowering.source,
-        ...(timelineSha256 ? { timelineSha256 } : {}),
+        ...sceneSourceEvidence,
         actorAssetsSha256: actorAssets.digest,
         fixedTimestepSeconds: lowering.fixedTimestepSeconds,
         frameCount: lowering.states.length,
@@ -601,7 +621,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         videos: videoRecords.map(({ actorId, sensorId, frameCount, sha256 }) => ({ actorId, sensorId, frameCount, sha256 })),
         service: { protocol: session.protocol, binary },
         frames: frameIdentities,
-        ...(parity ? { parity: {
+        ...(parity && features.has(CONTROL_FEATURE_NATIVE_PARITY) ? { parity: {
           schema: parity.schema, pass: parity.pass, comparedPoses: parity.comparedPoses,
           maxPositionErrorM: parity.maxPositionErrorM, maxHeadingErrorDeg: parity.maxHeadingErrorDeg,
           maxPitchErrorDeg: parity.maxPitchErrorDeg, maxRollErrorDeg: parity.maxRollErrorDeg,

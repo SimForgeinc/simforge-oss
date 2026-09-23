@@ -11,3 +11,12 @@ describe('leased job control digest', () => {
     expect(digestSchema.safeParse(undefined).success).toBe(false);
   });
 });
+
+describe('lease shape compatibility', () => {
+  it('accepts an optional controlFeatures list and inputs without a download URL', () => {
+    expect(JobLeasedResponseSchema.shape.controlFeatures.parse(undefined)).toBeUndefined();
+    expect(JobLeasedResponseSchema.shape.controlFeatures.parse(['native-evidence.scene-source'])).toEqual(['native-evidence.scene-source']);
+    const input = JobLeasedResponseSchema.shape.inputs.element;
+    expect(input.parse({ inputId: 'map.tile.000000', relativePath: 'master.gltf', sha256: 'a'.repeat(64), sizeBytes: 1 }).download).toBeUndefined();
+  });
+});
