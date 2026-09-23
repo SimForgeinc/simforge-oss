@@ -69,6 +69,10 @@ const baseEnv = withNodePath({
   CARGO_TERM_COLOR: "never",
   TURBO_TELEMETRY_DISABLED: "1",
   TURBO_NO_UPDATE_NOTIFIER: "1",
+  // pnpm finds the NEAREST pnpm-workspace.yaml; when this repository is
+  // embedded in a larger workspace, the outer root must win for every
+  // nested `pnpm run` (bins, and no auto-install into the inner workspace).
+  NPM_CONFIG_WORKSPACE_DIR: root,
   DO_NOT_TRACK: "1",
 });
 const want = (step, name = step) => !args.only || args.only.has(step) || args.only.has(name);
