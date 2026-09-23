@@ -24,7 +24,7 @@ impl Tri {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 struct Node {
     min: Vec3,
     max: Vec3,
@@ -43,6 +43,122 @@ pub struct RaycastScene {
 }
 
 const EPS: f32 = 1e-9;
+
+/// Levels of the triangle BVH whose two subtrees build on separate threads
+/// (up to 2^PARALLEL_DEPTH concurrent builders).
+pub const PARALLEL_DEPTH: u32 = 5;
+/// Subtrees (and sort chunks) smaller than this stay on one thread.
+const PARALLEL_MIN_TRIS: usize = 65_536;
+/// Chunks sorted concurrently before the final run-merging sort.
+const SORT_CHUNKS: usize = 32;
+
+impl Node {
+    const PLACEHOLDER: Node = Node { min: Vec3::ZERO, max: Vec3::ZERO, left_first: 0, count: 0, right: 0 };
+}
+
+/// Centroid lexicographic order (the historical comparator, NaN as equal).
+fn centroid_cmp(a: &Tri, b: &Tri) -> std::cmp::Ordering {
+    let (ca, cb) = (a.centroid(), b.centroid());
+    ca.x.partial_cmp(&cb.x)
+        .unwrap_or(std::cmp::Ordering::Equal)
+        .then(ca.y.partial_cmp(&cb.y).unwrap_or(std::cmp::Ordering::Equal))
+        .then(ca.z.partial_cmp(&cb.z).unwrap_or(std::cmp::Ordering::Equal))
+}
+
+/// Stable sort by [`centroid_cmp`], identical to `tris.sort_by(centroid_cmp)`:
+/// contiguous chunks are stably sorted in parallel, then one stable sort
+/// merges the resulting runs. Equal elements keep their input order both
+/// within a chunk and across chunks, which is exactly the stable result.
+fn parallel_stable_sort(tris: &mut [Tri]) {
+    if tris.len() < PARALLEL_MIN_TRIS * 2 {
+        tris.sort_by(centroid_cmp);
+        return;
+    }
+    let chunk = tris.len().div_ceil(SORT_CHUNKS);
+    std::thread::scope(|scope| {
+        for part in tris.chunks_mut(chunk) {
+            scope.spawn(move || part.sort_by(centroid_cmp));
+        }
+    });
+    tris.sort_by(centroid_cmp);
+}
+
+fn tri_bounds(tris: &[Tri]) -> (Vec3, Vec3) {
+    let mut min = Vec3::splat(f32::MAX);
+    let mut max = Vec3::splat(f32::MIN);
+    for t in tris {
+        for p in [t.a, t.b, t.c] {
+            min = min.min(p);
+            max = max.max(p);
+        }
+    }
+    (min, max)
+}
+
+/// Median split on the widest axis of the bounds: partitions `tris` in
+/// place and returns the left count.
+fn median_split(tris: &mut [Tri], bmin: Vec3, bmax: Vec3) -> usize {
+    let ext = bmax - bmin;
+    let axis = if ext.x >= ext.y && ext.x >= ext.z {
+        0
+    } else if ext.y >= ext.z {
+        1
+    } else {
+        2
+    };
+    let half = tris.len() / 2;
+    tris.select_nth_unstable_by_key(half, |t| {
+        let c = t.centroid();
+        match axis {
+            0 => c.x.to_bits(),
+            1 => c.y.to_bits(),
+            _ => c.z.to_bits(),
+        }
+    });
+    half
+}
+
+/// Nodes in the median-split subtree over `count` triangles.
+fn node_count(count: usize) -> usize {
+    if count <= 4 {
+        1
+    } else {
+        1 + node_count(count / 2) + node_count(count - count / 2)
+    }
+}
+
+/// Write the preorder subtree over `tris` (first global triangle `first`)
+/// into `nodes`, whose element 0 has absolute index `base`.
+fn fill_nodes(nodes: &mut [Node], base: u32, tris: &mut [Tri], first: u32, depth: u32) {
+    let count = tris.len();
+    let (bmin, bmax) = tri_bounds(tris);
+    if count <= 4 {
+        nodes[0] = Node { min: bmin, max: bmax, left_first: first, count: count as u32, right: 0 };
+        return;
+    }
+    let half = median_split(tris, bmin, bmax);
+    let left_len = node_count(half);
+    nodes[0] = Node {
+        min: bmin,
+        max: bmax,
+        left_first: base + 1,
+        count: 0,
+        right: base + 1 + left_len as u32,
+    };
+    let (left_nodes, right_nodes) = nodes[1..].split_at_mut(left_len);
+    let (left_tris, right_tris) = tris.split_at_mut(half);
+    let right_base = base + 1 + left_len as u32;
+    let right_first = first + half as u32;
+    if depth < PARALLEL_DEPTH && count >= PARALLEL_MIN_TRIS {
+        std::thread::scope(|scope| {
+            scope.spawn(move || fill_nodes(right_nodes, right_base, right_tris, right_first, depth + 1));
+            fill_nodes(left_nodes, base + 1, left_tris, first, depth + 1);
+        });
+    } else {
+        fill_nodes(left_nodes, base + 1, left_tris, first, depth + 1);
+        fill_nodes(right_nodes, right_base, right_tris, right_first, depth + 1);
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Hit {
@@ -72,67 +188,50 @@ impl RaycastScene {
     }
 
     /// Build the BVH. Call once after all triangles are pushed.
+    ///
+    /// Produces exactly the serial median-split tree (same triangle order,
+    /// same preorder node layout; tested against the serial reference), with
+    /// the work spread over threads: the stable centroid sort runs on chunks
+    /// in parallel before one run-merging pass, and the top
+    /// [`PARALLEL_DEPTH`] levels build their two subtrees concurrently into
+    /// disjoint, precomputed slices of the node array.
     pub fn build(&mut self) {
         let n = self.tris.len();
+        self.nodes.clear();
         if n == 0 {
             return;
         }
-        // Deterministic global triangle order: sort by centroid lexicographic.
-        self.tris.sort_by(|a, b| {
-            let ca = a.centroid();
-            let cb = b.centroid();
-            ca.x.partial_cmp(&cb.x)
-                .unwrap_or(std::cmp::Ordering::Equal)
-                .then(ca.y.partial_cmp(&cb.y).unwrap_or(std::cmp::Ordering::Equal))
-                .then(ca.z.partial_cmp(&cb.z).unwrap_or(std::cmp::Ordering::Equal))
-        });
+        parallel_stable_sort(&mut self.tris);
+        let mut nodes = vec![Node::PLACEHOLDER; node_count(n)];
+        fill_nodes(&mut nodes, 0, &mut self.tris, 0, 0);
+        self.nodes = nodes;
+    }
+
+    /// The original single-threaded build, kept as the reference the
+    /// parallel build must reproduce bit for bit.
+    #[cfg(test)]
+    fn build_serial(&mut self) {
+        let n = self.tris.len();
         self.nodes.clear();
+        if n == 0 {
+            return;
+        }
+        self.tris.sort_by(centroid_cmp);
         self.nodes.reserve(2 * n);
         self.subdivide(0, n as u32);
     }
 
-    fn tri_bounds(tris: &[Tri]) -> (Vec3, Vec3) {
-        let mut min = Vec3::splat(f32::MAX);
-        let mut max = Vec3::splat(f32::MIN);
-        for t in tris {
-            for p in [t.a, t.b, t.c] {
-                min = min.min(p);
-                max = max.max(p);
-            }
-        }
-        (min, max)
-    }
-
+    #[cfg(test)]
     fn subdivide(&mut self, first: u32, count: u32) -> u32 {
         let node_index = self.nodes.len() as u32;
-        let (bmin, bmax) = Self::tri_bounds(&self.tris[first as usize..(first + count) as usize]);
+        let range = first as usize..(first + count) as usize;
+        let (bmin, bmax) = tri_bounds(&self.tris[range.clone()]);
         if count <= 4 {
             self.nodes.push(Node { min: bmin, max: bmax, left_first: first, count, right: 0 });
             return node_index;
         }
-        // Median split on the widest axis of the bounds.
-        let ext = bmax - bmin;
-        let axis = if ext.x >= ext.y && ext.x >= ext.z {
-            0
-        } else if ext.y >= ext.z {
-            1
-        } else {
-            2
-        };
-        let mid = first + count / 2;
-        self.tris[first as usize..(first + count) as usize].select_nth_unstable_by_key(
-            (mid - first) as usize,
-            |t| {
-                let c = t.centroid();
-                match axis {
-                    0 => c.x.to_bits(),
-                    1 => c.y.to_bits(),
-                    _ => c.z.to_bits(),
-                }
-            },
-        );
-        // Reserve this interior's slot so indices stay stable across recursion,
-        // then fill in child links once both children exist.
+        let half = median_split(&mut self.tris[range], bmin, bmax) as u32;
+        let mid = first + half;
         self.nodes.push(Node { min: bmin, max: bmax, left_first: 0, count: 0, right: 0 });
         let left = self.subdivide(first, mid - first);
         let right = self.subdivide(mid, first + count - mid);
@@ -544,5 +643,81 @@ impl Raycast for CompositeScene<'_> {
             }
         }
         best
+    }
+}
+
+#[cfg(test)]
+mod parallel_build_tests {
+    use super::*;
+
+    /// Deterministic pseudo-random soup with duplicated centroids and
+    /// duplicated triangles (the cases a sort or split could reorder).
+    fn soup(n: usize) -> Vec<Tri> {
+        let mut state = 0x9e37_79b9_7f4a_7c15u64;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            ((state >> 40) as f32) / (1u64 << 24) as f32
+        };
+        let mut out = Vec::with_capacity(n);
+        for i in 0..n {
+            let base = Vec3::new(next() * 500.0, next() * 20.0, next() * 500.0);
+            let base = if i % 7 == 0 { Vec3::new(10.0, 0.0, 10.0) } else { base };
+            let tri = Tri {
+                a: base,
+                b: base + Vec3::new(next(), 0.1, 0.0),
+                c: base + Vec3::new(0.0, next(), 1.0),
+                instance_id: (i % 97) as u32,
+            };
+            out.push(tri);
+            if i % 11 == 0 {
+                out.push(tri);
+            }
+        }
+        out
+    }
+
+    fn scene(tris: &[Tri]) -> RaycastScene {
+        let mut scene = RaycastScene::new();
+        for t in tris {
+            scene.push_tri(*t);
+        }
+        scene
+    }
+
+    #[test]
+    fn parallel_build_reproduces_the_serial_tree_exactly() {
+        for n in [0, 1, 5, 1_000, 300_000] {
+            let tris = soup(n);
+            let mut parallel = scene(&tris);
+            parallel.build();
+            let mut serial = scene(&tris);
+            serial.build_serial();
+            assert_eq!(parallel.nodes.len(), serial.nodes.len(), "n={n}");
+            assert!(parallel.nodes == serial.nodes, "node layout differs at n={n}");
+            let same_tris = parallel.tris.iter().zip(&serial.tris).all(|(a, b)| {
+                a.a == b.a && a.b == b.b && a.c == b.c && a.instance_id == b.instance_id
+            });
+            assert!(same_tris, "triangle order differs at n={n}");
+            if n > 0 {
+                assert_eq!(parallel.nodes.len(), node_count(parallel.tris.len()));
+            }
+        }
+    }
+
+    #[test]
+    fn parallel_build_hits_like_the_serial_build() {
+        let tris = soup(200_000);
+        let mut parallel = scene(&tris);
+        parallel.build();
+        let mut serial = scene(&tris);
+        serial.build_serial();
+        for k in 0..500 {
+            let origin = Vec3::new((k * 7 % 500) as f32, 100.0, (k * 13 % 500) as f32);
+            let a = parallel.cast(origin, Vec3::NEG_Y, 1000.0).map(|h| (h.distance.to_bits(), h.instance_id));
+            let b = serial.cast(origin, Vec3::NEG_Y, 1000.0).map(|h| (h.distance.to_bits(), h.instance_id));
+            assert_eq!(a, b);
+        }
     }
 }

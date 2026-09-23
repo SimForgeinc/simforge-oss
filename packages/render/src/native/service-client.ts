@@ -104,6 +104,8 @@ export class NativeServiceClient {
   #buffer = Buffer.alloc(0);
   #sequence = 0;
   #shmPath = '';
+  /** Additive ops the service advertised in `hello.capabilities`. */
+  #capabilities = new Set<string>();
   /** Set once the connection is unusable; every later `rpc` rejects with it. */
   #failure: Error | undefined;
 
@@ -149,6 +151,8 @@ export class NativeServiceClient {
       throw new Error(`native render service protocol ${String(hello.protocol)}; this client speaks ${NATIVE_SERVICE_PROTOCOL}`);
     }
     client.#shmPath = hello.shm.path;
+    const capabilities = (hello as { capabilities?: unknown }).capabilities;
+    client.#capabilities = new Set(Array.isArray(capabilities) ? capabilities.filter((c): c is string => typeof c === 'string') : []);
     return client;
   }
 
@@ -196,19 +200,21 @@ export class NativeServiceClient {
     return value;
   }
 
+  /** Whether the service advertised an additive op in `hello.capabilities`. */
+  supports(op: string): boolean {
+    return this.#capabilities.has(op);
+  }
+
   /**
    * What the service drew for every scene actor on the last applied tick
-   * (`observe_actors`). `null` from a service that predates the op, so a
-   * newer engine still drives an older binary (without the parity gate).
+   * (`observe_actors`). `null` — without sending anything — from a service
+   * that does not advertise the op: older builds drop the connection on an
+   * op they cannot decode, so the op is gated on the handshake, never probed.
    */
   async observeActors(): Promise<NativeActorObservation | null> {
-    try {
-      const value = await this.rpc({ op: 'observe_actors' });
-      return { tick: (value.tick as number | null | undefined) ?? null, actors: (value.actors as NativeObservedActor[] | undefined) ?? [] };
-    } catch (error) {
-      if (error instanceof Error && /unknown variant|observe_actors/.test(error.message) && !(error instanceof NativeServiceTimeoutError)) return null;
-      throw error;
-    }
+    if (!this.supports('observe_actors')) return null;
+    const value = await this.rpc({ op: 'observe_actors' });
+    return { tick: (value.tick as number | null | undefined) ?? null, actors: (value.actors as NativeObservedActor[] | undefined) ?? [] };
   }
 
   async readFrame(frame: NativeFrameRecord): Promise<Buffer> {

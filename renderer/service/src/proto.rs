@@ -18,6 +18,9 @@ use serde::{Deserialize, Serialize};
 /// only. Requests are unchanged from V4.
 pub const NATIVE_SERVICE_PROTOCOL_VERSION: u32 = 5;
 
+/// Additive ops advertised in `hello.capabilities`.
+pub const NATIVE_SERVICE_CAPABILITIES: &[&str] = &["observe_actors"];
+
 /// Rigid attachment of a camera to a scene-state actor (CARLA
 /// `AttachmentType.Rigid` analogue): the pose is re-resolved from the
 /// actor's transform on every rendered tick, so the camera never lags or
@@ -311,6 +314,10 @@ pub enum ResponseBody {
         profile: String,
         legend_entries: usize,
         shm: ShmInfo,
+        /// Additive ops this build answers beyond the protocol baseline.
+        /// Clients gate on this before sending one: an older service drops
+        /// the connection on an op it cannot decode.
+        capabilities: Vec<String>,
     },
     Load {
         ok: bool,

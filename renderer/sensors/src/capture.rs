@@ -1084,7 +1084,8 @@ fn build_id_and_semantic_passes(
     // position.
     let mut entries: Vec<(String, [u32; 3], Entity)> = Vec::new();
     for (e, mesh3d, name, _child_of, gt, _local, _is_actor) in &meshes_q {
-        let name = name.map(|n| n.to_string()).unwrap_or_else(|| format!("unnamed_mesh_{e}"));
+        // Never the entity: it would order unnamed meshes by allocation.
+        let name = name.map(|n| n.to_string()).unwrap_or_else(|| "unnamed_mesh".to_string());
         let key = meshes.get(&mesh3d.0)
             .map(|mesh| {
                 let mut acc = Vec3::ZERO;

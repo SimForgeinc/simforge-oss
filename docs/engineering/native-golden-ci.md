@@ -212,9 +212,30 @@ Corpus roots: `SIMFORGE_CORPUS_RICHMOND` / `SIMFORGE_CORPUS_YALE` →
 Recorded parity (both runs): richmond max 7.8e-6 m / 1.3e-5° heading,
 yale max 6.2e-5 m / 6.3e-6° heading (f32 world coordinates at ~1.8 km).
 
-Known limitation: a static `native-render-job` scene over the richmond master
-(`richmond-frame0`, not committed) is **not** byte-stable in `id0` on the
-3080: 6 of 306,176 pixels swap between two instance ids across runs. That
-is a depth tie between coplanar meshes resolved by nondeterministic draw
-order; RGB and depth are stable. It needs deterministic draw ordering for
-the ID pass before a static richmond golden can be recorded.
+### Instance-ID assignment was not deterministic (fixed 2026-09-22)
+
+`richmond-frame0` (static `native-render-job` over the richmond master) was
+not byte-stable in `id0`: 6 of 306,176 pixels carried a different instance
+id from run to run while RGB and depth were identical. It was not a depth
+tie. `SceneApp::finalize_scene` numbers every mesh by sorting on
+`(name, entity bits)`, and entity allocation follows async asset-load
+completion; unnamed meshes were even named after their entity. So two
+same-named meshes (a split primitive, an instanced prop) could swap ids.
+
+The sort is now `(name, glTF sub-asset label `<file>#MeshN/PrimitiveM`,
+world pose)`, with entity bits only as the last tie-break for exact
+duplicates, and unnamed meshes are named `unnamed_mesh`. Evidence on the RTX
+5080 under co-tenant load, 6 runs each:
+
+| build | distinct id0 hashes | rgb0 | depth0 |
+|---|---|---|---|
+| before (entity-bit order) | 3 (`b82aee85…`, `713742cf…` ×4, `92d28b92…`) | 1 | 1 |
+| after | 1 (`b3feedec…`, 12/12 runs) | 1 | 1 |
+
+The same ordering now applies to `scen-play` (`playback.rs`) and the
+sensor-capture registry no longer names unnamed meshes after their entity.
+Instance ids of existing scenes are renumbered once by this change: goldens
+that hash an ID pass must be re-recorded (the two render-timeline goldens
+above were recorded before it; scen-play id0 is 3/3 stable after it on the
+5080). `richmond-frame0` is committed as a
+scene; record its golden per GPU with a quiet window.

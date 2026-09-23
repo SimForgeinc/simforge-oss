@@ -3826,8 +3826,18 @@ impl SceneApp {
         // the mesh's JOINTS/WEIGHTS attributes select the skinned pipeline
         // layout, and without the component Bevy binds the model-only bind
         // group and the draw fails validation (bevy#16929).
+        //
+        // Same-named meshes (instanced props, split primitives) are ordered
+        // by their world pose, never by entity bits alone: entity allocation
+        // follows async asset-load completion, so ordering on it gave the
+        // same mesh a different ID from run to run (6 px of richmond id0
+        // swapped ids between two runs on the RTX 3080). Entity bits remain
+        // only as the last tie-break for exact duplicates (same name, same
+        // sub-asset, same pose).
         let mut entries: Vec<(
             String,
+            String,
+            [f32; 7],
             u64,
             Entity,
             Handle<Mesh>,
@@ -3842,12 +3852,32 @@ impl SceneApp {
                 Option<&Name>,
                 Option<&ChildOf>,
                 Option<&Transform>,
+                Option<&GlobalTransform>,
                 Option<&SkinnedMesh>,
             )>();
-            for (e, mesh, name, child_of, transform, skin) in q.iter(world) {
+            for (e, mesh, name, child_of, transform, global, skin) in q.iter(world) {
+                let (_, rotation, translation) = global
+                    .map(|g| g.to_scale_rotation_translation())
+                    .unwrap_or_else(|| {
+                        let t = transform.copied().unwrap_or(Transform::IDENTITY);
+                        (t.scale, t.rotation, t.translation)
+                    });
                 entries.push((
                     name.map(|n| n.to_string())
-                        .unwrap_or_else(|| format!("unnamed_mesh_{e}")),
+                        .unwrap_or_else(|| "unnamed_mesh".to_string()),
+                    // The glTF sub-asset label (`<file>#MeshN/PrimitiveM`):
+                    // stable across runs, and it separates the primitives of
+                    // one node, which share a name and a pose.
+                    mesh.0.path().map(|p| p.to_string()).unwrap_or_default(),
+                    [
+                        translation.x,
+                        translation.y,
+                        translation.z,
+                        rotation.x,
+                        rotation.y,
+                        rotation.z,
+                        rotation.w,
+                    ],
                     e.to_bits(),
                     e,
                     mesh.0.clone(),
@@ -3857,7 +3887,18 @@ impl SceneApp {
                 ));
             }
         }
-        entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
+        entries.sort_by(|a, b| {
+            a.0.cmp(&b.0)
+                .then_with(|| a.1.cmp(&b.1))
+                .then_with(|| {
+                    a.2.iter()
+                        .zip(b.2.iter())
+                        .map(|(x, y)| x.total_cmp(y))
+                        .find(|o| o.is_ne())
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .then(a.3.cmp(&b.3))
+        });
 
         // Create all ID materials under one mutable borrow, then spawn the
         // clone entities once the assets borrow is released.
@@ -3875,7 +3916,7 @@ impl SceneApp {
             entries
                 .into_iter()
                 .enumerate()
-                .map(|(i, (name, _, entity, mesh_h, parent, transform, skin))| {
+                .map(|(i, (name, _, _, _, entity, mesh_h, parent, transform, skin))| {
                     let id = (i + 1) as u32; // 0 reserved as background
                     let bytes = id.to_le_bytes();
                     let mat = materials.add(StandardMaterial {
