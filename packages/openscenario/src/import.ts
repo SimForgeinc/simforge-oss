@@ -33,6 +33,11 @@ export interface OpenScenarioMapResolution {
   readonly diagnostic: OpenScenarioImportDiagnostic | null;
 }
 
+/**
+ * An actor in the scene frame of `ScenarioTemplateV2` roles: y-up, metres,
+ * `scene = (x, z_osc, -y_osc)` (packages/engine/src/frames.ts). `heading` is
+ * the OSC world heading, which is numerically identical in both frames.
+ */
 interface ImportedActor {
   readonly id: string;
   readonly kind: 'car' | 'truck' | 'bus' | 'van' | 'motorcycle' | 'bicycle' | 'pedestrian' | 'static_object';
@@ -184,12 +189,21 @@ function extractActors(xml: ParsedXml, diagnostics: OpenScenarioImportDiagnostic
     const name = nodeAttrs(scenarioObject).name;
     if (!name) continue;
     const kindNode = ['Vehicle', 'Pedestrian', 'MiscObject'].map((kind) => firstDescendant(nodeChildren(scenarioObject), kind)).find(Boolean);
-    if (!kindNode) {
-      diagnostics.push({ code: 'entity_type_unsupported', path: `Entities.${name}`, disposition: 'unsupported', message: 'Only Vehicle, Pedestrian, and MiscObject entities are translated.' });
-      continue;
-    }
     const catalog = firstDescendant(nodeChildren(scenarioObject), 'CatalogReference');
     const catalogId = catalog ? nodeAttrs(catalog).entryName : undefined;
+    if (!kindNode && !catalog) {
+      diagnostics.push({ code: 'entity_type_unsupported', path: `Entities.${name}`, disposition: 'unsupported', message: 'Only Vehicle, Pedestrian, and MiscObject entities (inline or by CatalogReference) are translated.' });
+      continue;
+    }
+    if (!kindNode) {
+      // Catalogs are not resolved; infer the class from the catalog name and
+      // say so, rather than dropping a valid entity.
+      const catalogName = (catalog ? nodeAttrs(catalog).catalogName ?? '' : '').toLowerCase();
+      const tag = catalogName.includes('pedestrian') ? 'Pedestrian' : catalogName.includes('misc') || catalogName.includes('object') ? 'MiscObject' : 'Vehicle';
+      diagnostics.push({ code: 'catalog_reference_unresolved', path: `Entities.${name}`, disposition: 'approximated', message: `CatalogReference ${catalogName || '?'}/${catalogId ?? '?'} is not resolved; the entity is imported as a ${tag} with the class default dimensions.` });
+      entities.set(name, { tag, catalog: catalogId });
+      continue;
+    }
     if (!catalogId) {
       diagnostics.push({ code: 'catalog_appearance_approximated', path: `Entities.${name}`, disposition: 'approximated', message: 'The ASAM entity class is preserved, but non-catalog appearance is resolved by the v2 editor catalog.' });
     }
@@ -200,22 +214,31 @@ function extractActors(xml: ParsedXml, diagnostics: OpenScenarioImportDiagnostic
   const actors: ImportedActor[] = [];
   let index = 0;
   for (const [name, entity] of entities) {
-    const init = descendants(xml, 'Private').find((node) => nodeAttrs(node).entityRef === name);
-    const world = init ? firstDescendant(nodeChildren(init), 'WorldPosition') : null;
+    const privateInit = descendants(descendants(xml, 'Init'), 'Private').find((node) => nodeAttrs(node).entityRef === name);
+    // The spawn pose is the TeleportAction's position, never a WorldPosition
+    // that happens to appear elsewhere in the Private (e.g. a route waypoint).
+    const teleport = privateInit ? firstDescendant(nodeChildren(privateInit), 'TeleportAction') : null;
+    const world = teleport ? firstDescendant(nodeChildren(teleport), 'WorldPosition') : null;
     if (!world) {
-      diagnostics.push({ code: 'actor_position_unsupported', path: `Storyboard.Init.${name}`, disposition: 'unsupported', message: 'Actor has no WorldPosition in Init; it was not translated because map-relative positions must not be guessed.' });
+      diagnostics.push({ code: 'actor_position_unsupported', path: `Storyboard.Init.${name}`, disposition: 'unsupported', message: 'Actor has no Init TeleportAction with a WorldPosition; it was not translated because map-relative positions (Lane/Road/Relative*) must not be guessed.' });
       continue;
     }
     const position = nodeAttrs(world);
-    const speed = init ? firstDescendant(nodeChildren(init), 'AbsoluteTargetSpeed') : null;
+    const speedAction = privateInit ? firstDescendant(nodeChildren(privateInit), 'SpeedAction') : null;
+    const speed = speedAction ? firstDescendant(nodeChildren(speedAction), 'AbsoluteTargetSpeed') : null;
     const speedValue = speed ? requiredFinite(nodeAttrs(speed).value, `Storyboard.Init.${name}.speed`) * 3.6 : undefined;
+    const dynamics = speedAction ? firstDescendant(nodeChildren(speedAction), 'SpeedActionDynamics') : null;
+    if (speed && dynamics && (nodeAttrs(dynamics).dynamicsShape ?? 'step') !== 'step') {
+      diagnostics.push({ code: 'initial_speed_transition_approximated', path: `Storyboard.Init.${name}.speed`, disposition: 'approximated', message: 'The Init SpeedAction is a transition, not a step; its target is imported as the initial speed.' });
+    }
     actors.push({
       id: safeId(name, index),
       kind: actorKind(entity.tag, entity.catalog),
       catalogId: entity.catalog,
+      // OSC world (x east, y north, z up) -> scene (x, y = up, z = -north).
       x: requiredFinite(position.x, `Storyboard.Init.${name}.x`),
       y: requiredFinite(position.z ?? '0', `Storyboard.Init.${name}.z`),
-      z: requiredFinite(position.y, `Storyboard.Init.${name}.y`),
+      z: 0 - requiredFinite(position.y, `Storyboard.Init.${name}.y`),
       heading: requiredFinite(position.h ?? '0', `Storyboard.Init.${name}.h`),
       speedKph: speedValue,
     });
