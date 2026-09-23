@@ -1030,3 +1030,186 @@ The dashboard timelapses show actual chronological saved plots (H.264,
 1400×1000, 10 FPS), not fabricated rollout imagery. Local evaluation used a
 pinned pre-showcase source/renderer so later CARLA-catalog appearance changes
 did not silently alter candidate/baseline comparability.
+
+## Day-28 result — 2026-09-23
+
+**Result: insufficient evidence; the recipe is not validated and no student is
+promoted.** The preregistered primary gate on the frozen `devpanel32-v3` panel
+returns `insufficient-evidence` for the stated reason
+`zero-collision BC ceiling: insufficient evidence, frozen test unchanged`:
+the matched BC-100k baseline has **0/16 collision episodes** on the hazard test
+entries, so no ≥20% collision reduction can be measured. Per the
+preregistration this is not permission to alter the frozen test, and the
+ceiling is not a safety claim — it comes with **24.78% mean task completion**,
+i.e. a student that mostly fails to drive the route rather than one that drives
+it safely. All four promotion verdicts are `exploratory`.
+
+### Training, validation and selection
+
+Three seeds × three arms produced **21 fixed-architecture training stages** of
+the **11,782,210-parameter** ResNet18+GRU student, **2,400,000 physical
+optimizer presentations** (600k shared initial presentations fork into all
+three arms; per-arm attribution is 1,200,000 each and must not be summed as
+compute), and **3.764676 learner A100-hours**. Unique labels were 100,000
+teacher demonstrations, 100,000 student-visited DAgger labels over two rounds
+and 100,000 additional teacher demonstrations for the secondary arm;
+acquisition executed **300,806 policy decisions** and **305,986 rendered
+frames** over **20.29 hours** of shared, non-exclusive renderer wall.
+
+All nine final checkpoints ran the complete frozen **120-episode poc-v3
+validation** split deterministically, 1,080 episodes in total. Selection used
+only the preregistered criterion — maximum mean native episode return, with
+collision, completion and seed tie breaks — and never consulted test.
+
+| Arm | Seed | Mean native return | Collision episodes | Mean completion |
+|---|---:|---:|---:|---:|
+| BC-100k | **42** | **−6.42951** | 0/120 | 23.009% |
+| BC-100k | 43 | −7.52984 | 0/120 | 16.174% |
+| BC-100k | 44 | −6.95248 | 0/120 | 22.042% |
+| DAgger | **42** | **−4.50103** | 5/120 | 28.810% |
+| DAgger | 43 | −6.53670 | 1/120 | 23.511% |
+| DAgger | 44 | −5.41121 | 30/120 | 31.733% |
+| BC-200k | 42 | −7.01701 | 2/120 | 19.342% |
+| BC-200k | 43 | −7.69347 | 0/120 | 17.068% |
+| BC-200k | 44 | **−6.88452** | 4/120 | 19.664% |
+
+Selected: BC-100k `torch:student-poc-v3-20260922-bc100k-round2-seed42/update-000004`
+(SHA-256 `7fbb0cc21a250ca95f6a470966a9d4d6e45f64568cb7521ac600e9efdd996667`),
+DAgger `…dagger-round2-seed42/update-000004`
+(`f60394c67c2406d0ba2bc4d86c1c70e9ab4f5efa889e8fdf603542613221e8bc`),
+BC-200k `…bc200k-round2-seed44/update-000004`
+(`4a269f1ad04c49e4fdb9e81569be198a440786d9439244e6ff1940033323b2e0`).
+Every BC-100k seed has zero validation collisions and the lowest completion of
+any arm; DAgger buys completion and pays in contacts. That trade is the whole
+result of this stage.
+
+### Frozen rendered promotions
+
+`simforge eval promote <ref> --split test` ran on both frozen panels, BC-100k
+first as the primary comparator and DAgger with `--bc-baseline <BC-100k>` and
+`--comparisons scripted,<teacher>,<BC-200k>`. Every row is 32 panel episodes,
+16 hazard test plus 16 paired controls; controls are never independent samples.
+
+| Panel | Policy | drivingScore mean | Mean completion | Collision episodes |
+|---|---|---:|---:|---:|
+| v3 | Frozen teacher | 0.560850 | 61.628% | 0/32 |
+| v3 | Scripted | 0.454150 | 56.587% | 6/32 |
+| v3 | BC-100k | 0.205343 | 26.025% | 0/32 |
+| v3 | DAgger | 0.132829 | 16.480% | 0/32 |
+| v3 | BC-200k | 0.112148 | 13.264% | 0/32 |
+| v1 | Frozen teacher | 0.379281 | 45.668% | 0/32 |
+| v1 | Scripted | 0.319928 | 38.418% | 5/32 |
+| v1 | BC-100k | 0.097644 | 15.911% | 0/32 |
+| v1 | DAgger | 0.104056 | 16.965% | 3/32 |
+| v1 | BC-200k | 0.084618 | 11.689% | 6/32 |
+
+All five policies have complete, clean 32-session health receipts on both
+panels: zero closed-loop fallbacks, invalid plans and timeouts. Every student
+fails the preregistered scripted-minus-one-SE reference gate (thresholds
+0.399933 on v3, 0.280798 on v1). `drive verify` passed **448 run directories,
+156,152 PNG digests and 30,583 policy decisions** across both panels including
+all reruns.
+
+### Day-28 statistics
+
+`tools/training/day28-statistics.mts` recomputed the 10,000-replicate
+fixed-seed paired bootstrap over the 16 matched hazard entries and checked it
+against the promotion implementation.
+
+| Panel | Comparison | BC coll. | DAgger coll. | Collision-reduction 95% CI | ΔdrivingScore (95% CI) | Δcompletion (95% CI) | Gate |
+|---|---|---:|---:|---|---|---|---|
+| v3 | **primary** BC-100k | 0/16 | 0/16 | [0, 0] | −0.054728 ([−0.100054, −0.016108]) | −0.077 ([−0.133582, −0.029642]) | insufficient-evidence |
+| v3 | secondary BC-200k | 0/16 | 0/16 | [0, 0] | +0.024795 ([−0.002811, +0.050819]) | +0.035 ([−0.009307, +0.081690]) | insufficient-evidence |
+| v1 | primary BC-100k | 0/16 | 3/16 | [−0.375, 0] | +0.029312 ([+0.004801, +0.052704]) | +0.050 ([+0.037128, +0.062674]) | insufficient-evidence |
+| v1 | secondary BC-200k | 6/16 | 3/16 | [−0.1875, +0.5625] | +0.057902 ([+0.039795, +0.076700]) | +0.066 ([+0.053669, +0.079188]) | failed |
+
+Per family on the primary v3 comparison, collision counts are zero in every
+cell: CPNCO 0/5 both arms (BC drivingScore 0.094213 vs DAgger 0.109900),
+cut-in/brake 0/5 (0.221000 vs 0.136671), queue-tail 0/6 (0.256840 vs 0.168099).
+On v1 the only collisions are DAgger's **3/5 queue-tail** and BC-200k's
+**6/11 cut-in/brake**; the one comparison where DAgger halves collisions
+(secondary, v1: 6 → 3, 50% relative reduction) still **fails** because its
+paired 95% lower bound is −0.1875, not positive. No primary claim is built
+from a secondary label-matched arm.
+
+### Camera-student rerun determinism is a world/action finding
+
+**0 of 128 camera-student reruns (32 per promotion × 4 promotions) matched
+world, actions and scene identity; 0 were RGB-identical; there were zero
+verification errors.** This is a different failure mode from the teacher stage,
+where the state-only policy was 64/64 world/action identical with 0/64
+RGB-identical on the same instrument. Inspecting `test-cell0-seed200`, the
+reset row and every row of the 64-frame authored prologue differ **only** in
+the camera RGB frame digests; the first differing applied action is the first
+policy decision after warmup, and from there the episodes diverge outright —
+64 versus 52 decisions with different native episode digests. For a
+pixels-to-controls policy, renderer RGB nondeterminism is therefore not a
+separately reportable RGB-only caveat: it propagates through the policy into
+world state. The rerun proof cannot be used as an exactness claim for this
+student, and release slot 02 is consequently the labelled recorded-action
+replay (`world/action chain identical, pixels not identical, not a model
+re-inference, not promotable`), produced by `tools/training/recorded-replay.mts`.
+
+### Kill-criteria checklist
+
+| Exact contract condition | Recorded outcome |
+|---|---|
+| Day 28: DAgger reduces held-out collision episodes ≥20% vs matched BC | **Not met.** Primary v3: BC 0/16 and DAgger 0/16, no reduction measurable — zero-collision BC ceiling, explicitly insufficient evidence. Primary v1: BC 0/16, DAgger 3/16, i.e. worse. The frozen test was not changed. |
+| Day 28: positive paired-bootstrap 95% lower bound | **Not met.** Primary bounds are [0, 0] (v3) and [−0.375, 0] (v1). The only ≥20% reduction anywhere (secondary v1, 6→3) has lower bound −0.1875. |
+| Day 28: task-completion loss ≤2 points | **Not met on the primary panel.** DAgger loses **7.80 completion points** to BC-100k on v3 (95% CI [−13.36, −2.96]); it gains 4.98 points on v1. |
+| Day 28: stays within budget | **Pass.** 3.764676 student learner A100-hours against the 72-hour allocation, plus shared non-exclusive rendering; no installed wheel, split, panel, reward or threshold was changed. |
+| Zero-collision BC ceiling | **Triggered, and reported as insufficient evidence.** It was not used to justify altering the frozen test, and it is not a safety result: the same BC checkpoint completes only 24.78% of the route. |
+| Promotion prerequisites | All four promotions are `exploratory`: reference gate failed, full-panel rerun determinism failed, primary day-28 statistics insufficient. The model store keeps `promoted: false`. |
+
+### Contention caveat
+
+Every A100 on simforge1 was shared for this entire stage with foreign
+`distill/v2` jobs holding roughly 34 GiB and ~89% utilization per device;
+`gpu-contention.json` records the window, the per-device snapshots and the
+owned OOM probe. Those processes were never touched, and the response was to
+extend wall time rather than shrink any preregistered budget. No throughput
+number in this section is an exclusive-device measurement, and the acquisition
+rate (≈1.8 decisions/s per DAgger shard) reflects that contention. One
+orchestration defect is visible in the evidence: `verify-promotions.mts`
+compared episode counts against the optional `expectedEpisodes` field, which
+the frozen panels do not declare, so the wrapper aborted after both panels had
+already completed. The tool now uses the same `expectedEpisodes ?? entries.length`
+rule as `loadPanel`, and the remaining stages were resumed without re-running,
+re-scoring or altering any promotion.
+
+### Artifacts
+
+Local evidence root
+`~/simforge-assets/runs/drive/training/student-poc-v3-20260922/` with
+`evidence.json` listing every artifact, its SHA-256 and its remote pointer.
+It contains `preregistration.json`, `selected-students.json` (all nine
+validation receipts and the selection), `day28-statistics.json`,
+`promotion-verification.json`, `promotions/{bc100k,dagger}/{devpanel32-v3,devpanel32}/promotion.json`,
+`family-videos.json`, `recorded-action-replay/`, `training-summary.json`,
+`metrics.jsonl`, `training-timelapse.mp4` and the regenerated release bundle
+`release/training-poc-v1` (**1,218 inventoried files, 127,647,166 bytes,
+all six video slots present**, verified by `tools/release-bundle/verify.mts`
+with `--require-complete`).
+
+Six family videos were rendered from the same frozen test members and seed 200
+as the teacher's family rollouts, requested at 20 s and retained at their
+actual native termination rather than padded:
+
+| Arm | Family | Policy seconds | Video seconds | Termination |
+|---|---|---:|---:|---|
+| BC-100k | cut-in/brake | 1.2 | 1.4 | corridor exit |
+| BC-100k | CPNCO parked row | 6.4 | 6.6 | corridor exit |
+| BC-100k | queue tail | 9.7 | 9.9 | corridor exit |
+| DAgger | cut-in/brake | 4.4 | 4.6 | corridor exit |
+| DAgger | CPNCO parked row | 1.5 | 1.7 | corridor exit |
+| DAgger | queue tail | 6.6 | 6.8 | collision |
+
+Every one passed `simforge drive verify` with healthy model receipts. The
+student-stage timelapse is the chronological actual saved dashboard PNG
+sequence, not rollout imagery. Bulk PNG sequences, checkpoints, learner
+directories and label JSONL remain on simforge1; all 470 produced mp4s are
+mirrored to `seablue:~/Desktop/simforge-drive-videos/training/student-poc-v3-20260922/`
+with the run-directory tree preserved.
+
+No camera-student promotion, perception-quality, label-efficiency or
+real-world-safety claim follows from this stage.
