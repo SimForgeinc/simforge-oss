@@ -1901,6 +1901,43 @@ impl GroundField {
 // SceneApp
 // ---------------------------------------------------------------------------
 
+/// Bevy's default task pools, except that the IO pool (where the glTF
+/// loader decodes and transcodes every map texture) gets a thread per core
+/// instead of at most 4. The other pools keep their default sizes: the total
+/// grows by exactly the extra IO threads, which sit idle after the map has
+/// loaded. On Belmont's 2,305 UASTC textures the transcode is ~125 s of
+/// CPU: 61 s on 4 threads, 13 s on 24 (measured by `ktx2_transcode_probe`).
+fn map_load_task_pools() -> bevy::app::TaskPoolOptions {
+    use bevy::app::{TaskPoolOptions, TaskPoolThreadAssignmentPolicy};
+    let defaults = TaskPoolOptions::default();
+    let cores = bevy::tasks::available_parallelism().max(1);
+    // Bevy's own assignment (`TaskPoolThreadAssignmentPolicy::get_number_of_threads`).
+    let share = |policy: &TaskPoolThreadAssignmentPolicy, remaining: usize| -> usize {
+        let proportion = cores as f32 * policy.percent;
+        let mut desired = proportion as usize;
+        if proportion - desired as f32 >= 0.5 {
+            desired += 1;
+        }
+        desired.min(remaining).clamp(policy.min_threads, policy.max_threads)
+    };
+    let default_io = share(&defaults.io, cores);
+    let async_compute = share(&defaults.async_compute, cores.saturating_sub(default_io));
+    let compute = share(&defaults.compute, cores.saturating_sub(default_io + async_compute));
+    let fixed = |policy: &TaskPoolThreadAssignmentPolicy, threads: usize| TaskPoolThreadAssignmentPolicy {
+        min_threads: threads,
+        max_threads: threads,
+        ..policy.clone()
+    };
+    let total = cores + async_compute + compute;
+    TaskPoolOptions {
+        min_total_threads: total,
+        max_total_threads: total,
+        io: fixed(&defaults.io, cores),
+        async_compute: fixed(&defaults.async_compute, async_compute),
+        compute: fixed(&defaults.compute, compute),
+    }
+}
+
 /// Host-driven headless renderer over a resident tile scene.
 ///
 /// The Bevy `App` is never `run()`; every [`Self::capture`] performs one
@@ -2050,6 +2087,7 @@ impl SceneApp {
             .init_resource::<HostLayerUnion>()
             .add_plugins((
                 DefaultPlugins
+                    .set(bevy::app::TaskPoolPlugin { task_pool_options: map_load_task_pools() })
                     .set(crate::platform::asset_plugin())
                     // Device creation on the backend this OS is qualified
                     // for (Vulkan / Metal / DX12); the resident engine keeps
@@ -5341,6 +5379,71 @@ mod tests {
             assert_eq!(parallel.min_y[cell].to_bits(), y.to_bits(), "cell {cell:?}");
         }
         assert_eq!(parallel.median.map(f32::to_bits), serial.median.map(f32::to_bits));
+    }
+
+    #[test]
+    fn map_load_pools_give_io_every_core_and_keep_the_other_pools() {
+        let cores = bevy::tasks::available_parallelism().max(1);
+        let options = map_load_task_pools();
+        assert_eq!((options.io.min_threads, options.io.max_threads), (cores, cores));
+        let others = options.async_compute.max_threads + options.compute.max_threads;
+        assert_eq!(options.min_total_threads, cores + others);
+        assert_eq!(options.max_total_threads, options.min_total_threads);
+        // What Bevy's defaults leave the async and compute pools on this host.
+        let default_io = if cores >= 16 { 4 } else { ((cores as f32 * 0.25).round() as usize).clamp(1, 4) };
+        assert_eq!(others, cores - default_io, "async + compute keep Bevy's default share");
+    }
+
+    /// Measurement probe (not a gate): CPU cost of turning a staged map's
+    /// KTX2 textures into GPU images, as Bevy's glTF loader does, on the
+    /// IO pool's thread count and on every core.
+    /// `SIMFORGE_KTX2_PROBE_DIR=<staged closure> cargo test --release -p render-core ktx2_transcode_probe -- --ignored --nocapture`
+    #[test]
+    #[ignore = "measurement probe over a staged map closure"]
+    fn ktx2_transcode_probe() {
+        let dir = std::env::var("SIMFORGE_KTX2_PROBE_DIR").expect("SIMFORGE_KTX2_PROBE_DIR");
+        let mut files = Vec::new();
+        let mut stack = vec![std::path::PathBuf::from(dir)];
+        while let Some(path) = stack.pop() {
+            for entry in std::fs::read_dir(&path).unwrap() {
+                let entry = entry.unwrap().path();
+                if entry.is_dir() {
+                    stack.push(entry);
+                } else if entry.extension().is_some_and(|ext| ext == "ktx2") {
+                    files.push(entry);
+                }
+            }
+        }
+        files.sort();
+        let read = Instant::now();
+        let buffers: Vec<Vec<u8>> = files.iter().map(|path| std::fs::read(path).unwrap()).collect();
+        let bytes: usize = buffers.iter().map(Vec::len).sum();
+        eprintln!("{} ktx2 files, {:.2} GB on disk, read in {:.1} s", files.len(), bytes as f64 / 1e9, read.elapsed().as_secs_f64());
+        let formats = bevy::image::CompressedImageFormats::BC;
+        for threads in [1usize, 4, std::thread::available_parallelism().map_or(4, |n| n.get())] {
+            let started = Instant::now();
+            let next = std::sync::atomic::AtomicUsize::new(0);
+            let gpu_bytes = std::sync::atomic::AtomicUsize::new(0);
+            let limit = if threads == 1 { buffers.len().min(200) } else { buffers.len() };
+            std::thread::scope(|scope| {
+                for _ in 0..threads {
+                    scope.spawn(|| loop {
+                        let index = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        if index >= limit {
+                            break;
+                        }
+                        let image = bevy::image::ktx2_buffer_to_image(&buffers[index], formats, true).expect("transcode");
+                        gpu_bytes.fetch_add(image.data.as_ref().map_or(0, Vec::len), std::sync::atomic::Ordering::Relaxed);
+                    });
+                }
+            });
+            let seconds = started.elapsed().as_secs_f64();
+            eprintln!(
+                "{threads:>2} threads: {limit} textures -> {:.2} GB GPU data in {seconds:.1} s{}",
+                gpu_bytes.load(std::sync::atomic::Ordering::Relaxed) as f64 / 1e9,
+                if limit < buffers.len() { format!(" (x{:.0} extrapolated: {:.0} s)", buffers.len() as f64 / limit as f64, seconds * buffers.len() as f64 / limit as f64) } else { String::new() }
+            );
+        }
     }
 
     #[test]
