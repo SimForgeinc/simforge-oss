@@ -255,3 +255,24 @@ export function compareObserved(
   const spec = typeof profile === 'string' ? profile : JSON.stringify(profile);
   return JSON.parse(timeline.compareObservedJson(observedJsonl, spec)) as ParityReport;
 }
+
+/** `simforge.render-contact-gate/v1`: every wheel of every body on the rendered ground. */
+export interface ContactGateReport {
+  readonly schema: 'simforge.render-contact-gate/v1';
+  readonly groundSha256: string;
+  readonly toleranceM: number;
+  readonly pass: boolean;
+  readonly checked: number;
+  readonly maxAbsGapM: number;
+  readonly unsupported: number;
+  readonly failureCount: number;
+  readonly failures: readonly { actorId: string; tick: number; contact: string; x: number; y: number; gapM: number }[];
+}
+
+/** Default render contact tolerance, metres. */
+export const CONTACT_GATE_TOLERANCE_M = 0.03;
+
+/** Check an opened timeline against the map's ground mesh (`derived/ground/ground-mesh.bin`). */
+export function checkTimelineContact(timeline: RenderTimelineHandle, groundMesh: Uint8Array, toleranceM = CONTACT_GATE_TOLERANCE_M): ContactGateReport {
+  return JSON.parse(timeline.contactGateJson(groundMesh, toleranceM)) as ContactGateReport;
+}

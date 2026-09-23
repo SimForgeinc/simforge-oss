@@ -1887,6 +1887,18 @@ impl WasmRenderTimeline {
         self.inner.identity.height_field_digest.clone()
     }
 
+    /// The render contact gate against the map's ground surface
+    /// (`derived/ground/ground-mesh.bin`): JSON `simforge.render-contact-gate/v1`
+    /// report; `pass` is false when any supported contact is off the surface
+    /// by more than `toleranceM`.
+    #[wasm_bindgen(js_name = contactGateJson)]
+    pub fn contact_gate_json(&self, ground_mesh: &[u8], tolerance_m: f64) -> Result<String, JsValue> {
+        let surface = simforge_core::map::ground::GroundSurface::decode(ground_mesh)
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let report = render_timeline::contact_gate::check_contact(&self.inner, &surface, tolerance_m);
+        serde_json_string(&report)
+    }
+
     /// Where z and road attitude came from: `trace`,
     /// `derived-at-timeline-build`, `legacy-xodr-elevation` or `synthetic`.
     #[wasm_bindgen(getter, js_name = contactOrigin)]
