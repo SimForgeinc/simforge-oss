@@ -1,8 +1,10 @@
 import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
+import type { z } from 'zod';
 import {
   ArtifactIdentitySchema,
+  JobFailureSchema,
   RENDER_WORKER_CONTROL_V2_SCHEMA,
   RenderArtifactManifestSchema,
   RenderCanceledError,
@@ -70,9 +72,30 @@ export function boundedFailureMessage(raw: string, limit = 1800): string {
 /** The control plane's failure code limit (`FailRenderJobV2Schema`); the worker's own schema allows 128. */
 const CONTROL_FAILURE_CODE_MAX = 100;
 
-export function failureOf(error: unknown): { code: string; message: string; retryable: boolean } {
+/**
+ * What the worker reports for a failed job (`JobFailureSchema`). `details`
+ * is structured evidence the engine attached, e.g. a crashed process's exit
+ * and scrubbed stderr tail.
+ */
+export type JobFailure = z.infer<typeof JobFailureSchema>;
+
+export function failureOf(error: unknown): JobFailure {
   const failure = uncappedFailureOf(error);
   return { ...failure, code: failure.code.slice(0, CONTROL_FAILURE_CODE_MAX) };
+}
+
+/** An engine error's `details`, when it is a JSON object the control plane can store. */
+function failureDetails(error: unknown): JobFailure['details'] {
+  const details = (error as { details?: unknown }).details;
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return undefined;
+  try {
+    const round = JSON.parse(JSON.stringify(details)) as unknown;
+    return round && typeof round === 'object' && !Array.isArray(round) && Object.keys(round).length > 0
+      ? JobFailureSchema.shape.details.parse(round)
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -152,7 +175,7 @@ export function completionRefusal(error: unknown): CompletionRefusal | null {
   return null;
 }
 
-function uncappedFailureOf(error: unknown): { code: string; message: string; retryable: boolean } {
+function uncappedFailureOf(error: unknown): JobFailure {
   if (error instanceof CompletionRefusedError) {
     return { code: error.refusal.failureCode, message: boundedFailureMessage(error.refusal.message), retryable: false };
   }
@@ -161,7 +184,8 @@ function uncappedFailureOf(error: unknown): { code: string; message: string; ret
   // native_gpu_memory_insufficient) report them as-is.
   const coded = error as { code?: unknown; retryable?: unknown };
   if (error instanceof Error && typeof coded.code === 'string' && /^(?:native|carla|render)_[a-z0-9_]+$/.test(coded.code) && typeof coded.retryable === 'boolean') {
-    return { code: `render.${coded.code}`, message, retryable: coded.retryable };
+    const details = failureDetails(error);
+    return { code: `render.${coded.code}`, message, retryable: coded.retryable, ...(details ? { details } : {}) };
   }
   if (error instanceof RenderCanceledError) return { code: 'render.canceled', message, retryable: false };
   if (error instanceof UnsupportedRenderIntentError) return { code: error.code, message, retryable: false };

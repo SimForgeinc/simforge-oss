@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
-import type { JobLeasedResponse } from '@simforge-oss/render';
+import { carlaProcessFailure, carlaRenderFailure, type JobLeasedResponse } from '@simforge-oss/render';
 import { nativeMapMemberInputId } from '@simforge-oss/render/native';
 
 import { boundedFailureMessage, boundedProgressRecord, createProgressForwarder, failureOf, heartbeatFailureIsFatal, validateClaimedInputs } from './worker.js';
@@ -149,6 +149,35 @@ describe('failure reporting', () => {
     const failure = failureOf(coded);
     expect(failure.code.length).toBeLessThanOrEqual(100);
     expect(failure.code).toMatch(/^render\.native_a+$/);
+  });
+
+  it('reports a crashed CARLA process with its scrubbed stderr tail and exit, retryable', () => {
+    const crash = carlaProcessFailure({ code: 1, signal: null }, [
+      'Traceback (most recent call last):',
+      'GET https://blobs.example/in.xosc?X-Amz-Signature=0123456789abcdef',
+      'RuntimeError: CARLA synchronous tick barrier is broken',
+    ].join('\n'));
+    const failure = failureOf(crash);
+    expect(failure.code).toBe('render.carla_process_failed');
+    expect(failure.retryable).toBe(true);
+    expect(failure.message).toContain('RuntimeError: CARLA synchronous tick barrier is broken');
+    expect(failure.message).not.toContain('0123456789abcdef');
+    expect(failure.details).toEqual({ exitCode: 1, signal: null, stderrTail: expect.stringContaining('tick barrier') });
+    expect(JSON.stringify(failure)).not.toContain('0123456789abcdef');
+  });
+
+  it('never retries a deterministic CARLA refusal', () => {
+    const refusal = carlaRenderFailure(JSON.stringify({
+      schema: 'simforge.carla-render-failure/v1', code: 'carla_render_contract_violation',
+      message: '[carla_render_contract_violation] renderSpec.clip ends after the authored clip', retryable: false,
+    }));
+    const failure = failureOf(refusal);
+    expect(failure).toEqual({
+      code: 'render.carla_render_contract_violation',
+      message: 'renderSpec.clip ends after the authored clip',
+      retryable: false,
+    });
+    expect(failureOf(carlaProcessFailure({ code: 3, signal: null }, 'garbled')).retryable).toBe(false);
   });
 
   it('caps warning messages and cancellation reasons at the control plane limit', () => {
