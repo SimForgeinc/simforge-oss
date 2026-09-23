@@ -31,6 +31,7 @@ import { authoredRenderSensors } from "@simforge-oss/scenario";
 import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { hostUrl } from "./host-url";
 
 const args = new Map(process.argv.slice(2).map((arg) => {
   const match = /^--(root|document|engine|timeout)=(.+)$/.exec(arg);
@@ -46,7 +47,7 @@ const timeoutSeconds = Number(args.get("timeout") ?? 900);
 const pass = (message: string) => console.log(`PASS ${message}`);
 
 async function api<T>(path: string): Promise<T> {
-  const response = await fetch(new URL(path, host.baseUrl), { headers: { authorization }, signal: AbortSignal.timeout(120_000) });
+  const response = await fetch(hostUrl(host.baseUrl, path), { headers: { authorization }, signal: AbortSignal.timeout(120_000) });
   if (!response.ok) throw new Error(`${path}: ${response.status} ${await response.text()}`);
   return await response.json() as T;
 }
