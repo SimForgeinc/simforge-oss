@@ -85,3 +85,7 @@ studio/public/scenario-editor/driver-behaviors/
 
 # Written by Next on every dev/build (its path depends on distDir).
 /studio/next-env.d.ts
+
+# devflow (pnpm verify / agent:env) and turbo run state
+.devflow/
+.turbo/

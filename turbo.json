@@ -1,0 +1,38 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["tsconfig.base.json"],
+  "tasks": {
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "build:artifacts": {
+      "dependsOn": ["^build:artifacts"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!wasm/**",
+        "!native/**",
+        "$TURBO_ROOT$/native/Cargo.toml",
+        "$TURBO_ROOT$/native/Cargo.lock",
+        "$TURBO_ROOT$/native/crates/**"
+      ],
+      "outputs": ["wasm/**", "native/*.node", "native/index.d.ts"]
+    },
+    "typecheck": {
+      "dependsOn": ["transit"],
+      "outputs": []
+    },
+    "lint": {
+      "dependsOn": ["transit"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["transit", "build:artifacts", "^build:artifacts"],
+      "outputs": []
+    },
+    "test:golden": {
+      "dependsOn": ["build:artifacts"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/fixtures/render-timeline/**", "$TURBO_ROOT$/examples/edge-cases/**/*.trace.json.gz"],
+      "outputs": []
+    }
+  }
+}
