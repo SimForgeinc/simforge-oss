@@ -192,6 +192,14 @@ pub struct CinematicFx {
     pub ssr: bool,
     pub ssao: bool,
     pub ssao_ultra: bool,
+    /// GTAO quality level; `None` keeps the legacy `ssao_ultra` switch
+    /// (Ultra or High). Set by `RenderConfig`.
+    pub ssao_quality: Option<crate::render_config::SsaoQuality>,
+    /// Screen-space contact shadows alongside SSAO.
+    pub contact_shadows: bool,
+    pub contact_shadow_steps: u32,
+    pub ssr_linear_steps: u32,
+    pub ssr_bisection_steps: u32,
     pub chromatic_aberration: f32,
     pub vignette_intensity: f32,
     pub lens_distortion: f32,
@@ -223,6 +231,11 @@ impl Default for CinematicFx {
             ssr: true,
             ssao: true,
             ssao_ultra: true,
+            ssao_quality: None,
+            contact_shadows: true,
+            contact_shadow_steps: 16,
+            ssr_linear_steps: 10,
+            ssr_bisection_steps: 5,
             // UE's default film camera is nearly rectilinear and does not
             // visibly fringe high-contrast edges.
             chromatic_aberration: 0.0,
@@ -427,18 +440,29 @@ impl RenderProfile {
                 }
                 fx.aa.insert(&mut cam);
                 if fx.ssr {
-                    cam.insert(ScreenSpaceReflections::default());
-                }
-                if fx.ssao {
-                    cam.insert(ScreenSpaceAmbientOcclusion {
-                        quality_level: if fx.ssao_ultra {
-                            ScreenSpaceAmbientOcclusionQualityLevel::Ultra
-                        } else {
-                            ScreenSpaceAmbientOcclusionQualityLevel::High
-                        },
+                    cam.insert(ScreenSpaceReflections {
+                        linear_steps: fx.ssr_linear_steps,
+                        bisection_steps: fx.ssr_bisection_steps,
                         ..Default::default()
                     });
-                    cam.insert(ContactShadows::default());
+                }
+                if fx.ssao {
+                    use crate::render_config::SsaoQuality;
+                    let quality_level = match fx.ssao_quality {
+                        Some(SsaoQuality::Low) => ScreenSpaceAmbientOcclusionQualityLevel::Low,
+                        Some(SsaoQuality::Medium) => ScreenSpaceAmbientOcclusionQualityLevel::Medium,
+                        Some(SsaoQuality::High) => ScreenSpaceAmbientOcclusionQualityLevel::High,
+                        Some(SsaoQuality::Ultra) => ScreenSpaceAmbientOcclusionQualityLevel::Ultra,
+                        None if fx.ssao_ultra => ScreenSpaceAmbientOcclusionQualityLevel::Ultra,
+                        None => ScreenSpaceAmbientOcclusionQualityLevel::High,
+                    };
+                    cam.insert(ScreenSpaceAmbientOcclusion { quality_level, ..Default::default() });
+                    if fx.contact_shadows {
+                        cam.insert(ContactShadows {
+                            linear_steps: fx.contact_shadow_steps,
+                            ..Default::default()
+                        });
+                    }
                 }
             }
         }

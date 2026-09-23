@@ -25,6 +25,7 @@ use render_core::engine::{
     CameraSpec, CapturedFrame, LegendEntry, Lighting, PassSet, Profile, SceneApp, SensorTriangle,
 };
 use render_core::profiles::RenderProfileConfig;
+use render_core::render_config::{LidarBackend, Preset, RenderConfig, RenderRequest};
 use render_core::vehicle_model::{VehicleModelCatalog, VehicleModelEntry};
 use sensors::bvh::{Blas, Hit, InstancedScene, Raycast, RaycastScene, Tri};
 use std::collections::HashMap;
@@ -83,6 +84,18 @@ pub struct SceneSpec {
     /// Jittered frames a pinned capture accumulates on TAA views (default 4).
     #[serde(default)]
     pub taa_samples: Option<u32>,
+    /// THE render configuration surface: a preset plus dotted overrides
+    /// (`render_core::render_config`). Mutually exclusive with the legacy
+    /// look fields (`profileConfig`, `captureClock`, `taaSamples`,
+    /// `sharedShadows`, `lidarBackend`), which only [`SceneSpec::render_config`]
+    /// maps, in one place.
+    #[serde(default)]
+    pub render: Option<render_core::render_config::RenderRequest>,
+    /// The texture tier the job stager actually staged `glbs[0]` with. The
+    /// render config's `textures.tier` must match it (the service cannot
+    /// re-stage textures, so a mismatch is an error, not a silent no-op).
+    #[serde(default)]
+    pub texture_tier: Option<render_core::render_config::TextureTier>,
     /// Render one directional cascade set for the whole RGB rig instead of
     /// one per camera (`render_core::shared_shadows`). Cascades are fitted
     /// to the union of the rig's frusta, so every view stays covered; the
@@ -90,8 +103,8 @@ pub struct SceneSpec {
     /// Default on: on the Belmont 8-camera rig it halves GPU time per
     /// render (624 -> 325 ms on an RTX 3080) at 55 dB mean / 52 dB min PSNR
     /// against per-view cascades (docs/engineering/native-render-gpu-profile.md).
-    #[serde(default = "default_true")]
-    pub shared_shadows: bool,
+    #[serde(default)]
+    pub shared_shadows: Option<bool>,
     /// `auto` (default: hardware rays when the device has them), `gpu`,
     /// `cpu` or `verify` (hardware rays re-checked against the CPU every
     /// scan). Every backend produces the same bytes; see [`LidarBackend`].
@@ -106,27 +119,109 @@ pub struct SceneSpec {
 }
 
 impl SceneSpec {
-    pub fn lidar_backend(&self) -> Result<LidarBackend> {
-        match self.lidar_backend.as_deref() {
-            None | Some("auto") => Ok(LidarBackend::Auto),
-            Some("gpu") => Ok(LidarBackend::Gpu),
-            Some("cpu") => Ok(LidarBackend::Cpu),
-            Some("verify") => Ok(LidarBackend::Verify),
-            Some(other) => anyhow::bail!("[native_lidar_backend_invalid] lidarBackend {other:?} (auto | gpu | cpu | verify)"),
+    /// The resolved render config, and any deprecation notes. The ONLY place
+    /// legacy look fields are mapped onto [`RenderConfig`]; with `render`
+    /// present they are an error.
+    pub fn render_config(&self) -> Result<(RenderConfig, Vec<String>)> {
+        let legacy = self.profile_config != RenderProfileConfig::default()
+            || self.capture_clock.is_some()
+            || self.taa_samples.is_some()
+            || self.shared_shadows.is_some()
+            || self.lidar_backend.is_some();
+        if let Some(request) = &self.render {
+            anyhow::ensure!(
+                !legacy,
+                "[native_render_config_invalid] `render` cannot be combined with the legacy profileConfig/captureClock/taaSamples/sharedShadows/lidarBackend fields"
+            );
+            let config = request.resolve()?;
+            self.check_texture_tier(&config)?;
+            return Ok((config, Vec::new()));
         }
+        if !legacy {
+            return Ok((RenderRequest::default().resolve()?, Vec::new()));
+        }
+        Ok((legacy_render_config(self)?, vec![
+            "scene spec uses the legacy look fields (profileConfig/captureClock/taaSamples/sharedShadows/lidarBackend); send `render: {preset, set}` instead".to_string(),
+        ]))
     }
+}
 
-    pub fn capture_clock(&self) -> Result<render_core::engine::CaptureClock> {
-        match self.capture_clock.as_deref() {
-            None | Some("free") => Ok(render_core::engine::CaptureClock::Free),
-            Some("pinned") => {
-                let samples = self.taa_samples.unwrap_or(4); // fallback-ok: documented pinned-clock default; the samples used are recorded in the capture manifest
-                anyhow::ensure!((1..=16).contains(&samples), "taaSamples must be 1..=16, got {samples}");
-                Ok(render_core::engine::CaptureClock::Pinned { samples })
-            }
-            Some(other) => anyhow::bail!("unknown captureClock {other:?} (free | pinned)"),
-        }
+/// Merge CLI `--preset` / `--set key=value` into the scene spec's `render`
+/// request (the CLI, the scene spec and the protocol share one surface).
+pub fn apply_render_cli(spec: &mut SceneSpec, preset: Option<String>, sets: &[String]) -> Result<()> {
+    if preset.is_none() && sets.is_empty() {
+        return Ok(());
     }
+    let request = spec.render.get_or_insert_with(RenderRequest::default);
+    if let Some(preset) = preset {
+        Preset::parse(&preset)?;
+        request.preset = Some(preset);
+    }
+    for assignment in sets {
+        request.push_set(assignment)?;
+    }
+    Ok(())
+}
+
+impl SceneSpec {
+    fn check_texture_tier(&self, config: &RenderConfig) -> Result<()> {
+        use render_core::render_config::TextureTier;
+        let staged = self.texture_tier.unwrap_or(TextureTier::UastcFull); // fallback-ok: a scene without a declared tier is the full-resolution master (rc.73 staging); a different requested tier fails below
+        anyhow::ensure!(
+            staged == config.textures.tier,
+            "[native_render_config_invalid] textures.tier {:?} but the scene's master was staged as {:?}; the tier is chosen when the job stages the map",
+            config.textures.tier,
+            staged
+        );
+        Ok(())
+    }
+}
+
+/// rc.73-era scene-spec look fields onto the showcase preset.
+fn legacy_render_config(spec: &SceneSpec) -> Result<RenderConfig> {
+    use render_core::render_config::{ClockMode, LidarBackend, SsaoQuality};
+    let fx = spec.profile_config.cinematic;
+    let mut config = RenderConfig::preset(Preset::Showcase);
+    config.aa.mode = fx.aa;
+    config.aa.taa_samples = spec.taa_samples.unwrap_or(4); // fallback-ok: the rc.73 pinned-clock default, recorded in the resolved config
+    config.ssr.enabled = fx.ssr;
+    config.ssao.enabled = fx.ssao;
+    config.ssao.quality = if fx.ssao_ultra { SsaoQuality::Ultra } else { SsaoQuality::High };
+    config.bloom.intensity = fx.bloom_intensity;
+    config.dof = render_core::render_config::DofConfig {
+        enabled: fx.dof_enabled,
+        aperture_f_stops: fx.dof_aperture_f_stops,
+        focal_distance_m: fx.dof_focal_distance_m,
+    };
+    config.motion_blur.shutter_angle = fx.motion_shutter_angle;
+    config.motion_blur.samples = fx.motion_samples;
+    config.grading = render_core::render_config::GradingConfig {
+        tone_map: fx.tone_map,
+        exposure: fx.grading_exposure,
+        temperature: fx.grading_temperature,
+        tint: fx.grading_tint,
+        post_saturation: fx.grading_post_saturation,
+        contrast: fx.grading_contrast,
+    };
+    config.lens.vignette = fx.vignette_intensity;
+    config.lens.distortion = fx.lens_distortion;
+    config.lens.chromatic_aberration = fx.chromatic_aberration;
+    config.clock.mode = match spec.capture_clock.as_deref() {
+        None | Some("free") => ClockMode::Free,
+        Some("pinned") => ClockMode::Pinned,
+        Some(other) => anyhow::bail!("[native_render_config_invalid] captureClock {other:?} (free | pinned)"),
+    };
+    config.shadows.shared = spec.shared_shadows.unwrap_or(true); // fallback-ok: rc.74 default, recorded in the resolved config
+    config.shadows.map_size = if config.shadows.shared { 2560 } else { 2048 };
+    config.lidar.backend = match spec.lidar_backend.as_deref() {
+        None | Some("auto") => LidarBackend::Auto,
+        Some("gpu") => LidarBackend::Gpu,
+        Some("cpu") => LidarBackend::Cpu,
+        Some("verify") => LidarBackend::Verify,
+        Some(other) => anyhow::bail!("[native_render_config_invalid] lidarBackend {other:?} (auto | gpu | cpu | verify)"),
+    };
+    config.validate()?;
+    Ok(config)
 }
 
 fn default_true() -> bool {
@@ -147,7 +242,7 @@ fn default_warmup() -> u32 {
 /// The warmup cameras are registered before the readiness barrier so the
 /// pipelines the real rig will need are compiled up front.
 pub fn prewarm(spec: &SceneSpec) -> Result<SceneApp> {
-    let clock = spec.capture_clock()?;
+    let (config, _) = spec.render_config()?;
     let mut phases: Vec<(String, f64)> = Vec::new();
     let mut mark = std::time::Instant::now();
     let mut phase = |name: &str, mark: &mut std::time::Instant| {
@@ -155,18 +250,17 @@ pub fn prewarm(spec: &SceneSpec) -> Result<SceneApp> {
         *mark = std::time::Instant::now();
     };
     let mut app =
-        SceneApp::new_with_profile_config(&spec.lighting, spec.profile_config)?;
-    app.set_capture_clock(clock);
+        SceneApp::new_with_profile_config(&spec.lighting, config.profile_config())?;
+    app.apply_render_config(&config)?;
     phase("device", &mut mark);
     // The constructor spawns the ladder with calibration defaults (IBL gain
     // 1.0, no EV bias); only a relight resolves the spec's `ambient_scale`,
     // `ev100_bias`, weather and night controls. A scene that never receives a
     // `set_lighting` request must still render the lighting it declared.
-    app.apply_lighting(&spec.lighting, spec.profile_config)?;
+    app.apply_lighting(&spec.lighting, config.profile_config())?;
     phase("lighting", &mut mark);
-    app.set_shared_shadows(spec.shared_shadows);
     app.load_tiles(&spec.glbs)?;
-    if let Some(manifest) = &spec.geometry_lod {
+    if let (Some(manifest), true) = (&spec.geometry_lod, config.lod.enabled) {
         let master = spec
             .glbs
             .first()
@@ -515,8 +609,12 @@ pub struct ServiceState {
     /// Run a tick's lidar/radar scans while the GPU renders it (on by
     /// default; outputs are verified bit-identical to the serial path).
     pub overlap_sensors: bool,
-    /// Lidar tracing engine (see [`SceneSpec::lidar_backend`]).
+    /// Lidar tracing engine (`RenderConfig.lidar.backend`).
     pub lidar_backend: LidarBackend,
+    /// The resolved render configuration (recorded by callers' manifests).
+    pub render_config: RenderConfig,
+    /// Deprecation notes from resolving the scene spec's render fields.
+    pub render_deprecations: Vec<String>,
     vehicle_models: Option<VehicleModelCatalog>,
     pedestrian_models: Option<VehicleModelCatalog>,
     actor_model_refs: HashMap<String, PathBuf>,
@@ -542,20 +640,6 @@ pub struct SensorScenesOutcome {    /// Already built before this call.
     pub gpu: bool,
 }
 
-/// Which engine traces lidar beams against the static map
-/// (`SceneSpec::lidar_backend`). All produce the same bytes.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum LidarBackend {
-    /// Hardware rays when the device supports them, else the CPU trees.
-    Auto,
-    /// Hardware rays; a device without them fails the request.
-    Gpu,
-    /// The CPU reference trees.
-    Cpu,
-    /// Hardware rays, each scan re-traced on the CPU and compared bit for
-    /// bit (a mismatch fails the bundle). Diagnostics and CI.
-    Verify,
-}
 
 impl ServiceState {
     /// Build the map's sensor scenes if nothing has needed them yet. Logs
@@ -666,6 +750,10 @@ impl ServiceState {
         shm_path: String,
         shm: ShmRing,
     ) -> Result<Self> {
+        let (render_config, render_deprecations) = spec.render_config()?;
+        for note in &render_deprecations {
+            eprintln!("deprecated: {note}");
+        }
         let vehicle_models = spec
             .vehicle_models
             .as_deref()
@@ -690,7 +778,9 @@ impl ServiceState {
             shm,
             near_m: spec.near_m,
             far_m: spec.far_m,
-            profile_config: spec.profile_config,
+            profile_config: render_config.profile_config(),
+            render_config,
+            render_deprecations,
             legend,
             scene: Vec::new(),
             current_tick: None,
@@ -707,7 +797,7 @@ impl ServiceState {
             allow_primitive_actors: spec.allow_primitive_actors,
             static_sensor_classes: None,
             needs_settle: true,
-            lidar_backend: spec.lidar_backend()?,
+            lidar_backend: render_config.lidar.backend,
             overlap_sensors: std::env::var("SIMFORGE_NATIVE_SERIAL_SENSORS").map_or(true, |value| value.is_empty() || value == "0"),
             vehicle_models,
             pedestrian_models,
@@ -783,6 +873,7 @@ fn auto_meter(state: &mut ServiceState, cam: &ServiceCamera, eye: &[f32; 3], tar
 /// the endpoint itself (a stat/connect poll is not portable to named
 /// pipes). Written atomically (temp file + rename).
 #[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReadyRecord<'a> {
     pub protocol: u32,
     pub pid: u32,
@@ -790,6 +881,10 @@ pub struct ReadyRecord<'a> {
     /// named-pipe endpoint (see [`crate::endpoint`]).
     pub endpoint: &'a str,
     pub shm: ShmInfo,
+    /// The resolved render configuration this service renders with.
+    pub render_config: &'a RenderConfig,
+    /// Deprecation notes (legacy scene-spec fields that were mapped).
+    pub deprecations: &'a [String],
 }
 
 fn write_ready_file(path: &Path, record: &ReadyRecord<'_>) -> Result<()> {
@@ -820,6 +915,8 @@ pub fn serve(mut state: ServiceState, endpoint: &str, ready_file: Option<&Path>)
                 pid: std::process::id(),
                 endpoint: listener.endpoint(),
                 shm: ShmInfo { path: state.shm_path.clone(), size_bytes, meta_bytes },
+                render_config: &state.render_config,
+                deprecations: &state.render_deprecations,
             },
         )?;
     }
@@ -1081,6 +1178,8 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
                         .iter()
                         .map(|c| (*c).to_owned())
                         .collect(),
+                    render_config: state.render_config,
+                    deprecations: state.render_deprecations.clone(),
                 },
             }
         }

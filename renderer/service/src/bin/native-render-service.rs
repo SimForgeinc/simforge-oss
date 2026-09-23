@@ -28,10 +28,14 @@ fn main() -> Result<()> {
     let mut shm_size_mb = 256u64;
     let mut scene_path = None;
     let mut ready_file: Option<PathBuf> = None;
+    let mut preset: Option<String> = None;
+    let mut sets: Vec<String> = Vec::new();
+    let mut print_render_config = false;
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--help" | "-h" => {
                 println!("native-render-service --scene SCENE.json --socket ENDPOINT [--shm PATH] [--shm-size-mb 256] [--ready-file PATH]\n\
+                    [--preset training|showcase] [--set key=value ...] [--print-render-config]\n\
                     Synchronous v5 MessagePack request/response with shared-memory frames; no background simulation clock.\n\
                     Closed loop: python -m simforge_native.closed_loop --help. reset_episode/step_episode use typed ConsumerSpec products.\n\
                     Two output modes: sensor-capture --profile training|showcase; describe_products exposes their typed defaults.\n\
@@ -48,14 +52,27 @@ fn main() -> Result<()> {
             "--ready-file" => {
                 ready_file = Some(args.next().context("--ready-file requires a path")?.into());
             }
+            "--preset" => preset = Some(args.next().context("--preset requires training | showcase")?),
+            "--set" => sets.push(args.next().context("--set requires key=value")?),
+            "--print-render-config" => print_render_config = true,
             other => anyhow::bail!("unknown argument {other}"),
         }
     }
     let scene_path = scene_path.context("missing --scene")?;
-    let spec: service::server::SceneSpec = serde_json::from_str(
+    let mut spec: service::server::SceneSpec = serde_json::from_str(
         &std::fs::read_to_string(&scene_path).with_context(|| format!("read {scene_path}"))?,
     )
     .with_context(|| format!("parse {scene_path}"))?;
+    service::server::apply_render_cli(&mut spec, preset, &sets)?;
+    if print_render_config {
+        let (config, deprecations) = spec.render_config()?;
+        println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+            "renderConfig": config,
+            "keys": config.keys()?.into_iter().map(|(key, value)| (key, value)).collect::<serde_json::Map<_, _>>(),
+            "deprecations": deprecations,
+        }))?);
+        return Ok(());
+    }
     let socket = socket.context("missing --socket")?;
     let shm_path = shm_path.unwrap_or_else(|| {
         default_ring_path(&format!("simforge-native-render.{pid}", pid = std::process::id()))

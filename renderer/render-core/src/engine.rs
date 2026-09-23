@@ -2290,6 +2290,8 @@ pub struct SceneApp {
     geometry_lods: Option<crate::geometry_lod::GeometryLods>,
     /// Static master mesh entity -> its ID-pass clone and ID material.
     id_clone_of: HashMap<Entity, (Entity, Handle<StandardMaterial>)>,
+    /// Resolved render config ([`Self::apply_render_config`]).
+    render_config: Option<crate::render_config::RenderConfig>,
 }
 
 impl SceneApp {
@@ -2366,6 +2368,12 @@ impl SceneApp {
                 crate::readiness::GpuReadinessPlugin,
                 crate::shared_shadows::SharedShadowsPlugin,
             ))
+            .init_resource::<ShadowCascadeSettings>()
+            .add_systems(
+                PostUpdate,
+                enforce_shadow_cascades
+                    .before(bevy::light::SimulationLightSystems::UpdateDirectionalLightCascades),
+            )
             .add_systems(
                 Update,
                 (
@@ -2584,6 +2592,7 @@ impl SceneApp {
             shared_shadows: false,
             geometry_lods: None,
             id_clone_of: HashMap::new(),
+            render_config: None,
         })
     }
 
@@ -2593,11 +2602,6 @@ impl SceneApp {
         self.shared_shadows = enabled;
         let entities: Vec<Entity> = self.groups.iter().map(|g| g.rgb_entity).collect();
         let world = self.app.world_mut();
-        world.resource_mut::<DirectionalLightShadowMap>().size = if enabled {
-            crate::shared_shadows::SHARED_SHADOW_MAP_SIZE
-        } else {
-            2048
-        };
         for entity in entities {
             let mut e = world.entity_mut(entity);
             if enabled {
@@ -2606,6 +2610,45 @@ impl SceneApp {
                 e.remove::<crate::shared_shadows::SharedShadowView>();
             }
         }
+    }
+
+    /// Apply the non-look knobs of a resolved [`crate::render_config::RenderConfig`]
+    /// (the look itself is the `RenderProfileConfig` the app was built and
+    /// relit with: `config.profile_config()`). Call before loading tiles.
+    pub fn apply_render_config(&mut self, config: &crate::render_config::RenderConfig) -> Result<()> {
+        use crate::render_config::ClockMode;
+        config.validate()?;
+        self.render_config = Some(*config);
+        self.set_shared_shadows(config.shadows.shared);
+        {
+            let world = self.app.world_mut();
+            world.resource_mut::<DirectionalLightShadowMap>().size = config.shadows.map_size as usize;
+            *world.resource_mut::<ShadowCascadeSettings>() = ShadowCascadeSettings {
+                cascades: config.shadows.cascades,
+                max_distance_m: config.shadows.max_distance_m,
+            };
+        }
+        self.set_capture_clock(match config.clock.mode {
+            ClockMode::Free => CaptureClock::Free,
+            ClockMode::Pinned => CaptureClock::Pinned {
+                samples: if config.aa.mode == crate::profiles::AntiAlias::Taa { config.aa.taa_samples } else { 1 },
+            },
+        });
+        let threads = match config.encode.finish_threads {
+            0 => std::thread::available_parallelism().map_or(1, |n| n.get()).min(16), // fallback-ok: thread count only; output does not depend on it
+            n => n as usize,
+        };
+        self.app.sub_app_mut(RenderApp).insert_resource(EncoderFinishThreads(threads));
+        if let Some(lods) = &mut self.geometry_lods {
+            lods.pixel_error_px = config.lod.pixel_error_px;
+            lods.applied_f_px = None;
+        }
+        Ok(())
+    }
+
+    /// The resolved render config this app runs with, if one was applied.
+    pub fn render_config(&self) -> Option<crate::render_config::RenderConfig> {
+        self.render_config
     }
 
     /// Take one camera in or out of the shared cascade set (for example a
@@ -4883,7 +4926,9 @@ impl SceneApp {
             lod_path,
             master_path,
             lod_gltf,
-            pixel_error_px: crate::geometry_lod::DEFAULT_PIXEL_ERROR_PX,
+            pixel_error_px: self
+                .render_config
+                .map_or(crate::geometry_lod::DEFAULT_PIXEL_ERROR_PX, |config| config.lod.pixel_error_px), // fallback-ok: the derivative's own default when no render config was applied (tests)
             applied_f_px: None,
         });
         Ok(())
@@ -5778,6 +5823,38 @@ fn targets_image(camera: &ExtractedCamera, image: &Handle<Image>) -> bool {
 /// requested pass whose camera was not extracted this frame (just
 /// registered, inactive, or removed) is not copied and therefore never
 /// reported: stale staging bytes cannot be relabelled as this frame.
+/// Cascade layout of every directional light (`RenderConfig.shadows`).
+#[derive(Resource, Clone, Copy, Debug, PartialEq)]
+pub struct ShadowCascadeSettings {
+    pub cascades: u32,
+    pub max_distance_m: f32,
+}
+
+impl Default for ShadowCascadeSettings {
+    fn default() -> Self {
+        Self { cascades: 4, max_distance_m: 400.0 }
+    }
+}
+
+/// Keep every directional light's cascades on the configured layout (the
+/// lighting ladder respawns lights on relight).
+fn enforce_shadow_cascades(
+    settings: Res<ShadowCascadeSettings>,
+    mut lights: Query<(Ref<DirectionalLight>, &mut bevy::light::CascadeShadowConfig)>,
+) {
+    for (light, mut config) in &mut lights {
+        if settings.is_changed() || light.is_added() {
+            *config = bevy::light::cascade::CascadeShadowConfigBuilder {
+                minimum_distance: 1.0,
+                maximum_distance: settings.max_distance_m,
+                num_cascades: settings.cascades as usize,
+                ..Default::default()
+            }
+            .build();
+        }
+    }
+}
+
 /// Threads that finish the frame's command encoders (see `SceneApp::new`).
 #[derive(Resource)]
 struct EncoderFinishThreads(usize);

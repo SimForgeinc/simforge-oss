@@ -20,7 +20,7 @@ pub const NATIVE_SERVICE_PROTOCOL_VERSION: u32 = 5;
 
 /// Additive ops advertised in `hello.capabilities`.
 pub const NATIVE_SERVICE_CAPABILITIES: &[&str] =
-    &["observe_actors", "capture_clock.pinned", "render_bundle.observe", "render_bundle.pipeline"];
+    &["observe_actors", "render_config", "capture_clock.pinned", "render_bundle.observe", "render_bundle.pipeline"];
 
 /// Rigid attachment of a camera to a scene-state actor (CARLA
 /// `AttachmentType.Rigid` analogue): the pose is re-resolved from the
@@ -332,6 +332,10 @@ pub enum ResponseBody {
         /// Clients gate on this before sending one: an older service drops
         /// the connection on an op it cannot decode.
         capabilities: Vec<String>,
+        /// The resolved render configuration (`render_config` capability).
+        render_config: render_core::render_config::RenderConfig,
+        /// Deprecation notes from resolving the scene spec.
+        deprecations: Vec<String>,
     },
     Load {
         ok: bool,

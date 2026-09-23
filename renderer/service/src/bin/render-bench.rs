@@ -17,6 +17,8 @@
 //!       --intent intent.json [--glb master.gltf] [--models actor-assets]
 //!       [--start 0] [--ticks 48] [--sources all|rgb|lidar|<outputName,...>]
 //!       [--dump-dir DIR --dump-every N] [--out result.json]
+//!       [--preset training|showcase] [--set render.key=value ...]
+//!       [--scene-set sceneSpecField=json ...]
 //!
 //! `SIMFORGE_RENDER_DIAGNOSTICS=1` adds per-pass GPU timings (Bevy's
 //! render diagnostics; totals are per tick, summed over views and frames).
@@ -43,6 +45,8 @@ struct Args {
     shm_size_mb: u64,
     ablate: Vec<String>,
     spec_overrides: Vec<(String, String)>,
+    preset: Option<String>,
+    render_sets: Vec<String>,
 }
 
 fn parse_args() -> Result<Args> {
@@ -62,6 +66,8 @@ fn parse_args() -> Result<Args> {
         shm_size_mb: 512,
         ablate: Vec::new(),
         spec_overrides: Vec::new(),
+        preset: None,
+        render_sets: Vec::new(),
     };
     while let Some(arg) = args.next() {
         let mut value = || args.next().with_context(|| format!("{arg} requires a value"));
@@ -78,11 +84,13 @@ fn parse_args() -> Result<Args> {
             "--dump-every" => parsed.dump_every = value()?.parse()?,
             "--out" => parsed.out = Some(value()?.into()),
             "--shm-size-mb" => parsed.shm_size_mb = value()?.parse()?,
-            "--set" => {
+            "--scene-set" => {
                 let kv = value()?;
-                let (k, v) = kv.split_once('=').context("--set key=json")?;
+                let (k, v) = kv.split_once('=').context("--scene-set key=json")?;
                 parsed.spec_overrides.push((k.to_string(), v.to_string()));
             }
+            "--preset" => parsed.preset = Some(value()?),
+            "--set" => parsed.render_sets.push(value()?),
             "--ablate" => parsed.ablate = value()?.split(',').filter(|v| !v.is_empty()).map(String::from).collect(),
             other => bail!("unknown argument {other}"),
         }
@@ -220,7 +228,10 @@ fn main() -> Result<()> {
     for (key, value) in &args.spec_overrides {
         spec_json[key] = serde_json::from_str(value).with_context(|| format!("--set {key}"))?;
     }
-    let spec: SceneSpec = serde_json::from_value(spec_json)?;
+    let mut spec: SceneSpec = serde_json::from_value(spec_json)?;
+    service::server::apply_render_cli(&mut spec, args.preset.clone(), &args.render_sets)?;
+    let (resolved, _) = spec.render_config()?;
+    eprintln!("render-bench: render config {}", serde_json::to_string(&resolved)?);
     let trace: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&args.trace)?)?;
     let intent: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&args.intent)?)?;
     let frames = trace["frames"].as_array().context("trace.frames")?.clone();
@@ -413,6 +424,7 @@ fn main() -> Result<()> {
     let result = serde_json::json!({
         "schema": "simforge.render-bench/v1",
         "ablate": args.ablate,
+        "renderConfig": resolved,
         "prewarmS": prewarm_s,
         "firstTickMs": first_tick_ms,
         "ticks": tick_ms.len(),
