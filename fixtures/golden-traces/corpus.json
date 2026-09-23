@@ -298,6 +298,23 @@
         "seed": "ambient-3",
         "clipSeconds": 60
       }
+    },
+    {
+      "id": "rfs-template-ltap-carla-catalog",
+      "tier": "ci",
+      "map": "richmond-field-station",
+      "covers": [
+        "template-compile",
+        "pinned-site",
+        "pinned-simulation-seed",
+        "carla-catalog-actor"
+      ],
+      "source": {
+        "kind": "template",
+        "path": "fixtures/golden-traces/templates/ltap-opposing.carla.template.json",
+        "siteId": "3dd7bb59d80de7ee",
+        "drawIndex": 0
+      }
     }
   ]
 }
