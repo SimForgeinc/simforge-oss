@@ -1268,6 +1268,21 @@ export class EditorDocument {
     this.#transaction(() => { this.#doc.setExtension(key, value); });
   }
 
+  /**
+   * Persist several execution-bearing ambient-traffic options as ONE undoable
+   * gesture (a traffic source together with the density it needs).
+   */
+  setAmbientTrafficExtensions(entries: Readonly<Record<string, unknown>>): void {
+    for (const key of Object.keys(entries)) {
+      if (!key.startsWith('studio.ambientTraffic.')) {
+        throw new Error(`ambient traffic extension key must start with "studio.ambientTraffic.": ${key}`);
+      }
+    }
+    this.#transaction(() => {
+      for (const [key, value] of Object.entries(entries)) this.#doc.setExtension(key, value);
+    });
+  }
+
   undo(): boolean {
     const size = this.#groups.pop();
     if (size === undefined) return false;
