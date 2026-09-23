@@ -54,12 +54,35 @@ interface ActiveJobState {
 export function boundedFailureMessage(raw: string, limit = 1800): string {
   // eslint-disable-next-line no-control-regex
   const message = raw.replace(/\u001b\[[0-9;]*m/g, '');
+  // The control plane trims and requires a non-empty message; an empty one
+  // would fail the report and orphan the lease just like an oversized one.
+  if (message.trim().length === 0) return 'render failed without an error message';
   if (message.length <= limit) return message;
   const head = Math.floor(limit * 0.6);
   return `${message.slice(0, head)}\n…[${message.length - limit} chars elided]…\n${message.slice(message.length - (limit - head - 40))}`;
 }
 
-function failureOf(error: unknown): { code: string; message: string; retryable: boolean } {
+/** The control plane's failure code limit (`FailRenderJobV2Schema`); the worker's own schema allows 128. */
+const CONTROL_FAILURE_CODE_MAX = 100;
+
+export function failureOf(error: unknown): { code: string; message: string; retryable: boolean } {
+  const failure = uncappedFailureOf(error);
+  return { ...failure, code: failure.code.slice(0, CONTROL_FAILURE_CODE_MAX) };
+}
+
+/**
+ * A progress record the control plane will accept: warning messages and
+ * cancellation reasons are capped at its 2,000 characters (the worker's own
+ * schema allows 4,096), so one long engine warning cannot get a whole
+ * progress batch refused.
+ */
+export function boundedProgressRecord(record: RenderProgressRecord): RenderProgressRecord {
+  if (record.event === 'warning') return { ...record, message: boundedFailureMessage(record.message) };
+  if (record.event === 'job.canceled') return { ...record, reason: boundedFailureMessage(record.reason) };
+  return record;
+}
+
+function uncappedFailureOf(error: unknown): { code: string; message: string; retryable: boolean } {
   const message = boundedFailureMessage(error instanceof Error ? error.message : String(error));
   // Engine errors that carry their own machine code and retry verdict (e.g.
   // native_gpu_memory_insufficient) report them as-is.
@@ -248,7 +271,7 @@ async function executeClaim(
 
   const sendProgress = async (candidate: RenderProgressRecord): Promise<void> => {
     const record = RenderProgressRecordSchema.parse({
-      ...candidate,
+      ...boundedProgressRecord(candidate),
       jobId: job.jobId,
       attempt: job.attempt,
       sequence: state.progressSequence,
