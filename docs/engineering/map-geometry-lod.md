@@ -146,14 +146,26 @@ instead.
 | Saratoga School Area | 11.7M | 0.92M | 11.1M | SM_Maple_M 45k x 56 = 2.5M | 1021 (1027 MB, 65) |
 | Yale St | 27.1M | 2.09M | 25.8M | SM_Oak_L_v2 35k x 179 = 6.2M | 2524 (2902 MB, 112) |
 
-### Builder (simforge1 CPU, per map)
+### Builder (revision 3, one workstation core, per map)
 
-| map | LOD meshes | LOD'd instanced tris | coarsest levels | impostor floor | sensor tris (instanced) | lod.bin | sensor.bin | build |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Belmont | 17 | 264.6M | 7.29M | 0.82M | 2.73M | 24.5 MB | 9.3 MB | 60 s |
-| Richmond | 5 | 10.0M | 0.75M | 0.03M | 4.76M | 19.6 MB | 19.6 MB | 26 s |
+| map | LOD meshes (impostors) | instanced tris | in LOD'd meshes | all at coarsest level | impostor floor | sensor proxy (instanced) | render members | sensor members | build / peak RSS |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Belmont | 14 (8) | 266.1M | 264.4M | 7.20M | 0.82M | 3.08M | 39.9 MB | 17.6 MB | 2:06 / 0.8 GB |
+| Di Rosa SF | 18 (11) | 24.2M | 19.7M | 1.65M | 0.35M | 2.83M | 55.3 MB | 30.2 MB | 1:56 / 0.9 GB |
+| Easterbrook | 9 (6) | 11.7M | 9.9M | 0.79M | 0.07M | 0.81M | 30.7 MB | 5.8 MB | 0:35 / 0.6 GB |
+| El Camino | 12 (9) | 21.6M | 20.1M | 1.37M | 0.33M | 1.12M | 40.9 MB | 8.5 MB | 0:52 / 0.7 GB |
+| Garching | 18 (13) | 443.9M | 439.8M | 56.43M | 5.22M | 30.63M | 54.5 MB | 33.9 MB | 2:09 / 1.0 GB |
+| Richmond | 5 (4) | 11.5M | 10.0M | 0.75M | 0.03M | 4.77M | 35.4 MB | 18.6 MB | 1:05 / 0.7 GB |
+| San Ramon 25 P2 | 6 (0) | 12.6M | 4.2M | 0.42M | 0.42M | 3.11M | 18.2 MB | 53.2 MB | 0:09 / 0.8 GB |
+| San Ramon P1 | 28 (12) | 281.6M | 275.1M | 24.36M | 10.20M | 25.83M | 73.5 MB | 43.0 MB | 1:02 / 1.1 GB |
+| San Ramon P2 | 15 (14) | 1027.9M | 1023.3M | 76.44M | 0.32M | 80.05M | 82.6 MB | 65.4 MB | 6:40 / 1.3 GB |
+| Yale St | 11 (8) | 27.1M | 24.5M | 1.68M | 0.10M | 2.09M | 36.0 MB | 27.6 MB | 0:39 / 0.8 GB |
 
-(All maps: see the report attached to feat/map-lod-derivatives.)
+"Render members" (manifest, lod.gltf/.bin, impostor atlases) is what a
+renderer downloads: 18-83 MB, 3-12 s at 7 MB/s, once per worker cache. The
+sensor members are only fetched when a job requests the proxy. A build from
+a published closure (dev S3, KTX2 textures) is byte-identical to a build from
+an installed map; dev and staging share build keys.
 
 ### Image gate
 
@@ -165,33 +177,46 @@ cameras. TAA and auto-exposure are turned off for the gate (FXAA, fixed EV)
 because they make two runs of the *same* master differ (repeat-run floor with
 TAA: 42 dB mean PSNR). With FXAA the floor is 52.7 dB mean / 44.9 dB min.
 
-Belmont, gpu-deep fixture, 8 cameras x 4 ticks: LOD'd instances 264.6M to
-31.8M triangles; PSNR 48.1 dB mean / 44.0 dB min, SSIM 0.9966 / 0.9942. At
-`pixelErrorPx` 2 PSNR drops to 40.8 dB; at 4 and above impostors reach
-mid-range trees and edge-on cards streak (35.7 dB).
+| clip (8 cameras x 4 ticks) | LOD'd mesh tris | PSNR mean / min | SSIM mean / min |
+|---|---|---|---|
+| Belmont, repeat of full (noise floor) | 264.4M | 52.7 / 44.9 dB | 0.9987 / 0.9965 |
+| Belmont, selection rule (pixelErrorPx 1) | 264.4M -> 31.6M | 48.7 / 45.5 dB | 0.9970 / 0.9951 |
+| Richmond, selection rule (8 of 77 trees at L1) | 10.0M -> 9.1M | 69.7 / 59.2 dB | 0.9998 / 0.9994 |
+| Richmond, every tree forced to L1 | 10.0M -> 1.44M | 59.7 / 45.8 dB | 0.9957 / 0.9898 |
+| Richmond, forced L2 (+ impostors past L2) | 10.0M -> 0.35M | 58.6 / 44.6 dB | 0.9947 / 0.9871 |
+| Richmond, forced coarsest / impostor | 10.0M -> 0.03M | 58.8 / 44.3 dB | 0.9948 / 0.9863 |
+
+Belmont vertex-shader invocations per tick fall from 1.95G to 0.48G and
+clipped primitives from 1.66G to 0.34G. At `pixelErrorPx` 2 PSNR drops to
+40.8 dB; at 4 and above impostors reach mid-range trees and edge-on cards
+streak (35.7 dB).
 
 ### Lidar
 
-Production spinning lidar (64 channels, +-20 degrees, 1875 azimuth steps) from
-the host trajectory, 2.4M rays on Belmont, the production `bvh.rs`:
+Production spinning lidar (64 channels, +-20 degrees, 1875 azimuth steps),
+from 20 host positions (Belmont, 2.4M rays) and 18 (Richmond, 2.2M rays), on
+the production `bvh.rs` (128 threads):
 
-| static scene | tris | serialized | build | cast | range vs exact |
+| Belmont static scene | tris | serialized (download at 7 MB/s) | build | cast 2.4M rays | range vs exact |
 |---|---:|---:|---:|---:|---|
-| flat exact soup | 266.1M | 15.48 GB | 56.7 s + 7.6 s snapshot (128 threads) | 0.227 s | reference |
-| instanced exact (`InstancedScene`) | 2.18M unique | ~0.1 GB | 0.84 s | 0.237 s | bit-identical distances; 0.55 % instance ids differ, all exact ties |
-| sensor proxy (this derivative) | 2.73M | 184.6 MB | 0.51 s | 0.122 s | surfaces p50 0.7 mm, p90 7 cm, p95 25 cm; vegetation p50 0.3 m, p90 6 m |
+| flat exact soup | 266.1M | 15.48 GB (37 min) | 58.8 s + 8.4 s snapshot | 0.217 s | reference |
+| instanced exact (`InstancedScene`) | 2.18M unique | built from the master (0 extra) | 0.85 s | 0.240 s | bit-identical distances; 0.55 % instance ids differ, all exact ties |
+| sensor proxy (this derivative) | 3.08M | 199 MB BVH (28 s), or 17.6 MB mesh (2.5 s) | 0.59 s | 0.127 s | surfaces p50 0.1 mm, p90 12 cm, p95 2.7 m; vegetation p50 0.39 m, p90 5.5 m |
 
-The instanced exact BVH gets the size and build time of the proxy without
-changing a single range. Its only difference is the tie-break between
-coincident duplicates, which can be made identical.
+Richmond: flat exact 11.5M tris / 764 MB, 2.4 s; instanced bit-identical
+(334 of 1.2M ids at ties); proxy 4.77M tris, surfaces p90 6 cm / p99 0.48 m,
+vegetation p50 0.47 m / p90 6.7 m. Large proxy errors are grazing terrain
+(2 cm of height is metres of range at a 1 degree grazing angle), canopy
+returns (different samples of the same leaf area) and unlabelled vegetation
+walls simplified as surfaces.
 
 **Decision (2026-09-22):** production lidar and radar use exact instanced
-geometry (`InstancedScene`: a BLAS per master mesh, a TLAS over instances; ties
-broken by distance, then instance id, triangle index and insertion order; an
-exact tie between the static and actor layers goes to the static hit). The
-simplified sensor proxy stays in the derivative, **opt-in only**: a job must
-request it explicitly and the render manifest must record it; it is never
-selected implicitly.
+geometry (`InstancedScene`: a BLAS per master mesh, a TLAS over instances;
+ties broken by distance, then instance id, triangle index and insertion
+order; an exact tie between the static and actor layers goes to the static
+hit). It needs no derivative. The simplified sensor proxy stays in the
+derivative, **opt-in only**: a job must request it explicitly and the render
+manifest must record it; it is never selected implicitly.
 
 ## Published map versions
 
@@ -212,3 +237,15 @@ inputs, the lease resolves those the intent declared, and the worker prewarm
 lists and signs them with the set, the way `descriptor.ambientTurnVerdicts`
 rides along. Maps built by the new pipeline carry the members in the closure
 itself; closure members win over descriptor members of the same path.
+
+The worker caches a set's member list by closure digest (plus the bound
+turn-verdict table). Until the prewarm set carries a derivative digest (a
+control-plane field that needs a worker feature flag), a worker that cached
+a set before its backfill picks up the bound members through the job lease
+(the intent declares them) rather than through prewarm.
+
+The renderer reads the derivative through `SceneSpec.geometryLod` (the path of
+`manifest.json`; perf/gpu-deep): one entity per level per node with
+`VisibilityRange`s from the rule above, the level chain on the ID clones too,
+and the master primitive's material on every level.
+
