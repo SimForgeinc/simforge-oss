@@ -9,6 +9,7 @@ import { LaneIndex, type ScenarioMapEntry } from "@simforge-oss/editor";
 import { loadEngine } from "@simforge-oss/engine/browser";
 import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import { resolveScenarioMap } from "@simforge-oss/studio-host";
+import { mapsIncludingPinnedVersion } from "@simforge-oss/studio-ui/scenario/scene/pinned-map";
 import type { CityViewer } from "@simforge-oss/viewer";
 import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
 import { MapLoadDebugPanel } from "@simforge-oss/studio-ui/scenario/scene/MapLoadDebugPanel";
@@ -90,7 +91,9 @@ export function DriverInTheLoopDrive({
       .listMaps(abort.signal)
       .then(async (installed) => {
         setInstalledMaps(installed.map(({ sourceMapId, mapVersionId }) => ({ sourceMapId, mapVersionId })));
-        const entry = resolveScenarioMap({ mapVersionId, mapSourceMapId, mapXodrSha256 }, installed);
+        // A document pinned to a superseded map version drives on exactly that version.
+        const withPin = await mapsIncludingPinnedVersion(studioHost, installed, { id: documentId, mapVersionId }, abort.signal);
+        const entry = resolveScenarioMap({ mapVersionId, mapSourceMapId, mapXodrSha256 }, withPin);
         const engine = await loadEngine();
         const index = await LaneIndex.load(entry.topologyUrl, { engine, signal: abort.signal });
         return { mapVersionId, map: entry, laneIndex: index };

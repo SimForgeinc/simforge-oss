@@ -3,8 +3,6 @@ import "server-only";
 import { engineSemantics } from "@simforge-oss/compiler/node";
 import { parseTemplate } from "@simforge-oss/scenario";
 import {
-  resolveScenarioMapUpgrade,
-  ScenarioMapResolutionError,
   type RevisionSimulationReason,
   type ScenarioEngineChangeDto,
   type ScenarioMapDescriptorDto,
@@ -453,6 +451,19 @@ export async function restoreVersionToDraft(
 
 // ── Map pin: newer publications and the diffed re-pin ──────────────────────────────────────
 
+const GEOMETRY_DIGEST = /^[a-f0-9]{64}$/;
+
+/** Byte-identical OpenDRIVE, or equal published geometry digests (both present and well-formed). */
+export function sameRoadGeometry(pair: {
+  xodr_sha256: string; pinned_xodr_sha256: string; geometry_sha256: string | null; pinned_geometry_sha256: string | null;
+}): boolean {
+  if (pair.xodr_sha256 === pair.pinned_xodr_sha256) return true;
+  return Boolean(
+    pair.geometry_sha256 && pair.pinned_geometry_sha256
+      && GEOMETRY_DIGEST.test(pair.geometry_sha256) && pair.geometry_sha256 === pair.pinned_geometry_sha256,
+  );
+}
+
 export async function draftMapPinStatus(context: AppContext, documentId: string): Promise<(ScenarioMapPinStatusDto & { pinnedDescriptor: ScenarioMapDescriptorDto | null }) | null> {
   const document = await getScenarioDocument(context, documentId);
   if (!document) return null;
@@ -466,10 +477,17 @@ export async function draftMapPinStatus(context: AppContext, documentId: string)
   );
   const pinnedDescriptor = await readPinnedScenarioMapDescriptor(document.mapVersionId);
   // The newest unretired publication of the same source map with an available closure. Moving is
-  // offered only when its OpenDRIVE is byte-identical (anchors stay valid); otherwise the reason is
-  // shown and the author remaps explicitly (`resolveScenarioMapUpgrade`'s rule).
-  const newest = await queryOne<{ id: string; label: string; created_at: string; xodr_sha256: string }>(
-    `SELECT mv.id, mv.label, mv.created_at::text AS created_at, mv.xodr_sha256
+  // offered when its road geometry is the same: byte-identical OpenDRIVE, or equal
+  // `descriptor.xodrGeometrySha256` (OpenDRIVE with only elevation/lateral profiles and lane
+  // heights removed, published at import). Otherwise the reason is shown and nothing is offered.
+  const newest = await queryOne<{
+    id: string; label: string; created_at: string; xodr_sha256: string;
+    geometry_sha256: string | null; pinned_xodr_sha256: string; pinned_geometry_sha256: string | null;
+  }>(
+    `SELECT mv.id, mv.label, mv.created_at::text AS created_at, mv.xodr_sha256,
+            mv.descriptor->>'xodrGeometrySha256' AS geometry_sha256,
+            pinned.xodr_sha256 AS pinned_xodr_sha256,
+            pinned.descriptor->>'xodrGeometrySha256' AS pinned_geometry_sha256
        FROM simforge.map_versions mv
        JOIN simforge.map_versions pinned ON pinned.id = :pinned_id
        JOIN simforge.browser_asset_sets bs ON bs.id = mv.browser_asset_set_id AND bs.map_version_id = mv.id
@@ -482,12 +500,13 @@ export async function draftMapPinStatus(context: AppContext, documentId: string)
   let newer: ScenarioMapPinStatusDto["newer"] = null;
   let newerUnavailable: ScenarioMapPinStatusDto["newerUnavailable"] = null;
   if (newest && newest.id !== document.mapVersionId) {
-    try {
-      resolveScenarioMapUpgrade(document, [{ mapVersionId: newest.id, sourceMapId: document.mapSourceMapId ?? "", artifacts: { xodrSha256: newest.xodr_sha256 } }]);
+    if (sameRoadGeometry(newest)) {
       newer = { mapVersionId: newest.id, name: newest.label, publishedAt: newest.created_at };
-    } catch (error) {
-      if (!(error instanceof ScenarioMapResolutionError)) throw error;
-      newerUnavailable = { code: error.code, message: error.message };
+    } else {
+      newerUnavailable = {
+        code: "scenario_map_geometry_drift",
+        message: `A newer version of this map (${newest.label}) changes its road geometry, so the scenario's anchors cannot move to it as they are. It stays on its pinned version.`,
+      };
     }
   }
   return {

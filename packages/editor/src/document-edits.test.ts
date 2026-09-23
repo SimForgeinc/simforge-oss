@@ -129,3 +129,34 @@ describe('applyRepair', () => {
     document.dispose();
   });
 });
+
+describe('restoreTemplate', () => {
+  it('restores a saved version as one undoable, autosaved edit', async () => {
+    const document = await openedRecord();
+    const saved = structuredClone(document.data);
+    document.add([{ id: 'truck', catalogId: 'vehicle.sedan', x: 10, y: 0, z: 0, headingRad: 0 }]);
+    document.rename('Edited since');
+    expect(document.data.roles.map((role) => role.id)).toContain('truck');
+    const edits = vi.fn();
+    document.subscribeEdits(edits);
+
+    document.restoreTemplate(saved);
+    expect(edits).toHaveBeenCalledTimes(1);
+    expect(document.data.roles.map((role) => role.id)).toEqual(saved.roles.map((role) => role.id));
+    expect(document.data.meta.name).toBe(saved.meta.name);
+
+    // One undo returns to the edited draft; redo restores again.
+    expect(document.undo()).toBe(true);
+    expect(document.data.roles.map((role) => role.id)).toContain('truck');
+    expect(document.data.meta.name).toBe('Edited since');
+    expect(document.redo()).toBe(true);
+    expect(document.data.roles.map((role) => role.id)).not.toContain('truck');
+    document.dispose();
+  });
+
+  it('refuses content that is not a valid template', async () => {
+    const document = await openedRecord();
+    expect(() => document.restoreTemplate({ scenarioVersion: 2, roles: 'nope' })).toThrow();
+    document.dispose();
+  });
+});

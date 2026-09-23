@@ -442,3 +442,39 @@ test("deleting a workspace cascades through its history rows", async () => {
   const afterDelete = await queryOne<{ n: number }>(`SELECT COUNT(*)::int AS n FROM simforge.revision_simulations WHERE workspace_id = :ws`, { ws });
   assert.equal(Number(afterDelete?.n), 0);
 });
+
+test("a newer publication with different OpenDRIVE is offered only when its road geometry digest matches", async () => {
+  const doc = await newDocument("Elevation refit");
+  // An elevation-only refit: different OpenDRIVE bytes, the newest publication of the map.
+  await execute(
+    `INSERT INTO simforge.map_versions (
+       id, workspace_id, source_map_id, source_map_asset_id, label, browser_manifest_url, topology_artifact_url,
+       xodr_artifact_id, xodr_sha256, coordinate_system_id, coordinate_system_sha256, descriptor, asset_catalog_version_id, created_at
+     ) VALUES ('usmapv_refit', :ws, 'map-pin', 'map-pin', 'Pin St refit', 'local://manifest', 'local://topology',
+       'usart_pin_xodr', :xodr, 'epsg:32610', :coordinate, '{}'::jsonb, 'usacv_pin', NOW() + INTERVAL '2 hours')`,
+    { ws: LOCAL_WORKSPACE_ID, xodr: "7".repeat(64), coordinate: "c".repeat(64) },
+  );
+  await execute(
+    `INSERT INTO simforge.browser_asset_sets (id, workspace_id, map_version_id, closure_sha256, object_count, byte_length, asset_set_state)
+     VALUES ('usbas_refit', :ws, 'usmapv_refit', :closure, 1, 1, 'available')`,
+    { ws: LOCAL_WORKSPACE_ID, closure: "6".repeat(64) },
+  );
+  await setMembers("usbas_refit", { ...SIMULATION_MEMBERS, "map.xodr": "7".repeat(64) });
+  await execute(`UPDATE simforge.map_versions SET browser_asset_set_id = 'usbas_refit' WHERE id = 'usmapv_refit'`);
+
+  const drift = await draftMapPinStatus(context, doc.id);
+  assert.equal(drift?.newer, null, "different road geometry is never offered as a move");
+  assert.equal(drift?.newerUnavailable?.code, "scenario_map_geometry_drift");
+
+  // Both publications carry the same geometry digest: the refit changed heights only.
+  const geometry = "a".repeat(64);
+  await execute(
+    `UPDATE simforge.map_versions SET descriptor = descriptor || jsonb_build_object('xodrGeometrySha256', CAST(:geometry AS text))
+      WHERE id IN ('usmapv_pin', 'usmapv_refit')`,
+    { geometry },
+  );
+  const same = await draftMapPinStatus(context, doc.id);
+  assert.equal(same?.newer?.mapVersionId, "usmapv_refit");
+  assert.equal(same?.newerUnavailable, null);
+  await execute(`UPDATE simforge.map_versions SET retired_at = NOW() WHERE id = 'usmapv_refit'`);
+});

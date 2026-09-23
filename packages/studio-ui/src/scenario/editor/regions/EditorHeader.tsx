@@ -47,6 +47,7 @@ export function EditorHeader({
   onExperienceToggle,
   documentSaveStatus,
   playback,
+  versionsControl,
 }: {
   document?: EditorDocument | null;
   getDebugInformation?: () => string;
@@ -59,6 +60,8 @@ export function EditorHeader({
   onExperienceToggle?: () => void;
   documentSaveStatus?: React.ReactNode;
   playback?: ScenarioSharedPlayback;
+  /** The Versions panel's toolbar button (saved versions and their simulation history). */
+  versionsControl?: React.ReactNode;
 }) {
   useRouteHeader({ title: "Editor" });
   useSetTopBarActionsAlignment("start");
@@ -122,6 +125,7 @@ export function EditorHeader({
       <TopBarTrailingPortal>
         <div {...stylex.props(styles.flexCenterGap2)} data-testid="scenario-editor-toolbar-trailing">
           <EditorTutorialGuide experience={experience ?? "advanced"} />
+          {versionsControl}
           <ScenarioReadinessButton issues={readinessIssues} />
           {/* Weather and traffic moved to the left rail: they are things you add
               to the scenario, like actors, and they now share that panel's tile
