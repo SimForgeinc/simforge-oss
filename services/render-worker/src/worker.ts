@@ -19,6 +19,8 @@ import {
   type JobLeasedResponse,
   type RenderEngineAdapter,
   type RenderProgressRecord,
+  WORKER_CONTROL_FEATURES_LABEL,
+  WORKER_CONTROL_FEATURES_V1,
   WORKER_INPUT_URLS_BATCH_V1,
   WORKER_INPUT_URLS_LABEL,
 } from '@simforge-oss/render';
@@ -26,7 +28,7 @@ import { collectNativeMapMembers, isNativeMapMemberInputId } from '@simforge-oss
 
 import type { RenderWorkerConfig } from './config.js';
 import { BlobStore } from './blob-store.js';
-import { acquireGpuJobLock, type GpuJobLock } from './gpu-lock.js';
+import { acquireGpuJobLock, clearStaleGpuLock, type GpuJobLock } from './gpu-lock.js';
 import { probeGpuMemory, type GpuMemory } from './gpu-memory.js';
 import type { WorkerHealth } from './health.js';
 import { withBoundedRetry } from './retry.js';
@@ -160,6 +162,18 @@ export function createProgressForwarder(
 export function heartbeatFailureIsFatal(error: unknown, leaseExpiresAtMs: number, intervalMs: number, now = Date.now()): boolean {
   const leaseGone = error instanceof Error && /returned 409\b|lease_invalid/i.test(error.message);
   return leaseGone || now >= leaseExpiresAtMs - Math.max(10_000, intervalMs);
+}
+
+const finishedJobs = new Set<string>();
+
+/** Whether `jobId` was run (and finished) by this worker: this process, or a workspace a previous process left. */
+export async function ownPastJob(scratchDir: string, jobId: string): Promise<boolean> {
+  if (finishedJobs.has(jobId)) return true;
+  try {
+    return (await readdir(scratchDir)).some((name) => name.startsWith(`${jobId}-`));
+  } catch {
+    return false;
+  }
 }
 
 async function loadConfiguredEngine(config: RenderWorkerConfig): Promise<RenderEngineAdapter> {
@@ -308,7 +322,12 @@ async function executeClaim(
     if (containerIdentity) await chownWorkspace(workspace, containerIdentity);
     let gpuMemory: GpuMemory | null = null;
     if (engine.capabilities.requiresGpu) {
-      gpuLock = await acquireGpuJobLock(config.gpuLockPath, job.jobId);
+      gpuLock = await acquireGpuJobLock(config.gpuLockPath, job.jobId, {
+        signal: state.controller.signal,
+        // A lock naming one of this worker's own earlier jobs is a leftover.
+        isJobActive: async (jobId) => jobId === job.jobId || !(await ownPastJob(config.scratchDir, jobId)),
+        onWait: (owner) => console.error(JSON.stringify({ event: 'gpu.lock_wait', jobId: job.jobId, heldBy: owner.jobId ?? null })),
+      });
       // Measured while holding the lock: co-tenant renders are excluded, their idle residency is not.
       gpuMemory = await probeGpuMemory();
       if (gpuMemory) console.error(JSON.stringify({ event: 'gpu.memory', jobId: job.jobId, ...gpuMemory }));
@@ -325,6 +344,7 @@ async function executeClaim(
       signal: state.controller.signal,
       reportProgress: forward,
       ...(gpuMemory ? { gpuMemory } : {}),
+      controlFeatures: new Set(job.controlFeatures ?? []),
     }));
     if (manifest.intentSha256 !== job.intentSha256) throw new Error('engine manifest intentSha256 does not match claimed intent');
 
@@ -452,6 +472,7 @@ async function executeClaim(
     state.controller.abort(new RenderCanceledError('job finalized'));
     await heartbeat.catch(() => undefined);
     await gpuLock?.release();
+    finishedJobs.add(job.jobId);
     store.setMode('idle');
     // A succeeded job's outputs are uploaded and its inputs live in the
     // cache: the workspace is garbage. Failed ones are kept for debugging
@@ -506,13 +527,21 @@ export async function runRenderWorker(
     prewarmBusyBytesPerSecond: config.cache.prewarm.busyBytesPerSecond,
     instanceTag: config.workerId,
   });
+  // Nothing runs in this process yet: a GPU lock left by this worker's
+  // previous process (crash, restart, redeploy) is released now instead of
+  // failing the next job, whatever its PID namespace said.
+  const staleLock = await clearStaleGpuLock(config.gpuLockPath, { isJobActive: async (jobId) => !(await ownPastJob(config.scratchDir, jobId)) });
+  if (staleLock) console.error(JSON.stringify({ event: 'gpu.lock_stale_removed', path: config.gpuLockPath, reason: staleLock, at: 'startup' }));
   const migrated = await store.migrateLegacyLayout();
   const swept = await sweepScratch(config.scratchDir, config.workspaceRetentionMs);
   console.error(JSON.stringify({ event: 'cache.ready', root: config.cacheDir, migratedLegacyBlobs: migrated, sweptWorkspaces: swept, jobConcurrency }));
   const operationSignal = new AbortController().signal;
-  const labels = transport.inputUrls
-    ? { ...config.labels, [WORKER_INPUT_URLS_LABEL]: WORKER_INPUT_URLS_BATCH_V1 }
-    : config.labels;
+  const labels = {
+    ...config.labels,
+    // Leases may then carry `controlFeatures`; without it the engine writes baseline outputs only.
+    [WORKER_CONTROL_FEATURES_LABEL]: WORKER_CONTROL_FEATURES_V1,
+    ...(transport.inputUrls ? { [WORKER_INPUT_URLS_LABEL]: WORKER_INPUT_URLS_BATCH_V1 } : {}),
+  };
   const registration = await withBoundedRetry('worker registration', config.retries, operationSignal, () => transport.register({
     schema: RENDER_WORKER_CONTROL_V2_SCHEMA,
     type: 'worker.register',

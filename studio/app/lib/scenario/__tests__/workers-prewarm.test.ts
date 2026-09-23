@@ -325,7 +325,7 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   await approveRenderWorker(WORKER_NODE_ID, { engine: capability, labels: { ...CARLA_LABELS }, reason: "prewarm test" });
   const registration = await registerRenderWorkerV2({
     workerId: WORKER_NODE_ID, instanceId: "prewarm-1", engine: capability,
-    labels: { ...CARLA_LABELS, inputUrls: "batch-v1" },
+    labels: { ...CARLA_LABELS, inputUrls: "batch-v1", controlFeatures: "v1" },
   });
   assert.equal(await approvedRenderWorker(WORKER_NODE_ID), true);
   assert.equal(await approvedRenderWorker(WORKER_NODE_ID, "uswr_someone_else"), false);
@@ -387,6 +387,8 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   assert.ok(inputs.length >= 3);
   assert.ok(inputs.every((input) => input.download === undefined), "a batch-v1 lease carries no signed URL or bearer token");
   assert.ok(!JSON.stringify(lease).includes("authorization"));
+  // A worker that declared controlFeatures=v1 learns which newer output fields this plane accepts.
+  assert.deepEqual((lease as { controlFeatures?: string[] }).controlFeatures, ["native-evidence.scene-source", "native-evidence.parity"]);
 
   const urls = await signRenderInputsV2({
     jobId: job.id, leaseId: lease.lease.leaseId, fenceToken: lease.lease.fenceToken, workerNodeId: WORKER_NODE_ID,

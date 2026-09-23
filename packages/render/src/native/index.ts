@@ -1,4 +1,4 @@
-export { createRenderEngine, resolveBinary, selectNativeRenderInputs, NATIVE_RENDER_ENGINE_ID } from './engine.js';
+export { createRenderEngine, gatedSceneSourceEvidence, resolveBinary, selectNativeRenderInputs, NATIVE_RENDER_ENGINE_ID } from './engine.js';
 export type { NativeRenderEngineOptions } from './engine.js';
 export { ShmBundleReader, TornBundleError, crc32 } from './shm-bundles.js';
 export type { ShmBundle, ShmBundleEntry } from './shm-bundles.js';
@@ -27,7 +27,7 @@ export type { NativeActorAppearance } from './lowering.js';
 export {
   NATIVE_RENDER_MANIFEST_V1_SCHEMA, NATIVE_RUN_DIAGNOSTICS_V1_SCHEMA,
   NativeRenderManifestSchema, NativeRunDiagnosticsSchema, nativeEvidenceFailure, nativeRunExpectations,
-  NativeEvidenceSchemaError, parseNativeRenderManifestForHost, parseNativeRunDiagnosticsForHost,
+  NativeEvidenceSchemaError, parseNativeRenderManifestForHost, parseNativeRunDiagnosticsForHost, parseToleratingUnknownKeys,
 } from './evidence.js';
 export type {
   HostParsedEvidence, NativeEvidenceFailure, NativeRenderManifest, NativeReservedArtifact, NativeRunDiagnostics, NativeRunExpectations,

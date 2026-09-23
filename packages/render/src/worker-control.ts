@@ -53,6 +53,17 @@ export const InputDownloadSchema = z.strictObject({
 export const WORKER_INPUT_URLS_LABEL = 'inputUrls' as const;
 export const WORKER_INPUT_URLS_BATCH_V1 = 'batch-v1' as const;
 export const INPUT_URLS_MAX_BATCH = 500;
+/** Worker label announcing it understands `controlFeatures` on a lease. */
+export const WORKER_CONTROL_FEATURES_LABEL = 'controlFeatures' as const;
+export const WORKER_CONTROL_FEATURES_V1 = 'v1' as const;
+/**
+ * Output fields newer than the baseline native evidence contract. A worker
+ * writes one only when the lease's control plane lists it; a control plane
+ * lists only what its parsers accept. Every new output field gets a feature.
+ */
+export const CONTROL_FEATURE_NATIVE_SCENE_SOURCE = 'native-evidence.scene-source' as const;
+export const CONTROL_FEATURE_NATIVE_PARITY = 'native-evidence.parity' as const;
+export const CONTROL_FEATURES_V1 = [CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY] as const;
 
 export const JobInputTransferSchema = z.strictObject({
   inputId: z.string().min(1).max(256),
@@ -83,6 +94,13 @@ export const JobLeasedResponseSchema = z.strictObject({
   executionPackageControlSha256: RenderSha256Schema,
   // scenario.xosc is transferred in addition to the intent's declared assets.
   inputs: z.array(JobInputTransferSchema).max(RENDER_INTENT_MAX_ASSETS + 1),
+  /**
+   * What this control plane accepts in worker outputs beyond the baseline
+   * contract (e.g. `native-evidence.scene-source`). Sent only to a worker that
+   * registered `labels.controlFeatures = "v1"`; absent means baseline only, and
+   * the worker must omit every newer output field.
+   */
+  controlFeatures: z.array(z.string().min(1).max(128)).max(64).optional(),
 });
 export const JobClaimResponseSchema = z.discriminatedUnion('type', [NoJobResponseSchema, JobLeasedResponseSchema]);
 
