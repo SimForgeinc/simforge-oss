@@ -209,6 +209,7 @@ async function measure(profile, target, setting, mode, traceFile = null) {
       cacheHitBytes: bench.cache.hitBytes,
       cacheReadSpanMs: bench.cache.first === null ? 0 : bench.cache.last - bench.cache.first,
       mapNetworkRequests: mapFetches.length,
+      mapNetworkUrls: mapFetches.map((fetch) => fetch.url),
       appMapFetches: bench.fetches.filter((fetch) => fetch.layer === 'app').length,
       basisTranscodes: bench.workers.basisTranscodes,
       meshoptDecodes: bench.workers.meshoptDecodes,
