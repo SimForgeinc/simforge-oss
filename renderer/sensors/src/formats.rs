@@ -30,16 +30,37 @@ pub fn encode_lidar_ply(points: &[LidarPoint]) -> Vec<u8> {
     let _ = writeln!(out, "property float intensity");
     let _ = writeln!(out, "property uint instance_id");
     let _ = writeln!(out, "end_header");
-    for p in points {
-        let _ = writeln!(
-            out,
-            "{} {} {} {} {}",
-            fmt_g(p.x),
-            fmt_g(p.y),
-            fmt_g(p.z),
-            fmt_g(p.intensity),
-            p.instance_id
-        );
+    // The body is formatted in parallel chunks and concatenated in point
+    // order: the bytes are those of a serial loop (each line depends only on
+    // its point), and a 120k-point scan no longer costs ~40 ms of one core.
+    const CHUNK: usize = 8192;
+    let body = |chunk: &[LidarPoint]| {
+        let mut text = String::with_capacity(chunk.len() * 64);
+        for p in chunk {
+            let _ = writeln!(
+                text,
+                "{} {} {} {} {}",
+                fmt_g(p.x),
+                fmt_g(p.y),
+                fmt_g(p.z),
+                fmt_g(p.intensity),
+                p.instance_id
+            );
+        }
+        text
+    };
+    if points.len() <= CHUNK {
+        out.push_str(&body(points));
+    } else {
+        let parts: Vec<String> = crate::RAY_POOL.scope(|scope| {
+            for chunk in points.chunks(CHUNK) {
+                let body = &body;
+                scope.spawn(async move { body(chunk) });
+            }
+        });
+        for part in parts {
+            out.push_str(&part);
+        }
     }
     out.into_bytes()
 }

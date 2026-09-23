@@ -2716,16 +2716,31 @@ fn gpu_lidar_scan(
         .cast_hits(combined.static_scene, &rays)
         .map_err(|error| format!("[native_lidar_gpu_trace] {error:#}"))?;
     let t2 = std::time::Instant::now();
-    let hits: Vec<Option<Hit>> = dirs
-        .iter()
-        .zip(statics)
-        .map(|(dir, static_hit)| {
-            let reach = static_hit.map_or(config.range_m, |hit| hit.distance);
-            match combined.actor_scene.cast(origin, *dir, reach) {
-                Some(actor_hit) if static_hit.is_none_or(|hit| actor_hit.distance < hit.distance) => Some(actor_hit),
-                _ => static_hit,
+    // Actor layer on the CPU, one chunk of beams per ray-pool task; chunks
+    // are concatenated in beam order, so the result is scheduling-free.
+    let merge = |dirs: &[Vec3], statics: &[Option<Hit>]| -> Vec<Option<Hit>> {
+        dirs.iter()
+            .zip(statics)
+            .map(|(dir, static_hit)| {
+                let static_hit = *static_hit;
+                let reach = static_hit.map_or(config.range_m, |hit| hit.distance);
+                match combined.actor_scene.cast(origin, *dir, reach) {
+                    Some(actor_hit) if static_hit.is_none_or(|hit| actor_hit.distance < hit.distance) => Some(actor_hit),
+                    _ => static_hit,
+                }
+            })
+            .collect()
+    };
+    const CHUNK: usize = 4096;
+    let hits: Vec<Option<Hit>> = sensors::RAY_POOL
+        .scope(|scope| {
+            for (dirs, statics) in dirs.chunks(CHUNK).zip(statics.chunks(CHUNK)) {
+                let merge = &merge;
+                scope.spawn(async move { merge(dirs, statics) });
             }
         })
+        .into_iter()
+        .flatten()
         .collect();
     let t3 = std::time::Instant::now();
     let points = sensors::lidar::points_from_hits(frame, &dirs, &hits, instance_class);
