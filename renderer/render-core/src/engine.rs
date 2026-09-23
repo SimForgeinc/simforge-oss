@@ -999,7 +999,6 @@ pub enum CaptureTicket {
 
 pub struct PendingCapture {
     identity: FrameIdentity,
-    slot: usize,
     keys: Vec<String>,
     stats: CaptureStats,
 }
@@ -1883,8 +1882,8 @@ pub struct SceneApp {
     pinned_sample: PinnedSample,
     /// Deferred readbacks the render world started ([`Self::capture_begin`]).
     deferred_maps: DeferredMaps,
-    /// Staging slot of the next capture.
-    next_slot: usize,
+    /// Bevy's GPU clustering setting before a pinned clock disabled it.
+    gpu_clustering_default: Option<Option<bevy::light::cluster::GlobalClusterGpuSettings>>,
     /// Scene-state actors: id -> (cuboid entity, allocated instance id).
     actors: HashMap<String, (Entity, u32)>,
     /// Dynamic actor id -> (loaded catalog GLB root, authored scale, mesh count).
@@ -2152,7 +2151,7 @@ impl SceneApp {
             capture_clock: CaptureClock::Free,
             pinned_sample,
             deferred_maps,
-            next_slot: 0,
+            gpu_clustering_default: None,
             actors: HashMap::new(),
             actor_models: HashMap::new(),
             actor_id_clones: HashMap::new(),
@@ -4398,7 +4397,6 @@ impl SceneApp {
                 rig_revision: self.rig_revision,
                 generation,
             },
-            slot,
             keys: keys.to_vec(),
             stats,
         };
@@ -4686,6 +4684,20 @@ impl SceneApp {
     /// [`CaptureClock`]).
     pub fn set_capture_clock(&mut self, clock: CaptureClock) {
         self.capture_clock = clock;
+        // Clustered lights: Bevy's GPU clustering fills each cluster's light
+        // list through atomics, so the order lights are summed in (and the
+        // low bits of the result) varies run to run, and an overflowing list
+        // is resized with "a few incorrect frames". CPU clustering orders the
+        // lists deterministically; a pinned capture uses it.
+        if let Some(mut settings) = self.app.world_mut().get_resource_mut::<bevy::light::cluster::GlobalClusterSettings>() {
+            if self.gpu_clustering_default.is_none() {
+                self.gpu_clustering_default = Some(settings.gpu_clustering);
+            }
+            settings.gpu_clustering = match clock {
+                CaptureClock::Free => self.gpu_clustering_default.flatten(),
+                CaptureClock::Pinned { .. } => None,
+            };
+        }
         match clock {
             CaptureClock::Free => {
                 self.pinned_sample.set(None);
