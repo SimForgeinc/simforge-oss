@@ -207,6 +207,40 @@ export async function encodeKtx2(sourceBytes: Uint8Array, cls: ImageClass, optio
   }
 }
 
+/**
+ * Decode a KTX2 (UASTC or uncompressed) back to 8-bit RGBA with the pinned
+ * KTX-Software, at the smallest mip level whose longest edge is at least
+ * `minDimension` (level 0 when absent). Deterministic: transcoding is exact
+ * for a given encoder output. Returns PNG bytes.
+ */
+export async function decodeKtx2(bytes: Uint8Array, options: { ktxBinDir?: string; minDimension?: number } = {}): Promise<{ png: Buffer; width: number; height: number; level: number }> {
+  const ktxBinDir = resolveKtxBinDir(options.ktxBinDir);
+  const header = Buffer.from(bytes.buffer, bytes.byteOffset, Math.min(bytes.byteLength, 48));
+  if (header.length < 48 || header.toString('latin1', 1, 7) !== 'KTX 20') throw new Error('not a KTX2 file');
+  const width = header.readUInt32LE(20);
+  const height = header.readUInt32LE(24);
+  const levels = Math.max(1, header.readUInt32LE(40));
+  let level = 0;
+  if (options.minDimension) {
+    while (level + 1 < levels && Math.max(width, height) >> (level + 1) >= options.minDimension) level += 1;
+  }
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'simforge-ktx2-decode-'));
+  try {
+    const input = path.join(tmpDir, 'in.ktx2');
+    const output = path.join(tmpDir, 'out.png');
+    await writeFile(input, bytes);
+    try {
+      await execFileAsync(path.join(ktxBinDir, 'ktx'), ['extract', '--testrun', '--transcode', 'rgba8', '--level', String(level), input, output], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+    } catch (error) {
+      const failure = error as { stderr?: string; stdout?: string; message: string };
+      throw new Error(`ktx extract failed: ${failure.stderr || failure.stdout || failure.message}`);
+    }
+    return { png: await readFile(output), width: Math.max(1, width >> level), height: Math.max(1, height >> level), level };
+  } finally {
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+}
+
 /** Run `work` over `items` with at most `limit` in flight; results keep input order. */
 export async function mapConcurrent<T, R>(items: readonly T[], limit: number, work: (item: T, index: number) => Promise<R>): Promise<R[]> {
   const results = new Array<R>(items.length);

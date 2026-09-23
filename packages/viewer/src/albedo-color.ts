@@ -24,6 +24,19 @@ export function registerAlbedoTexture(texture: Texture): void {
   albedoSources.add(texture.source);
 }
 
+/**
+ * Record the ingest classification of a texture (the browser pack's
+ * `albedo.rgbMissing`), so the upload never renders and reads it back.
+ * An inspection already under way or finished for the source wins.
+ */
+export function setIngestAlbedoClassification(texture: Texture, rgbMissing: boolean): void {
+  if (classifications.has(texture.source)) return;
+  classifications.set(texture.source, rgbMissing);
+  if (!rgbMissing) return;
+  const image = texture.image as { width?: number; height?: number } | undefined;
+  warnMaskOnly(texture, image?.width ?? 0, image?.height ?? 0);
+}
+
 export function isMaskOnlyAlbedo(texture: Texture | null | undefined): boolean {
   return !!texture && classifications.get(texture.source) === true;
 }

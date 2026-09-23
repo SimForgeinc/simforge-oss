@@ -111,3 +111,53 @@ it('streams rigid placements once while retaining lights, nonidentity skins, mor
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+it('writes coarser vegetation cells from the geometry derivative, with the cell error in metres', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'simforge-web-veg-lod-'));
+  try {
+    const build = (coarse: boolean) => {
+      const document = new Document();
+      const buffer = document.createBuffer();
+      const tri = (scale: number) => document.createPrimitive().setAttribute('POSITION',
+        document.createAccessor().setBuffer(buffer).setType('VEC3').setArray(new Float32Array([0, 0, 0, scale, 0, 0, 0, scale, 0])));
+      const scene = document.createScene('s');
+      document.getRoot().setDefaultScene(scene);
+      const road = document.createMesh('road').addPrimitive(tri(50));
+      // Mesh 1: a tree with a LOD chain; at the coarse level it is a smaller stand-in.
+      const tree = document.createMesh('tree').addPrimitive(tri(1)).addPrimitive(tri(1));
+      const treeLod = document.createMesh('tree_lod').addPrimitive(tri(1));
+      // Mesh 3: a bush without LODs.
+      const bush = document.createMesh('bush').addPrimitive(tri(1));
+      scene.addChild(document.createNode('Road_Main').setMesh(road));
+      scene.addChild(document.createNode('tree_a').setMesh(coarse ? treeLod : tree).setTranslation([10, 0, 10]).setScale([2, 2, 2]));
+      scene.addChild(document.createNode('tree_b').setMesh(coarse ? treeLod : tree).setTranslation([20, 0, 10]));
+      scene.addChild(document.createNode('bush_a').setMesh(bush).setTranslation([150, 0, 10]));
+      return document;
+    };
+    const master = build(false);
+    const report = await buildWebTier(master, directory, {
+      cellSize: 100,
+      vegetationLevels: async function* () {
+        yield { level: 1, document: build(true), errorM: (mesh: number) => (mesh === 1 ? 0.25 : 0) };
+      },
+    });
+    const manifest = JSON.parse(await readFile(path.join(directory, '3d/manifest.json'), 'utf8'));
+    const [treeCell, bushCell] = manifest.vegetationTiles;
+    expect(treeCell.lods.map((lod: { level: number; file: string; geometricError: number }) => [lod.level, lod.file, lod.geometricError])).toEqual([
+      [0, 'tiles/veg_0_0.lod0.glb', 0],
+      // tree_a is scaled 2x: the cell error is the largest scaled mesh error.
+      [1, 'tiles/veg_0_0.lod1.glb', 0.5],
+    ]);
+    expect(treeCell.lods[1].triangles).toBeLessThan(treeCell.lods[0].triangles);
+    // A cell whose members have no LOD gets no coarser file.
+    expect(bushCell.lods).toHaveLength(1);
+    expect(manifest.scene.lodLevels).toBe(2);
+    expect(report.vegetationLodTiles).toBe(1);
+    const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder });
+    await MeshoptDecoder.ready;
+    const coarse = await io.read(path.join(directory, '3d/tiles/veg_0_0.lod1.glb'));
+    expect(coarse.getRoot().listMeshes()).toHaveLength(1);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

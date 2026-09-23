@@ -8,7 +8,18 @@ import { read as readKtx2 } from 'three/addons/libs/ktx-parse.module.js';
 import { selectKtx2MipLevels, ktx2MipInfo } from '@simforge-oss/maps/ktx2';
 
 export const TEXTURE_TIERS_REVISION = 'texture-tiers-v1-ktx-4.4.2-zstd9';
-export const TEXTURE_VARIANTS = ['textures-256-uastc', 'textures-512-uastc', 'textures-512-bc7', 'textures-512-astc'];
+/**
+ * Every tier is cooked for each GPU family at ingest, so a browser uploads
+ * blocks its GPU samples natively and never transcodes: BC7 (desktop), ASTC
+ * (Apple and most mobile) and ETC2 (the WebGL2 baseline elsewhere). UASTC
+ * stays as the portable source the others are transcoded from.
+ */
+export const TEXTURE_VARIANTS = [
+  'textures-256-uastc', 'textures-256-bc7', 'textures-256-astc', 'textures-256-etc2',
+  'textures-512-uastc', 'textures-512-bc7', 'textures-512-astc', 'textures-512-etc2',
+];
+/** `ktx transcode --target` for each GPU-block codec (ETC2 RGBA8 is KTX-Software's `etc-rgba`). */
+const KTX_TARGET = { bc7: 'bc7', astc: 'astc', etc2: 'etc-rgba', rgba: 'rgba8' };
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const exec = promisify(execFile);
 const arrayBuffer = bytes => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
@@ -144,7 +155,7 @@ export async function buildTextureTiers({ sourceRoot, outputRoot = sourceRoot, k
     }
   }
   ktxBin ??= path.join(process.env.SIMFORGE_KTX_BIN_DIR ?? path.join(os.homedir(), 'simforge-assets/tools/KTX-Software-4.4.2-Linux-x86_64/bin'), 'ktx');
-  if (variants.some(id => /-(bc7|astc)$/.test(id))) {
+  if (variants.some(id => /-(bc7|astc|etc2)$/.test(id))) {
     const { stdout } = await exec(ktxBin, ['--version']);
     if (!stdout.includes('4.4.2')) throw new Error(`Texture tier transcodes require KTX-Software 4.4.2, got ${stdout.trim()}`);
   }
@@ -185,7 +196,7 @@ export async function buildTextureTiers({ sourceRoot, outputRoot = sourceRoot, k
             const temporary = path.join(variantRoot, `.transcode-${process.pid}-${worker}`);
             try {
               await writeFile(`${temporary}.in.ktx2`, output);
-              await exec(ktxBin, ['transcode', '--target', codec === 'rgba' ? 'rgba8' : codec, '--zstd', '9',
+              await exec(ktxBin, ['transcode', '--target', KTX_TARGET[codec], '--zstd', '9',
                 `${temporary}.in.ktx2`, `${temporary}.out.ktx2`], { maxBuffer: 1024 * 1024 });
               output = await readFile(`${temporary}.out.ktx2`);
             } finally {
@@ -194,7 +205,7 @@ export async function buildTextureTiers({ sourceRoot, outputRoot = sourceRoot, k
           }
           const info = ktx2MipInfo(arrayBuffer(output));
           if (info.supercompressionScheme !== 2 || Math.max(info.width, info.height) > payload.longestEdgePx) throw new Error(`Invalid texture tier output ${id}/${sourceFile}`);
-          if ((codec === 'bc7' || codec === 'astc') && (info.width % 4 || info.height % 4)) throw new Error(`Illegal native texture base ${id}/${sourceFile}`);
+          if ((codec === 'bc7' || codec === 'astc' || codec === 'etc2') && (info.width % 4 || info.height % 4)) throw new Error(`Illegal native texture base ${id}/${sourceFile}`);
           const outputSha256 = sha256(output);
           const file = `variants/objects/${outputSha256}.ktx2`;
           const objectPath = path.join(outputRoot, '3d', file);

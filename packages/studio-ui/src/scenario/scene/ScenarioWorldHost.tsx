@@ -12,9 +12,9 @@ import { applySceneFidelity } from "../editor/EditorSceneEnvironmentBridge";
 import { AUTHORING_QUALITY, sceneViewerOptions } from "../editor/authoring-quality";
 import { applyDefaultSceneEnvironment } from "../editor/scene-environment";
 import {
-  animateMapCamera,
   type MapModelLoadSnapshot,
   MAP_ZOOM_IN_MS,
+  playInterruptibleMapZoom,
   pulledBackMapView,
   waitForMapModelsFullyLoaded,
 } from "./map-camera-transition";
@@ -163,7 +163,13 @@ export function ScenarioWorldHost({
   const cancelCameraAnimationRef = useRef<(() => void) | null>(null);
   const cancelModelSettleRef = useRef<(() => void) | null>(null);
   const cancelMetadataProgressRef = useRef<(() => void) | null>(null);
-  const presentationRef = useRef<{ target: ScenarioWorldTarget; detail: string; generation: number } | null>(null);
+  const presentationRef = useRef<{
+    target: ScenarioWorldTarget;
+    detail: string;
+    generation: number;
+    /** The view the scene loaded at: the intro zoom ends there. */
+    introZoomTo: ReturnType<CityViewer["controls"]["getView"]> | null;
+  } | null>(null);
   const actorRendererRef = useRef<ActorRenderer | null>(null);
   const onViewerChangeRef = useRef(onViewerChange);
   const onActorRendererChangeRef = useRef(onActorRendererChange);
@@ -259,8 +265,12 @@ export function ScenarioWorldHost({
     updateTransitionPhase("idle");
   };
 
-  const revealPreparedMap = (current: ScenarioWorldTarget, detail: string) => {
-    presentationRef.current = { target: current, detail, generation: transitionGenerationRef.current };
+  const revealPreparedMap = (
+    current: ScenarioWorldTarget,
+    detail: string,
+    introZoomTo: ReturnType<CityViewer["controls"]["getView"]> | null = null,
+  ) => {
+    presentationRef.current = { target: current, detail, generation: transitionGenerationRef.current, introZoomTo };
     setPreparedMapVersionId(current.mapVersionId);
     updateTransitionPhase("revealing");
   };
@@ -285,6 +295,23 @@ export function ScenarioWorldHost({
         detail: presentation.detail,
       });
       finishCameraTransition(viewer);
+      // The intro zoom plays on the interactive scene and never gates it:
+      // the first pointer, wheel, key or touch hands the camera to the user.
+      const destination = presentation.introZoomTo;
+      if (destination && supportsMapCameraTransition(viewer)) {
+        viewer.setCameraPoseConstraintsEnabled(false);
+        cancelCameraAnimationRef.current = playInterruptibleMapZoom(
+          viewer.renderer.domElement.parentElement ?? viewer.renderer.domElement,
+          (view) => viewer.controls.applyView(view),
+          pulledBackMapView(destination),
+          destination,
+          MAP_ZOOM_IN_MS,
+          () => {
+            cancelCameraAnimationRef.current = null;
+            if (viewerRef.current === viewer) viewer.setCameraPoseConstraintsEnabled(true);
+          },
+        );
+      }
     });
   }, [preparedMapVersionId, transitionPhase]);
 
@@ -593,13 +620,15 @@ export function ScenarioWorldHost({
               message: `Loading ${current.label} assets`,
               detail: "Loading roads, buildings, and map objects…",
             });
-            const destinationView =
+            // The scene loads at the view it opens on and is revealed, and
+            // interactive, as soon as that view is complete. The intro zoom
+            // then plays from a pulled-back view on the live scene (see the
+            // revealing effect); it used to be played before the reveal, from a
+            // pulled-back view the load was also judged at, and cost 1.8 s.
+            const introZoomTo =
               supportsMapCameraTransition(viewer) && !prefersReducedMotion()
                 ? viewer.controls.getView()
                 : null;
-            const pulledBackDestination = destinationView
-              ? pulledBackMapView(destinationView)
-              : null;
             const prepareReveal = () => {
               const latest = targetRef.current ?? retainedTargetRef.current;
               if (
@@ -610,7 +639,7 @@ export function ScenarioWorldHost({
                 return;
               }
               cancelModelSettleRef.current = null;
-              revealPreparedMap(current, "Scene assets are loaded and ready to use.");
+              revealPreparedMap(current, "Scene assets are loaded and ready to use.", introZoomTo);
             };
             const completeMapLoad = () => {
               const latest = targetRef.current ?? retainedTargetRef.current;
@@ -622,34 +651,10 @@ export function ScenarioWorldHost({
                 return;
               }
               cancelModelSettleRef.current = null;
-              if (
-                supportsMapCameraTransition(viewer) &&
-                destinationView &&
-                pulledBackDestination &&
-                transitionPhaseRef.current === "loading" &&
-                !prefersReducedMotion()
-              ) {
-                viewer.setCameraPoseConstraintsEnabled(false);
-                viewer.controls.setEnabled(false);
-                updateTransitionPhase("zooming-in");
-                cancelCameraAnimationRef.current = animateMapCamera(
-                  (view) => viewer.controls.applyView(view),
-                  pulledBackDestination,
-                  destinationView,
-                  MAP_ZOOM_IN_MS,
-                  prepareReveal,
-                );
-              } else {
-                prepareReveal();
-              }
+              prepareReveal();
             };
 
             if (supportsMapModelReadiness(viewer)) {
-              if (pulledBackDestination) {
-                viewer.setCameraPoseConstraintsEnabled(false);
-                viewer.controls.setEnabled(false);
-                viewer.controls.applyView(pulledBackDestination);
-              }
               updateTransitionPhase("loading");
               cancelModelSettleRef.current?.();
               cancelModelSettleRef.current = waitForMapModelsFullyLoaded(
@@ -670,6 +675,8 @@ export function ScenarioWorldHost({
                     residentTiles: stats.residentTiles,
                     wantedTiles: wantedTiles(stats),
                     residentBytes: stats.residentBytes,
+                    requiredPendingAssets: stats.requiredPendingAssets,
+                    missingInViewTiles: stats.coverage.city?.missingInViewTiles ?? 0,
                   };
                 },
                 completeMapLoad,

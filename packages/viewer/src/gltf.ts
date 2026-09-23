@@ -8,7 +8,8 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { ktx2MipInfo, selectKtx2MipLevels } from '@simforge-oss/maps/ktx2';
 import { AssetDownloadTracker, readResponseBufferWithProgress } from './download-progress';
 import type { CityViewerOptions } from './types';
-import { inspectAlbedoTexture } from './albedo-color';
+import { inspectAlbedoTexture, setIngestAlbedoClassification } from './albedo-color';
+import type { MapPackReader } from './map-pack';
 
 /**
  * Where the Basis transcoder (`basis_transcoder.js` + `.wasm`) is served
@@ -184,7 +185,7 @@ export function limitCompressedTextureMipmaps(texture: CompressedTexture, maxDim
 export interface MapTextureSource {
   url: string;
   digest: string;
-  codec: 'uastc' | 'bc7' | 'astc' | 'rgba';
+  codec: 'uastc' | 'bc7' | 'astc' | 'etc2' | 'rgba';
   authoredWidth: number;
   authoredHeight: number;
 }
@@ -200,9 +201,11 @@ class SharedKTX2Loader extends KTX2Loader {
   maxTextureDimension = Infinity;
   tracker?: AssetDownloadTracker;
   signal?: AbortSignal;
+  /** The map's browser pack: members come out of its chunks instead of one request each. */
+  packReader: MapPackReader | null = null;
   readonly resolvedUrls = new Map<string, string>();
   readonly containers = new Map<string, FetchedContainer>();
-  readonly telemetry = { fetchedBytes: 0, fetchedContainers: 0, containerCacheHits: 0 };
+  readonly telemetry = { fetchedBytes: 0, fetchedContainers: 0, containerCacheHits: 0, packedContainers: 0 };
   private activeDownloads = 0;
   private activeRequests = 0;
   private readonly cacheIdentity = ++textureLoaderIdentity;
@@ -247,6 +250,13 @@ class SharedKTX2Loader extends KTX2Loader {
     else this.activeDownloads++;
     try {
       signal?.throwIfAborted();
+      const pack = this.packReader;
+      if (pack?.has(url)) {
+        const buffer = await pack.read(url, signal);
+        signal?.throwIfAborted();
+        this.telemetry.packedContainers++;
+        return buffer;
+      }
       const resolvedUrl = this.resolvedUrls.get(url) ?? url;
       const response = await fetch(resolvedUrl, { signal, credentials: this.withCredentials ? 'include' : 'same-origin' });
       if (!response.ok) throw new Error(`downloading texture ${response.status} ${url}`);
@@ -298,6 +308,9 @@ class SharedKTX2Loader extends KTX2Loader {
               ? 'non-block-aligned-basis-base' : 'no-supported-compressed-transcode-target'
           : undefined;
         limitCompressedTextureMipmaps(texture, maxDimension);
+        // Ingest classified this image's albedo; no GPU readback is needed.
+        const rgbMissing = this.packReader?.albedoRgbMissingFor(url) ?? null;
+        if (rgbMissing !== null) setIngestAlbedoClassification(texture, rgbMissing);
         texture.addEventListener('dispose', release);
         texture.userData.mapTexture = {
           url, authoredWidth: source?.authoredWidth ?? authored.width, authoredHeight: source?.authoredHeight ?? authored.height,
@@ -340,8 +353,8 @@ let sharedKtx2: SharedKTX2Loader | null = null;
 let sharedKtx2Path = '';
 const trackedLoaders = new Map<AssetDownloadTracker, { ktx2: SharedKTX2Loader; path: string; signal?: AbortSignal }>();
 
-export function trackedTextureStats(tracker: AssetDownloadTracker): { fetchedBytes: number; fetchedContainers: number; containerCacheHits: number } {
-  return trackedLoaders.get(tracker)?.ktx2.telemetry ?? { fetchedBytes: 0, fetchedContainers: 0, containerCacheHits: 0 };
+export function trackedTextureStats(tracker: AssetDownloadTracker): { fetchedBytes: number; fetchedContainers: number; containerCacheHits: number; packedContainers: number } {
+  return trackedLoaders.get(tracker)?.ktx2.telemetry ?? { fetchedBytes: 0, fetchedContainers: 0, containerCacheHits: 0, packedContainers: 0 };
 }
 
 /**
@@ -359,7 +372,7 @@ export function trackedTextureStats(tracker: AssetDownloadTracker): { fetchedByt
  */
 export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '', tracker?: AssetDownloadTracker, signal?: AbortSignal,
   maxTextureDimension = Infinity, resolver: CityViewerOptions['resolveAssetUrls'] = null,
-  textureSources: ReadonlyMap<string, MapTextureSource> = new Map()): GLTFLoader {
+  textureSources: ReadonlyMap<string, MapTextureSource> = new Map(), packReader: MapPackReader | null = null): GLTFLoader {
   if (!sharedLoader) {
     const loader = new GLTFLoader();
     MeshoptDecoder.useWorkers(Math.min(4, Math.max(1, (navigator.hardwareConcurrency ?? 4) - 2)));
@@ -391,6 +404,7 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '',
       trackedLoaders.set(tracker, tracked);
     }
     const ktx2 = tracked.ktx2;
+    ktx2.packReader = packReader;
     const limit = Math.min(maxTextureDimension, renderer.capabilities.maxTextureSize || Infinity);
     // Only the worker pool is shared. Every parser closes over its own cap and
     // image bindings; interleaved road/city parses cannot mutate each other.
@@ -460,7 +474,9 @@ export function getGLTFLoader(renderer?: WebGLRenderer, ktx2TranscoderPath = '',
             }
           }
           if (!resolver || !signal || urls.length === 0) return;
-          const targets = [...new Set(urls.map(url => textureSources.get(url)?.url ?? url))];
+          // Packed members are read out of pack chunks, never fetched by URL.
+          const targets = [...new Set(urls.map(url => textureSources.get(url)?.url ?? url))].filter(url => !packReader?.has(url));
+          if (targets.length === 0) return;
           const resolved = await resolver(targets, signal);
           signal.throwIfAborted();
           for (const [url, target] of resolved) ktx2.resolvedUrls.set(url, target);

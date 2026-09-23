@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { CONTROL_FEATURES_V1, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS } from '../worker-control.js';
+import { CONTROL_FEATURES_V1, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, PrewarmSetSchema } from '../worker-control.js';
 import { gatedSceneSourceEvidence } from './engine.js';
 import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema } from './evidence.js';
 
@@ -40,3 +40,16 @@ it('omits scene-source evidence for a control plane that did not list the featur
   expect(gatedSceneSourceEvidence(new Set(CONTROL_FEATURES_V1), 'render-timeline', 'a'.repeat(64))).toEqual({ sceneSource: 'render-timeline', timelineSha256: 'a'.repeat(64) });
   expect(gatedSceneSourceEvidence(new Set([CONTROL_FEATURE_NATIVE_SCENE_SOURCE]), 'openscenario-legacy', undefined)).toEqual({ sceneSource: 'openscenario-legacy' });
 });
+
+/**
+ * Keys an rc.73 worker's strict `PrewarmSetSchema` accepts. The control plane
+ * sends any other key only to a worker whose `prewarmFeatures` lists it.
+ */
+const BASELINE_PREWARM_SET_KEYS = ['setId', 'mapVersionId', 'mapId', 'closureSha256', 'objectCount', 'byteLength', 'createdAt', 'turnVerdictsSha256'];
+const GATED_PREWARM_SET_KEYS = ['derivativesSha256'];
+
+it('every prewarm set key is either baseline or gated behind a worker prewarm feature', () => {
+  const unknown = Object.keys(PrewarmSetSchema.shape).filter((key) => !BASELINE_PREWARM_SET_KEYS.includes(key) && !GATED_PREWARM_SET_KEYS.includes(key));
+  expect(unknown, 'a new prewarm set field needs a prewarm feature (worker-control.ts) and a gate in the control plane').toEqual([]);
+});
+

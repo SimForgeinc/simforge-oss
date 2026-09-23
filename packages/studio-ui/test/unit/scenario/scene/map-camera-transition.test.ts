@@ -4,6 +4,7 @@ import {
   interpolateMapView,
   MAP_MODEL_STABLE_MS,
   mapModelsFullyLoaded,
+  playInterruptibleMapZoom,
   pulledBackMapView,
   waitForMapModelsFullyLoaded,
 } from "../../../../src/scenario/scene/map-camera-transition";
@@ -59,12 +60,56 @@ describe("map camera transition", () => {
     expect(mapModelsFullyLoaded(snapshot)).toBe(false);
     snapshot = { ...snapshot, roadReady: true, roadVisible: true, loading: 0 };
     expect(mapModelsFullyLoaded({ ...snapshot, sceneAssetsReady: false })).toBe(false);
-    vi.advanceTimersByTime(MAP_MODEL_STABLE_MS - 1);
+    expect(MAP_MODEL_STABLE_MS).toBe(0);
     expect(complete).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(101);
+    vi.advanceTimersByTime(100);
     expect(complete).toHaveBeenCalledOnce();
     expect(failure).not.toHaveBeenCalled();
     cancel();
+  });
+
+  it("plays the intro zoom on a live scene and hands the camera over on the first input", () => {
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => frames.push(callback));
+    vi.stubGlobal("cancelAnimationFrame", () => undefined);
+    const surface = new EventTarget();
+    const applied: number[] = [];
+    const onEnd = vi.fn();
+    const far = pulledBackMapView(near, 2);
+    playInterruptibleMapZoom(surface, (view) => applied.push(view.position[0]), far, near, 1000, onEnd);
+    expect(applied).toEqual([20]); // starts pulled back
+    frames.shift()!(0);
+    frames.shift()!(250);
+    expect(onEnd).not.toHaveBeenCalled();
+    surface.dispatchEvent(new Event("pointerdown"));
+    expect(onEnd).toHaveBeenCalledWith(true);
+    const count = applied.length;
+    frames.shift()?.(500); // a frame already queued does nothing after the takeover
+    expect(applied).toHaveLength(count);
+    surface.dispatchEvent(new Event("wheel"));
+    expect(onEnd).toHaveBeenCalledOnce();
+  });
+
+  it("reports an uninterrupted zoom as finished", () => {
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => frames.push(callback));
+    vi.stubGlobal("cancelAnimationFrame", () => undefined);
+    const onEnd = vi.fn();
+    playInterruptibleMapZoom(new EventTarget(), () => undefined, pulledBackMapView(near, 2), near, 100, onEnd);
+    frames.shift()!(0);
+    frames.shift()!(200);
+    expect(onEnd).toHaveBeenCalledWith(false);
+  });
+
+  it("counts the view as loaded once its required scope is resident, while prefetch and vegetation still stream", () => {
+    const base = { roadReady: true, roadVisible: true, loading: 3, queued: 12, uploading: 2 };
+    // Without the viewer's required-scope counters the whole queue must drain.
+    expect(mapModelsFullyLoaded(base)).toBe(false);
+    expect(mapModelsFullyLoaded({ ...base, requiredPendingAssets: 1, missingInViewTiles: 0 })).toBe(false);
+    expect(mapModelsFullyLoaded({ ...base, requiredPendingAssets: 0, missingInViewTiles: 1 })).toBe(false);
+    expect(mapModelsFullyLoaded({ ...base, requiredPendingAssets: 0, missingInViewTiles: 0 })).toBe(true);
+    expect(mapModelsFullyLoaded({ ...base, requiredPendingAssets: 0, missingInViewTiles: 0, streamingError: "boom" })).toBe(false);
+    expect(mapModelsFullyLoaded({ ...base, requiredPendingAssets: 0, missingInViewTiles: 0, roadVisible: false })).toBe(false);
   });
 
   it("times out only after work stops progressing, not during a slow download", () => {

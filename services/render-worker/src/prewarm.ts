@@ -368,9 +368,10 @@ export class Prewarmer {
   }
 
   private async members(set: PrewarmSet, signal: AbortSignal): Promise<PrewarmMember[]> {
-    // A closure digest names immutable members; the optional turn-verdict
-    // table is bound per map version, so it is part of the key.
-    const key = set.turnVerdictsSha256 ? `${set.closureSha256}.${set.turnVerdictsSha256}` : set.closureSha256;
+    // A closure digest names immutable members; the turn-verdict table and
+    // descriptor-bound derivatives are bound per map version (a backfill can
+    // add them later), so they are part of the key.
+    const key = [set.closureSha256, set.turnVerdictsSha256, set.derivativesSha256].filter(Boolean).join('.');
     const file = path.join(this.store.root, 'prewarm', 'sets', `${key}.json`);
     try {
       const cached = JSON.parse(await readFile(file, 'utf8')) as PrewarmMember[];

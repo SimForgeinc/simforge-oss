@@ -27,7 +27,11 @@ const BROWSER_SCENE_QUALITY = {
   live: {
     maxPixelRatio: 2,
     maxScreenSpaceError: 210,
-    vegetationScreenSpaceError: 1500,
+    // Vegetation cells carry geometry-derivative levels whose geometric error
+    // is in metres (docs/engineering/map-geometry-lod.md); this is the largest
+    // projected error, in device pixels, a level may show. 1 px is the native
+    // renderer's image-gate setting; each tier below trades a little of that.
+    vegetationScreenSpaceError: 2,
     uploadBudgetMs: 5,
     uploadPixelsPerFrame: 4.2e6,
     vegetationMaxDistance: 340,
@@ -38,7 +42,7 @@ const BROWSER_SCENE_QUALITY = {
 export const AUTHORING_QUALITY = {
   low: {
     ...BROWSER_SCENE_QUALITY,
-    live: { ...BROWSER_SCENE_QUALITY.live, byteBudget: 640 * MB },
+    live: { ...BROWSER_SCENE_QUALITY.live, byteBudget: 640 * MB, vegetationScreenSpaceError: 4 },
   },
   medium: {
     ...BROWSER_SCENE_QUALITY,

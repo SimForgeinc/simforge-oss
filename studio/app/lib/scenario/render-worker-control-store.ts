@@ -42,6 +42,7 @@ import {
 } from "@simforge-oss/studio-shared";
 import { z } from "zod";
 import { canonicalJsonSha256, sha256, scenarioId } from "./core";
+import { boundMapDerivatives, derivativeMembers, MAP_DERIVATIVE_DESCRIPTOR_SQL, MAP_DERIVATIVE_MEMBERS_JOIN_SQL, mapDerivativeExtraMembers, type MapDerivativeMemberRow } from "./map-derivatives";
 import { expectedNativeClosure } from "./jobs/local-native-render-store";
 import {
   ScenarioRenderIntentSchema,
@@ -701,6 +702,13 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
         if (!renderMembers.some((member) => member.relative_path === "master.gltf")) {
           throw new Error("native_map_master_unavailable");
         }
+        // Descriptor-bound derivatives the intent declared (an intent created
+        // before a backfill declares none and gets none).
+        renderMembers.push(...await leasedDerivativeMembers(
+          tx, row.revision_id, row.workspace_id,
+          new Set(renderMembers.map((member) => member.relative_path)),
+          new Set(intent.assets.map((asset) => asset.assetId)),
+        ));
         assertNativeMapMemberCapacity(renderMembers.length);
         inputs.push(...renderMembers.map((member) => ({
           inputId: member.relative_path === "master.gltf"
@@ -1831,4 +1839,40 @@ export async function renderProgressForJob(context: Pick<AppContext, "workspaceI
       ORDER BY p.render_attempt_id, p.sequence LIMIT 5000`,
     { workspace_id: context.workspaceId, job_id: jobId },
   );
+}
+
+/** Bound derivative-set members (map-derivatives.ts) a native intent declared, with their blob locations. */
+async function leasedDerivativeMembers(
+  tx: { queryRows<T>(sql: string, params?: Record<string, unknown>): Promise<T[]> },
+  revisionId: string,
+  workspaceId: string,
+  closurePaths: ReadonlySet<string>,
+  declaredInputIds: ReadonlySet<string>,
+) {
+  const [row] = await tx.queryRows<{ derivatives: unknown; map_version_id: string }>(
+    `SELECT ${MAP_DERIVATIVE_DESCRIPTOR_SQL} AS derivatives, mv.id AS map_version_id
+       FROM simforge.revisions r JOIN simforge.map_versions mv ON mv.id = r.map_version_id
+      WHERE r.id = :revision_id AND r.workspace_id = :workspace_id`,
+    { revision_id: revisionId, workspace_id: workspaceId },
+  );
+  const bindings = boundMapDerivatives(row?.derivatives);
+  if (!row || bindings.length === 0) return [];
+  const rows = await tx.queryRows<MapDerivativeMemberRow & { storage_bucket: string; storage_key: string }>(
+    `SELECT ds.id AS set_id, dm.relative_path, db.sha256, db.byte_length, db.storage_bucket, db.storage_key
+       FROM simforge.map_versions mv ${MAP_DERIVATIVE_MEMBERS_JOIN_SQL}
+      WHERE mv.id = :map_version_id
+      ORDER BY dm.relative_path`,
+    { map_version_id: row.map_version_id },
+  );
+  const byPath = new Map(rows.map((member) => [member.relative_path, member]));
+  return mapDerivativeExtraMembers(derivativeMembers(bindings, rows), closurePaths)
+    .filter((member) => declaredInputIds.has(`map.resource.${sha256(member.relativePath)}`))
+    .map((member) => ({
+      relative_path: member.relativePath,
+      sha256: member.sha256,
+      byte_length: member.byteLength,
+      storage_bucket: byPath.get(member.relativePath)!.storage_bucket,
+      storage_key: byPath.get(member.relativePath)!.storage_key,
+      object_count: 0,
+    }));
 }

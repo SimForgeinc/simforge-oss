@@ -1,0 +1,80 @@
+name: map-load-bench
+
+# Web map-load regression gate: warm-load stage timings and structural counts
+# (Cache Storage reads, map requests, Basis transcodes, albedo GPU readbacks)
+# for the public map, judged against config/bench/map-load-budgets.json.
+#
+# Runs on the RTX 5080 box's self-hosted runner (label `gpu-rtx5080`, the
+# native-golden runner): a load-time budget is only meaningful on the GPU the
+# budgets were set on. Until that runner is registered the job stays queued;
+# the same command runs locally (docs/engineering/performance-benchmarks.md,
+# "Map load").
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/viewer/**'
+      - 'packages/studio-ui/src/scenario/scene/**'
+      - 'packages/studio-ui/src/lib/maps/**'
+      - 'packages/map-pipeline/scripts/browser-packs.mjs'
+      - 'packages/map-pipeline/scripts/texture-tiers.mjs'
+      - 'studio/app/**'
+      - 'scripts/benchmarks/map-load-benchmark.mjs'
+      - 'scripts/benchmarks/lib/map-load-*'
+      - 'config/bench/map-load-budgets.json'
+      - '.github/workflows/map-load-bench.yml'
+  pull_request:
+    paths:
+      - 'packages/viewer/**'
+      - 'packages/studio-ui/src/scenario/scene/**'
+      - 'packages/studio-ui/src/lib/maps/**'
+      - 'packages/map-pipeline/scripts/browser-packs.mjs'
+      - 'packages/map-pipeline/scripts/texture-tiers.mjs'
+      - 'scripts/benchmarks/map-load-benchmark.mjs'
+      - 'scripts/benchmarks/lib/map-load-*'
+      - 'config/bench/map-load-budgets.json'
+  workflow_dispatch: {}
+
+concurrency:
+  group: map-load-bench-gpu
+  cancel-in-progress: false
+
+jobs:
+  map-load:
+    runs-on: [self-hosted, Linux, X64, gpu-rtx5080]
+    timeout-minutes: 60
+    env:
+      SIMFORGE_CLOUD_ROOT: ${{ runner.temp }}/map-load-bench-root
+      SIMFORGE_LOCAL_WORKER: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright-core install chromium
+      - name: Build the studio
+        run: pnpm --filter @simforge-oss/studio build
+      - name: Install the public map with its browser packs
+        # Richmond is the one public map. Its browser packs are part of the
+        # web profile; a release without them fails the cacheReads budget.
+        run: node packages/cli/bin/simforge.js maps pull richmond-field-station
+      - name: Start the local host
+        run: |
+          node --conditions=development --import tsx packages/cli/src/main.ts daemon --port 5199 --no-worker > "$RUNNER_TEMP/host.log" 2>&1 &
+          for i in $(seq 1 120); do curl -fsS -o /dev/null http://127.0.0.1:5199/ && break; sleep 2; done
+      - name: Benchmark warm map loads against the budgets
+        run: >
+          pnpm bench:map-load --base-url http://127.0.0.1:5199 --data-root "$SIMFORGE_CLOUD_ROOT"
+          --maps richmond-field-station --settings low-no-foliage,medium --modes editor,drive --runs 5
+          --budgets config/bench/map-load-budgets.json --out artifacts/bench/map-load
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: map-load-bench
+          path: |
+            artifacts/bench/map-load
+            ${{ runner.temp }}/host.log
