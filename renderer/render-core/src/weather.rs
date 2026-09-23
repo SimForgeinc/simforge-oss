@@ -86,7 +86,7 @@ impl Weather {
         let sun_lux = sun_direct_normal_illuminance_lx(sun_elev_deg);
         let daylight = daylight_fraction(sun_elev_deg);
         let sun_color = sun_dir_color
-            .unwrap_or_else(|| kelvin_to_rgb(sun_color_temperature_k(sun_elev_deg)));
+            .unwrap_or_else(|| kelvin_to_rgb(sun_color_temperature_k(sun_elev_deg))); // fallback-ok: optional sun temperature override; None is the documented elevation-derived colour
         match self {
             Weather::Clear => LightingPlan {
                 sun_lux,
@@ -362,7 +362,7 @@ pub fn apply_wetness(
     let mut touched = 0;
     let mut seen = std::collections::HashSet::new();
     for (_e, name, parent, _mesh, mat) in meshes_q.iter_mut() {
-        let mut label = name.map(|n| n.as_str()).unwrap_or("");
+        let mut label = name.map(|n| n.as_str()).unwrap_or(""); // fallback-ok: matching label for material classification; unnamed materials match nothing
         if label.is_empty() {
             if let Some(p) = parent {
                 if let Ok(pn) = names_q.get(p.0) {

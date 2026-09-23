@@ -8,6 +8,14 @@ import { canonicalJson } from './canonical-json.js';
 
 export const RENDER_INTENT_V1_SCHEMA = 'simforge.render-intent/v1' as const;
 /**
+ * Substitutions a render intent may explicitly allow. Each is a genuine
+ * product choice, never a default:
+ * - `carla-actor-body`: CARLA renders an actor whose catalog body its image
+ *   lacks with the nearest same-class blueprint.
+ */
+export const RENDER_SUBSTITUTION_KINDS = ['carla-actor-body'] as const;
+export type RenderSubstitutionKind = typeof RENDER_SUBSTITUTION_KINDS[number];
+/**
  * A trailing presentation camera authored on the sensor host. It rides outside the
  * measurement rig so a render can ship a drive-along view without restating the rig counts.
  */
@@ -112,6 +120,13 @@ export const RenderIntentV1Schema = z.strictObject({
   nativeVramCapacityBytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
   assets: z.array(RenderIntentAssetSchema).max(RENDER_INTENT_MAX_ASSETS),
   seed: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  /**
+   * Substitutions the requester explicitly accepts (docs/engineering/
+   * no-silent-fallbacks.md). Absent means none: an engine that cannot render
+   * an input exactly fails the job. Every substitution an engine makes under
+   * one of these is recorded in its manifest.
+   */
+  allowSubstitutions: z.array(z.enum(RENDER_SUBSTITUTION_KINDS)).min(1).max(RENDER_SUBSTITUTION_KINDS.length).optional(),
 }).check((ctx) => {
   const ids = new Set<string>();
   ctx.value.assets.forEach((asset, index) => {

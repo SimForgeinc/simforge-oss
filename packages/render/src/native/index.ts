@@ -32,6 +32,13 @@ export {
 export type {
   HostParsedEvidence, NativeEvidenceFailure, TolerantParseIssue, TolerantParseSchema, NativeRenderManifest, NativeReservedArtifact, NativeRunDiagnostics, NativeRunExpectations,
 } from './evidence.js';
+export { NATIVE_SENSOR_SCENE_BUILDER, buildNativeSensorScenes, nativeSensorSceneMarkerPath, nativeSensorScenesCached } from './sensor-cache.js';
+export type { BuildNativeSensorScenesOptions, NativeSensorSceneMarker } from './sensor-cache.js';
+export { NATIVE_DEFAULT_ANTI_ALIAS, NATIVE_DEFAULT_TAA_SAMPLES, nativeCaptureSettings } from './engine.js';
+export { DEFAULT_NVENC_MAX_SESSIONS, NVENC_EQUIVALENT_CQ, VideoEncoder, assignVideoCodecs, nvencAvailable } from './video-encoder.js';
+export type { NativeVideoCodec, NativeVideoEncoderPreference } from './video-encoder.js';
+export { NATIVE_STAGE_TIMINGS_V1_SCHEMA, NativeStageTimingsSchema, StageSamples, splitServiceStages, summarizeStage } from './stage-timings.js';
+export type { NativeStageTimings, StageSummary } from './stage-timings.js';
 export { NATIVE_SERVICE_PROTOCOL, NativeServiceClient, NativeServiceTimeoutError, stripRgbaPadding } from './service-client.js';
 export type {
   NativeBundleResponse, NativeFrameIdentity, NativeFrameRecord, NativeServiceConnectOptions, NativeServiceResponse,
