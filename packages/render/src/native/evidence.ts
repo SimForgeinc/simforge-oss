@@ -141,7 +141,7 @@ export class NativeEvidenceSchemaError extends Error {
     issues: Array<{ path: string; code: string; message: string }>;
   };
 
-  constructor(document: string, issues: readonly z.core.$ZodIssue[]) {
+  constructor(document: string, issues: readonly TolerantParseIssue[]) {
     super(`native_${document}_schema_invalid`);
     this.name = 'NativeEvidenceSchemaError';
     this.verificationDetails = {
@@ -154,6 +154,25 @@ export class NativeEvidenceSchemaError extends Error {
     };
   }
 }
+
+/** One schema issue, as any Zod major reports it. */
+export type TolerantParseIssue = {
+  readonly code: string;
+  readonly path: readonly PropertyKey[];
+  readonly message: string;
+  readonly keys?: readonly string[];
+};
+
+/**
+ * What the tolerant parser needs from a schema. Structural on purpose: a host
+ * app may resolve `zod` to a different major than this package does, and
+ * both majors' objects satisfy it.
+ */
+export type TolerantParseSchema<T> = {
+  safeParse(input: unknown):
+    | { success: true; data: T }
+    | { success: false; error: { issues: readonly TolerantParseIssue[] } };
+};
 
 export type HostParsedEvidence<T> = {
   readonly value: T;
@@ -191,7 +210,7 @@ function withoutKeys(value: unknown, path: readonly PropertyKey[], keys: readonl
  * missing field, a wrong type, a literal or protocol mismatch, a failed
  * cross-field check) still rejects, with the real issues attached.
  */
-export function parseToleratingUnknownKeys<T>(schema: z.ZodType<T>, input: unknown, document = 'evidence'): HostParsedEvidence<T> {
+export function parseToleratingUnknownKeys<T>(schema: TolerantParseSchema<T>, input: unknown, document = 'evidence'): HostParsedEvidence<T> {
   let candidate = input;
   const ignoredFields: string[] = [];
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -202,12 +221,13 @@ export function parseToleratingUnknownKeys<T>(schema: z.ZodType<T>, input: unkno
       throw new NativeEvidenceSchemaError(document, issues.filter((issue) => issue.code !== 'unrecognized_keys'));
     }
     for (const issue of issues) {
-      const keys = (issue as { keys: string[] }).keys;
+      const keys = issue.keys ?? [];
       ignoredFields.push(...keys.map((key) => [...issue.path.map(String), key].join('.')));
       candidate = withoutKeys(candidate, issue.path, keys);
     }
   }
-  throw new NativeEvidenceSchemaError(document, schema.safeParse(candidate).error?.issues ?? []);
+  const last = schema.safeParse(candidate);
+  throw new NativeEvidenceSchemaError(document, last.success ? [] : last.error.issues);
 }
 
 export function parseNativeRenderManifestForHost(input: unknown): HostParsedEvidence<NativeRenderManifest> {
