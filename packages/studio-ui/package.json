@@ -453,6 +453,10 @@
         "types": "./dist/scenario/scene/previewPolicy.d.ts",
         "default": "./dist/scenario/scene/previewPolicy.js"
       },
+      "./scenario/scene/pinned-map": {
+        "types": "./dist/scenario/scene/pinned-map.d.ts",
+        "default": "./dist/scenario/scene/pinned-map.js"
+      },
       "./scenario/scene/useIdleStreetTour": {
         "types": "./dist/scenario/scene/useIdleStreetTour.d.ts",
         "default": "./dist/scenario/scene/useIdleStreetTour.js"
@@ -1021,6 +1025,11 @@
       "development": "./src/scenario/scene/previewPolicy.ts",
       "types": "./dist/scenario/scene/previewPolicy.d.ts",
       "default": "./dist/scenario/scene/previewPolicy.js"
+    },
+    "./scenario/scene/pinned-map": {
+      "development": "./src/scenario/scene/pinned-map.ts",
+      "types": "./dist/scenario/scene/pinned-map.d.ts",
+      "default": "./dist/scenario/scene/pinned-map.js"
     },
     "./scenario/scene/useIdleStreetTour": {
       "development": "./src/scenario/scene/useIdleStreetTour.ts",

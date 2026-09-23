@@ -1290,6 +1290,24 @@ export class EditorDocument {
     });
   }
 
+  /**
+   * Restore a saved version's content onto this draft as ONE undoable, autosaved edit (the
+   * Versions panel's "Restore this version"). The content is validated first; its map identity is
+   * reconciled to this session's map version exactly as an import is, so a version from another
+   * map version is restored through the host's explicit re-pin instead.
+   */
+  restoreTemplate(value: unknown): void {
+    const parsed = TemplateDocument.fromJSON(value, { historyLimit: HISTORY_LIMIT }).data;
+    const bound = reconcileTemplateMapIdentity(parsed, {
+      mapVersionId: editorMapVersionId(this.map),
+      sourceMapId: editorSourceMapId(this.map),
+      label: this.map.label,
+    });
+    this.#transaction(() => {
+      this.#doc.apply({ type: 'replaceTemplate', template: normalizeAuthoringGraph(bound).template });
+    });
+  }
+
   undo(): boolean {
     const size = this.#groups.pop();
     if (size === undefined) return false;

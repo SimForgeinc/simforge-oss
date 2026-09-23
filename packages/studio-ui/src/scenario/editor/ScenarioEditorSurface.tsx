@@ -136,6 +136,8 @@ import {
 } from "./tutorial/simple-route-tutorial";
 import { MultiSelectionPanel } from "./MultiSelectionPanel";
 import { MirroredImportBanner } from "./MirroredImportBanner";
+import { EngineChangeBanner } from "./versions/EngineChangeBanner";
+import { VersionsButton } from "./versions/VersionsPanel";
 import { UnanchoredActorBadges } from "./UnanchoredActorBadges";
 import { useEditorClipboard } from "./clipboard/use-editor-clipboard";
 import {
@@ -176,6 +178,7 @@ export function ScenarioEditorSurface({
   sharedActorRenderer,
   active = true,
   documentSaveStatus,
+  statusBanners,
 }: {
   map: ScenarioMapEntry;
   record: ScenarioDocumentDto | null;
@@ -192,6 +195,8 @@ export function ScenarioEditorSurface({
   /** Presentation changes never unmount the editor runtime. */
   active?: boolean;
   documentSaveStatus?: React.ReactNode;
+  /** Banners the workspace owns (the newer-map offer), shown with the editor's own. */
+  statusBanners?: React.ReactNode;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [localViewer, setLocalViewer] = useState<CityViewer | null>(null);
@@ -950,6 +955,7 @@ export function ScenarioEditorSurface({
           simulationIssues={simulationIssues}
           experience={experience}
           onExperienceToggle={toggleExperience}
+          versionsControl={<VersionsButton record={record} document={editorDocument} />}
         />
       ) : null}
       <ScenarioEditorShell
@@ -1038,6 +1044,8 @@ export function ScenarioEditorSurface({
           ) : state ? (
             <div {...stylex.props(styles.divFlex)}>
               {sharedPlayback?.inspecting ? null : <MirroredImportBanner document={editorDocument} />}
+              {sharedPlayback?.inspecting ? null : <EngineChangeBanner documentId={record?.id ?? null} playback={sharedPlayback} />}
+              {sharedPlayback?.inspecting ? null : statusBanners}
               {clipboardNotice ? (
                 <p
                   {...stylex.props([hairline.all, styles.clipboardNotice])}

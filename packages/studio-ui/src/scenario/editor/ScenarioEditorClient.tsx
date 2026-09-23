@@ -27,6 +27,9 @@ import {
   useScenarioWorkspaceStatus,
 } from "./status";
 import { SaveStatus } from "./SaveStatus";
+import { NewerMapBanner } from "./versions/NewerMapBanner";
+import { mapsIncludingPinnedVersion } from "../scene/pinned-map";
+import type { StudioMapEntry } from "@simforge-oss/studio-host";
 import type { ScenarioWorldTarget } from "../scene/ScenarioWorldHost";
 import type { ScenarioMapOption } from "../list/document-map-groups";
 import { mapSupportsScenarioPreview } from "../scene/previewPolicy";
@@ -469,6 +472,37 @@ function ScenarioEditorWorkspace({
   }, [persist]);
   changeQualityRef.current = changeQuality;
 
+  // A draft pinned to a superseded (or retired) map version opens on exactly that version: its
+  // descriptor joins the catalog, which only lists each map's newest publication.
+  const pinnedMapVersionId = record?.mapVersionId ?? null;
+  const pinnedDocumentId = record?.id ?? null;
+  useEffect(() => {
+    if (!maps || !pinnedDocumentId || !pinnedMapVersionId) return;
+    if (maps.some((entry) => entry.mapVersionId === pinnedMapVersionId)) return;
+    const abort = new AbortController();
+    mapsIncludingPinnedVersion(studioHost, maps as StudioMapEntry[], { id: pinnedDocumentId, mapVersionId: pinnedMapVersionId }, abort.signal)
+      .then((next) => {
+        if (!abort.signal.aborted && next.length !== maps.length) setMaps([...next] as ScenarioMapEntry[]);
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string } | null)?.name !== "AbortError") {
+          setError(`The scenario's pinned map version could not be loaded: ${reason instanceof Error ? reason.message : String(reason)}`);
+        }
+      });
+    return () => abort.abort();
+  }, [maps, pinnedDocumentId, pinnedMapVersionId, studioHost]);
+
+  /** The explicit re-pin offered by NewerMapBanner: save pending edits, then move the draft. */
+  const moveToNewerMap = useCallback(async (targetMapVersionId: string) => {
+    const current = recordRef.current;
+    if (!current) return;
+    await persist();
+    const saved = await studioHost.projects.getDocument(current.id);
+    const moved = await studioHost.projects.updateDocument(saved.id, { expectedVersion: saved.draftVersion, mapVersionId: targetMapVersionId });
+    recordRef.current = moved;
+    setRecord(moved);
+  }, [persist, studioHost]);
+
   // Boot and failure conditions, published rather than rendered. Only one can be
   // blocking at a time and the gate resolves severity itself, so the order here
   // is just precedence of message, not of display.
@@ -580,6 +614,13 @@ function ScenarioEditorWorkspace({
         sharedPlayback={sharedPlayback}
         sharedActorRenderer={sharedActorRenderer}
         active={active}
+        statusBanners={
+          <NewerMapBanner
+            documentId={record?.id ?? null}
+            mapVersionId={record?.mapVersionId ?? null}
+            onMove={moveToNewerMap}
+          />
+        }
       />
     </>,
   );
