@@ -16,6 +16,7 @@ from .compiler import (
     PlanFrame,
 )
 from .contract import ContractError, MAX_ACTOR_COUNT, MAX_ACTOR_FRAME_STATES, SHA256, canonical_json
+from .policy import CarlaRenderError
 
 SCHEMA = "simforge.materialized-traffic.v1"
 # historical name retained for stored-data compat
@@ -232,15 +233,6 @@ def parse_materialized_traffic(
     )
 
 
-_CATALOG_BY_KIND = {
-    "vehicle": "vehicle.sedan",
-    "pedestrian": "pedestrian.adult",
-    "bicycle": "vehicle.bicycle",
-    "obstacle": "vehicle.sedan",
-}
-_WORKER_KIND = {"obstacle": "static_object"}
-
-
 def merge_materialized_traffic(
     plan: ExecutionPlan,
     traffic: MaterializedTraffic,
@@ -248,41 +240,27 @@ def merge_materialized_traffic(
 ) -> ExecutionPlan:
     if not traffic.actors and not traffic.signals:
         return plan
-    actors = dict(plan.actors)
-    overlap = sorted(set(actors) & {actor.id for actor in traffic.actors})
-    authored_overlap = [actor_id for actor_id in overlap if (
-        not actors[actor_id].materialized_traffic_eligible or actor_id not in allowed_overlap_actor_ids
-    )]
-    if authored_overlap:
-        raise ContractError(f"materialized traffic actors collide with authored actors: {', '.join(authored_overlap)}")
-    if set(overlap) != set(allowed_overlap_actor_ids):
+    if traffic.actors:
+        # `simforge.materialized-traffic.v1` actors carry a planar path only:
+        # no elevation, no attitude and no catalog body. Rendering them put
+        # every ambient car at z=0 (floating or buried on a non-flat map) with
+        # a body picked by kind (an obstacle became a sedan).
+        raise CarlaRenderError(
+            "carla_ambient_traffic_unsupported",
+            f"materialized traffic actors ({', '.join(actor.id for actor in traffic.actors[:8])}"
+            f"{', ...' if len(traffic.actors) > 8 else ''}) carry no elevation, attitude or catalog body; "
+            "CARLA renders ambient traffic only as authored actors in the scenario",
+        )
+    if allowed_overlap_actor_ids:
         raise ContractError("materialized traffic overlap membership does not match the signed execution manifest")
-    for actor in traffic.actors:
-        if actor.id not in actors:
-            actors[actor.id] = ActorBinding(actor.id, f"materialized_{actor.id}", _WORKER_KIND.get(actor.kind, actor.kind), _CATALOG_BY_KIND[actor.kind])
-    if len(actors) > MAX_ACTOR_COUNT or len(actors) * len(plan.frames) > MAX_ACTOR_FRAME_STATES:
-        raise ContractError("merged execution plan exceeds actor execution limits")
-    traffic_by_id = {actor.id: actor for actor in traffic.actors}
+    actors = dict(plan.actors)
     signal_by_id = {signal.id: signal for signal in traffic.signals}
     frames: list[PlanFrame] = []
     for index, frame in enumerate(plan.frames):
-        actor_states = dict(frame.actors)
-        for actor_id, actor in traffic_by_id.items():
-            state = actor.states[index]
-            appearance = {
-                "light.indicatorRight": "on" if state.signals & 0x1 else "off",
-                "light.indicatorLeft": "on" if state.signals & 0x2 else "off",
-                "light.warningLights": "on" if state.signals & 0x3 == 0x3 else "off",
-            } if actor.kind in {"vehicle", "bicycle"} else {}
-            actor_states[actor_id] = ActorFrame(
-                (LIFECYCLE_ABSENT if not state.present else
-                 LIFECYCLE_SPAWN if index == 0 or not actor.states[index - 1].present else LIFECYCLE_ACTIVE),
-                state.x, state.z, 0.0, math.degrees(state.heading_rad), state.speed_mps, appearance,
-            )
         signal_states = dict(frame.signals)
         for signal_id, signal in signal_by_id.items():
             signal_states[signal_id] = signal.states[index][1]
-        frames.append(PlanFrame(frame.index, frame.t, actor_states, signal_states))
+        frames.append(PlanFrame(frame.index, frame.t, dict(frame.actors), signal_states))
     immutable = tuple(frames)
     digest_value = {
         "schema": plan.schema,

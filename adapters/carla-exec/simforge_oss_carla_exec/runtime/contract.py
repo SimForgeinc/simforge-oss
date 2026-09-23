@@ -458,15 +458,18 @@ class Sensor:
 
 @dataclass(frozen=True)
 class Environment:
-    cloudiness: float = 0.0
-    precipitation: float = 0.0
-    precipitation_deposits: float = 0.0
-    wind_intensity: float = 0.0
-    sun_azimuth_angle: float = 0.0
-    sun_altitude_angle: float = 45.0
-    fog_density: float = 0.0
-    fog_distance: float = 0.0
-    wetness: float = 0.0
+    """The CARLA weather a render requests. Every field is required: a render
+    spec that omits one is refused rather than filled with a default sun."""
+
+    cloudiness: float
+    precipitation: float
+    precipitation_deposits: float
+    wind_intensity: float
+    sun_azimuth_angle: float
+    sun_altitude_angle: float
+    fog_density: float
+    fog_distance: float
+    wetness: float
 
 
 def _finite_number(value: Any, label: str, minimum: float, maximum: float) -> float:
@@ -498,10 +501,10 @@ def _parse_sensor_config(modality: str, value: Any, label: str) -> Mapping[str, 
     if modality in LIDAR_MODALITIES:
         expected = {
             "channels", "rangeM", "pointsPerSecond", "rotationFrequencyHz",
-            "upperFovDeg", "lowerFovDeg",
+            "upperFovDeg", "lowerFovDeg", "horizontalFovDeg",
         }
         if set(value) != expected:
-            raise ContractError(f"{label} has invalid {modality} fields")
+            raise ContractError(f"{label} has invalid {modality} fields (requires {', '.join(sorted(expected))})")
         channels, points = value["channels"], value["pointsPerSecond"]
         if not isinstance(channels, int) or isinstance(channels, bool) or not 1 <= channels <= 256:
             raise ContractError(f"{label}.channels must be an integer in [1, 256]")
@@ -520,6 +523,9 @@ def _parse_sensor_config(modality: str, value: Any, label: str) -> Mapping[str, 
             ),
             "upperFovDeg": upper,
             "lowerFovDeg": lower,
+            "horizontalFovDeg": _finite_number(
+                value["horizontalFovDeg"], f"{label}.horizontalFovDeg", 0.001, 360.0,
+            ),
         }
     expected = {"horizontalFovDeg", "verticalFovDeg", "rangeM", "pointsPerSecond"}
     if set(value) != expected:
@@ -555,7 +561,8 @@ class RenderSpec:
             "schema", "fps", "sensors", "outputs", "executionMode", "quality",
             "environment", "formats",
         }
-        required_fields = {"schema", "fps", "sensors", "outputs"}
+        # Quality and environment change the pixels, so neither has a default.
+        required_fields = {"schema", "fps", "sensors", "outputs", "quality", "environment"}
         if set(value) - allowed_fields or not required_fields.issubset(value):
             raise ContractError("renderSpec has invalid fields")
         if value.get("schema") not in {expected_schema, HISTORICAL_SCHEMAS[expected_schema]}:
@@ -613,10 +620,10 @@ class RenderSpec:
         ):
             raise ContractError("renderSpec.outputs must contain unique supported values")
         execution_mode = normalize_execution_mode(value.get("executionMode"), "renderSpec.executionMode")
-        quality = value.get("quality", "standard")
+        quality = value["quality"]
         if quality not in {"preview", "standard", "high", "cinematic"}:
             raise ContractError("renderSpec.quality is unsupported")
-        raw_environment = value.get("environment", {})
+        raw_environment = value["environment"]
         if not isinstance(raw_environment, Mapping):
             raise ContractError("renderSpec.environment must be an object")
         environment_fields = {
@@ -625,12 +632,15 @@ class RenderSpec:
             "sunAzimuth": "sun_azimuth_angle", "sunAltitude": "sun_altitude_angle",
             "fogDensity": "fog_density", "fogDistance": "fog_distance", "wetness": "wetness",
         }
-        if set(raw_environment) - set(environment_fields):
-            raise ContractError("renderSpec.environment has invalid fields")
+        if set(raw_environment) != set(environment_fields):
+            missing = sorted(set(environment_fields) - set(raw_environment))
+            raise ContractError(
+                "renderSpec.environment must carry exactly "
+                + ", ".join(sorted(environment_fields))
+                + (f" (missing {', '.join(missing)})" if missing else "")
+            )
         environment_values: dict[str, float] = {}
-        defaults = Environment()
         for external, internal in environment_fields.items():
-            default = getattr(defaults, internal)
             minimum, maximum = (
                 (-90.0, 90.0) if external == "sunAltitude" else
                 (0.0, 360.0) if external == "sunAzimuth" else
@@ -638,7 +648,7 @@ class RenderSpec:
                 (0.0, 100.0)
             )
             environment_values[internal] = _finite_number(
-                raw_environment.get(external, default), f"renderSpec.environment.{external}", minimum, maximum,
+                raw_environment[external], f"renderSpec.environment.{external}", minimum, maximum,
             )
         environment = Environment(**environment_values)
         raw_formats = value.get("formats", ["png", "ply", "csv", "mp4-h264", "json", "jsonl"])

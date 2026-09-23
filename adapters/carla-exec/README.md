@@ -52,12 +52,31 @@ simforge-oss-carla-exec --host 127.0.0.1 --port 2000 run-intent \
 
 `run-intent` accepts strict render-spec/v3 sources, verifies `intentSha256` and
 every local input before CARLA starts, writes render-progress/v1 JSONL, and
-closes with render-artifact-manifest/v1.
+closes with render-artifact-manifest/v1. `--control-features` passes the
+lease's `controlFeatures` (comma-separated); newer manifest fields, such as
+`substitutions` (`render-evidence.substitutions`), are written only when listed.
+
+### No silent fallbacks
+
+Missing, failed or unsupported data never silently degrades a render
+(`docs/engineering/no-silent-fallbacks.md`). The render fails with a
+`carla_*` code; `run-intent` then prints one
+`simforge.carla-render-failure/v1` JSON line (`code`, `message`,
+`retryable: false`) and exits 3, and every message starts with
+`[carla_<code>] `. The only substitution CARLA makes is `carla-actor-body`, and
+only when the intent's `allowSubstitutions` lists it and the lease can record
+it (else `carla_substitutions_unreportable`): each one is written to the
+manifest's `substitutions` and announced as a `carla.substitution.*` warning.
+
+Worker settings that used to change the output are refused
+(`carla_forbidden_worker_config`): `SIMFORGE_CARLA_ALLOW_GENERATED_XODR`,
+`SIMFORGE_CARLA_MAP_BINDING` other than `exact`,
+`SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON` and `SIMFORGE_CARLA_SIGNAL_ID_MAP`.
 
 Set `SIMFORGE_CARLA_COOKED_MAPS_JSON` to a JSON map of cooked map names to
 their source XODR SHA-256 values; a digest or loaded-world identity mismatch is
-fatal. `SIMFORGE_CARLA_SIGNAL_ID_MAP` supplies an explicit one-to-one authored
-to cooked OpenDRIVE signal-id map. `SIMFORGE_SENSOR_WRITER_WORKERS` bounds
+fatal, and a map without a cooked world fails `carla_map_not_cooked`.
+`SIMFORGE_SENSOR_WRITER_WORKERS` bounds
 parallel streaming writers. Set `SIMFORGE_PRESENTATION_VIDEO_ENCODER=nvidia`
 to request `h264_nvenc` for the per-camera streaming encoders (default
 `software` = libx264). Camera frames stream directly into one H.264 MP4 per
@@ -68,11 +87,15 @@ Managed execution currently derives from
 `ghcr.io/simforgeinc/carla-rfs-munich-belmont@sha256:baed0d038437c55efe0abe52a762d352aeb21acdeeff5b11a15f6bd8a648de64`
 (OCI index `sha256:f17c639e5f86fd7458fe1d02d3be1d481deeaa714f3cac30e465187d04ec90e5`).
 Sensors attach to the authored host actor after its catalog binding is resolved.
-Any native CARLA vehicle blueprint is valid. A non-native vehicle binding uses
-the nearest deterministic same-class native fallback and records the
-substitution in `carlaVehicleFallbacks`; execution fails closed only when the
-claimed catalog has no native blueprint for that actor class. Parent readback
-verifies the resolved actor identity without imposing a model-specific host.
+An actor renders its catalog body when the binding is the authored body
+(`fidelity` `exact` or `native-blueprint`) and, once the world is loaded, the
+runtime is observed to place it. Otherwise (a generated body, a
+`semantic-substitute` binding, a body the image does not ship) the render fails
+`carla_blueprint_unavailable` unless the intent allows `carla-actor-body`; then
+a road user takes the dimensionally nearest placeable body of its own
+`actorClass` (never across classes) and the substitution is recorded. Parent
+readback verifies the resolved actor identity without imposing a
+model-specific host.
 
 ## Execution modes
 
@@ -91,9 +114,12 @@ CARLA is a renderer of the scenario. It never owns motion.
   driven by throttle, brake and steer toward the trace, and walkers and props
   are replayed kinematically. Its output measures how CARLA physics diverges
   from the trace. It is labelled `purpose: physics-validation` everywhere and
-  is never the scenario's render. A render intent opts in by asking for the
-  `actor.native_controls` capability. `diagnostic-replay` is the historical
-  name of `trace-replay`.
+  is never the scenario's render. A render intent opts in by *requiring* the
+  `actor.native_controls` capability (preferring it fails
+  `carla_capability_preference_unsupported`). An actor physics validation
+  cannot place at its authored pose, or cannot execute (knockdowns, cues,
+  reversing non-vehicles, moving statics), fails the job; nothing is nudged or
+  dropped. `diagnostic-replay` is the historical name of `trace-replay`.
 
 ### Blocking replay parity
 
@@ -130,17 +156,44 @@ The timeline z is authoritative: it is the ground-contact elevation, baked
 once from the XODR elevation. The cooked-mesh raycast only runs as a
 diagnostic (`runtimeEvidence.replay.groundDiagnostic`: cooked surface minus
 timeline z, per class, with the suggested per-map calibration). A calibrated
-per-map offset (`MAP_Z_CALIBRATION_M`, or `SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON`
-keyed by XODR sha256) is applied and recorded when the cooked world floats or
-sinks bodies.
+per-map offset (`MAP_Z_CALIBRATION_M`, keyed by XODR sha256) is applied and
+recorded when the cooked world floats or sinks bodies.
 
 The world is bound by XODR digest, never by name. The package XODR selects the
 cooked world. The runtime's `to_opendrive()` must then be byte-identical to
 the package XODR or an approved cooked re-serialization of it
 (`APPROVED_COOKED_XODR_DIGESTS`, `SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON`).
-Anything else fails. The exception is `SIMFORGE_CARLA_MAP_BINDING=allow-approximate`,
-which renders the job labelled `approximate map` in the manifest and the
-evidence.
+Anything else fails `carla_map_digest_mismatch`. There is no approximate
+binding and no world generated from the bare OpenDRIVE.
+
+### Environment
+
+A cooked RoadRunner world reports `is_weather_enabled()` false: its sun, sky
+and weather are baked at cook time and `set_weather` cannot change them. Such
+a world renders a request only if it equals the world's registered baked
+environment (`COOKED_MAP_BAKED_ENVIRONMENTS`, measured per cooked level);
+anything else fails `carla_environment_unsupported_on_cooked_map`. A world
+with weather applies the request and reads it back. The authored environment
+must state `weather` and `timeOfDay`; `night_lit` and an authored
+(corridor-relative) `sunAzimuthDeg` fail.
+
+### Actors and sensors
+
+- An actor CARLA refuses to spawn fails `carla_actor_spawn_refused`; every
+  plan actor is expected by the replay gate.
+- A walking walker (timeline speed above 0.3 m/s) must move its legs:
+  `get_bones()` is sampled every 5 ticks until a leg bone rotates 2°, and a
+  frozen or T-posed gait fails `carla_walker_animation_inactive`
+  (`runtimeEvidence.walkerAnimation`).
+- Each lidar capture holds one full revolution, assembled from the tick
+  sectors ending at the capture tick (`sweep` metadata); a revolution must
+  span whole ticks (`carla_lidar_schedule_unsupported`). Drop-off and noise
+  are set to zero and every sensor attribute is read back and recorded.
+- Every camera must ask for the render fps (`carla_camera_fps_mismatch`), the
+  video size is the primary camera's (`carla_video_size_mismatch`), and
+  `lossless` fails `carla_video_quality_unsupported`.
+- Materialized ambient traffic actors fail `carla_ambient_traffic_unsupported`
+  (the format carries no elevation, attitude or body).
 
 ### What replay approximates
 
@@ -151,8 +204,9 @@ The manifest lists these under `approximations`:
   carry none (level bodies).
 - **Wheels.** Kinematic vehicles' wheels neither spin nor steer.
 - **Walker gait.** Speed is fed to CARLA's locomotion blend
-  (`ApplyWalkerControl` plus the target velocity), so gait animates while the
-  body is posed exactly. It is CARLA's gait, not a replayed skeleton.
+  (`ApplyWalkerControl` plus the target velocity) while the body is posed
+  exactly. It is CARLA's gait, not a replayed skeleton, and a walking walker
+  whose legs do not move fails the render.
 - **Radar Doppler.** CARLA's `velocity_mps` comes from the physical velocity of
   the detected body. Under replay every radar CSV also carries
   `timeline_velocity_mps`/`timeline_actor_id`, the same relative radial
