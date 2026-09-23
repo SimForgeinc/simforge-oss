@@ -5,7 +5,7 @@ import { hashRenderIntent, PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSO
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput, assertNativeMapMemberCapacity } from "@simforge-oss/render/native";
 import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
-import { boundMapDerivatives, MAP_DERIVATIVE_DESCRIPTOR_SQL, mapDerivativeExtraMembers } from "./map-derivatives";
+import { boundMapDerivatives, derivativeMembers, MAP_DERIVATIVE_DESCRIPTOR_SQL, MAP_DERIVATIVE_MEMBERS_JOIN_SQL, mapDerivativeExtraMembers, type MapDerivativeMemberRow } from "./map-derivatives";
 import type { ScenarioRenderJobDto } from "./contracts";
 import {
   ScenarioRenderIntentSchema,
@@ -91,10 +91,9 @@ function cameraAttributes(source: RenderSpecV3["sources"][number]) {
 }
 
 /**
- * Descriptor-bound derivative members of a map version (map-derivatives.ts)
- * that its native closure does not already carry, each backed by a verified
- * native blob. A binding whose blobs are missing is a broken backfill and
- * fails the submission.
+ * Members of a map version's bound derivative sets (map-derivatives.ts) that
+ * its native closure does not already carry. A binding whose set is
+ * incomplete is a broken backfill and fails the submission.
  */
 async function boundDerivativeMembers(
   tx: { queryRows<T>(sql: string, params?: Record<string, unknown>): Promise<T[]> },
@@ -105,18 +104,17 @@ async function boundDerivativeMembers(
     `SELECT ${MAP_DERIVATIVE_DESCRIPTOR_SQL} AS derivatives FROM simforge.map_versions mv WHERE mv.id = :map_version_id`,
     { map_version_id: mapVersionId },
   );
-  const extra = mapDerivativeExtraMembers(boundMapDerivatives(row?.derivatives), closurePaths);
-  if (extra.length === 0) return [];
-  const blobs = await tx.queryRows<{ sha256: string; byte_length: number | string }>(
-    `SELECT DISTINCT sha256, byte_length FROM simforge.native_map_asset_blobs
-      WHERE verification_state = 'verified' AND sha256 = ANY(string_to_array(:digests, ','))`,
-    { digests: extra.map((member) => member.sha256).join(",") },
+  const bindings = boundMapDerivatives(row?.derivatives);
+  if (bindings.length === 0) return [];
+  const rows = await tx.queryRows<MapDerivativeMemberRow>(
+    `SELECT ds.id AS set_id, dm.relative_path, db.sha256, db.byte_length
+       FROM simforge.map_versions mv ${MAP_DERIVATIVE_MEMBERS_JOIN_SQL}
+      WHERE mv.id = :map_version_id
+      ORDER BY dm.relative_path`,
+    { map_version_id: mapVersionId },
   );
-  const verified = new Set(blobs.map((blob) => `${blob.sha256}:${Number(blob.byte_length)}`));
-  return extra.map((member) => {
-    if (!verified.has(`${member.sha256}:${member.byteLength}`)) throw new Error("map_derivative_member_unavailable");
-    return { relative_path: member.relativePath, sha256: member.sha256, byte_length: member.byteLength, object_count: 0 };
-  });
+  return mapDerivativeExtraMembers(derivativeMembers(bindings, rows), closurePaths)
+    .map((member) => ({ relative_path: member.relativePath, sha256: member.sha256, byte_length: member.byteLength, object_count: 0 }));
 }
 
 export function deriveRenderIntentResources(spec: RenderSpecV3): RenderResourceRequestV2 {

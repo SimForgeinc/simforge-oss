@@ -247,20 +247,27 @@ Status: dev reconciled on 2026-09-23 (20 live map versions, 10 build keys,
 
 A native asset set is immutable and unique per registry release, so the
 SimCloud backfill cannot add members to it. It uploads the derivative files
-content-addressed, registers them as verified native blobs, and binds them in
-`map_versions.descriptor.geometryLod`:
+content-addressed, registers them as verified native blobs, publishes them as
+a *derivative set* (a `native_map_asset_sets` row with contract
+`simforge.map-derivative-set.v1` for the same map version; it is never bound
+as `mv.native_map_asset_set_id`, so every closure query ignores it) and records
+a summary in `map_versions.descriptor.geometryLod`:
 
 ```
 { state: "ready", schema, buildKey, revision, fingerprint, masterSha256,
-  manifestSha256, members: [{ relativePath, sha256, byteLength }], totals, builtAt }
+  manifestSha256, assetSetId, objectCount, byteLength, totals, builtAt }
 ```
 
 (`failed` with a reason, or a `lastFailure` beside a ready binding, otherwise.)
-`studio/app/lib/scenario/map-derivatives.ts` reads the bindings (geometry LODs and the GPU texture tier, docs/engineering/map-texture-variants.md); native render
-intents declare its members as ordinary `map.resource.<sha256(path)>` map
-inputs, the lease resolves those the intent declared, and the worker prewarm
-lists and signs them with the set, the way `descriptor.ambientTurnVerdicts`
-rides along. Maps built by the new pipeline carry the members in the closure
+Member lists never go into the descriptor: descriptors are read in bulk through
+the Aurora Data API (1 MB per response) and a texture tier has up to ~14k
+members. `studio/app/lib/scenario/map-derivatives.ts` reads the bindings
+(geometry LODs and the GPU texture tier, docs/engineering/map-texture-variants.md)
+and proves each derivative set complete (member count, manifest digest, paths)
+before use; native render intents declare its members as ordinary
+`map.resource.<sha256(path)>` map inputs, the lease resolves those the intent
+declared, and the worker prewarm lists and signs them with the set, the way
+`descriptor.ambientTurnVerdicts` rides along. Maps built by the new pipeline carry the members in the closure
 itself; closure members win over descriptor members of the same path.
 
 The worker caches a set's member list by closure digest, the bound
