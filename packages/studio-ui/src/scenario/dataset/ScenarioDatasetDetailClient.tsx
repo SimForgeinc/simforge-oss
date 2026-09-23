@@ -48,7 +48,7 @@ import { useScenarioDocumentList } from "../list/useScenarioDocumentList";
 import { useScenarioOpenScenarioImport } from "../list/useScenarioOpenScenarioImport";
 import { useScenarioTagManager } from "../list/useScenarioTagManager";
 import { isDatasetEditable } from "../rail/DatasetStrip";
-import { textLayout, typography } from "../../stylex/recipes.stylex";
+import { scroll, textLayout, typography } from "../../stylex/recipes.stylex";
 
 /** Readiness refresh cadence while a render is in flight, matching v1. */
 const READINESS_POLL_MS = 5_000;
@@ -369,7 +369,7 @@ export function ScenarioDatasetDetailClient({
 
   return (
     <section
-      {...stylex.props(styles.column)}
+      {...stylex.props(scroll.clip, styles.column)}
       data-testid="scenario-document-index"
       data-dataset-id={datasetId}
     >
@@ -524,7 +524,7 @@ export function ScenarioDatasetDetailClient({
         </div>
       ) : null}
 
-      <div {...stylex.props(styles.body)}>
+      <div {...stylex.props(scroll.clip, styles.body)}>
         {listEmpty && !tagEditorOpen ? (
           <EmptyState
             xstyle={styles.emptyState}

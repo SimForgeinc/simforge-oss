@@ -5,7 +5,7 @@ export const logoTransform = stylex.defineVars({ value: "none" });
 
 export const styles = stylex.create({
   // Inset shadows paint below native no-drag controls rather than intercepting their hit regions.
-  header: { position: "relative", zIndex: layers.topbar, display: "flex", height: "3.5rem", width: "100%", flexShrink: 0, alignItems: "center", overflow: "hidden", borderBottom: `1px solid ${colors.hairlineStrong}`, backgroundColor: colors.scrim, boxShadow: "0 10px 35px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.10)", backdropFilter: "blur(40px) saturate(0)" },
+  header: { position: "relative", zIndex: layers.topbar, display: "flex", height: "3.5rem", width: "100%", flexShrink: 0, alignItems: "center", borderBottom: `1px solid ${colors.hairlineStrong}`, backgroundColor: colors.scrim, boxShadow: "0 10px 35px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.10)", backdropFilter: "blur(40px) saturate(0)" },
   clouds: { pointerEvents: "none", position: "absolute", left: "-8%", right: "-8%", top: "-100%", bottom: "-100%" },
   // Respect desktop window controls without reserving space in a browser.
   row: { position: "relative", zIndex: layers.raised, display: "flex", height: "100%", minWidth: 0, marginLeft: "env(titlebar-area-x, 0px)", width: "env(titlebar-area-width, 100%)", alignItems: "center", gap: space.s3, paddingInline: space.s3 },

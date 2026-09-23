@@ -158,10 +158,10 @@ export const styles = stylex.create({
   status: {
     color: colors.mutedForeground,
   },
+  /** Holds the scenario list, which is the column's one scroller; the body itself is clipped. */
   body: {
     minHeight: 0,
     flex: "1 1 0%",
-    overflow: "hidden",
   },
   emptyState: {
     paddingInline: space.s3,

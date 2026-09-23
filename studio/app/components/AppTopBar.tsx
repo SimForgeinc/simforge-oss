@@ -12,7 +12,7 @@ import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { layout } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 import { useDashboardNav } from "@/app/lib/dashboard-nav";
 import { cloudPlate, styles } from "./AppTopBar.stylex";
-import { textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
+import { scroll, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 export function AppTopBar() {
   const pathname = usePathname();
@@ -42,7 +42,7 @@ export function AppTopBar() {
   </>;
   return <>
     {/* The global no-drag hook keeps all interactive descendants usable in the native titlebar. */}
-    <header {...mergeStyleProps(stylex.props(styles.header), "app-topbar-native")} data-testid="app-topbar">
+    <header {...mergeStyleProps(stylex.props(scroll.clip, styles.header), "app-topbar-native")} data-testid="app-topbar">
       <div aria-hidden="true" {...stylex.props(styles.clouds, cloudPlate.plate)} data-testid="app-topbar-clouds" />
       <div {...stylex.props(styles.row)}>
         <button ref={switcherTriggerRef} type="button" onClick={() => setSwitcherOpen(true)} aria-label="Open app switcher" aria-haspopup="dialog" aria-expanded={switcherOpen} {...stylex.props(styles.trigger)}>
