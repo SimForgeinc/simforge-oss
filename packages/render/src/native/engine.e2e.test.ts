@@ -5,7 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 import { extractOpenScenarioExecutionPlan } from '@simforge-oss/openscenario';
-import { CameraProfileSchema, type RenderIntentV1 } from '@simforge-oss/scenario';
+import { CameraProfileSchema, type RenderIntentV1, type RenderSourceV3 } from '@simforge-oss/scenario';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { createFixedSchedules } from '../schedule.js';
@@ -18,6 +18,42 @@ const enabled = process.env.SIMFORGE_NATIVE_E2E === '1';
 const suite = enabled ? describe : describe.skip;
 const executeFile = promisify(execFile);
 const output = process.env.SIMFORGE_NATIVE_E2E_OUTPUT ?? path.resolve('native-e2e-output');
+
+async function grayVideoFrame(videoPath: string, frame: number): Promise<Buffer> {
+  const result = await executeFile('ffmpeg', [
+    '-v', 'error', '-i', videoPath, '-vf', `select='eq(n,${frame})',format=gray`,
+    '-frames:v', '1', '-f', 'rawvideo', 'pipe:1',
+  ], { encoding: null, maxBuffer: 320 * 180 * 2 });
+  return Buffer.from(result.stdout);
+}
+
+function rotatedFrameDifference(
+  reference: Uint8Array,
+  candidate: Uint8Array,
+  width: number,
+  height: number,
+  degrees: number,
+): number {
+  const radians = degrees * Math.PI / 180;
+  const sin = Math.sin(radians);
+  const cos = Math.cos(radians);
+  const centerX = (width - 1) / 2;
+  const centerY = (height - 1) / 2;
+  let difference = 0;
+  let samples = 0;
+  for (let y = 16; y < height - 16; y += 1) {
+    for (let x = 16; x < width - 16; x += 1) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const candidateX = Math.round(centerX + cos * dx - sin * dy);
+      const candidateY = Math.round(centerY + sin * dx + cos * dy);
+      if (candidateX < 0 || candidateX >= width || candidateY < 0 || candidateY >= height) continue;
+      difference += Math.abs(reference[y * width + x]! - candidate[candidateY * width + candidateX]!);
+      samples += 1;
+    }
+  }
+  return difference / samples;
+}
 
 suite('native retained service GPU e2e', () => {
   afterAll(async () => {
@@ -68,6 +104,18 @@ suite('native retained service GPU e2e', () => {
     await fs.mkdir(path.dirname(closurePath), { recursive: true });
     await fs.writeFile(closurePath, closureBytes);
     const hostCatalogId = nativeActorCatalogId(actor.kind, plan.actorMetadata[actor.id]?.tags ?? actor.tags);
+    const frontCamera: RenderSourceV3 = {
+      actorId: actor.id, sensorId: 'front-camera', outputName: 'front-rgb', modality: 'rgb',
+      transform: {
+        position: { x: 1.5, y: 1.8, z: 0 },
+        rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 },
+      },
+      attributes: {
+        width: 320, height: 180, fps: 12, horizontalFovDeg: 90, nearM: 0.05, farM: 1_000,
+        cameraProfile: CameraProfileSchema.parse({}),
+        profileSource: 'default',
+      },
+    };
     const intent: RenderIntentV1 = {
       schema: 'simforge.render-intent/v1',
       intentId: 'native-gpu-e2e',
@@ -77,19 +125,18 @@ suite('native retained service GPU e2e', () => {
         openScenario: { sha256: xoscSha256, sizeBytes: xosc.byteLength },
         map: { mapId: plan.mapId, revisionId: 'native-corpus', sha256: 'c'.repeat(64) },
       },
-      sensorHosts: [{ sourceId: 'front-rgb', actorId: actor.id, vehicleAsset: { catalogAssetId: hostCatalogId } }],
+      sensorHosts: ['front-rgb', 'front-rgb-roll'].map((sourceId) => ({
+        sourceId, actorId: actor.id, vehicleAsset: { catalogAssetId: hostCatalogId },
+      })),
       renderSpec: {
         schema: 'simforge.render-spec/v3',
-        sources: [{
-          actorId: actor.id, sensorId: 'front-camera', outputName: 'front-rgb', modality: 'rgb',
+        sources: [frontCamera, {
+          ...frontCamera,
+          sensorId: 'front-camera-roll',
+          outputName: 'front-rgb-roll',
           transform: {
-            position: { x: 1.5, y: 1.8, z: 0 },
-            rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 },
-          },
-          attributes: {
-            width: 320, height: 180, fps: 12, horizontalFovDeg: 90, nearM: 0.05, farM: 1_000,
-            cameraProfile: CameraProfileSchema.parse({}),
-            profileSource: 'default',
+            ...frontCamera.transform,
+            rotation: { ...frontCamera.transform.rotation, rollRad: 10 * Math.PI / 180 },
           },
         }],
         clip: { startSeconds: clipStart, endSeconds: clipEnd },
@@ -133,6 +180,19 @@ suite('native retained service GPU e2e', () => {
       '-of', 'json', path.join(output, video!.relativePath),
     ])).stdout) as { streams: Array<{ codec_name: string; pix_fmt: string; nb_frames: string }> };
     expect(probe.streams[0]).toMatchObject({ codec_name: 'h264', pix_fmt: 'yuv420p', nb_frames: '24' });
+    const baselineVideo = manifest.artifacts.find((artifact) => artifact.identity.sensorId === 'front-camera');
+    const rolledVideo = manifest.artifacts.find((artifact) => artifact.identity.sensorId === 'front-camera-roll');
+    expect(baselineVideo?.identity.role).toBe('video');
+    expect(rolledVideo?.identity.role).toBe('video');
+    const baselineFrame = await grayVideoFrame(path.join(output, baselineVideo!.relativePath), 12);
+    const rolledFrame = await grayVideoFrame(path.join(output, rolledVideo!.relativePath), 12);
+    expect(baselineFrame).toHaveLength(320 * 180);
+    expect(rolledFrame).toHaveLength(320 * 180);
+    const alignedHorizon = rotatedFrameDifference(baselineFrame, rolledFrame, 320, 180, 10);
+    const flatHorizon = rotatedFrameDifference(baselineFrame, rolledFrame, 320, 180, 0);
+    const oppositeHorizon = rotatedFrameDifference(baselineFrame, rolledFrame, 320, 180, -10);
+    expect(alignedHorizon).toBeLessThan(flatHorizon * 0.8);
+    expect(alignedHorizon).toBeLessThan(oppositeHorizon * 0.7);
     const trace = JSON.parse(await fs.readFile(path.join(output, 'trace/native-trace.json'), 'utf8')) as {
       frames: Array<{ actors: Array<{ id: string; transform: { position: number[] } }> }>;
     };

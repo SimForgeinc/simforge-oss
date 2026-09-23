@@ -1,7 +1,6 @@
 import { CameraProfileSchema, type RenderIntentV1, type RenderSourceV3 } from '@simforge-oss/scenario';
 import { describe, expect, it } from 'vitest';
 
-import { FULL_MOUNT_ROTATION_APPROXIMATION } from '../capabilities.js';
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, PINNED_ACTOR_ASSETS_DIGEST, PINNED_ACTOR_ASSETS_SIZE_BYTES } from './actor-assets.js';
 import {
   NativeRenderManifestSchema,
@@ -122,10 +121,10 @@ describe('native run expectations', () => {
       cameraProfiles: [{
         actorId: 'ego', sensorId: 'slow', outputName: 'ego-slow',
         requested: profile, effective: null,
-        approximations: [FULL_MOUNT_ROTATION_APPROXIMATION],
+        approximations: [],
         differences: ['cameraProfile: not applied by cinematic review capture'],
       }],
-      warnings: [FULL_MOUNT_ROTATION_APPROXIMATION.reason],
+      warnings: [],
     });
 
     expect(parsed.cameraProfiles[0]).toMatchObject({
@@ -134,9 +133,9 @@ describe('native run expectations', () => {
         encoding: { transfer: 'srgb', bitDepth: 8 },
       },
       effective: null,
-      approximations: [FULL_MOUNT_ROTATION_APPROXIMATION],
+      approximations: [],
     });
-    expect(parsed.warnings).toContain(FULL_MOUNT_ROTATION_APPROXIMATION.reason);
+    expect(parsed.warnings).toEqual([]);
   });
 
   it('records the generic profile as effective for dataset sensor capture', () => {
@@ -148,7 +147,7 @@ describe('native run expectations', () => {
       cameraProfiles: [{
         actorId: 'ego', sensorId: 'slow', outputName: 'ego-slow',
         requested: profile, effective: profile,
-        approximations: [FULL_MOUNT_ROTATION_APPROXIMATION],
+        approximations: [],
         differences: [],
       }],
     });

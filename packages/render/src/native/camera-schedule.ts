@@ -17,6 +17,7 @@ export interface NativeSensorAttach {
   /** Degrees, CARLA sense (clockwise from above); the service subtracts it. */
   readonly yawDeg: number;
   readonly pitchDeg: number;
+  readonly rollDeg: number;
   /**
    * Keep the host's own geometry in this view. A rigid rig mount sits inside
    * the body shell and must not see it; the trailing chase camera exists to.
@@ -91,6 +92,7 @@ function attachment(source: RenderSourceV3, actorId: string, pitchOffsetDeg = 0)
     offsetM: [mount.x, -mount.z, mount.y],
     yawDeg: -source.transform.rotation.yawRad * 180 / Math.PI,
     pitchDeg: source.transform.rotation.pitchRad * 180 / Math.PI + pitchOffsetDeg,
+    rollDeg: -source.transform.rotation.rollRad * 180 / Math.PI,
     hostVisible: source.sensorId === PRONTO_CHASE_CAMERA_SENSOR_ID,
   };
 }

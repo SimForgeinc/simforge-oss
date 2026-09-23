@@ -35,18 +35,13 @@ export const EngineCapabilitySchema = z.enum([
   'camera.output.linear_rgb',
   'camera.output.processed_rgb',
   'camera.noise.ptc',
+  'full-mount-rotation',
 ]);
 
 export const EngineCapabilityApproximationSchema = z.strictObject({
   capability: z.literal('full-mount-rotation'),
   support: z.literal('approximated'),
   reason: z.string().min(1),
-});
-
-export const FULL_MOUNT_ROTATION_APPROXIMATION = Object.freeze({
-  capability: 'full-mount-rotation' as const,
-  support: 'approximated' as const,
-  reason: 'roll dropped by SceneApp::set_pose (KNOWLEDGE-9f3d54a8)',
 });
 
 export const EngineCapabilityDeclarationSchema = z.strictObject({

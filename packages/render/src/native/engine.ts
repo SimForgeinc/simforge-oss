@@ -9,7 +9,6 @@ import type { Readable, Writable } from 'node:stream';
 
 import {
   ENGINE_CAPABILITIES_V1_SCHEMA,
-  FULL_MOUNT_ROTATION_APPROXIMATION,
   hashFile,
   scheduleFrameMicros,
   type EngineCapabilityDeclaration,
@@ -105,9 +104,9 @@ const CAPABILITIES: EngineCapabilityDeclaration = {
     'camera.projection.pinhole',
     'camera.shutter.global',
     'camera.output.linear_rgb',
+    'full-mount-rotation',
     'map.static_semantics',
   ],
-  approximations: [FULL_MOUNT_ROTATION_APPROXIMATION],
   modalities: ['rgb', 'lidar', 'radar'],
   limits: {
     maxSimultaneousSensors: 64,
@@ -498,9 +497,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           outputName: source.outputName,
           requested: source.attributes.cameraProfile,
           ...resolveEffectiveCameraProfile(source.attributes.cameraProfile, captureProfile.profile),
-          approximations: [FULL_MOUNT_ROTATION_APPROXIMATION],
         }] : []),
-        warnings: [FULL_MOUNT_ROTATION_APPROXIMATION.reason],
+        warnings: [],
         videos: videoRecords,
       }));
       const nativeManifestDigest = await hashFile(nativeManifestPath);
@@ -542,10 +540,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         startedAt,
         completedAt: new Date().toISOString(),
         artifacts,
-        warnings: [{
-          code: 'camera.full-mount-rotation.approximated',
-          message: FULL_MOUNT_ROTATION_APPROXIMATION.reason,
-        }],
+        warnings: [],
       };
     },
   };

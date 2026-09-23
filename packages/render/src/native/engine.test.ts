@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { CameraProfileSchema, type RenderIntentV1 } from '@simforge-oss/scenario';
 
 import {
-  FULL_MOUNT_ROTATION_APPROXIMATION,
   UnsupportedRenderIntentError,
   assertEngineSupportsIntent,
 } from '../capabilities.js';
@@ -72,11 +71,12 @@ describe('native retained engine adapter', () => {
     });
     expect(engine.capabilities.capabilities).toEqual(expect.arrayContaining([
       'sensor.rgb', 'sensor.lidar', 'sensor.radar', 'artifact.video', 'artifact.manifest', 'artifact.trace', 'artifact.sensor_archive',
+      'full-mount-rotation',
     ]));
     expect(engine.capabilities.capabilities).not.toEqual(expect.arrayContaining([
       'sensor.depth', 'sensor.semantic', 'sensor.instance',
     ]));
-    expect(engine.capabilities.approximations).toContainEqual(FULL_MOUNT_ROTATION_APPROXIMATION);
+    expect(engine.capabilities.approximations).toBeUndefined();
     expect(assertEngineSupportsIntent(engine.capabilities, intent)).toEqual({ warnings: [] });
   });
 

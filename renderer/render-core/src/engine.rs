@@ -3887,16 +3887,12 @@ impl SceneApp {
         Ok(())
     }
 
-    /// Set the pose of a registered camera group (applies to RGB + ID cams).
-    pub fn set_pose(&mut self, sensor_id: &str, eye: &[f32; 3], target: &[f32; 3]) -> Result<()> {
-        let eye = Vec3::from_slice(eye);
-        let target = Vec3::from_slice(target);
+    fn set_camera_transform(&mut self, sensor_id: &str, transform: Transform) -> Result<()> {
         let group = self
             .groups
             .iter()
             .find(|g| g.spec.sensor_id == sensor_id)
             .ok_or_else(|| anyhow::anyhow!("unknown sensor {sensor_id}"))?;
-        let transform = Transform::from_translation(eye).looking_at(target, Vec3::Y);
         self.scene_revision += 1;
         let world = self.app.world_mut();
         if let Some(mut t) = world.get_mut::<Transform>(group.rgb_entity) {
@@ -3908,6 +3904,26 @@ impl SceneApp {
             }
         }
         Ok(())
+    }
+
+    /// Set the eye/target pose of a registered camera group.
+    pub fn set_pose(&mut self, sensor_id: &str, eye: &[f32; 3], target: &[f32; 3]) -> Result<()> {
+        let transform = Transform::from_translation(Vec3::from_slice(eye))
+            .looking_at(Vec3::from_slice(target), Vec3::Y);
+        self.set_camera_transform(sensor_id, transform)
+    }
+
+    /// Set the full world pose of a registered camera group, preserving roll.
+    pub fn set_camera_pose(
+        &mut self,
+        sensor_id: &str,
+        position: &[f32; 3],
+        rotation: Quat,
+    ) -> Result<()> {
+        self.set_camera_transform(
+            sensor_id,
+            Transform::from_translation(Vec3::from_slice(position)).with_rotation(rotation),
+        )
     }
 
     /// Unregister a camera group: its cameras and readback targets are

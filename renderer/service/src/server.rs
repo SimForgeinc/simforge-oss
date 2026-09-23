@@ -887,15 +887,18 @@ fn actor_color(actor: &ActorState, class: &str) -> Result<[f32; 3], String> {
     Ok([color.red, color.green, color.blue])
 }
 
+fn camera_rotation(mount_rotation: Quat) -> Quat {
+    mount_rotation * Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2)
+}
 
 /// Resolve a camera pose: explicit eye/target, or rigid attachment against
 /// the current scene frame.
 fn resolve_pose(
     state: &ServiceState,
     cam: &ServiceCamera,
-) -> Result<([f32; 3], [f32; 3]), String> {
+) -> Result<([f32; 3], [f32; 3], Option<Quat>), String> {
     let Some(attach) = &cam.attach else {
-        return Ok((cam.eye, cam.target));
+        return Ok((cam.eye, cam.target, None));
     };
     let mount=resolve_sensor_mount(state,attach)?;
     let target=if attach.look_at_actor {
@@ -903,7 +906,8 @@ fn resolve_pose(
     } else {
         mount.origin+50.0*(mount.rotation*Vec3::X)
     };
-    Ok((mount.origin.to_array(),target.to_array()))
+    let rotation=(!attach.look_at_actor).then(|| camera_rotation(mount.rotation));
+    Ok((mount.origin.to_array(),target.to_array(),rotation))
 }
 
 struct ResolvedSensorMount {
@@ -931,14 +935,14 @@ fn resolve_sensor_mount(
                 attach.actor_id
             )
         })?;
-    let yaw = quat_yaw(&actor.transform.rotation);
     let position = actor.transform.position;
     let actor_y = actor_base_y(
         position[1],
         frame.ground_y,
         state.app.ground_at(position[0], position[2]),
     );
-    let actor_rotation = Quat::from_rotation_y(yaw);
+    let [qx,qy,qz,qw] = actor.transform.rotation;
+    let actor_rotation = Quat::from_xyzw(qx,qy,qz,qw).normalize();
     // Wire mount: forward/right/up. Canonical sensor: forward/up/right.
     let local_offset = Vec3::new(
         attach.offset_m[0],
@@ -1033,11 +1037,12 @@ fn sync_rig(state: &mut ServiceState, cameras: &[ServiceCamera]) -> Result<(), S
             .app
             .set_camera_host(&cam.sensor_id, host)
             .map_err(|error| format!("set host: {error:#}"))?;
-        let (eye, target) = resolve_pose(state, cam)?;
-        state
-            .app
-            .set_pose(&cam.sensor_id, &eye, &target)
-            .map_err(|error| format!("set pose: {error:#}"))?;
+        let (eye, target, rotation) = resolve_pose(state, cam)?;
+        match rotation {
+            Some(rotation) => state.app.set_camera_pose(&cam.sensor_id,&eye,rotation),
+            None => state.app.set_pose(&cam.sensor_id,&eye,&target),
+        }
+        .map_err(|error| format!("set pose: {error:#}"))?;
         if index == 0 {
             auto_meter(state, cam, &eye, &target);
         }
@@ -1785,14 +1790,56 @@ fn async_export_pngs(dir: &str, tick_id: u64, payloads: &[(String, String, u32, 
 #[cfg(test)]
 mod tests {
     use super::{
-        actor_base_y, actor_color, capture_keys, instance_coverage, parse_bundle_passes,
+        actor_base_y, actor_color, camera_rotation, capture_keys, instance_coverage, parse_bundle_passes,
         row_stride, CombinedSensorScene,
     };
-    use crate::proto::ServiceCamera;
+    use crate::proto::{CameraAttach, ServiceCamera};
     use crate::scene::{ActorState, ActorTransform};
     use bevy::math::{Quat, Vec3};
     use sensors::bvh::{RaycastScene, Tri};
     use sensors::taxonomy::SemanticClass;
+
+    #[test]
+    fn camera_attach_roll_reaches_the_full_camera_pose() {
+        let attach = CameraAttach {
+            actor_id: "ego".into(),
+            offset_m: [0.0; 3],
+            yaw_deg: 0.0,
+            pitch_deg: 0.0,
+            roll_deg: 10.0,
+            look_at_actor: false,
+            host_visible: false,
+        };
+        let mount_rotation = render_core::coordinates::source_to_bevy(
+            render_core::coordinates::LengthWidthHeight::UNIT,
+            render_core::coordinates::SourceRotation::MountYawPitchRoll {
+                parent_rotation: Quat::IDENTITY,
+                yaw: attach.yaw_deg.to_radians(),
+                pitch: attach.pitch_deg.to_radians(),
+                roll: attach.roll_deg.to_radians(),
+            },
+            render_core::coordinates::FrameBasis::Rig,
+        )
+        .rotation;
+        let camera_pose_rotation = camera_rotation(mount_rotation);
+        let up = camera_pose_rotation * Vec3::Y;
+        assert!(up.abs_diff_eq(
+            Vec3::new(
+                0.0,
+                10_f32.to_radians().cos(),
+                10_f32.to_radians().sin(),
+            ),
+            1e-6,
+        ));
+        assert!((camera_pose_rotation * -Vec3::Z).abs_diff_eq(Vec3::X, 1e-6));
+
+        let production_source = include_str!("server.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        assert!(production_source.contains("roll: attach.roll_deg.to_radians()"));
+        assert!(production_source.contains("set_camera_pose(&cam.sensor_id,&eye,rotation)"));
+    }
 
     #[test]
     fn coverage_counts_nonzero_rgb_and_ignores_alpha_and_padding() {

@@ -57,4 +57,20 @@ describe('native ego-mounted camera schedule', () => {
     expect(schedule[1]![0]!.target[2]).toBeCloseTo(-34);
     expect(schedule[1]![0]!.eye).not.toEqual(schedule[0]![0]!.eye);
   });
+
+  it('reflects authored roll into the x-forward, y-right, z-up attachment', () => {
+    const schedule = createNativeCameraSchedule(
+      [{
+        ...source,
+        transform: {
+          ...source.transform,
+          rotation: { yawRad: 0, pitchRad: 0, rollRad: 10 * Math.PI / 180 },
+        },
+      }],
+      [host],
+      [state(0, [10, 2, 20], 0)],
+    );
+
+    expect(schedule[0]![0]!.attach.rollDeg).toBeCloseTo(-10);
+  });
 });
