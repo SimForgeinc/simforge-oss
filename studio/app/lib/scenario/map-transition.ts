@@ -126,7 +126,7 @@ type VersionRow = {
 
 async function readVersion(mapVersionId: string): Promise<VersionRow | null> {
   return queryOne<VersionRow>(
-    `SELECT id, label, created_at::text AS created_at, source_map_asset_id, xodr_sha256,
+    `SELECT id, label, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at, source_map_asset_id, xodr_sha256,
             descriptor->>'xodrGeometrySha256' AS geometry_sha256, retired_at IS NOT NULL AS retired
        FROM simforge.map_versions WHERE id = :id`,
     { id: mapVersionId },

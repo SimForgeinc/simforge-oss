@@ -1,11 +1,11 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { colors, space, stroke } from "../../../stylex/tokens.stylex";
+import { colors, layout, space, stroke } from "../../../stylex/tokens.stylex";
 
 /** Layout of the before/after view. */
 export const styles = stylex.create({
   body: { display: "grid", gap: space.s3 },
-  panes: { display: "grid", gridTemplateColumns: { default: "minmax(0, 1fr)", "@media (min-width: 900px)": "minmax(0, 1fr) minmax(0, 1fr)" }, gap: space.s3 },
+  panes: { display: "grid", gridTemplateColumns: { default: "minmax(0, 1fr)", [layout.bpMd]: "minmax(0, 1fr) minmax(0, 1fr)" }, gap: space.s3 },
   pane: { display: "grid", gap: space.s1, minWidth: 0 },
   stage: { width: "100%", aspectRatio: "4 / 3" },
   summary: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: space.s2 },

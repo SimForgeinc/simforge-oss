@@ -55,7 +55,7 @@ export function EngineChangeBanner({
       });
       versionsChanged(pending.documentId);
       playback?.clearSimulationEngineChange?.();
-      setMessage({ tone: "positive", text: `Saved ${versionTitle(result.revision)} with the ${previous} motion. The draft continues with ${engineLabel(change.current.engineSemVer)}.` });
+      setMessage({ tone: "positive", text: `${versionTitle(result.revision)} keeps the ${previous} motion; the draft continues with ${engineLabel(change.current.engineSemVer)}. Both are in Versions.` });
     } catch (reason) {
       setMessage({ tone: "critical", text: reason instanceof Error ? reason.message : String(reason) });
     } finally {

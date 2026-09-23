@@ -8,7 +8,8 @@ import { layout, space } from "../../../stylex/tokens.stylex";
  */
 export const styles = stylex.create({
   sheet: { display: "flex", flexDirection: "column", overflow: "hidden" },
-  header: { display: "grid", gap: space.s2, paddingInline: space.s4, paddingBlock: space.s4 },
+  /** The sheet sits under the app's top bar (`layers.popover` < `layers.topbar`): clear it. */
+  header: { display: "grid", gap: space.s2, paddingInline: space.s4, paddingBlockStart: `calc(${space.s12} + ${space.s4})`, paddingBlockEnd: space.s4 },
   saveRow: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: space.s2, alignItems: "center" },
   body: { flex: "1 1 auto", minHeight: 0, overflowY: "auto" },
   state: { display: "grid", justifyItems: "start", gap: space.s2, paddingInline: space.s4, paddingBlock: space.s4 },

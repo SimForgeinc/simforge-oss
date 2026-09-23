@@ -236,7 +236,11 @@ export function useScenarioSession({
     void studioHost.projects.getDocument(documentId, abort.signal).then(async (nextDocument) => {
       if (abort.signal.aborted || generation !== fetchGenerationRef.current) return;
       // A draft pinned to a superseded or retired map version previews on exactly that version.
-      const withPin = await mapsIncludingPinnedVersion(studioHost, maps, nextDocument, abort.signal);
+      // Without the pinned version's descriptor, resolution below still fails loudly as before.
+      const withPin = await mapsIncludingPinnedVersion(studioHost, maps, nextDocument, abort.signal).catch((reason: unknown) => {
+        console.warn(`[scenario] pinned map version ${nextDocument.mapVersionId} could not be loaded: ${reason instanceof Error ? reason.message : String(reason)}`);
+        return maps;
+      });
       if (abort.signal.aborted || generation !== fetchGenerationRef.current) return;
       if (withPin.length !== maps.length) setMaps([...withPin] as typeof maps);
       const canonical = withCanonicalEditorTimeline(nextDocument);
