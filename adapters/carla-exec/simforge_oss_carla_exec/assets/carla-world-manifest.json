@@ -1,0 +1,4046 @@
+{
+ "cookedImage": {
+  "engineBinarySha256": "06644e3ab2307a0e77012d6c114b55ce1015d4d7a31c9444814c0f0d00887112",
+  "image": "ghcr.io/simforgeinc/carla-rr-maps:0.10.0-prod-graphics",
+  "imageId": "sha256:a2d11ebd7bca598e1d7117a23c221e3f8f79b44131041a6a56bdd3e4b80a64af",
+  "repoDigests": [
+   "435362779479.dkr.ecr.us-east-1.amazonaws.com/simcloud-carla-worker-dev@sha256:a2d11ebd7bca598e1d7117a23c221e3f8f79b44131041a6a56bdd3e4b80a64af",
+   "ghcr.io/simforgeinc/carla-rr-maps@sha256:a2d11ebd7bca598e1d7117a23c221e3f8f79b44131041a6a56bdd3e4b80a64af"
+  ],
+  "version": {
+   "Carla git hash": "ada75f920642e18cace0a9f85ecf9d4077ddb531",
+   "Content git hash": "518f45bd010c0dea7239b55eed27d01ba132934e",
+   "UnrealEngine git hash": "6cf20383302899026a5e777219ba4206afe47d38"
+  }
+ },
+ "legacySources": [
+  {
+   "carlaWorld": "El_Camino_Rd_Palo_Alto_CA",
+   "cookedXodrSha256": "97feee3176b26bfad8e96b58aa1682f54a89a0cd1651bc397b459b49b5db9665",
+   "note": "El Camino Road pre-2026-08-27 export; runtime digest and signal remap as approved in backend.py up to 0.1.0-rc.73",
+   "signalIdMap": {
+    "2230": "2233",
+    "2231": "2234",
+    "2232": "2235",
+    "2233": "2236",
+    "2234": "2237",
+    "2235": "2238",
+    "2236": "2239",
+    "2240": "2243",
+    "2241": "2244",
+    "2242": "2245",
+    "2245": "2248",
+    "2246": "2249",
+    "2247": "2251",
+    "2251": "2258",
+    "2252": "2259",
+    "2254": "2261",
+    "2262": "2269",
+    "2271": "2278",
+    "2272": "2279",
+    "2287": "2294",
+    "2288": "2295",
+    "2289": "2296"
+   },
+   "sourceXodrSha256": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a"
+  },
+  {
+   "carlaWorld": "Belmont_Office_Park_Belmont_CA",
+   "cookedXodrSha256": "a345d71de6cee091ee7d2ad4d0dfbf0a49db59ab9927cd22d4dd0dcd3e3eca4d",
+   "note": "Belmont pre-2026-08-27 export; runtime digest measured 2026-09-22 on the carla-rfs-munich-belmont 0.10.0 cook",
+   "signalIdMap": {},
+   "sourceXodrSha256": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63"
+  },
+  {
+   "carlaWorld": "Richmond_Field_Station_Richmond_CA",
+   "cookedXodrSha256": "1576737df37adb4caad6bef62210e060fcbf5c9a082ddd269515417616a36111",
+   "note": "Richmond Field Station pre-2026-08-27 export; runtime digest and signal remap as approved in backend.py up to 0.1.0-rc.73; the world also cooks three low-mounted pedestrian signals (444-446) the source never declares, forced Red and frozen",
+   "signalIdMap": {
+    "367": "423",
+    "368": "429",
+    "369": "422",
+    "370": "421",
+    "371": "430",
+    "372": "428",
+    "373": "431",
+    "374": "432"
+   },
+   "sourceXodrSha256": "80704cd1bc2563a63d5d365a5b0c43936222cef811f513e89129a8205e464643",
+   "unownedCookedSignalIds": [
+    "444",
+    "445",
+    "446"
+   ]
+  },
+  {
+   "carlaWorld": "Yale_St_Palo_Alto_CA",
+   "cookedXodrSha256": "c7e95b5eeb8a58fadec6b26b9e73c41753cd21428039f0d44e541bbef1644f6f",
+   "note": "Yale Street pre-2026-08-27 export (usmap_6e5559c1e7c4d9e4c93426f9d1e65f9e); 45 heads matched geometrically within 6 m, see artifacts/production-scenarios/signal-id-map-yale-street-*.json",
+   "signalIdMap": {
+    "1425": "1594",
+    "1426": "1595",
+    "1427": "1596",
+    "1428": "1597",
+    "1429": "1599",
+    "1430": "1598",
+    "1431": "1600",
+    "1432": "1601",
+    "1433": "1705",
+    "1435": "1602",
+    "1436": "1603",
+    "1437": "1604",
+    "1438": "1605",
+    "1440": "1607",
+    "1441": "1608",
+    "1442": "1606",
+    "1443": "1609",
+    "1444": "1610",
+    "1463": "1629",
+    "1464": "1628",
+    "1475": "1640",
+    "1476": "1641",
+    "1484": "1645",
+    "1511": "1672",
+    "1512": "1673",
+    "1514": "1675",
+    "1518": "1679",
+    "1519": "1680",
+    "1520": "1681",
+    "1523": "1683",
+    "1524": "1684",
+    "1526": "1685",
+    "1528": "1686",
+    "1529": "1706",
+    "1531": "1688",
+    "1532": "1691",
+    "1536": "1694",
+    "1538": "1695",
+    "1541": "1699",
+    "1542": "1698",
+    "1543": "1700",
+    "1545": "1702",
+    "1546": "1703",
+    "1549": "1693",
+    "1550": "1704"
+   },
+   "sourceXodrSha256": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5"
+  }
+ ],
+ "maps": [
+  {
+   "blocking": [
+    "road network differs: 507 source / 505 world roads unpaired, 0 structural and 63 topology mismatches, max deviations {'position': 0.004246, 'heading': 0.001333, 'elevation': 0.009339, 'superelevation': 0.0, 'laneOffset': 0.003984, 'laneWidth': 0.008444, 'length': 0.004661}"
+   ],
+   "carlaWorld": "Belmont_Office_Park_Belmont_CA",
+   "comparison": {
+    "controllers": {
+     "onlyRuntime": 0,
+     "onlySource": 0,
+     "paired": 0,
+     "runtime": 0,
+     "source": 0
+    },
+    "header": {
+     "boundsEqual": true,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-19T14:29:34",
+     "sourceDate": "2026-08-28T17:39:22"
+    },
+    "objects": {
+     "onlyRuntime": 46,
+     "onlySource": 131,
+     "runtime": 2059,
+     "source": 2144
+    },
+    "roads": {
+     "junctionConflicts": 0,
+     "junctions": {
+      "renumbered": 35,
+      "runtime": 80,
+      "source": 81
+     },
+     "linkMismatches": 63,
+     "maxDeviation": {
+      "elevation": 0.009339,
+      "heading": 0.001333,
+      "laneOffset": 0.003984,
+      "laneWidth": 0.008444,
+      "length": 0.004661,
+      "position": 0.004246,
+      "superelevation": 0.0
+     },
+     "paired": 179,
+     "renumbered": 165,
+     "reversed": [],
+     "runtime": 684,
+     "source": 686,
+     "structuralMismatches": {},
+     "unpairedRuntime": 505,
+     "unpairedSource": 507
+    },
+    "signals": {
+     "nonPhysicalGateRuntimeIds": [],
+     "paired": 11,
+     "renumbered": 11,
+     "runtime": 77,
+     "runtimeDynamic": 0,
+     "runtimeDynamicWithoutController": [],
+     "source": 81,
+     "sourceDynamic": 0,
+     "sourceHeadsWithoutCarlaActor": [],
+     "unpairedRuntimeDynamic": [],
+     "unpairedRuntimeStatic": 66,
+     "unpairedSourceDynamic": [],
+     "unpairedSourceStatic": 70
+    }
+   },
+   "cookedXodrSha256": "a345d71de6cee091ee7d2ad4d0dfbf0a49db59ab9927cd22d4dd0dcd3e3eca4d",
+   "decisionRequired": [],
+   "differences": [
+    "road ids renumbered (165 of 179)",
+    "junction ids renumbered (35)",
+    "signal ids renumbered (11)",
+    "static signs differ (70 only in source, 66 only in the world)",
+    "OpenDRIVE objects differ (2144 in source, 2059 in the world); the world renders its own cooked meshes",
+    "export date 2026-08-28T17:39:22 vs cooked 2026-06-19T14:29:34"
+   ],
+   "extraFiles": [],
+   "glb": {
+    "bytes": 2363798160,
+    "mtime": "2026-08-31T09:34:54.0000000000Z",
+    "name": "Belmont_Office_Park_Belmont_CA_GLB.glb",
+    "sha256": "84cd25007830e14988c48bd3157afff0f202cc0bd0addb34bcfe0f7c10bf1d3a"
+   },
+   "signalIdMap": {},
+   "simforge": {
+    "dev": {
+     "carlaMapName": null,
+     "label": "Belmont Research Center",
+     "mapAssetId": "belmont-research-center",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 21:53:03.622356+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_dae684d148341b9af7baa3fffeec6fff",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 21:59:56.278094+00",
+       "dependents": {
+        "documents": 982,
+        "drafts": 982,
+        "revisions": 3,
+        "simulationPreviews": 9
+       },
+       "id": "usmap_03acd4170256057b3f3bf4a9e6eea5c6",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    },
+    "staging": {
+     "carlaMapName": null,
+     "label": "Belmont Research Center",
+     "mapAssetId": "belmont-research-center",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 23:53:29.665979+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_dae684d148341b9af7baa3fffeec6fff",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 23:55:00.086217+00",
+       "dependents": {
+        "documents": 973,
+        "drafts": 973,
+        "revisions": 4,
+        "simulationPreviews": 5
+       },
+       "id": "usmap_03acd4170256057b3f3bf4a9e6eea5c6",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    }
+   },
+   "sourceFolder": "Belmont_Office_Park_Belmont_CA",
+   "status": "needs-recook",
+   "worldMatch": {
+    "candidates": [
+     {
+      "iou": 1.0,
+      "world": "Belmont_Office_Park_Belmont_CA"
+     }
+    ],
+    "method": "geoReference+headerBoundsIoU"
+   },
+   "xodr": {
+    "bytes": 8484128,
+    "exportDate": "2026-08-28T17:39:22",
+    "geoReference": "+proj=tmerc +lat_0=37.5315582634145 +lon_0=-122.269893363296 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs",
+    "mtime": "2026-08-31T09:17:53.0000000000Z",
+    "name": "Belmont_Office_Park_Belmont_CA.xodr",
+    "sha256": "e4ec8cab3f9ce8c7faa4804348e1978e70d52acd5d0dcd0696b30e6d2d498e10"
+   }
+  },
+  {
+   "blocking": [
+    "header bounds differ",
+    "road network differs: 344 source / 347 world roads unpaired, 0 structural and 33 topology mismatches, max deviations {'position': 0.004533, 'heading': 0.000715, 'elevation': 0.000719, 'superelevation': 0.0, 'laneOffset': 0.001938, 'laneWidth': 0.004224, 'length': 0.006958}",
+    "76 dynamic source signals have no counterpart in the world",
+    "20 source signal controllers are not in the world"
+   ],
+   "carlaWorld": "Di_Rosa_SF",
+   "comparison": {
+    "controllers": {
+     "onlyRuntime": 22,
+     "onlySource": 20,
+     "paired": 0,
+     "runtime": 22,
+     "source": 20
+    },
+    "header": {
+     "boundsEqual": false,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-19T12:25:47",
+     "sourceDate": "2026-08-28T11:17:16"
+    },
+    "objects": {
+     "onlyRuntime": 494,
+     "onlySource": 34,
+     "runtime": 3193,
+     "source": 2733
+    },
+    "roads": {
+     "junctionConflicts": 0,
+     "junctions": {
+      "renumbered": 14,
+      "runtime": 34,
+      "source": 33
+     },
+     "linkMismatches": 33,
+     "maxDeviation": {
+      "elevation": 0.000719,
+      "heading": 0.000715,
+      "laneOffset": 0.001938,
+      "laneWidth": 0.004224,
+      "length": 0.006958,
+      "position": 0.004533,
+      "superelevation": 0.0
+     },
+     "paired": 89,
+     "renumbered": 88,
+     "reversed": [
+      "1055"
+     ],
+     "runtime": 436,
+     "source": 433,
+     "structuralMismatches": {},
+     "unpairedRuntime": 347,
+     "unpairedSource": 344
+    },
+    "signals": {
+     "nonPhysicalGateRuntimeIds": [
+      "1596"
+     ],
+     "paired": 88,
+     "renumbered": 88,
+     "runtime": 488,
+     "runtimeDynamic": 104,
+     "runtimeDynamicWithoutController": [
+      "1571"
+     ],
+     "source": 499,
+     "sourceDynamic": 98,
+     "sourceHeadsWithoutCarlaActor": [],
+     "unpairedRuntimeDynamic": [
+      "1389",
+      "1390",
+      "1391",
+      "1392",
+      "1395",
+      "1396",
+      "1397",
+      "1399",
+      "1400",
+      "1401",
+      "1402",
+      "1403",
+      "1405",
+      "1407",
+      "1408",
+      "1409",
+      "1410",
+      "1411",
+      "1412",
+      "1414",
+      "1415",
+      "1416",
+      "1417",
+      "1418",
+      "1420",
+      "1427",
+      "1428",
+      "1430",
+      "1437",
+      "1438",
+      "1439",
+      "1440",
+      "1441",
+      "1443",
+      "1444",
+      "1445",
+      "1446",
+      "1447",
+      "1467",
+      "1469",
+      "1487",
+      "1502",
+      "1547",
+      "1550",
+      "1552",
+      "1553",
+      "1554",
+      "1556",
+      "1557",
+      "1558",
+      "1559",
+      "1561",
+      "1562",
+      "1563",
+      "1565",
+      "1566",
+      "1567",
+      "1568",
+      "1569",
+      "1570",
+      "1571",
+      "1579",
+      "1580",
+      "1581",
+      "1582",
+      "1583",
+      "1584",
+      "1585",
+      "1586",
+      "1587",
+      "1588",
+      "1589",
+      "1590",
+      "1591",
+      "1592",
+      "1593",
+      "1594",
+      "1595",
+      "1597",
+      "1598",
+      "1599",
+      "1600"
+     ],
+     "unpairedRuntimeStatic": 318,
+     "unpairedSourceDynamic": [
+      "1474",
+      "1475",
+      "1476",
+      "1477",
+      "1480",
+      "1481",
+      "1482",
+      "1484",
+      "1485",
+      "1486",
+      "1487",
+      "1488",
+      "1490",
+      "1492",
+      "1493",
+      "1494",
+      "1495",
+      "1496",
+      "1497",
+      "1499",
+      "1500",
+      "1501",
+      "1502",
+      "1503",
+      "1505",
+      "1512",
+      "1513",
+      "1515",
+      "1522",
+      "1523",
+      "1524",
+      "1525",
+      "1526",
+      "1528",
+      "1529",
+      "1530",
+      "1531",
+      "1532",
+      "1552",
+      "1554",
+      "1572",
+      "1587",
+      "1632",
+      "1635",
+      "1637",
+      "1638",
+      "1639",
+      "1641",
+      "1642",
+      "1643",
+      "1644",
+      "1646",
+      "1647",
+      "1648",
+      "1650",
+      "1651",
+      "1652",
+      "1653",
+      "1654",
+      "1655",
+      "1656",
+      "1664",
+      "1665",
+      "1666",
+      "1667",
+      "1668",
+      "1669",
+      "1670",
+      "1671",
+      "1672",
+      "1673",
+      "1674",
+      "1676",
+      "1677",
+      "1678",
+      "1679"
+     ],
+     "unpairedSourceStatic": 335
+    }
+   },
+   "cookedXodrSha256": "22b92a6aa0757d4946e4201a3c6f9dfcd595ee6286517e0a1203d301fc3be171",
+   "decisionRequired": [
+    "the world has 82 dynamic signals the source does not declare",
+    "the world has 22 signal controllers the source does not declare"
+   ],
+   "differences": [
+    "road ids renumbered (88 of 89)",
+    "1 roads exported in the opposite direction (same reference line and lanes): 1055->1076",
+    "junction ids renumbered (14)",
+    "signal ids renumbered (88)",
+    "static signs differ (335 only in source, 318 only in the world)",
+    "1 dynamic heads have no signal controller (in the world and the source), so CARLA spawns no actor for them; a signal plan that drives them fails at bind_signals: ?->1571",
+    "OpenDRIVE objects differ (2733 in source, 3193 in the world); the world renders its own cooked meshes",
+    "export date 2026-08-28T11:17:16 vs cooked 2026-06-19T12:25:47"
+   ],
+   "extraFiles": [],
+   "glb": {
+    "bytes": 2630552648,
+    "mtime": "2026-08-31T09:17:44.0000000000Z",
+    "name": "Di_Rosa_SF.glb",
+    "sha256": "ee0870bc1b6319c91058cb28df1ab206053947b0303cc1e321f1068c4177b906"
+   },
+   "signalIdMap": {},
+   "simforge": {
+    "dev": {
+     "carlaMapName": null,
+     "label": "Di Rosa Sf",
+     "mapAssetId": "di-rosa-sf",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 21:54:06.696408+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_ee37ccadb19874681e46dfb2a8625496",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 22:12:08.539163+00",
+       "dependents": {
+        "documents": 14,
+        "drafts": 14,
+        "revisions": 0,
+        "simulationPreviews": 4
+       },
+       "id": "usmap_d3ae297f295df19f9e5ed61b1d36368b",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    },
+    "staging": {
+     "carlaMapName": null,
+     "label": "Di Rosa Sf",
+     "mapAssetId": "di-rosa-sf",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 23:56:03.677912+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_ee37ccadb19874681e46dfb2a8625496",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 23:58:26.938361+00",
+       "dependents": {
+        "documents": 8,
+        "drafts": 8,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_d3ae297f295df19f9e5ed61b1d36368b",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    }
+   },
+   "sourceFolder": "Di_Rosa_SF",
+   "status": "needs-recook",
+   "worldMatch": {
+    "candidates": [
+     {
+      "iou": 0.999893,
+      "world": "Di_Rosa_SF"
+     }
+    ],
+    "method": "geoReference+headerBoundsIoU"
+   },
+   "xodr": {
+    "bytes": 6014342,
+    "exportDate": "2026-08-28T11:17:16",
+    "geoReference": "+proj=tmerc +lat_0=37.7529245416892 +lon_0=-122.390225306153 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs",
+    "mtime": "2026-08-31T08:47:17.0000000000Z",
+    "name": "Di_Rosa_SF_no_barriers_26_final (2).xodr",
+    "sha256": "112ad93fdd020c552d3fb6f77fd6732d0671ade6cc1faee8b506cde5c8df9bd6"
+   }
+  },
+  {
+   "blocking": [
+    "header bounds differ",
+    "road network differs: 446 source / 455 world roads unpaired, 0 structural and 45 topology mismatches, max deviations {'position': 0.004939, 'heading': 0.000894, 'elevation': 0.009789, 'superelevation': 0.0, 'laneOffset': 3e-06, 'laneWidth': 0.006453, 'length': 0.004554}",
+    "35 dynamic source signals have no counterpart in the world",
+    "4 source signal controllers are not in the world"
+   ],
+   "carlaWorld": "El_Camino_Rd_Palo_Alto_CA",
+   "comparison": {
+    "controllers": {
+     "onlyRuntime": 4,
+     "onlySource": 4,
+     "paired": 0,
+     "runtime": 4,
+     "source": 4
+    },
+    "header": {
+     "boundsEqual": false,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-19T16:21:53",
+     "sourceDate": "2026-08-28T17:41:50"
+    },
+    "objects": {
+     "onlyRuntime": 565,
+     "onlySource": 8,
+     "runtime": 1850,
+     "source": 1293
+    },
+    "roads": {
+     "junctionConflicts": 0,
+     "junctions": {
+      "renumbered": 18,
+      "runtime": 68,
+      "source": 72
+     },
+     "linkMismatches": 45,
+     "maxDeviation": {
+      "elevation": 0.009789,
+      "heading": 0.000894,
+      "laneOffset": 3e-06,
+      "laneWidth": 0.006453,
+      "length": 0.004554,
+      "position": 0.004939,
+      "superelevation": 0.0
+     },
+     "paired": 74,
+     "renumbered": 74,
+     "reversed": [
+      "141",
+      "151"
+     ],
+     "runtime": 529,
+     "source": 520,
+     "structuralMismatches": {},
+     "unpairedRuntime": 455,
+     "unpairedSource": 446
+    },
+    "signals": {
+     "nonPhysicalGateRuntimeIds": [],
+     "paired": 12,
+     "renumbered": 12,
+     "runtime": 88,
+     "runtimeDynamic": 31,
+     "runtimeDynamicWithoutController": [
+      "2250",
+      "2252",
+      "2253",
+      "2271",
+      "2272",
+      "2274",
+      "2276",
+      "2277"
+     ],
+     "source": 97,
+     "sourceDynamic": 40,
+     "sourceHeadsWithoutCarlaActor": [],
+     "unpairedRuntimeDynamic": [
+      "2233",
+      "2234",
+      "2235",
+      "2236",
+      "2239",
+      "2243",
+      "2244",
+      "2245",
+      "2248",
+      "2249",
+      "2250",
+      "2251",
+      "2252",
+      "2253",
+      "2254",
+      "2261",
+      "2269",
+      "2271",
+      "2272",
+      "2274",
+      "2276",
+      "2277",
+      "2278",
+      "2294",
+      "2295",
+      "2296"
+     ],
+     "unpairedRuntimeStatic": 50,
+     "unpairedSourceDynamic": [
+      "1001",
+      "1002",
+      "1003",
+      "1004",
+      "1005",
+      "1006",
+      "1007",
+      "1014",
+      "1022",
+      "1024",
+      "1025",
+      "1027",
+      "1029",
+      "1030",
+      "1031",
+      "1047",
+      "1048",
+      "1049",
+      "1065",
+      "1066",
+      "1067",
+      "1068",
+      "1069",
+      "1070",
+      "1071",
+      "1072",
+      "1073",
+      "986",
+      "987",
+      "988",
+      "989",
+      "992",
+      "996",
+      "997",
+      "998"
+     ],
+     "unpairedSourceStatic": 50
+    }
+   },
+   "cookedXodrSha256": "97feee3176b26bfad8e96b58aa1682f54a89a0cd1651bc397b459b49b5db9665",
+   "decisionRequired": [
+    "the world has 26 dynamic signals the source does not declare",
+    "the world has 4 signal controllers the source does not declare"
+   ],
+   "differences": [
+    "road ids renumbered (74 of 74)",
+    "2 roads exported in the opposite direction (same reference line and lanes): 141->149, 151->143",
+    "junction ids renumbered (18)",
+    "signal ids renumbered (12)",
+    "static signs differ (50 only in source, 50 only in the world)",
+    "8 dynamic heads have no signal controller (in the world and the source), so CARLA spawns no actor for them; a signal plan that drives them fails at bind_signals: ?->2250, ?->2252, ?->2253, ?->2271, ?->2272, ?->2274, ?->2276, ?->2277",
+    "OpenDRIVE objects differ (1293 in source, 1850 in the world); the world renders its own cooked meshes",
+    "export date 2026-08-28T17:41:50 vs cooked 2026-06-19T16:21:53"
+   ],
+   "extraFiles": [],
+   "glb": {
+    "bytes": 1101062732,
+    "mtime": "2026-08-31T08:08:59.0000000000Z",
+    "name": "El_Camino_Rd_Palo_Alto_CA_GLB.glb",
+    "sha256": "c5aee79482c9a6554af208772c2027e753c16fecda1bb2b68d562563fa72227f"
+   },
+   "signalIdMap": {},
+   "simforge": {
+    "dev": {
+     "carlaMapName": null,
+     "label": "El Camino Road",
+     "mapAssetId": "el-camino-road",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 21:55:35.051736+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_4498974730482770127d4bea2079d637",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 21:56:33.553896+00",
+       "dependents": {
+        "documents": 833,
+        "drafts": 833,
+        "revisions": 3,
+        "simulationPreviews": 4
+       },
+       "id": "usmap_34209b2ae639f8aa5bc052c5f90432c5",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    },
+    "staging": {
+     "carlaMapName": null,
+     "label": "El Camino Road",
+     "mapAssetId": "el-camino-road",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-21 00:00:21.590277+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_4498974730482770127d4bea2079d637",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-21 00:01:09.449415+00",
+       "dependents": {
+        "documents": 827,
+        "drafts": 827,
+        "revisions": 4,
+        "simulationPreviews": 4
+       },
+       "id": "usmap_34209b2ae639f8aa5bc052c5f90432c5",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    }
+   },
+   "sourceFolder": "El_Camino_Rd_Palo_Alto_CA",
+   "status": "needs-recook",
+   "worldMatch": {
+    "candidates": [
+     {
+      "iou": 0.997876,
+      "world": "El_Camino_Rd_Palo_Alto_CA"
+     },
+     {
+      "iou": 0.055977,
+      "world": "Yale_St_Palo_Alto_CA"
+     },
+     {
+      "iou": 0.051848,
+      "world": "Page_Mill_Rd_Palo_Alto_CA"
+     }
+    ],
+    "method": "geoReference+headerBoundsIoU"
+   },
+   "xodr": {
+    "bytes": 5577715,
+    "exportDate": "2026-08-28T17:41:50",
+    "geoReference": "+proj=tmerc +lat_0=37.4100548676094 +lon_0=-122.154771275882 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs",
+    "mtime": "2026-08-31T07:54:30.0000000000Z",
+    "name": "El_Camino_Rd_Palo_Alto_CA.xodr",
+    "sha256": "e90cc708cc75f9c9eacac8e8831a63b258edf05033d02a22b6d005e4b34213e9"
+   }
+  },
+  {
+   "carlaWorld": null,
+   "extraFiles": [],
+   "glb": {
+    "bytes": 2244638864,
+    "mtime": "2026-09-02T12:06:14.0000000000Z",
+    "name": "Garching_Phase_1_2.glb",
+    "sha256": "318d85ec3b2d3f9bd88824d255b2d42e5c20415d711626adfff6b36faddef9ab"
+   },
+   "reason": "no cooked world shares this source's geoReference and extent",
+   "simforge": {
+    "dev": {
+     "carlaMapName": null,
+     "label": "Garching Phase 1 2",
+     "mapAssetId": "garching-phase-1-2",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 22:04:13.815041+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_c92d2fe947b36a59de538901d8aed2b9",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 22:57:30.486784+00",
+       "dependents": {
+        "documents": 5,
+        "drafts": 5,
+        "revisions": 0,
+        "simulationPreviews": 1
+       },
+       "id": "usmap_defdf138d63c7365e622157fb13dd634",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    },
+    "staging": {
+     "carlaMapName": null,
+     "label": "Garching Phase 1 2",
+     "mapAssetId": "garching-phase-1-2",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-21 00:03:01.269587+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_c92d2fe947b36a59de538901d8aed2b9",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-21 00:10:59.178843+00",
+       "dependents": {
+        "documents": 6,
+        "drafts": 6,
+        "revisions": 0,
+        "simulationPreviews": 1
+       },
+       "id": "usmap_defdf138d63c7365e622157fb13dd634",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    }
+   },
+   "sourceFolder": "Garching_Phase_1_2",
+   "status": "no-world",
+   "worldMatch": {
+    "candidates": [],
+    "method": "geoReference+headerBoundsIoU"
+   },
+   "xodr": {
+    "bytes": 13704739,
+    "exportDate": "2026-08-27T11:31:30",
+    "geoReference": "+proj=tmerc +lat_0=48.2554688997943 +lon_0=11.6522926105154 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs",
+    "mtime": "2026-09-02T06:41:18.0000000000Z",
+    "name": "Garching_Phase_1_2.xodr",
+    "sha256": "09d8e88639a31ad7752c3061cebd1756928c283c86e4446c388f1160388c4c5e"
+   }
+  },
+  {
+   "blocking": [
+    "header bounds differ",
+    "road network differs: 128 source / 124 world roads unpaired, 0 structural and 31 topology mismatches, max deviations {'position': 0.002434, 'heading': 1.3e-05, 'elevation': 0.0003, 'superelevation': 0.0, 'laneOffset': 0.0, 'laneWidth': 0.008144, 'length': 0.002434}",
+    "7 dynamic source signals have no counterpart in the world",
+    "4 source signal controllers are not in the world"
+   ],
+   "carlaWorld": "Richmond_Field_Station_Richmond_CA",
+   "comparison": {
+    "controllers": {
+     "onlyRuntime": 4,
+     "onlySource": 4,
+     "paired": 0,
+     "runtime": 4,
+     "source": 4
+    },
+    "header": {
+     "boundsEqual": false,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-22T13:16:13",
+     "sourceDate": "2026-08-28T17:53:23"
+    },
+    "objects": {
+     "onlyRuntime": 37,
+     "onlySource": 4,
+     "runtime": 688,
+     "source": 655
+    },
+    "roads": {
+     "junctionConflicts": 0,
+     "junctions": {
+      "renumbered": 21,
+      "runtime": 35,
+      "source": 35
+     },
+     "linkMismatches": 31,
+     "maxDeviation": {
+      "elevation": 0.0003,
+      "heading": 1.3e-05,
+      "laneOffset": 0.0,
+      "laneWidth": 0.008144,
+      "length": 0.002434,
+      "position": 0.002434,
+      "superelevation": 0.0
+     },
+     "paired": 99,
+     "renumbered": 85,
+     "reversed": [],
+     "runtime": 223,
+     "source": 227,
+     "structuralMismatches": {},
+     "unpairedRuntime": 124,
+     "unpairedSource": 128
+    },
+    "signals": {
+     "nonPhysicalGateRuntimeIds": [],
+     "paired": 13,
+     "renumbered": 13,
+     "runtime": 47,
+     "runtimeDynamic": 11,
+     "runtimeDynamicWithoutController": [],
+     "source": 55,
+     "sourceDynamic": 11,
+     "sourceHeadsWithoutCarlaActor": [],
+     "unpairedRuntimeDynamic": [
+      "423",
+      "429",
+      "431",
+      "432",
+      "444",
+      "445",
+      "446"
+     ],
+     "unpairedRuntimeStatic": 27,
+     "unpairedSourceDynamic": [
+      "422",
+      "428",
+      "430",
+      "431",
+      "438",
+      "439",
+      "440"
+     ],
+     "unpairedSourceStatic": 35
+    }
+   },
+   "cookedXodrSha256": "1576737df37adb4caad6bef62210e060fcbf5c9a082ddd269515417616a36111",
+   "decisionRequired": [
+    "the world has 7 dynamic signals the source does not declare",
+    "the world has 4 signal controllers the source does not declare"
+   ],
+   "differences": [
+    "road ids renumbered (85 of 99)",
+    "junction ids renumbered (21)",
+    "signal ids renumbered (13)",
+    "static signs differ (35 only in source, 27 only in the world)",
+    "OpenDRIVE objects differ (655 in source, 688 in the world); the world renders its own cooked meshes",
+    "export date 2026-08-28T17:53:23 vs cooked 2026-06-22T13:16:13"
+   ],
+   "extraFiles": [],
+   "glb": {
+    "bytes": 1632942336,
+    "mtime": "2026-08-31T10:15:19.0000000000Z",
+    "name": "Richmond_Field_Station_Richmond_CA_GLB.glb",
+    "sha256": "dc718925b9b01a1371eb14239b7fc88f97befc79615ecf0c392b359f836a11b5"
+   },
+   "signalIdMap": {},
+   "simforge": {
+    "dev": {
+     "carlaMapName": null,
+     "label": "Richmond Field Station",
+     "mapAssetId": "richmond-field-station",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 21:57:28.891744+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_b4dc32c72517efcae07108a5013ade5f",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 22:14:41.862601+00",
+       "dependents": {
+        "documents": 663,
+        "drafts": 663,
+        "revisions": 7,
+        "simulationPreviews": 9
+       },
+       "id": "usmap_a81a248d69e9b6fda3c5afee075ff83a",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    },
+    "staging": {
+     "carlaMapName": null,
+     "label": "Richmond Field Station",
+     "mapAssetId": "richmond-field-station",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-21 00:13:41.254148+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_b4dc32c72517efcae07108a5013ade5f",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-21 00:14:59.001649+00",
+       "dependents": {
+        "documents": 649,
+        "drafts": 649,
+        "revisions": 1,
+        "simulationPreviews": 4
+       },
+       "id": "usmap_a81a248d69e9b6fda3c5afee075ff83a",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    }
+   },
+   "sourceFolder": "Richmond_Field_Station_Richmond_CA",
+   "status": "needs-recook",
+   "worldMatch": {
+    "candidates": [
+     {
+      "iou": 0.99958,
+      "world": "Richmond_Field_Station_Richmond_CA"
+     }
+    ],
+    "method": "geoReference+headerBoundsIoU"
+   },
+   "xodr": {
+    "bytes": 2101817,
+    "exportDate": "2026-08-28T17:53:23",
+    "geoReference": "+proj=tmerc +lat_0=37.9150891287087 +lon_0=-122.333308830857 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs",
+    "mtime": "2026-08-31T10:15:25.0000000000Z",
+    "name": "Richmond_Field_Station_Richmond_CA.xodr",
+    "sha256": "5b08367524edbc0c46cfb2f4cd77ef6a204f263bb14cf7e8f90a1fffde1c14d6"
+   }
+  },
+  {
+   "blocking": [],
+   "carlaWorld": "San_Ramon_Phase_1_P2",
+   "comparison": {
+    "controllers": {
+     "onlyRuntime": 0,
+     "onlySource": 0,
+     "paired": 20,
+     "runtime": 20,
+     "source": 20
+    },
+    "header": {
+     "boundsEqual": true,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-22T14:07:25",
+     "sourceDate": "2026-08-28T12:42:44"
+    },
+    "objects": {
+     "onlyRuntime": 32,
+     "onlySource": 32,
+     "runtime": 9902,
+     "source": 9902
+    },
+    "roads": {
+     "junctionConflicts": 0,
+     "junctions": {
+      "renumbered": 220,
+      "runtime": 283,
+      "source": 283
+     },
+     "linkMismatches": 0,
+     "maxDeviation": {
+      "elevation": 0.001348,
+      "heading": 0.001119,
+      "laneOffset": 0.000181,
+      "laneWidth": 0.001685,
+      "length": 0.004945,
+      "position": 0.004945,
+      "superelevation": 0.0
+     },
+     "paired": 2398,
+     "renumbered": 1453,
+     "reversed": [
+      "19709",
+      "19714"
+     ],
+     "runtime": 2398,
+     "source": 2398,
+     "structuralMismatches": {},
+     "unpairedRuntime": 0,
+     "unpairedSource": 0
+    },
+    "signals": {
+     "nonPhysicalGateRuntimeIds": [
+      "20712",
+      "20713",
+      "20714",
+      "20715",
+      "20716",
+      "20717",
+      "20718",
+      "20719",
+      "20720",
+      "20721",
+      "20722",
+      "20723",
+      "20724",
+      "20725",
+      "20726",
+      "20727",
+      "20728",
+      "20729",
+      "20730"
+     ],
+     "paired": 425,
+     "renumbered": 425,
+     "runtime": 425,
+     "runtimeDynamic": 106,
+     "runtimeDynamicWithoutController": [
+      "20435",
+      "20439",
+      "20451",
+      "20723"
+     ],
+     "source": 425,
+     "sourceDynamic": 106,
+     "sourceHeadsWithoutCarlaActor": [
+      "20421",
+      "20425",
+      "20437",
+      "20709"
+     ],
+     "unpairedRuntimeDynamic": [],
+     "unpairedRuntimeStatic": 0,
+     "unpairedSourceDynamic": [],
+     "unpairedSourceStatic": 0
+    }
+   },
+   "cookedXodrSha256": "ca540122c82407b41addf397dd204676ef218e0e052010334ef2aaf363feeffb",
+   "decisionRequired": [],
+   "differences": [
+    "road ids renumbered (1453 of 2398)",
+    "2 roads exported in the opposite direction (same reference line and lanes): 19709->19728, 19714->19736",
+    "junction ids renumbered (220)",
+    "signal ids renumbered (425)",
+    "4 dynamic heads have no signal controller (in the world and the source), so CARLA spawns no actor for them; a signal plan that drives them fails at bind_signals: 20421->20435, 20425->20439, 20437->20451, 20709->20723",
+    "OpenDRIVE objects differ (9902 in source, 9902 in the world); the world renders its own cooked meshes",
+    "export date 2026-08-28T12:42:44 vs cooked 2026-06-22T14:07:25"
+   ],
+   "extraFiles": [
+    {
+     "bytes": 52224985,
+     "duplicateOf": "San_ramon_Phase2/San_Ramon_Phase_2.xodr",
+     "mtime": "2026-08-31T09:35:30.0000000000Z",
+     "name": "San_Ramon_Phase_2.xodr",
+     "sha256": "c40e43731e4b4f5ab7c92e5ed9aec30452d58bfe2f17919fd1bd21fff67a6845"
+    }
+   ],
+   "glb": {
+    "bytes": 3068322048,
+    "mtime": "2026-08-31T10:02:12.0000000000Z",
+    "name": "San_Ramon_25_P2.glb",
+    "sha256": "7b952e87e39359c5cf7754ee1a9cda0ddbfb7a5e1246a3a03e01b2aa2ffd5c96"
+   },
+   "signalIdMap": {
+    "20292": "20306",
+    "20293": "20307",
+    "20294": "20308",
+    "20297": "20311",
+    "20298": "20312",
+    "20299": "20313",
+    "20300": "20314",
+    "20303": "20317",
+    "20304": "20318",
+    "20305": "20319",
+    "20306": "20320",
+    "20309": "20323",
+    "20310": "20324",
+    "20311": "20325",
+    "20312": "20326",
+    "20313": "20327",
+    "20314": "20328",
+    "20317": "20331",
+    "20321": "20335",
+    "20322": "20336",
+    "20323": "20337",
+    "20324": "20338",
+    "20325": "20339",
+    "20326": "20340",
+    "20330": "20344",
+    "20334": "20348",
+    "20336": "20350",
+    "20337": "20351",
+    "20341": "20355",
+    "20342": "20356",
+    "20343": "20357",
+    "20344": "20358",
+    "20345": "20359",
+    "20347": "20361",
+    "20348": "20362",
+    "20349": "20363",
+    "20350": "20364",
+    "20355": "20369",
+    "20359": "20373",
+    "20360": "20374",
+    "20361": "20375",
+    "20362": "20376",
+    "20366": "20380",
+    "20367": "20381",
+    "20369": "20383",
+    "20370": "20384",
+    "20374": "20388",
+    "20375": "20389",
+    "20376": "20390",
+    "20377": "20391",
+    "20378": "20392",
+    "20381": "20395",
+    "20382": "20396",
+    "20383": "20397",
+    "20384": "20398",
+    "20385": "20399",
+    "20389": "20403",
+    "20390": "20404",
+    "20391": "20405",
+    "20392": "20406",
+    "20393": "20407",
+    "20397": "20411",
+    "20398": "20412",
+    "20399": "20413",
+    "20403": "20417",
+    "20404": "20418",
+    "20405": "20419",
+    "20406": "20420",
+    "20407": "20421",
+    "20408": "20422",
+    "20409": "20423",
+    "20413": "20427",
+    "20414": "20428",
+    "20418": "20432",
+    "20419": "20433",
+    "20420": "20434",
+    "20421": "20435",
+    "20425": "20439",
+    "20426": "20440",
+    "20427": "20441",
+    "20428": "20442",
+    "20429": "20443",
+    "20433": "20447",
+    "20434": "20448",
+    "20435": "20449",
+    "20436": "20450",
+    "20437": "20451",
+    "20698": "20712",
+    "20699": "20713",
+    "20700": "20714",
+    "20701": "20715",
+    "20702": "20716",
+    "20703": "20717",
+    "20704": "20718",
+    "20705": "20719",
+    "20706": "20720",
+    "20707": "20721",
+    "20708": "20722",
+    "20709": "20723",
+    "20710": "20724",
+    "20711": "20725",
+    "20712": "20726",
+    "20713": "20727",
+    "20714": "20728",
+    "20715": "20729",
+    "20716": "20730"
+   },
+   "simforge": {
+    "dev": {
+     "carlaMapName": null,
+     "label": "San Ramon 25 P2",
+     "mapAssetId": "san-ramon-25-p2",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 22:07:03.730249+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_1ebf89c5b6cdfc48eb6cbcf0d7203c14",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 22:24:19.864548+00",
+       "dependents": {
+        "documents": 1,
+        "drafts": 1,
+        "revisions": 0,
+        "simulationPreviews": 1
+       },
+       "id": "usmap_b66053edc0f201102457c7f84b8511f9",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    },
+    "staging": {
+     "carlaMapName": null,
+     "label": "San Ramon 25 P2",
+     "mapAssetId": "san-ramon-25-p2",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-21 00:16:12.524694+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_1ebf89c5b6cdfc48eb6cbcf0d7203c14",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-21 00:19:21.38294+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_b66053edc0f201102457c7f84b8511f9",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    }
+   },
+   "sourceFolder": "San_Ramon_25_P2",
+   "status": "approved-equivalent",
+   "unownedCookedSignalIds": [
+    "20712",
+    "20713",
+    "20714",
+    "20715",
+    "20716",
+    "20717",
+    "20718",
+    "20719",
+    "20720",
+    "20721",
+    "20722",
+    "20723",
+    "20724",
+    "20725",
+    "20726",
+    "20727",
+    "20728",
+    "20729",
+    "20730"
+   ],
+   "worldMatch": {
+    "candidates": [
+     {
+      "iou": 1.0,
+      "world": "San_Ramon_Phase_1_P2"
+     },
+     {
+      "iou": 0.350072,
+      "world": "San_Ramon_Phase_1_P1"
+     }
+    ],
+    "method": "geoReference+headerBoundsIoU"
+   },
+   "xodr": {
+    "bytes": 39293279,
+    "exportDate": "2026-08-28T12:42:44",
+    "geoReference": "+proj=tmerc +lat_0=37.7622120661233 +lon_0=-121.961571089923 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs",
+    "mtime": "2026-09-04T15:13:58.1670081530Z",
+    "name": "San_Ramon_25_P2.xodr",
+    "sha256": "9098904a93bd40a930c4231442dc32b5b1e132d98c01b073da50e570c54e6bd9"
+   }
+  },
+  {
+   "blocking": [],
+   "carlaWorld": "San_Ramon_Phase_1_P1",
+   "comparison": {
+    "controllers": {
+     "onlyRuntime": 0,
+     "onlySource": 0,
+     "paired": 26,
+     "runtime": 26,
+     "source": 26
+    },
+    "header": {
+     "boundsEqual": true,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-22T13:23:34",
+     "sourceDate": "2026-08-28T12:25:57"
+    },
+    "objects": {
+     "onlyRuntime": 5,
+     "onlySource": 5,
+     "runtime": 4964,
+     "source": 4964
+    },
+    "roads": {
+     "junctionConflicts": 0,
+     "junctions": {
+      "renumbered": 208,
+      "runtime": 220,
+      "source": 220
+     },
+     "linkMismatches": 0,
+     "maxDeviation": {
+      "elevation": 0.00048,
+      "heading": 0.001607,
+      "laneOffset": 0.000653,
+      "laneWidth": 0.005534,
+      "length": 0.008703,
+      "position": 0.005035,
+      "superelevation": 0.0
+     },
+     "paired": 1822,
+     "renumbered": 1354,
+     "reversed": [],
+     "runtime": 1822,
+     "source": 1822,
+     "structuralMismatches": {},
+     "unpairedRuntime": 0,
+     "unpairedSource": 0
+    },
+    "signals": {
+     "nonPhysicalGateRuntimeIds": [
+      "6018",
+      "6019",
+      "6020",
+      "6021",
+      "6022",
+      "6023",
+      "6024",
+      "6025",
+      "6026",
+      "6027",
+      "6028",
+      "6029",
+      "6030",
+      "6031",
+      "6032",
+      "6033",
+      "6034",
+      "6035",
+      "6036",
+      "6037",
+      "6038",
+      "6039",
+      "6040",
+      "6041"
+     ],
+     "paired": 248,
+     "renumbered": 248,
+     "runtime": 248,
+     "runtimeDynamic": 148,
+     "runtimeDynamicWithoutController": [
+      "5898"
+     ],
+     "source": 248,
+     "sourceDynamic": 148,
+     "sourceHeadsWithoutCarlaActor": [
+      "5918"
+     ],
+     "unpairedRuntimeDynamic": [],
+     "unpairedRuntimeStatic": 0,
+     "unpairedSourceDynamic": [],
+     "unpairedSourceStatic": 0
+    }
+   },
+   "cookedXodrSha256": "5da6851d276af8131218f10aaa6617682ddce41308295f9ff9a11d460b082f8b",
+   "decisionRequired": [],
+   "differences": [
+    "road ids renumbered (1354 of 1822)",
+    "junction ids renumbered (208)",
+    "signal ids renumbered (248)",
+    "1 dynamic heads have no signal controller (in the world and the source), so CARLA spawns no actor for them; a signal plan that drives them fails at bind_signals: 5918->5898",
+    "OpenDRIVE objects differ (4964 in source, 4964 in the world); the world renders its own cooked meshes",
+    "export date 2026-08-28T12:25:57 vs cooked 2026-06-22T13:23:34"
+   ],
+   "extraFiles": [],
+   "glb": {
+    "bytes": 3369559580,
+    "mtime": "2026-08-31T10:46:10.0000000000Z",
+    "name": "San_Ramon_Phase_1_P1_GLB.glb",
+    "sha256": "d8abf369405d0fced6b67799fdff0fcdc883db8ec5c3aeb68520843178b624ae"
+   },
+   "signalIdMap": {
+    "5814": "5794",
+    "5815": "5795",
+    "5816": "5796",
+    "5817": "5797",
+    "5818": "5798",
+    "5819": "5799",
+    "5820": "5800",
+    "5821": "5801",
+    "5822": "5802",
+    "5823": "5803",
+    "5824": "5804",
+    "5825": "5805",
+    "5826": "5806",
+    "5827": "5807",
+    "5828": "5808",
+    "5829": "5809",
+    "5830": "5810",
+    "5831": "5811",
+    "5832": "5812",
+    "5833": "5813",
+    "5834": "5814",
+    "5835": "5815",
+    "5836": "5816",
+    "5837": "5817",
+    "5838": "5818",
+    "5839": "5819",
+    "5840": "5820",
+    "5841": "5821",
+    "5842": "5822",
+    "5843": "5823",
+    "5844": "5824",
+    "5845": "5825",
+    "5846": "5826",
+    "5847": "5827",
+    "5848": "5828",
+    "5849": "5829",
+    "5850": "5830",
+    "5851": "5831",
+    "5852": "5832",
+    "5853": "5833",
+    "5854": "5834",
+    "5855": "5835",
+    "5856": "5836",
+    "5857": "5837",
+    "5858": "5838",
+    "5859": "5839",
+    "5860": "5840",
+    "5861": "5841",
+    "5877": "5857",
+    "5878": "5858",
+    "5879": "5859",
+    "5880": "5860",
+    "5881": "5861",
+    "5882": "5862",
+    "5883": "5863",
+    "5884": "5864",
+    "5885": "5865",
+    "5886": "5866",
+    "5889": "5869",
+    "5890": "5870",
+    "5892": "5872",
+    "5893": "5873",
+    "5896": "5876",
+    "5898": "5878",
+    "5899": "5879",
+    "5900": "5880",
+    "5901": "5881",
+    "5902": "5882",
+    "5905": "5885",
+    "5906": "5886",
+    "5907": "5887",
+    "5908": "5888",
+    "5911": "5891",
+    "5912": "5892",
+    "5913": "5893",
+    "5914": "5894",
+    "5915": "5895",
+    "5916": "5896",
+    "5917": "5897",
+    "5918": "5898",
+    "5919": "5899",
+    "5921": "5901",
+    "5922": "5902",
+    "5923": "5903",
+    "5927": "5907",
+    "5928": "5908",
+    "5929": "5909",
+    "5930": "5910",
+    "5933": "5913",
+    "5934": "5914",
+    "5935": "5915",
+    "5936": "5916",
+    "5937": "5917",
+    "5941": "5921",
+    "5942": "5922",
+    "5943": "5923",
+    "5944": "5924",
+    "5945": "5925",
+    "5949": "5929",
+    "5950": "5930",
+    "5951": "5931",
+    "5955": "5935",
+    "5956": "5936",
+    "5957": "5937",
+    "5958": "5938",
+    "5959": "5939",
+    "5960": "5940",
+    "5961": "5941",
+    "5965": "5945",
+    "5966": "5946",
+    "5970": "5950",
+    "5971": "5951",
+    "5972": "5952",
+    "5973": "5953",
+    "5977": "5957",
+    "5978": "5958",
+    "5979": "5959",
+    "5980": "5960",
+    "5981": "5961",
+    "5985": "5965",
+    "5986": "5966",
+    "5987": "5967",
+    "5988": "5968",
+    "5989": "5969",
+    "6038": "6018",
+    "6039": "6019",
+    "6040": "6020",
+    "6041": "6021",
+    "6042": "6022",
+    "6043": "6023",
+    "6044": "6024",
+    "6045": "6025",
+    "6046": "6026",
+    "6047": "6027",
+    "6048": "6028",
+    "6049": "6029",
+    "6050": "6030",
+    "6051": "6031",
+    "6052": "6032",
+    "6053": "6033",
+    "6054": "6034",
+    "6055": "6035",
+    "6056": "6036",
+    "6057": "6037",
+    "6058": "6038",
+    "6059": "6039",
+    "6060": "6040",
+    "6061": "6041"
+   },
+   "simforge": {
+    "dev": {
+     "carlaMapName": null,
+     "label": "San Ramon Phase 1",
+     "mapAssetId": "san-ramon-phase-1",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 22:17:11.802511+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_c432dd7e44e93ac7e9df4873dfe6d20c",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 23:03:58.086134+00",
+       "dependents": {
+        "documents": 5,
+        "drafts": 5,
+        "revisions": 0,
+        "simulationPreviews": 1
+       },
+       "id": "usmap_f29e4b023d53283bf4e451cc19e5bbcc",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    },
+    "staging": {
+     "carlaMapName": null,
+     "label": "San Ramon Phase 1",
+     "mapAssetId": "san-ramon-phase-1",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-21 00:20:59.860983+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_c432dd7e44e93ac7e9df4873dfe6d20c",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-21 00:24:27.34294+00",
+       "dependents": {
+        "documents": 4,
+        "drafts": 4,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_f29e4b023d53283bf4e451cc19e5bbcc",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    }
+   },
+   "sourceFolder": "San_Ramon_Phase_1_P1",
+   "status": "approved-equivalent",
+   "unownedCookedSignalIds": [
+    "6018",
+    "6019",
+    "6020",
+    "6021",
+    "6022",
+    "6023",
+    "6024",
+    "6025",
+    "6026",
+    "6027",
+    "6028",
+    "6029",
+    "6030",
+    "6031",
+    "6032",
+    "6033",
+    "6034",
+    "6035",
+    "6036",
+    "6037",
+    "6038",
+    "6039",
+    "6040",
+    "6041"
+   ],
+   "worldMatch": {
+    "candidates": [
+     {
+      "iou": 1.0,
+      "world": "San_Ramon_Phase_1_P1"
+     },
+     {
+      "iou": 0.350072,
+      "world": "San_Ramon_Phase_1_P2"
+     }
+    ],
+    "method": "geoReference+headerBoundsIoU"
+   },
+   "xodr": {
+    "bytes": 20672684,
+    "exportDate": "2026-08-28T12:25:57",
+    "geoReference": "+proj=tmerc +lat_0=37.7622120661233 +lon_0=-121.961571089923 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs",
+    "mtime": "2026-08-31T10:46:24.0000000000Z",
+    "name": "San_Ramon_P1.xodr",
+    "sha256": "eaeebc429898aca03dc8b399e23cef1d7e129784f607350ad974cf0f012ded55"
+   }
+  },
+  {
+   "blocking": [],
+   "carlaWorld": "San_Ramon_Phase_2",
+   "comparison": {
+    "controllers": {
+     "onlyRuntime": 83,
+     "onlySource": 0,
+     "paired": 0,
+     "runtime": 83,
+     "source": 0
+    },
+    "header": {
+     "boundsEqual": true,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-07-06T17:00:49",
+     "sourceDate": "2026-08-28T18:43:40"
+    },
+    "objects": {
+     "onlyRuntime": 0,
+     "onlySource": 0,
+     "runtime": 13182,
+     "source": 13182
+    },
+    "roads": {
+     "junctionConflicts": 0,
+     "junctions": {
+      "renumbered": 0,
+      "runtime": 417,
+      "source": 417
+     },
+     "linkMismatches": 0,
+     "maxDeviation": {
+      "elevation": 0.0,
+      "heading": 0.0,
+      "laneOffset": 0.0,
+      "laneWidth": 0.0,
+      "length": 0.0,
+      "position": 0.0,
+      "superelevation": 0.0
+     },
+     "paired": 4573,
+     "renumbered": 0,
+     "reversed": [],
+     "runtime": 4573,
+     "source": 4573,
+     "structuralMismatches": {},
+     "unpairedRuntime": 0,
+     "unpairedSource": 0
+    },
+    "signals": {
+     "nonPhysicalGateRuntimeIds": [],
+     "paired": 0,
+     "renumbered": 0,
+     "runtime": 762,
+     "runtimeDynamic": 471,
+     "runtimeDynamicWithoutController": [],
+     "source": 686,
+     "sourceDynamic": 0,
+     "sourceHeadsWithoutCarlaActor": [],
+     "unpairedRuntimeDynamic": [
+      "35370",
+      "35371",
+      "35372",
+      "35373",
+      "35374",
+      "35375",
+      "35376",
+      "35377",
+      "35378",
+      "35379",
+      "35380",
+      "35381",
+      "35382",
+      "35383",
+      "35384",
+      "35385",
+      "35386",
+      "35387",
+      "35388",
+      "35389",
+      "35390",
+      "35391",
+      "35392",
+      "35393",
+      "35394",
+      "35395",
+      "35396",
+      "35397",
+      "35398",
+      "35399",
+      "35400",
+      "35401",
+      "35402",
+      "35403",
+      "35404",
+      "35405",
+      "35406",
+      "35407",
+      "35408",
+      "35409",
+      "35410",
+      "35411",
+      "35412",
+      "35413",
+      "35414",
+      "35415",
+      "35416",
+      "35417",
+      "35418",
+      "35419",
+      "35420",
+      "35421",
+      "35422",
+      "35423",
+      "35424",
+      "35425",
+      "35426",
+      "35427",
+      "35475",
+      "35476",
+      "35478",
+      "35481",
+      "35482",
+      "35483",
+      "35484",
+      "35485",
+      "35486",
+      "35488",
+      "35489",
+      "35490",
+      "35491",
+      "35492",
+      "35494",
+      "35495",
+      "35503",
+      "35504",
+      "35505",
+      "35506",
+      "35507",
+      "35508",
+      "35509",
+      "35510",
+      "35511",
+      "35512",
+      "35513",
+      "35514",
+      "35515",
+      "35516",
+      "35517",
+      "35518",
+      "35519",
+      "35520",
+      "35521",
+      "35522",
+      "35523",
+      "35524",
+      "35525",
+      "35526",
+      "35527",
+      "35528",
+      "35529",
+      "35530",
+      "35531",
+      "35532",
+      "35533",
+      "35534",
+      "35535",
+      "35536",
+      "35537",
+      "35538",
+      "35539",
+      "35540",
+      "35541",
+      "35542",
+      "35543",
+      "35544",
+      "35545",
+      "35546",
+      "35547",
+      "35548",
+      "35549",
+      "35550",
+      "35551",
+      "35552",
+      "35553",
+      "35554",
+      "35555",
+      "35556",
+      "35557",
+      "35558",
+      "35559",
+      "35560",
+      "35561",
+      "35562",
+      "35563",
+      "35564",
+      "35565",
+      "35566",
+      "35567",
+      "35568",
+      "35569",
+      "35570",
+      "35571",
+      "35572",
+      "35573",
+      "35574",
+      "35575",
+      "35576",
+      "35577",
+      "35578",
+      "35579",
+      "35580",
+      "35581",
+      "35582",
+      "35583",
+      "35584",
+      "35585",
+      "35586",
+      "35587",
+      "35588",
+      "35589",
+      "35590",
+      "35591",
+      "35592",
+      "35593",
+      "35594",
+      "35595",
+      "35596",
+      "35597",
+      "35650",
+      "35651",
+      "35652",
+      "35653",
+      "35654",
+      "35655",
+      "35659",
+      "35660",
+      "35661",
+      "35663",
+      "35664",
+      "35665",
+      "35666",
+      "35667",
+      "35668",
+      "35669",
+      "35670",
+      "35671",
+      "35672",
+      "35673",
+      "35674",
+      "35675",
+      "35676",
+      "35677",
+      "35678",
+      "35679",
+      "35680",
+      "35681",
+      "35682",
+      "35683",
+      "35684",
+      "35685",
+      "35686",
+      "35687",
+      "35688",
+      "35689",
+      "35690",
+      "35691",
+      "35692",
+      "35693",
+      "35694",
+      "35695",
+      "35696",
+      "35697",
+      "35698",
+      "35699",
+      "35700",
+      "35701",
+      "35702",
+      "35703",
+      "35704",
+      "35705",
+      "35706",
+      "35707",
+      "35708",
+      "35709",
+      "35710",
+      "35711",
+      "35712",
+      "35713",
+      "35714",
+      "35715",
+      "35716",
+      "35717",
+      "35718",
+      "35719",
+      "35720",
+      "35721",
+      "35722",
+      "35723",
+      "35724",
+      "35725",
+      "35726",
+      "35727",
+      "35728",
+      "35729",
+      "35730",
+      "35731",
+      "35732",
+      "35733",
+      "35734",
+      "35735",
+      "35736",
+      "35737",
+      "35738",
+      "35739",
+      "35740",
+      "35741",
+      "35742",
+      "35743",
+      "35744",
+      "35745",
+      "35746",
+      "35747",
+      "35748",
+      "35749",
+      "35750",
+      "35751",
+      "35752",
+      "35753",
+      "35754",
+      "35755",
+      "35756",
+      "35757",
+      "35758",
+      "35759",
+      "35760",
+      "35761",
+      "35762",
+      "35763",
+      "35764",
+      "35765",
+      "35766",
+      "35767",
+      "35768",
+      "35769",
+      "35770",
+      "35771",
+      "35772",
+      "35773",
+      "35774",
+      "35775",
+      "35776",
+      "35777",
+      "35778",
+      "35779",
+      "35780",
+      "35781",
+      "35782",
+      "35783",
+      "35784",
+      "35785",
+      "35786",
+      "35787",
+      "35788",
+      "35789",
+      "35790",
+      "35791",
+      "35792",
+      "35793",
+      "35794",
+      "35795",
+      "35796",
+      "35797",
+      "35798",
+      "35799",
+      "35800",
+      "35801",
+      "35802",
+      "35803",
+      "35804",
+      "35805",
+      "35806",
+      "35807",
+      "35808",
+      "35809",
+      "35810",
+      "35811",
+      "35812",
+      "35813",
+      "35814",
+      "35815",
+      "35816",
+      "35817",
+      "35818",
+      "35819",
+      "35820",
+      "35821",
+      "35822",
+      "35823",
+      "35824",
+      "35825",
+      "35826",
+      "35827",
+      "35828",
+      "35829",
+      "35830",
+      "35831",
+      "35832",
+      "35833",
+      "35834",
+      "35964",
+      "35965",
+      "35966",
+      "35967",
+      "35968",
+      "35969",
+      "35970",
+      "35971",
+      "35972",
+      "35973",
+      "35974",
+      "35975",
+      "35976",
+      "35977",
+      "35978",
+      "35979",
+      "35980",
+      "35981",
+      "35982",
+      "35983",
+      "35984",
+      "35985",
+      "35986",
+      "35987",
+      "35988",
+      "35989",
+      "35990",
+      "35991",
+      "35992",
+      "35993",
+      "35994",
+      "35995",
+      "35996",
+      "35997",
+      "35998",
+      "35999",
+      "36000",
+      "36001",
+      "36002",
+      "36003",
+      "36004",
+      "36005",
+      "36006",
+      "36007",
+      "36008",
+      "36027",
+      "36028",
+      "36029",
+      "36030",
+      "36031",
+      "36032",
+      "36033",
+      "36034",
+      "36035",
+      "36036",
+      "36037",
+      "36038",
+      "36039",
+      "36040",
+      "36041",
+      "36042",
+      "36043",
+      "36044",
+      "36045",
+      "36046",
+      "36047",
+      "36048",
+      "36049",
+      "36050",
+      "36051",
+      "36052",
+      "36053",
+      "36054",
+      "36055",
+      "36056",
+      "36057",
+      "36058",
+      "36059",
+      "36060",
+      "36061",
+      "36062",
+      "36063",
+      "36064",
+      "36065",
+      "36066",
+      "36067",
+      "36068",
+      "36069",
+      "36070",
+      "36071",
+      "36072",
+      "36073",
+      "36074",
+      "36075",
+      "36076",
+      "36077",
+      "36078",
+      "36079",
+      "36080",
+      "36081",
+      "36082",
+      "36083",
+      "36084",
+      "36085",
+      "36086",
+      "36087",
+      "36088",
+      "36089",
+      "36090",
+      "36091",
+      "36092",
+      "36093",
+      "36094",
+      "36095",
+      "36096",
+      "36097",
+      "36098",
+      "36099",
+      "36100",
+      "36101",
+      "36102"
+     ],
+     "unpairedRuntimeStatic": 291,
+     "unpairedSourceDynamic": [],
+     "unpairedSourceStatic": 686
+    }
+   },
+   "cookedXodrSha256": "ae48056b9a59f45cf6fdd45a9a27ea4614c5ded861a59b3708ae437e34ea93dc",
+   "decisionRequired": [
+    "the world has 471 dynamic signals the source does not declare",
+    "the world has 83 signal controllers the source does not declare"
+   ],
+   "differences": [
+    "static signs differ (686 only in source, 291 only in the world)",
+    "export date 2026-08-28T18:43:40 vs cooked 2026-07-06T17:00:49"
+   ],
+   "extraFiles": [],
+   "glb": {
+    "bytes": 2535238576,
+    "mtime": "2026-09-01T10:08:38.0000000000Z",
+    "name": "San_Ramon_Phase_2.glb",
+    "sha256": "92f5ef4c7981343d8bc77290e04fa09b3f5a78fa66545e40234c6d288eced795"
+   },
+   "signalIdMap": {},
+   "simforge": {
+    "dev": {
+     "carlaMapName": null,
+     "label": "San Ramon Phase 2",
+     "mapAssetId": "san-ramon-phase-2",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 22:27:08.744503+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_79f9712d8f3206513647d36decf66b62",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 23:10:22.809205+00",
+       "dependents": {
+        "documents": 3,
+        "drafts": 3,
+        "revisions": 0,
+        "simulationPreviews": 1
+       },
+       "id": "usmap_5b6b96d857279db384b39ca412b7fb06",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    },
+    "staging": {
+     "carlaMapName": null,
+     "label": "San Ramon Phase 2",
+     "mapAssetId": "san-ramon-phase-2",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-21 00:26:45.670471+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_79f9712d8f3206513647d36decf66b62",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-21 00:45:22.455855+00",
+       "dependents": {
+        "documents": 2,
+        "drafts": 2,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_5b6b96d857279db384b39ca412b7fb06",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    }
+   },
+   "sourceFolder": "San_ramon_Phase2",
+   "status": "needs-decision",
+   "worldMatch": {
+    "candidates": [
+     {
+      "iou": 1.0,
+      "world": "San_Ramon_Phase_2"
+     }
+    ],
+    "method": "geoReference+headerBoundsIoU"
+   },
+   "xodr": {
+    "bytes": 52224985,
+    "exportDate": "2026-08-28T18:43:40",
+    "geoReference": "+proj=tmerc +lat_0=37.7755206878088 +lon_0=-121.967278830707 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs",
+    "mtime": "2026-09-01T10:08:43.0000000000Z",
+    "name": "San_Ramon_Phase_2.xodr",
+    "sha256": "c40e43731e4b4f5ab7c92e5ed9aec30452d58bfe2f17919fd1bd21fff67a6845"
+   }
+  },
+  {
+   "blocking": [],
+   "carlaWorld": "Saratoga_School_Area",
+   "comparison": {
+    "controllers": {
+     "onlyRuntime": 0,
+     "onlySource": 0,
+     "paired": 0,
+     "runtime": 0,
+     "source": 0
+    },
+    "header": {
+     "boundsEqual": true,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-11T14:08:32",
+     "sourceDate": "2026-08-28T18:37:55"
+    },
+    "objects": {
+     "onlyRuntime": 0,
+     "onlySource": 397,
+     "runtime": 0,
+     "source": 397
+    },
+    "roads": {
+     "junctionConflicts": 0,
+     "junctions": {
+      "renumbered": 0,
+      "runtime": 17,
+      "source": 17
+     },
+     "linkMismatches": 0,
+     "maxDeviation": {
+      "elevation": 0.0,
+      "heading": 0.0,
+      "laneOffset": 0.0,
+      "laneWidth": 0.0,
+      "length": 0.0,
+      "position": 0.0,
+      "superelevation": 0.0
+     },
+     "paired": 309,
+     "renumbered": 0,
+     "reversed": [],
+     "runtime": 309,
+     "source": 309,
+     "structuralMismatches": {},
+     "unpairedRuntime": 0,
+     "unpairedSource": 0
+    },
+    "signals": {
+     "nonPhysicalGateRuntimeIds": [],
+     "paired": 44,
+     "renumbered": 44,
+     "runtime": 54,
+     "runtimeDynamic": 0,
+     "runtimeDynamicWithoutController": [],
+     "source": 44,
+     "sourceDynamic": 0,
+     "sourceHeadsWithoutCarlaActor": [],
+     "unpairedRuntimeDynamic": [],
+     "unpairedRuntimeStatic": 10,
+     "unpairedSourceDynamic": [],
+     "unpairedSourceStatic": 0
+    }
+   },
+   "cookedXodrSha256": "ec0e06ca1dfe0391f4e4471acafa93a8c71a809663d434f4bc7e580ca5007bd7",
+   "decisionRequired": [],
+   "differences": [
+    "signal ids renumbered (44)",
+    "static signs differ (0 only in source, 10 only in the world)",
+    "OpenDRIVE objects differ (397 in source, 0 in the world); the world renders its own cooked meshes",
+    "export date 2026-08-28T18:37:55 vs cooked 2026-06-11T14:08:32"
+   ],
+   "extraFiles": [],
+   "glb": {
+    "bytes": 1083521980,
+    "mtime": "2026-08-31T07:54:20.0000000000Z",
+    "name": "Saratoga_School_Area_GLB.glb",
+    "sha256": "0427fd314449a937b471cd9bf7b330da894b5eeb8bd6f9770ed620d39ffdb4c9"
+   },
+   "signalIdMap": {},
+   "simforge": {
+    "dev": {
+     "carlaMapName": null,
+     "label": "Easterbrook Discovery School",
+     "mapAssetId": "easterbrook-discovery-school",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 21:54:33.270141+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_551a395fafc1566415361da995812526",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 21:55:08.984803+00",
+       "dependents": {
+        "documents": 554,
+        "drafts": 554,
+        "revisions": 2,
+        "simulationPreviews": 4
+       },
+       "id": "usmap_4aac2577010fd2a497a3071922503019",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    },
+    "staging": {
+     "carlaMapName": null,
+     "label": "Easterbrook Discovery School",
+     "mapAssetId": "easterbrook-discovery-school",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 23:59:11.892938+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_551a395fafc1566415361da995812526",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 23:59:54.62277+00",
+       "dependents": {
+        "documents": 552,
+        "drafts": 552,
+        "revisions": 3,
+        "simulationPreviews": 6
+       },
+       "id": "usmap_4aac2577010fd2a497a3071922503019",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    }
+   },
+   "sourceFolder": "Saratoga_School_Area",
+   "status": "approved-equivalent",
+   "worldMatch": {
+    "candidates": [
+     {
+      "iou": 1.0,
+      "world": "Saratoga_School_Area"
+     }
+    ],
+    "method": "geoReference+headerBoundsIoU"
+   },
+   "xodr": {
+    "bytes": 7893405,
+    "exportDate": "2026-08-28T18:37:55",
+    "geoReference": "+proj=tmerc +lat_0=37.3062949404212 +lon_0=-121.987040676177 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs",
+    "mtime": "2026-08-31T07:54:24.0000000000Z",
+    "name": "Saratoga_School_Area.xodr",
+    "sha256": "ff368b92160bf1d8bc726a39039cb225be81a85518b0630ba8671e69f649c4f6"
+   }
+  },
+  {
+   "blocking": [
+    "header bounds differ",
+    "road network differs: 391 source / 445 world roads unpaired, 0 structural and 70 topology mismatches, max deviations {'position': 0.006343, 'heading': 0.001314, 'elevation': 0.004011, 'superelevation': 0.0, 'laneOffset': 0.008403, 'laneWidth': 0.008403, 'length': 0.006343}",
+    "55 dynamic source signals have no counterpart in the world",
+    "13 source signal controllers are not in the world"
+   ],
+   "carlaWorld": "Yale_St_Palo_Alto_CA",
+   "comparison": {
+    "controllers": {
+     "onlyRuntime": 13,
+     "onlySource": 13,
+     "paired": 0,
+     "runtime": 13,
+     "source": 13
+    },
+    "header": {
+     "boundsEqual": false,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-22T19:01:04",
+     "sourceDate": "2026-08-28T17:36:11"
+    },
+    "objects": {
+     "onlyRuntime": 371,
+     "onlySource": 22,
+     "runtime": 1265,
+     "source": 916
+    },
+    "roads": {
+     "junctionConflicts": 0,
+     "junctions": {
+      "renumbered": 23,
+      "runtime": 63,
+      "source": 62
+     },
+     "linkMismatches": 70,
+     "maxDeviation": {
+      "elevation": 0.004011,
+      "heading": 0.001314,
+      "laneOffset": 0.008403,
+      "laneWidth": 0.008403,
+      "length": 0.006343,
+      "position": 0.006343,
+      "superelevation": 0.0
+     },
+     "paired": 130,
+     "renumbered": 124,
+     "reversed": [],
+     "runtime": 575,
+     "source": 521,
+     "structuralMismatches": {},
+     "unpairedRuntime": 445,
+     "unpairedSource": 391
+    },
+    "signals": {
+     "nonPhysicalGateRuntimeIds": [],
+     "paired": 25,
+     "renumbered": 25,
+     "runtime": 126,
+     "runtimeDynamic": 46,
+     "runtimeDynamicWithoutController": [],
+     "source": 176,
+     "sourceDynamic": 65,
+     "sourceHeadsWithoutCarlaActor": [],
+     "unpairedRuntimeDynamic": [
+      "1594",
+      "1595",
+      "1596",
+      "1597",
+      "1598",
+      "1599",
+      "1600",
+      "1601",
+      "1602",
+      "1603",
+      "1604",
+      "1605",
+      "1606",
+      "1607",
+      "1608",
+      "1609",
+      "1610",
+      "1640",
+      "1641",
+      "1645",
+      "1673",
+      "1675",
+      "1679",
+      "1680",
+      "1681",
+      "1684",
+      "1685",
+      "1688",
+      "1689",
+      "1691",
+      "1693",
+      "1694",
+      "1695",
+      "1698",
+      "1705",
+      "1706"
+     ],
+     "unpairedRuntimeStatic": 65,
+     "unpairedSourceDynamic": [
+      "1251",
+      "1252",
+      "1253",
+      "1254",
+      "1255",
+      "1256",
+      "1257",
+      "1258",
+      "1259",
+      "1260",
+      "1261",
+      "1262",
+      "1263",
+      "1264",
+      "1265",
+      "1266",
+      "1267",
+      "1297",
+      "1298",
+      "1302",
+      "1330",
+      "1332",
+      "1336",
+      "1337",
+      "1338",
+      "1341",
+      "1342",
+      "1345",
+      "1346",
+      "1348",
+      "1350",
+      "1351",
+      "1352",
+      "1355",
+      "1362",
+      "1363",
+      "1370",
+      "1371",
+      "1372",
+      "1373",
+      "1374",
+      "1375",
+      "1376",
+      "1377",
+      "1378",
+      "1379",
+      "1380",
+      "1381",
+      "1382",
+      "1383",
+      "1384",
+      "1385",
+      "1386",
+      "1387",
+      "1388"
+     ],
+     "unpairedSourceStatic": 96
+    }
+   },
+   "cookedXodrSha256": "c7e95b5eeb8a58fadec6b26b9e73c41753cd21428039f0d44e541bbef1644f6f",
+   "decisionRequired": [
+    "the world has 36 dynamic signals the source does not declare",
+    "the world has 13 signal controllers the source does not declare"
+   ],
+   "differences": [
+    "road ids renumbered (124 of 130)",
+    "junction ids renumbered (23)",
+    "signal ids renumbered (25)",
+    "static signs differ (96 only in source, 65 only in the world)",
+    "OpenDRIVE objects differ (916 in source, 1265 in the world); the world renders its own cooked meshes",
+    "export date 2026-08-28T17:36:11 vs cooked 2026-06-22T19:01:04"
+   ],
+   "extraFiles": [],
+   "glb": {
+    "bytes": 3065871724,
+    "mtime": "2026-08-31T08:47:03.0000000000Z",
+    "name": "Yale_St_Palo_Alto_CA_GLB.glb",
+    "sha256": "a93ad1edcced7a6b908924e0b1fe2caa6a1278bf341983e10b8ff0228cc8f4db"
+   },
+   "signalIdMap": {},
+   "simforge": {
+    "dev": {
+     "carlaMapName": null,
+     "label": "Yale Street",
+     "mapAssetId": "yale-street",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-20 22:18:00.315567+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_0e516196ab41b231daadbae12fb71be5",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-20 22:29:04.859574+00",
+       "dependents": {
+        "documents": 1250,
+        "drafts": 1250,
+        "revisions": 0,
+        "simulationPreviews": 8
+       },
+       "id": "usmap_9fcd80480e445745cc1d1312ba994ac9",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    },
+    "staging": {
+     "carlaMapName": null,
+     "label": "Yale Street",
+     "mapAssetId": "yale-street",
+     "mapVersions": [
+      {
+       "createdAt": "2026-09-21 00:37:52.405495+00",
+       "dependents": {
+        "documents": 0,
+        "drafts": 0,
+        "revisions": 0,
+        "simulationPreviews": 0
+       },
+       "id": "usmap_0e516196ab41b231daadbae12fb71be5",
+       "retiredAt": null
+      },
+      {
+       "createdAt": "2026-09-21 00:39:28.348816+00",
+       "dependents": {
+        "documents": 1252,
+        "drafts": 1252,
+        "revisions": 3,
+        "simulationPreviews": 7
+       },
+       "id": "usmap_9fcd80480e445745cc1d1312ba994ac9",
+       "retiredAt": null
+      }
+     ],
+     "ue5CarlaMapName": null
+    }
+   },
+   "sourceFolder": "Yale_St_Palo_Alto_CA",
+   "status": "needs-recook",
+   "worldMatch": {
+    "candidates": [
+     {
+      "iou": 0.999947,
+      "world": "Yale_St_Palo_Alto_CA"
+     },
+     {
+      "iou": 0.055709,
+      "world": "El_Camino_Rd_Palo_Alto_CA"
+     }
+    ],
+    "method": "geoReference+headerBoundsIoU"
+   },
+   "xodr": {
+    "bytes": 5056327,
+    "exportDate": "2026-08-28T17:36:11",
+    "geoReference": "+proj=tmerc +lat_0=37.4100548676094 +lon_0=-122.154771275882 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +vunits=m +no_defs",
+    "mtime": "2026-08-31T08:47:09.0000000000Z",
+    "name": "Yale_St_Palo_Alto_CA.xodr",
+    "sha256": "c8d8401dabdfa9420f3231cdbd7a37bd400cc517f8fa9af8fcaadc489b41d6ae"
+   }
+  },
+  {
+   "carlaWorld": "Belmont_Office_Park_Belmont_CA",
+   "derivedFrom": "e4ec8cab3f9ce8c7faa4804348e1978e70d52acd5d0dcd0696b30e6d2d498e10",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 82961,
+     "mtime": "2026-09-23T00:37:04.1562436590Z",
+     "name": "CHANGES.md",
+     "sha256": "ca5bb1c825c444ce085ef45dc67b009beee989036dcf4a236803062ecf8361fd"
+    },
+    {
+     "bytes": 303590,
+     "mtime": "2026-09-23T00:37:04.2762436540Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "d790fca91ed3c7b857be3d0a06c88aa3922c167db27c6ea892cf0d171a403234"
+    },
+    {
+     "bytes": 580130,
+     "mtime": "2026-09-23T00:37:04.4002436480Z",
+     "name": "refit-report.json",
+     "sha256": "48adf51ba609a033b79ab07466587500e0549e7ae8b95f7360d4340ff900a5fa"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "915dba7bfb3e090f092e1a677a5e5d0693169f183065173b033660c806652639",
+   "glb": null,
+   "reason": "its original Belmont_Office_Park_Belmont_CA is needs-recook",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 3533,
+      "laneHeight": 862,
+      "lateralProfile": 2147
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 0.9310263901482081,
+     "maxSurfaceChangeM": 1.0632898475284724,
+     "roadsRefit": 548
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/Belmont_Office_Park_Belmont_CA",
+   "status": "needs-recook",
+   "xodr": {
+    "bytes": 8704109,
+    "mtime": "2026-09-23T00:37:04.0482436630Z",
+    "name": "Belmont_Office_Park_Belmont_CA.xodr",
+    "sha256": "234c9ffd76dff2d61c9d4324ada21e185cfd3cfb66a762727a87f89e007a9d50"
+   }
+  },
+  {
+   "carlaWorld": "Di_Rosa_SF",
+   "derivedFrom": "112ad93fdd020c552d3fb6f77fd6732d0671ade6cc1faee8b506cde5c8df9bd6",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 63748,
+     "mtime": "2026-09-23T00:37:04.5322436430Z",
+     "name": "CHANGES.md",
+     "sha256": "3be54a101005e989056903d7c86328f68a167d8caf1b6d6ae908a3fa83c1f912"
+    },
+    {
+     "bytes": 386526,
+     "mtime": "2026-09-23T00:37:04.9002436270Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "6f9a303e12f2e0d5de114680e95a48cbf3f73cdcfd48e848e62625289d24af74"
+    },
+    {
+     "bytes": 474246,
+     "mtime": "2026-09-23T00:37:05.0362436220Z",
+     "name": "refit-report.json",
+     "sha256": "cc6c99bafc2daf77f1ed4c3cdc5943024bc00d7ed893885c00b079f283cf5d3d"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "913c3571fcd195de1cbfd60846bf4dac57271e35150b4a09960c7d7c0cfc1775",
+   "glb": null,
+   "reason": "its original Di_Rosa_SF is needs-recook",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 2338,
+      "laneHeight": 1078,
+      "lateralProfile": 1782
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 12.241802244390655,
+     "maxSurfaceChangeM": 12.404820790411424,
+     "roadsRefit": 370
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/Di_Rosa_SF",
+   "status": "needs-recook",
+   "xodr": {
+    "bytes": 6367504,
+    "mtime": "2026-09-23T00:37:04.7802436320Z",
+    "name": "Di_Rosa_SF_no_barriers_26_final (2).xodr",
+    "sha256": "16815fd314b3ad95eff6183e91e4d30ef0de238dd67de69ca797987d3689bcb3"
+   }
+  },
+  {
+   "carlaWorld": "El_Camino_Rd_Palo_Alto_CA",
+   "derivedFrom": "e90cc708cc75f9c9eacac8e8831a63b258edf05033d02a22b6d005e4b34213e9",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 57258,
+     "mtime": "2026-09-23T00:37:05.1842436150Z",
+     "name": "CHANGES.md",
+     "sha256": "57bd5e6b9c9576d80fc169cfbee305ca750bbfba9a06dd18f319e529433679c3"
+    },
+    {
+     "bytes": 416214,
+     "mtime": "2026-09-23T00:37:05.5602436000Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "54c97affa2dd9e0675f076500fabde99558265048ac61e77a97ec77aecb8ec89"
+    },
+    {
+     "bytes": 395278,
+     "mtime": "2026-09-23T00:37:05.7002435940Z",
+     "name": "refit-report.json",
+     "sha256": "4cd6ff6a2bc046e12501d6ac354f8a00a2d13402105aeb1526511b1c490a3686"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "d38e965df342bdc8250b9e5f2a99cb71dbaeee025f8d1df40420ad81dff110d8",
+   "glb": null,
+   "reason": "its original El_Camino_Rd_Palo_Alto_CA is needs-recook",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 2226,
+      "laneHeight": 451,
+      "lateralProfile": 1750
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 0.6353874821649814,
+     "maxSurfaceChangeM": 0.6540997038206111,
+     "roadsRefit": 373
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/El_Camino_Rd_Palo_Alto_CA",
+   "status": "needs-recook",
+   "xodr": {
+    "bytes": 5877259,
+    "mtime": "2026-09-23T00:37:05.4282436050Z",
+    "name": "El_Camino_Rd_Palo_Alto_CA.xodr",
+    "sha256": "a4473ebb9813885308dc4181fc42bca5b16681e602391cfd4cd586bf792d11a8"
+   }
+  },
+  {
+   "carlaWorld": null,
+   "derivedFrom": "09d8e88639a31ad7752c3061cebd1756928c283c86e4446c388f1160388c4c5e",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 123553,
+     "mtime": "2026-09-23T00:37:05.8242435890Z",
+     "name": "CHANGES.md",
+     "sha256": "b224b367f9fbe8e218b13eeb96cd107499af89709aad917bea3d834084b15e72"
+    },
+    {
+     "bytes": 227168,
+     "mtime": "2026-09-23T00:37:06.3842435650Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "ea3df3bcf1a7e041f13b4e18eb7ecfc60f1ea926355ffbccfb87c1cf69a0c425"
+    },
+    {
+     "bytes": 898832,
+     "mtime": "2026-09-23T00:37:06.5202435590Z",
+     "name": "refit-report.json",
+     "sha256": "ca68b613d216565a503b36cf6738ed66a9dc2eb9253ac44b7d8dfe7ce7f873f2"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "462d495497ea12fbbf1ddf235ef589c78b8f3d4af56ce757a65989555f1958d3",
+   "glb": null,
+   "reason": "its original Garching_Phase_1_2 is no-world",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 5736,
+      "laneHeight": 1221,
+      "lateralProfile": 5692
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 0.8105051861426205,
+     "maxSurfaceChangeM": 0.8214703122950482,
+     "roadsRefit": 762
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/Garching_Phase_1_2",
+   "status": "no-world",
+   "xodr": {
+    "bytes": 13855012,
+    "mtime": "2026-09-23T00:37:06.2842435690Z",
+    "name": "Garching_Phase_1_2.xodr",
+    "sha256": "1ca552ae728417a255f5c771fb314de928832a74de5aaf19013c223eddf23b2a"
+   }
+  },
+  {
+   "carlaWorld": "Richmond_Field_Station_Richmond_CA",
+   "derivedFrom": "5b08367524edbc0c46cfb2f4cd77ef6a204f263bb14cf7e8f90a1fffde1c14d6",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 20968,
+     "mtime": "2026-09-23T00:37:06.6522435540Z",
+     "name": "CHANGES.md",
+     "sha256": "4fd55162656babf4541179477ed848bf0d68f3e2c8b44940d864949c2ba6b99a"
+    },
+    {
+     "bytes": 194205,
+     "mtime": "2026-09-23T00:37:06.8522435450Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "2c57b52ae0f978121d4a19d1571fd08017047603b2cda98ac8ae2a359f17569d"
+    },
+    {
+     "bytes": 124766,
+     "mtime": "2026-09-23T00:37:06.9842435400Z",
+     "name": "refit-report.json",
+     "sha256": "49a5c0f015588aa6f349c5b2bcb970b849554998dd68cfd957152a1995d2a628"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "abab6a910779fb8e4a8956deb1f56067c557d0a2ed68208c6bcdb8c0839a5fe7",
+   "glb": null,
+   "reason": "its original Richmond_Field_Station_Richmond_CA is needs-recook",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 743,
+      "laneHeight": 23,
+      "lateralProfile": 575
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 0.250224674372137,
+     "maxSurfaceChangeM": 0.26175434929634456,
+     "roadsRefit": 132
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/Richmond_Field_Station_Richmond_CA",
+   "status": "needs-recook",
+   "xodr": {
+    "bytes": 2167063,
+    "mtime": "2026-09-23T00:37:06.7162435510Z",
+    "name": "Richmond_Field_Station_Richmond_CA.xodr",
+    "sha256": "531c1bd6f568c56a41fd868ffe1cec0e92bc7dcda9c794c67a8f80a450186b18"
+   }
+  },
+  {
+   "blocking": [],
+   "carlaWorld": "San_Ramon_Phase_1_P2",
+   "comparison": {
+    "header": {
+     "boundsEqual": true,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-22T14:07:25",
+     "sourceDate": "2026-08-28T12:42:44"
+    },
+    "roads": {
+     "paired": 914,
+     "runtime": 2398,
+     "source": 2398,
+     "unpairedSource": 1484
+    }
+   },
+   "cookedXodrSha256": "ca540122c82407b41addf397dd204676ef218e0e052010334ef2aaf363feeffb",
+   "decisionRequired": [],
+   "derivedFrom": "9098904a93bd40a930c4231442dc32b5b1e132d98c01b073da50e570c54e6bd9",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "differences": [
+    "elevation-only refit of San_Ramon_25_P2"
+   ],
+   "elevationChange": {
+    "maxM": 1.7353,
+    "p95M": 0.1316,
+    "reportMaxElevationChangeM": 1.7352357212080278,
+    "samples": 61045
+   },
+   "extraFiles": [
+    {
+     "bytes": 240460,
+     "mtime": "2026-09-23T00:37:07.1042435350Z",
+     "name": "CHANGES.md",
+     "sha256": "39245848f6ad2e69e450244000b7b1292f623fb9a9e1d23584bd92d896170745"
+    },
+    {
+     "bytes": 380845,
+     "mtime": "2026-09-23T00:37:08.4002434800Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "2a9f34a275dc78281534cb61c2f9cc10ad54b88c6e4001753e902e96bb48d55b"
+    },
+    {
+     "bytes": 1750412,
+     "mtime": "2026-09-23T00:37:08.5682434730Z",
+     "name": "refit-report.json",
+     "sha256": "c0ddab1731e13c89e721a7c83b3a9b849e244fb15c1318c6d7d5f3b502ad554b"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "4bf4b6ac9729e4179833a53ef1946caa2ce77772ec3e24a5e43db3087f58e461",
+   "glb": null,
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 9939,
+      "laneHeight": 2590,
+      "lateralProfile": 6462
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 1.7352357212080278,
+     "maxSurfaceChangeM": 0.9547881679613681,
+     "roadsRefit": 1513
+    }
+   },
+   "signalIdMap": {
+    "20292": "20306",
+    "20293": "20307",
+    "20294": "20308",
+    "20297": "20311",
+    "20298": "20312",
+    "20299": "20313",
+    "20300": "20314",
+    "20303": "20317",
+    "20304": "20318",
+    "20305": "20319",
+    "20306": "20320",
+    "20309": "20323",
+    "20310": "20324",
+    "20311": "20325",
+    "20312": "20326",
+    "20313": "20327",
+    "20314": "20328",
+    "20317": "20331",
+    "20321": "20335",
+    "20322": "20336",
+    "20323": "20337",
+    "20324": "20338",
+    "20325": "20339",
+    "20326": "20340",
+    "20330": "20344",
+    "20334": "20348",
+    "20336": "20350",
+    "20337": "20351",
+    "20341": "20355",
+    "20342": "20356",
+    "20343": "20357",
+    "20344": "20358",
+    "20345": "20359",
+    "20347": "20361",
+    "20348": "20362",
+    "20349": "20363",
+    "20350": "20364",
+    "20355": "20369",
+    "20359": "20373",
+    "20360": "20374",
+    "20361": "20375",
+    "20362": "20376",
+    "20366": "20380",
+    "20367": "20381",
+    "20369": "20383",
+    "20370": "20384",
+    "20374": "20388",
+    "20375": "20389",
+    "20376": "20390",
+    "20377": "20391",
+    "20378": "20392",
+    "20381": "20395",
+    "20382": "20396",
+    "20383": "20397",
+    "20384": "20398",
+    "20385": "20399",
+    "20389": "20403",
+    "20390": "20404",
+    "20391": "20405",
+    "20392": "20406",
+    "20393": "20407",
+    "20397": "20411",
+    "20398": "20412",
+    "20399": "20413",
+    "20403": "20417",
+    "20404": "20418",
+    "20405": "20419",
+    "20406": "20420",
+    "20407": "20421",
+    "20408": "20422",
+    "20409": "20423",
+    "20413": "20427",
+    "20414": "20428",
+    "20418": "20432",
+    "20419": "20433",
+    "20420": "20434",
+    "20421": "20435",
+    "20425": "20439",
+    "20426": "20440",
+    "20427": "20441",
+    "20428": "20442",
+    "20429": "20443",
+    "20433": "20447",
+    "20434": "20448",
+    "20435": "20449",
+    "20436": "20450",
+    "20437": "20451",
+    "20698": "20712",
+    "20699": "20713",
+    "20700": "20714",
+    "20701": "20715",
+    "20702": "20716",
+    "20703": "20717",
+    "20704": "20718",
+    "20705": "20719",
+    "20706": "20720",
+    "20707": "20721",
+    "20708": "20722",
+    "20709": "20723",
+    "20710": "20724",
+    "20711": "20725",
+    "20712": "20726",
+    "20713": "20727",
+    "20714": "20728",
+    "20715": "20729",
+    "20716": "20730"
+   },
+   "simforge": {},
+   "sourceFolder": "derived/San_Ramon_25_P2",
+   "status": "approved-equivalent",
+   "unownedCookedSignalIds": [
+    "20712",
+    "20713",
+    "20714",
+    "20715",
+    "20716",
+    "20717",
+    "20718",
+    "20719",
+    "20720",
+    "20721",
+    "20722",
+    "20723",
+    "20724",
+    "20725",
+    "20726",
+    "20727",
+    "20728",
+    "20729",
+    "20730"
+   ],
+   "xodr": {
+    "bytes": 40285101,
+    "mtime": "2026-09-23T00:37:08.2882434850Z",
+    "name": "San_Ramon_25_P2.xodr",
+    "sha256": "2c8fe7c18e87c88d265db4dedadc40b905b08bc7cf192fe1d4f29d9b9513c288"
+   }
+  },
+  {
+   "blocking": [],
+   "carlaWorld": "San_Ramon_Phase_1_P1",
+   "comparison": {
+    "header": {
+     "boundsEqual": true,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-22T13:23:34",
+     "sourceDate": "2026-08-28T12:25:57"
+    },
+    "roads": {
+     "paired": 712,
+     "runtime": 1822,
+     "source": 1822,
+     "unpairedSource": 1110
+    }
+   },
+   "cookedXodrSha256": "5da6851d276af8131218f10aaa6617682ddce41308295f9ff9a11d460b082f8b",
+   "decisionRequired": [],
+   "derivedFrom": "eaeebc429898aca03dc8b399e23cef1d7e129784f607350ad974cf0f012ded55",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "differences": [
+    "elevation-only refit of San_Ramon_Phase_1_P1"
+   ],
+   "elevationChange": {
+    "maxM": 1.3185,
+    "p95M": 0.1814,
+    "reportMaxElevationChangeM": 1.3186793424235645,
+    "samples": 54483
+   },
+   "extraFiles": [
+    {
+     "bytes": 180965,
+     "mtime": "2026-09-23T00:37:08.7002434680Z",
+     "name": "CHANGES.md",
+     "sha256": "fb0977ea55cfff4c1668cc950d7e021b9b4d76f02ba55cb63e85cd623fafd83d"
+    },
+    {
+     "bytes": 298266,
+     "mtime": "2026-09-23T00:37:09.7002434260Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "9c0348ef509672a8932a45a472437c7b6309c5eb600e050846db55c8cd3c3faa"
+    },
+    {
+     "bytes": 1319729,
+     "mtime": "2026-09-23T00:37:09.8482434190Z",
+     "name": "refit-report.json",
+     "sha256": "175bc7bbd138edee7ac3a0311d79092247a8dfc363669ce15ceada5b296bba76"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "f29421acf7f954783b6d024ee424ff428525cd00e741187805fc554206eee399",
+   "glb": null,
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 8612,
+      "laneHeight": 2274,
+      "lateralProfile": 6002
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 1.3186793424235645,
+     "maxSurfaceChangeM": 0.95708311037572,
+     "roadsRefit": 1128
+    }
+   },
+   "signalIdMap": {
+    "5814": "5794",
+    "5815": "5795",
+    "5816": "5796",
+    "5817": "5797",
+    "5818": "5798",
+    "5819": "5799",
+    "5820": "5800",
+    "5821": "5801",
+    "5822": "5802",
+    "5823": "5803",
+    "5824": "5804",
+    "5825": "5805",
+    "5826": "5806",
+    "5827": "5807",
+    "5828": "5808",
+    "5829": "5809",
+    "5830": "5810",
+    "5831": "5811",
+    "5832": "5812",
+    "5833": "5813",
+    "5834": "5814",
+    "5835": "5815",
+    "5836": "5816",
+    "5837": "5817",
+    "5838": "5818",
+    "5839": "5819",
+    "5840": "5820",
+    "5841": "5821",
+    "5842": "5822",
+    "5843": "5823",
+    "5844": "5824",
+    "5845": "5825",
+    "5846": "5826",
+    "5847": "5827",
+    "5848": "5828",
+    "5849": "5829",
+    "5850": "5830",
+    "5851": "5831",
+    "5852": "5832",
+    "5853": "5833",
+    "5854": "5834",
+    "5855": "5835",
+    "5856": "5836",
+    "5857": "5837",
+    "5858": "5838",
+    "5859": "5839",
+    "5860": "5840",
+    "5861": "5841",
+    "5877": "5857",
+    "5878": "5858",
+    "5879": "5859",
+    "5880": "5860",
+    "5881": "5861",
+    "5882": "5862",
+    "5883": "5863",
+    "5884": "5864",
+    "5885": "5865",
+    "5886": "5866",
+    "5889": "5869",
+    "5890": "5870",
+    "5892": "5872",
+    "5893": "5873",
+    "5896": "5876",
+    "5898": "5878",
+    "5899": "5879",
+    "5900": "5880",
+    "5901": "5881",
+    "5902": "5882",
+    "5905": "5885",
+    "5906": "5886",
+    "5907": "5887",
+    "5908": "5888",
+    "5911": "5891",
+    "5912": "5892",
+    "5913": "5893",
+    "5914": "5894",
+    "5915": "5895",
+    "5916": "5896",
+    "5917": "5897",
+    "5918": "5898",
+    "5919": "5899",
+    "5921": "5901",
+    "5922": "5902",
+    "5923": "5903",
+    "5927": "5907",
+    "5928": "5908",
+    "5929": "5909",
+    "5930": "5910",
+    "5933": "5913",
+    "5934": "5914",
+    "5935": "5915",
+    "5936": "5916",
+    "5937": "5917",
+    "5941": "5921",
+    "5942": "5922",
+    "5943": "5923",
+    "5944": "5924",
+    "5945": "5925",
+    "5949": "5929",
+    "5950": "5930",
+    "5951": "5931",
+    "5955": "5935",
+    "5956": "5936",
+    "5957": "5937",
+    "5958": "5938",
+    "5959": "5939",
+    "5960": "5940",
+    "5961": "5941",
+    "5965": "5945",
+    "5966": "5946",
+    "5970": "5950",
+    "5971": "5951",
+    "5972": "5952",
+    "5973": "5953",
+    "5977": "5957",
+    "5978": "5958",
+    "5979": "5959",
+    "5980": "5960",
+    "5981": "5961",
+    "5985": "5965",
+    "5986": "5966",
+    "5987": "5967",
+    "5988": "5968",
+    "5989": "5969",
+    "6038": "6018",
+    "6039": "6019",
+    "6040": "6020",
+    "6041": "6021",
+    "6042": "6022",
+    "6043": "6023",
+    "6044": "6024",
+    "6045": "6025",
+    "6046": "6026",
+    "6047": "6027",
+    "6048": "6028",
+    "6049": "6029",
+    "6050": "6030",
+    "6051": "6031",
+    "6052": "6032",
+    "6053": "6033",
+    "6054": "6034",
+    "6055": "6035",
+    "6056": "6036",
+    "6057": "6037",
+    "6058": "6038",
+    "6059": "6039",
+    "6060": "6040",
+    "6061": "6041"
+   },
+   "simforge": {},
+   "sourceFolder": "derived/San_Ramon_Phase_1_P1",
+   "status": "approved-equivalent",
+   "unownedCookedSignalIds": [
+    "6018",
+    "6019",
+    "6020",
+    "6021",
+    "6022",
+    "6023",
+    "6024",
+    "6025",
+    "6026",
+    "6027",
+    "6028",
+    "6029",
+    "6030",
+    "6031",
+    "6032",
+    "6033",
+    "6034",
+    "6035",
+    "6036",
+    "6037",
+    "6038",
+    "6039",
+    "6040",
+    "6041"
+   ],
+   "xodr": {
+    "bytes": 21765908,
+    "mtime": "2026-09-23T00:37:09.5922434300Z",
+    "name": "San_Ramon_P1.xodr",
+    "sha256": "bda617b839088668ff342d9439018415b4df15387ddb93647fbe0a04843ce633"
+   }
+  },
+  {
+   "carlaWorld": "San_Ramon_Phase_2",
+   "derivedFrom": "c40e43731e4b4f5ab7c92e5ed9aec30452d58bfe2f17919fd1bd21fff67a6845",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 572583,
+     "mtime": "2026-09-23T00:37:09.9762434140Z",
+     "name": "CHANGES.md",
+     "sha256": "a3378a41fa2f727a1f9627e1392472322e00633e9b1c2027fa67213a3f7e8eda"
+    },
+    {
+     "bytes": 329963,
+     "mtime": "2026-09-23T00:37:11.7322433400Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "c7dead13f6c29aaaa0a10e42beb9beeb0c6d78203967b7a88a712f16daaebbd7"
+    },
+    {
+     "bytes": 4263898,
+     "mtime": "2026-09-23T00:37:11.9682433300Z",
+     "name": "refit-report.json",
+     "sha256": "ff304c3e6ac2efde0e0c025befac5bbf263c212c3dc4f54ba79255f46790d979"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "464115753c4c3258a999d689c4ed6c01eebd2d27f2c5e99cb93fe25121dcb38d",
+   "glb": null,
+   "reason": "its original San_ramon_Phase2 is needs-decision",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 28212,
+      "laneHeight": 8761,
+      "lateralProfile": 19335
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 1.028661178048452,
+     "maxSurfaceChangeM": 1.0062210361276414,
+     "roadsRefit": 3492
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/San_ramon_Phase2",
+   "status": "needs-decision",
+   "xodr": {
+    "bytes": 55445719,
+    "mtime": "2026-09-23T00:37:11.5402433480Z",
+    "name": "San_Ramon_Phase_2.xodr",
+    "sha256": "c412c430531c444658b43d0a92303cfa2518536d03ee41ae7d4831869304095f"
+   }
+  },
+  {
+   "blocking": [],
+   "carlaWorld": "Saratoga_School_Area",
+   "comparison": {
+    "header": {
+     "boundsEqual": true,
+     "geoReferenceEqual": true,
+     "runtimeDate": "2026-06-11T14:08:32",
+     "sourceDate": "2026-08-28T18:37:55"
+    },
+    "roads": {
+     "paired": 77,
+     "runtime": 309,
+     "source": 309,
+     "unpairedSource": 232
+    }
+   },
+   "cookedXodrSha256": "ec0e06ca1dfe0391f4e4471acafa93a8c71a809663d434f4bc7e580ca5007bd7",
+   "decisionRequired": [],
+   "derivedFrom": "ff368b92160bf1d8bc726a39039cb225be81a85518b0630ba8671e69f649c4f6",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "differences": [
+    "elevation-only refit of Saratoga_School_Area"
+   ],
+   "elevationChange": {
+    "maxM": 2.9288,
+    "p95M": 1.8866,
+    "reportMaxElevationChangeM": 2.9288630336391464,
+    "samples": 26203
+   },
+   "extraFiles": [
+    {
+     "bytes": 54046,
+     "mtime": "2026-09-23T00:37:12.0882433250Z",
+     "name": "CHANGES.md",
+     "sha256": "2431a8a600b8edbc3c8f684a9ba17ed0245cbff63262bd3f088984ed134655ba"
+    },
+    {
+     "bytes": 171378,
+     "mtime": "2026-09-23T00:37:12.5162433070Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "869bd2ff64aded7176acab269290e2d191d91a067eb79baae2512ddb55a99225"
+    },
+    {
+     "bytes": 395667,
+     "mtime": "2026-09-23T00:37:12.6762433010Z",
+     "name": "refit-report.json",
+     "sha256": "1ebda6417a456e58f2f64fda26a3db144228c9e78d4eb02e0f9576983bd90bc5"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "3097e80f86a339fd1718ff6d42c4bd78fc14c242d0a35b2094e8bf1acee252da",
+   "glb": null,
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 4253,
+      "laneHeight": 2204,
+      "lateralProfile": 2678
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 2.9288630336391464,
+     "maxSurfaceChangeM": 0.6769086467047315,
+     "roadsRefit": 233
+    }
+   },
+   "signalIdMap": {},
+   "simforge": {},
+   "sourceFolder": "derived/Saratoga_School_Area",
+   "status": "approved-equivalent",
+   "xodr": {
+    "bytes": 8535535,
+    "mtime": "2026-09-23T00:37:12.3842433130Z",
+    "name": "Saratoga_School_Area.xodr",
+    "sha256": "1a21e0b1813a80a68481f21e9ca44e5907c4e611824852fd1843642c18dde9fc"
+   }
+  },
+  {
+   "carlaWorld": "Yale_St_Palo_Alto_CA",
+   "derivedFrom": "c8d8401dabdfa9420f3231cdbd7a37bd400cc517f8fa9af8fcaadc489b41d6ae",
+   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "extraFiles": [
+    {
+     "bytes": 64961,
+     "mtime": "2026-09-23T00:37:12.8082432950Z",
+     "name": "CHANGES.md",
+     "sha256": "a07fe17044ec7cb4e4205eb0ee08f4fed52969bb7c7e42cdd002f3d99fafe4f5"
+    },
+    {
+     "bytes": 334609,
+     "mtime": "2026-09-23T00:37:13.1362432810Z",
+     "name": "heatmap-before-after.png",
+     "sha256": "c27bb597512c983cf721e020ed823be51a72adb6c99f0ee79a845378c03296f8"
+    },
+    {
+     "bytes": 488327,
+     "mtime": "2026-09-23T00:37:13.2642432760Z",
+     "name": "refit-report.json",
+     "sha256": "c77c44cc9d72c1f32439636149a100946a22df85f3efc601cd24cdedf3c7c244"
+    }
+   ],
+   "geometryEqualsOriginal": true,
+   "geometrySha256": "680b8e077f390e701194f4c4255586cb21de9d01a7bc7275f204eaec77d11469",
+   "glb": null,
+   "reason": "its original Yale_St_Palo_Alto_CA is needs-recook",
+   "refitReport": {
+    "schema": "simforge.xodr-elevation-refit.v1",
+    "structuralDiff": {
+     "bytesOutsideAllowedIdentical": true,
+     "changedElements": {
+      "elevationProfile": 2351,
+      "laneHeight": 957,
+      "lateralProfile": 1674
+     },
+     "forbidden": 0
+    },
+    "tool": {
+     "fingerprint": "851abd758aa4917da2c61902ff309107393b3262147b51396acd4cd94e740588",
+     "gitSha": "5e12aca8d5a74656aaf876dc8ba2f6344792f4d8"
+    },
+    "totals": {
+     "maxElevationChangeM": 0.9764953349521761,
+     "maxSurfaceChangeM": 0.9714655895236267,
+     "roadsRefit": 375
+    }
+   },
+   "simforge": {},
+   "sourceFolder": "derived/Yale_St_Palo_Alto_CA",
+   "status": "needs-recook",
+   "xodr": {
+    "bytes": 5399240,
+    "mtime": "2026-09-23T00:37:13.0322432860Z",
+    "name": "Yale_St_Palo_Alto_CA.xodr",
+    "sha256": "272ddeeb04e707dc7ad16ae1063b53a869a3c8b74d5d24e620f3c411cff3cfe5"
+   }
+  }
+ ],
+ "schema": "simforge.carla-world-manifest/v1",
+ "source": {
+  "root": "/mnt/nas/a100-data/GLB_Map_Export"
+ },
+ "tolerance": {
+  "headingDeg": 0.1,
+  "positionM": 0.01
+ },
+ "worlds": {
+  "Belmont_Office_Park_Belmont_CA": {
+   "boundDerived": [],
+   "boundSource": null,
+   "matchedSources": [
+    "Belmont_Office_Park_Belmont_CA",
+    "derived/Belmont_Office_Park_Belmont_CA"
+   ],
+   "xodrSha256": "a345d71de6cee091ee7d2ad4d0dfbf0a49db59ab9927cd22d4dd0dcd3e3eca4d"
+  },
+  "Di_Rosa_SF": {
+   "boundDerived": [],
+   "boundSource": null,
+   "matchedSources": [
+    "Di_Rosa_SF",
+    "derived/Di_Rosa_SF"
+   ],
+   "xodrSha256": "22b92a6aa0757d4946e4201a3c6f9dfcd595ee6286517e0a1203d301fc3be171"
+  },
+  "El_Camino_Rd_Palo_Alto_CA": {
+   "boundDerived": [],
+   "boundSource": null,
+   "matchedSources": [
+    "El_Camino_Rd_Palo_Alto_CA",
+    "derived/El_Camino_Rd_Palo_Alto_CA"
+   ],
+   "xodrSha256": "97feee3176b26bfad8e96b58aa1682f54a89a0cd1651bc397b459b49b5db9665"
+  },
+  "Mine_01": {
+   "boundDerived": [],
+   "boundSource": null,
+   "matchedSources": [],
+   "xodrSha256": "1e165bf403293d8901f0b0842e1f227ddf64ad01ee4150fdbeb0c75523b04996"
+  },
+  "Munich": {
+   "boundDerived": [],
+   "boundSource": null,
+   "matchedSources": [],
+   "xodrSha256": "a8f627a40b91b69c10b809200ec0014a3e20ef2b3801874b567e62fdd1842740"
+  },
+  "Page_Mill_Rd_Palo_Alto_CA": {
+   "boundDerived": [],
+   "boundSource": null,
+   "matchedSources": [],
+   "xodrSha256": "6452f1cc3f7c4736ab9be6ae255bf8ec795a88c0b4a384cebff2c3f9825405af"
+  },
+  "Richmond_Field_Station_Richmond_CA": {
+   "boundDerived": [],
+   "boundSource": null,
+   "matchedSources": [
+    "Richmond_Field_Station_Richmond_CA",
+    "derived/Richmond_Field_Station_Richmond_CA"
+   ],
+   "xodrSha256": "1576737df37adb4caad6bef62210e060fcbf5c9a082ddd269515417616a36111"
+  },
+  "San_Ramon_Phase_1_P1": {
+   "boundDerived": [
+    "derived/San_Ramon_Phase_1_P1"
+   ],
+   "boundSource": "San_Ramon_Phase_1_P1",
+   "matchedSources": [
+    "San_Ramon_Phase_1_P1",
+    "derived/San_Ramon_Phase_1_P1"
+   ],
+   "xodrSha256": "5da6851d276af8131218f10aaa6617682ddce41308295f9ff9a11d460b082f8b"
+  },
+  "San_Ramon_Phase_1_P2": {
+   "boundDerived": [
+    "derived/San_Ramon_25_P2"
+   ],
+   "boundSource": "San_Ramon_25_P2",
+   "matchedSources": [
+    "San_Ramon_25_P2",
+    "derived/San_Ramon_25_P2"
+   ],
+   "xodrSha256": "ca540122c82407b41addf397dd204676ef218e0e052010334ef2aaf363feeffb"
+  },
+  "San_Ramon_Phase_2": {
+   "boundDerived": [],
+   "boundSource": null,
+   "matchedSources": [
+    "San_ramon_Phase2",
+    "derived/San_ramon_Phase2"
+   ],
+   "xodrSha256": "ae48056b9a59f45cf6fdd45a9a27ea4614c5ded861a59b3708ae437e34ea93dc"
+  },
+  "Saratoga_School_Area": {
+   "boundDerived": [
+    "derived/Saratoga_School_Area"
+   ],
+   "boundSource": "Saratoga_School_Area",
+   "matchedSources": [
+    "Saratoga_School_Area",
+    "derived/Saratoga_School_Area"
+   ],
+   "xodrSha256": "ec0e06ca1dfe0391f4e4471acafa93a8c71a809663d434f4bc7e580ca5007bd7"
+  },
+  "Town10HD_Opt": {
+   "boundDerived": [],
+   "boundSource": null,
+   "matchedSources": [],
+   "xodrSha256": "5d883b799f634030af92be1e9d79d107845540ba04338e8c60e095be1aef7be7"
+  },
+  "Yale_St_Palo_Alto_CA": {
+   "boundDerived": [],
+   "boundSource": null,
+   "matchedSources": [
+    "Yale_St_Palo_Alto_CA",
+    "derived/Yale_St_Palo_Alto_CA"
+   ],
+   "xodrSha256": "c7e95b5eeb8a58fadec6b26b9e73c41753cd21428039f0d44e541bbef1644f6f"
+  }
+ }
+}

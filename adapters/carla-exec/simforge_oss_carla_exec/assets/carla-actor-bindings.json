@@ -1,0 +1,1356 @@
+{
+ "bindings": {
+  "carla.advertisement": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.advertisement",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.atm": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.atm",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.bench01": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.bench01",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.bench02": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.bench02",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.busstop": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.busstop",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.calibrator": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.calibrator",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.chainbarrier": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.chainbarrier",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.chainbarrierend": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.chainbarrierend",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.colacan": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.colacan",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.constructioncone": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.constructioncone",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.creasedbox01": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.creasedbox01",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.dirtdebris01": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.dirtdebris01",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.dirtdebris02": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.dirtdebris02",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.dirtdebris03": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.dirtdebris03",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.dumpster": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.dumpster",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.dumpster02": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.dumpster02",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.fountain": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.fountain",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.garbage04": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.garbage04",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.garbage05": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.garbage05",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.gnome": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.gnome",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.haybale": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.haybale",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.kiosk_01": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.kiosk_01",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.mailbox": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.mailbox",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.maptable": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.maptable",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.mobile": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.mobile",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.plantpot01": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.plantpot01",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.plantpot02": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.plantpot02",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.plantpot03": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.plantpot03",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.plantpot04": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.plantpot04",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.plantpot05": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.plantpot05",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.plantpot06": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.plantpot06",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.plantpot07": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.plantpot07",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.platformgarbage01": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.platformgarbage01",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.recyclecardboard": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.recyclecardboard",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.recycleglass": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.recycleglass",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.recycleorganic": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.recycleorganic",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.recycleplastic": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.recycleplastic",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.streetbarrier": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.streetbarrier",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.streetfountain": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.streetfountain",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.streetsign": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.streetsign",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.streetsign01": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.streetsign01",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.streetsign04": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.streetsign04",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.swing": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.swing",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.trafficcone01": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.trafficcone01",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.trafficcone02": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.trafficcone02",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.trafficwarning": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.trafficwarning",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.trashbag": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.trashbag",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.trashcan01": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.trashcan01",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.trashcan02": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.trashcan02",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.trashcan03": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.trashcan03",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.trashcan04": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.trashcan04",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.trashcan05": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.trashcan05",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_ambulance_ford": {
+   "actorClass": "truck",
+   "blueprintId": "vehicle.ambulance.ford",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_bh_crossbike": {
+   "actorClass": "bicycle",
+   "blueprintId": "vehicle.bh.crossbike",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_carlacola_actors": {
+   "actorClass": "truck",
+   "blueprintId": "vehicle.carlacola.actors",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_diamondback_century": {
+   "actorClass": "bicycle",
+   "blueprintId": "vehicle.diamondback.century",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_dodge_charger": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.dodge.charger",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_dodgecop_charger": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.dodgecop.charger",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_firetruck_actors": {
+   "actorClass": "truck",
+   "blueprintId": "vehicle.firetruck.actors",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_fuso_mitsubishi": {
+   "actorClass": "bus",
+   "blueprintId": "vehicle.fuso.mitsubishi",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_gazelle_omafiets": {
+   "actorClass": "bicycle",
+   "blueprintId": "vehicle.gazelle.omafiets",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_harley_lowrider": {
+   "actorClass": "motorcycle",
+   "blueprintId": "vehicle.harley.lowrider",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_kawasaki_ninja": {
+   "actorClass": "motorcycle",
+   "blueprintId": "vehicle.kawasaki.ninja",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_kia_carnival": {
+   "actorClass": "van",
+   "blueprintId": "vehicle.kia.carnival",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_lincoln_mkz": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.lincoln.mkz",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_mini_cooper": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.mini.cooper",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_nissan_patrol": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.nissan.patrol",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_sprinter_mercedes": {
+   "actorClass": "van",
+   "blueprintId": "vehicle.sprinter.mercedes",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_taxi_ford": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.taxi.ford",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_ue4_audi_tt": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.ue4.audi.tt",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_ue4_bmw_grantourer": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.ue4.bmw.grantourer",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_ue4_chevrolet_impala": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.ue4.chevrolet.impala",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_ue4_ford_crown": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.ue4.ford.crown",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_ue4_ford_mustang": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.ue4.ford.mustang",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_ue4_mercedes_ccc": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.ue4.mercedes.ccc",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_vespa_zx125": {
+   "actorClass": "motorcycle",
+   "blueprintId": "vehicle.vespa.zx125",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vehicle_yamaha_yzf": {
+   "actorClass": "motorcycle",
+   "blueprintId": "vehicle.yamaha.yzf",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.vendingmachine": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.vendingmachine",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0015": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0015",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0016": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0016",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0017": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0017",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0018": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0018",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0019": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0019",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0020": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0020",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0021": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0021",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0022": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0022",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0023": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0023",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0024": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0024",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0025": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0025",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0026": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0026",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0027": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0027",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0028": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0028",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0029": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0029",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0030": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0030",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0031": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0031",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0032": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0032",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0033": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0033",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0034": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0034",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0035": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0035",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0036": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0036",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0037": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0037",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0038": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0038",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0039": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0039",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0040": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0040",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0041": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0041",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0042": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0042",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0043": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0043",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0044": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0044",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0045": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0045",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0046": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0046",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0047": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0047",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0048": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0048",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0049": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0049",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0050": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0050",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0051": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0051",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.walker_0052": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0052",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.warningaccident": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.warningaccident",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "carla.warningconstruction": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.warningconstruction",
+   "dimensionalAgreement": "exact",
+   "fidelity": "exact",
+   "origin": "carla-object"
+  },
+  "construction.pedestrian_barrier": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.streetbarrier",
+   "carlaDims": {
+    "h": 1.069,
+    "l": 1.215,
+    "w": 0.372
+   },
+   "dimensionalAgreement": "close",
+   "fidelity": "semantic-substitute",
+   "origin": "equivalent"
+  },
+  "construction.sign_road_work": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.warningconstruction",
+   "carlaDims": {
+    "h": 1.86,
+    "l": 1.305,
+    "w": 1.055
+   },
+   "dimensionalAgreement": "close",
+   "fidelity": "semantic-substitute",
+   "origin": "equivalent"
+  },
+  "construction.traffic_cone": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.constructioncone",
+   "carlaDims": {
+    "h": 0.712,
+    "l": 0.478,
+    "w": 0.478
+   },
+   "dimensionalAgreement": "close",
+   "fidelity": "semantic-substitute",
+   "origin": "equivalent"
+  },
+  "hazard.cardboard_box": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.creasedbox01",
+   "carlaDims": {
+    "h": 0.062,
+    "l": 1.029,
+    "w": 0.907
+   },
+   "dimensionalAgreement": "loose",
+   "fidelity": "semantic-substitute",
+   "origin": "equivalent"
+  },
+  "hazard.debris": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.dirtdebris01",
+   "carlaDims": {
+    "h": 0.149,
+    "l": 1.857,
+    "w": 1.514
+   },
+   "dimensionalAgreement": "loose",
+   "fidelity": "semantic-substitute",
+   "origin": "equivalent"
+  },
+  "hazard.trash_bags": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.trashbag",
+   "carlaDims": {
+    "h": 0.702,
+    "l": 0.378,
+    "w": 0.43
+   },
+   "dimensionalAgreement": "loose",
+   "fidelity": "semantic-substitute",
+   "origin": "equivalent"
+  },
+  "occluder.dumpster": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.dumpster",
+   "carlaDims": {
+    "h": 1.926,
+    "l": 2.258,
+    "w": 1.163
+   },
+   "dimensionalAgreement": "close",
+   "fidelity": "semantic-substitute",
+   "origin": "equivalent"
+  },
+  "pedestrian.adult": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0016",
+   "carlaDims": {
+    "h": 1.805,
+    "l": 0.869,
+    "w": 0.327
+   },
+   "dimensionalAgreement": "loose",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "pedestrian.adult_standing": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0016",
+   "carlaDims": {
+    "h": 1.805,
+    "l": 0.869,
+    "w": 0.327
+   },
+   "dimensionalAgreement": "loose",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "pedestrian.adult_walking": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0016",
+   "carlaDims": {
+    "h": 1.805,
+    "l": 0.869,
+    "w": 0.327
+   },
+   "dimensionalAgreement": "close",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "pedestrian.child": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0050",
+   "carlaDims": {
+    "h": 1.192,
+    "l": 0.448,
+    "w": 0.343
+   },
+   "dimensionalAgreement": "loose",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "pedestrian.child_standing": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0050",
+   "carlaDims": {
+    "h": 1.192,
+    "l": 0.448,
+    "w": 0.343
+   },
+   "dimensionalAgreement": "loose",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "pedestrian.child_walking": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0049",
+   "carlaDims": {
+    "h": 1.16,
+    "l": 0.473,
+    "w": 0.299
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "pedestrian.traffic_marshal": {
+   "actorClass": "pedestrian",
+   "blueprintId": "walker.pedestrian.0017",
+   "carlaDims": {
+    "h": 1.93,
+    "l": 0.699,
+    "w": 0.396
+   },
+   "dimensionalAgreement": "close",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "street.bus_shelter": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.busstop",
+   "carlaDims": {
+    "h": 2.739,
+    "l": 1.894,
+    "w": 3.876
+   },
+   "dimensionalAgreement": "loose",
+   "fidelity": "semantic-substitute",
+   "origin": "equivalent"
+  },
+  "street.mailbox_cluster": {
+   "actorClass": "static_object",
+   "blueprintId": "static.prop.mailbox",
+   "carlaDims": {
+    "h": 1.157,
+    "l": 0.527,
+    "w": 0.438
+   },
+   "dimensionalAgreement": "close",
+   "fidelity": "semantic-substitute",
+   "origin": "equivalent"
+  },
+  "vehicle.ambulance": {
+   "actorClass": "truck",
+   "blueprintId": "vehicle.ambulance.ford",
+   "carlaDims": {
+    "h": 2.431,
+    "l": 6.357,
+    "w": 2.351
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.bicycle": {
+   "actorClass": "bicycle",
+   "blueprintId": "vehicle.gazelle.omafiets",
+   "carlaDims": {
+    "h": 1.776,
+    "l": 1.843,
+    "w": 0.659
+   },
+   "dimensionalAgreement": "close",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.box_truck": {
+   "actorClass": "truck",
+   "blueprintId": "vehicle.carlacola.actors",
+   "carlaDims": {
+    "h": 4.055,
+    "l": 8.004,
+    "w": 2.912
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.chevrolet_corvette": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.dodge.charger",
+   "carlaDims": {
+    "h": 1.54,
+    "l": 5.006,
+    "w": 1.881
+   },
+   "dimensionalAgreement": "close",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.delivery_van": {
+   "actorClass": "van",
+   "blueprintId": "vehicle.sprinter.mercedes",
+   "carlaDims": {
+    "h": 2.726,
+    "l": 5.915,
+    "w": 1.988
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.fire_engine": {
+   "actorClass": "truck",
+   "blueprintId": "vehicle.firetruck.actors",
+   "carlaDims": {
+    "h": 3.827,
+    "l": 8.58,
+    "w": 2.901
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.ford_mustang": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.dodge.charger",
+   "carlaDims": {
+    "h": 1.54,
+    "l": 5.006,
+    "w": 1.881
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.hatchback": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.mini.cooper",
+   "carlaDims": {
+    "h": 1.772,
+    "l": 4.553,
+    "w": 2.096
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.honda_civic": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.lincoln.mkz",
+   "carlaDims": {
+    "h": 1.524,
+    "l": 4.892,
+    "w": 1.836
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.jeep_wrangler": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.nissan.patrol",
+   "carlaDims": {
+    "h": 2.059,
+    "l": 5.591,
+    "w": 2.147
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.kia.carnival": {
+   "actorClass": "van",
+   "blueprintId": "vehicle.kia.carnival",
+   "carlaDims": {
+    "h": 1.803,
+    "l": 5.162,
+    "w": 2.351
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.minivan": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.nissan.patrol",
+   "carlaDims": {
+    "h": 2.059,
+    "l": 5.591,
+    "w": 2.147
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.motorcycle": {
+   "actorClass": "motorcycle",
+   "blueprintId": "vehicle.harley.lowrider",
+   "carlaDims": {
+    "h": 1.649,
+    "l": 2.35,
+    "w": 0.766
+   },
+   "dimensionalAgreement": "close",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.police_cruiser": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.dodgecop.charger",
+   "carlaDims": {
+    "h": 1.644,
+    "l": 5.237,
+    "w": 1.924
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.police_suv": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.dodgecop.charger",
+   "carlaDims": {
+    "h": 1.644,
+    "l": 5.237,
+    "w": 1.924
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.porsche_911": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.dodge.charger",
+   "carlaDims": {
+    "h": 1.54,
+    "l": 5.006,
+    "w": 1.881
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.sedan": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.lincoln.mkz",
+   "carlaDims": {
+    "h": 1.524,
+    "l": 4.892,
+    "w": 1.836
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.suv": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.nissan.patrol",
+   "carlaDims": {
+    "h": 2.059,
+    "l": 5.591,
+    "w": 2.147
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.taxi": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.taxi.ford",
+   "carlaDims": {
+    "h": 1.575,
+    "l": 5.354,
+    "w": 1.789
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.tesla_model_3": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.lincoln.mkz",
+   "carlaDims": {
+    "h": 1.524,
+    "l": 4.892,
+    "w": 1.836
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.toyota_camry": {
+   "actorClass": "car",
+   "blueprintId": "vehicle.lincoln.mkz",
+   "carlaDims": {
+    "h": 1.524,
+    "l": 4.892,
+    "w": 1.836
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  },
+  "vehicle.van": {
+   "actorClass": "van",
+   "blueprintId": "vehicle.sprinter.mercedes",
+   "carlaDims": {
+    "h": 2.726,
+    "l": 5.915,
+    "w": 1.988
+   },
+   "dimensionalAgreement": "exact",
+   "fidelity": "native-blueprint",
+   "origin": "equivalent"
+  }
+ },
+ "schema": "simforge.carla-actor-bindings/v1",
+ "source": {
+  "objectCatalog": {
+   "carlaVersion": "0.10.0",
+   "generatedFrom": {
+    "inventory": "config/simforge/carla/carla-0.10.0-kia-blueprints.json",
+    "inventorySha256": "dd614ea8fdeec297f5e08cdab3d576465b437b50bc9df7f3f651c38327fb7e3c",
+    "proceduralCatalogEntries": 90
+   },
+   "sha256": "68a4d4699f52ee7d3b1ec4be4493bdf28c5c4b9a4247cf2755eefaa70bc12fe4"
+  },
+  "paritySubstitutions": {
+   "entries": 12,
+   "sha256": "d5f356011157d18f7198037590c71f2a9eaf6b3b84d62e7a53c3065fe5fdee21"
+  }
+ },
+ "unavailable": {
+  "animal.cat": "no CARLA animal blueprint matches this model",
+  "animal.deer": "no CARLA animal blueprint matches this model",
+  "animal.dog": "no CARLA animal blueprint matches this model",
+  "animal.goose": "no CARLA animal blueprint matches this model",
+  "animal.raccoon": "no CARLA animal blueprint matches this model",
+  "construction.arrow_board": "no CARLA construction blueprint matches this model",
+  "construction.barricade_type3": "no CARLA construction blueprint matches this model",
+  "construction.channelizer_drum": "static.prop.barrel is unspawnable on the kia image (missing cooked physics-prop mesh)",
+  "construction.excavator": "no CARLA construction blueprint matches this model",
+  "construction.flagger": "no CARLA construction blueprint matches this model",
+  "construction.jersey_barrier": "no CARLA construction blueprint matches this model",
+  "construction.jersey_barrier_run": "no CARLA construction blueprint matches this model",
+  "construction.long_pipe": "no CARLA construction blueprint matches this model",
+  "construction.portable_signal": "no CARLA construction blueprint matches this model",
+  "construction.portable_toilet": "no CARLA construction blueprint matches this model",
+  "construction.spoil_pile": "no CARLA construction blueprint matches this model",
+  "construction.temporary_stop_sign": "CARLA 0.10.0 has no portable stop sign; static.prop.streetsign is a fixed street name sign",
+  "drone.camera_quadcopter": "no CARLA drone blueprint matches this model",
+  "drone.delivery_quadcopter": "no CARLA drone blueprint matches this model",
+  "drone.emergency_responder": "no CARLA drone blueprint matches this model",
+  "hazard.downed_branch": "no CARLA hazard blueprint matches this model",
+  "hazard.ladder": "no CARLA hazard blueprint matches this model",
+  "hazard.mattress": "no CARLA hazard blueprint matches this model",
+  "hazard.tire_debris": "no CARLA hazard blueprint matches this model",
+  "occluder.covered_car": "no CARLA occluder blueprint matches this model",
+  "occluder.fence_run": "no CARLA occluder blueprint matches this model",
+  "occluder.hedge_run": "no CARLA occluder blueprint matches this model",
+  "sidewalk_robot.cooler_bot": "no CARLA sidewalk_robot blueprint matches this model",
+  "sidewalk_robot.delivery_rover": "no CARLA sidewalk_robot blueprint matches this model",
+  "sidewalk_robot.humanoid_construction": "no CARLA sidewalk_robot blueprint matches this model",
+  "sidewalk_robot.humanoid_delivery": "no CARLA sidewalk_robot blueprint matches this model",
+  "sidewalk_robot.humanoid_general_purpose": "no CARLA sidewalk_robot blueprint matches this model",
+  "sidewalk_robot.humanoid_public_safety": "no CARLA sidewalk_robot blueprint matches this model",
+  "sidewalk_robot.humanoid_warehouse": "no CARLA sidewalk_robot blueprint matches this model",
+  "sidewalk_robot.quadruped_courier": "no CARLA sidewalk_robot blueprint matches this model",
+  "street.food_cart": "static.prop.foodcart does not exist in the kia image library (removed alongside static.prop.gardenlamp)",
+  "street.shopping_cart": "static.prop.shoppingcart is unspawnable on the kia image (missing cooked physics-prop mesh)",
+  "vehicle.bus": "renderer parity: The only CARLA bus body (Fuso Rosa, 10.2 m) fails the dimension gate for a 12.2 m bus, so CARLA fails closed.",
+  "vehicle.cement_mixer": "no mixer body blueprint",
+  "vehicle.dump_truck": "no tipper body blueprint",
+  "vehicle.fire_command_suv": "no marked command SUV blueprint",
+  "vehicle.flatbed_truck": "no flatbed body blueprint",
+  "vehicle.garbage_truck": "no refuse body blueprint",
+  "vehicle.mobility_scooter": "no mobility-scooter body; the Vespa ZX 125 is a moped, and substituting it would misstate the VRU class",
+  "vehicle.pickup": "no pickup blueprint; the nearest bodies are a 4.9 m saloon and an 8 m box truck",
+  "vehicle.school_bus": "no school-bus body; the Fuso Rosa minibus fails the dimensional gate",
+  "vehicle.semi_truck": "no articulated tractor-trailer blueprint; the 8 m box truck is 12 m short",
+  "vehicle.shuttle_bus": "renderer parity: CARLA has no shuttle body and the Sprinter is not bound for this id; native shows a long-wheelbase Sprinter.",
+  "vehicle.tanker_truck": "no tanker body blueprint",
+  "vehicle.tow_truck": "no recovery body blueprint",
+  "vehicle.tram": "CARLA 0.10.0 ships no rail vehicle blueprint",
+  "vehicle.utility_bucket_truck": "no aerial-platform body blueprint"
+ }
+}

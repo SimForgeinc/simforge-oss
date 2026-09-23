@@ -22,6 +22,7 @@ from .runtime.backend import (
     KIA_CARNIVAL_BLUEPRINT_ID,
     PRONTO_CHASE_CAMERA_SENSOR_ID,
     CarlaBackend,
+    asset_catalog_version_id,
     cooked_map_name_for_xodr,
 )
 from .runtime.compiler import compile_xosc14
@@ -761,8 +762,8 @@ def _intent_lease(
         raise ContractError("catalog input must be UTF-8 JSON") from exc
     if not isinstance(catalog_json, Mapping) or catalog_json.get("contractVersion") not in {ASSET_CATALOG_SCHEMA, "uniscenario.asset-catalog/v1"}:
         raise ContractError("catalog input is not a supported asset catalog")
-    catalog_version = catalog_json.get("catalogVersionId")
-    if not isinstance(catalog_version, str) or not catalog_version:
+    catalog_version = asset_catalog_version_id(catalog_json, hashlib.sha256(catalog_body).hexdigest())
+    if catalog_version is None:
         raise ContractError("catalog input has no catalogVersionId")
     plan = compile_xosc14(xosc)
     duration = plan.frames[-1].t
@@ -1232,6 +1233,15 @@ def _run_intent(args: argparse.Namespace) -> dict[str, object]:
         message = "CARLA render failed its blocking parity gate: " + json.dumps(summary, sort_keys=True)
         emit("warning", {"code": "carla.parity_failed", "message": message[:4096]})
         raise RuntimeError(message)
+    riders = result.get("riderPoseStatic") or []
+    if riders:
+        # A known degradation, stated where the UI shows job warnings.
+        emit("warning", {
+            "code": "carla_rider_pose_static",
+            "message": ("CARLA trace replay has no wheel/crank state: two-wheeler riders hold a static pose "
+                        "(pedals do not turn); native renders pedal from the timeline odometer. Actors: "
+                        + ", ".join(riders))[:4096],
+        })
     manifest_entries = _artifact_manifest_entries(result["artifacts"])
     substitutions = result.get("substitutions")
     if not isinstance(substitutions, list):

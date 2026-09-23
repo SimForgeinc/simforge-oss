@@ -20,6 +20,15 @@ RUN pnpm install --frozen-lockfile --ignore-scripts \
 RUN pnpm deploy --config.allow-unused-patches=true --legacy --filter @simforge-oss/render-worker --prod /out/worker \
  && node services/render-worker/finalize-deploy.mjs /out/worker services/render-worker
 
+# The shared render-timeline sampler (PyO3, abi3 >= 3.10, manylinux2014). The
+# trace-replay path refuses a package that ships a render timeline without it,
+# so an image without this wheel cannot render any platform CARLA job.
+FROM ghcr.io/pyo3/maturin:v1.9.6 AS timeline-build
+COPY --from=source /native /src/native
+COPY --from=source /adapters/timeline /src/adapters/timeline
+WORKDIR /src/adapters/timeline
+RUN maturin build --release --locked --manylinux 2014 -o /wheels
+
 FROM python:3.12.10-slim-bookworm AS python-build
 WORKDIR /src
 COPY --from=source /adapters/carla-exec ./adapters/carla-exec
@@ -40,7 +49,9 @@ RUN test -n "$SOURCE_REVISION" && test -n "$IMAGE_VERSION" \
 COPY --from=node-toolchain /usr/local/bin/node /usr/local/bin/node
 COPY --from=node-build --chown=carla:carla /out/worker /opt/simforge/worker
 COPY --from=python-build /wheels /tmp/wheels
-RUN python3 -m pip install --no-cache-dir /home/carla/PythonAPI/carla/dist/carla-*.whl /tmp/wheels/*.whl && rm -rf /tmp/wheels
+COPY --from=timeline-build /wheels /tmp/wheels
+RUN python3 -m pip install --no-cache-dir /home/carla/PythonAPI/carla/dist/carla-*.whl /tmp/wheels/*.whl && rm -rf /tmp/wheels \
+ && python3 -c "import simforge_oss_timeline"
 # SIMFORGE_SOURCE_REVISION is the engine version a CARLA worker registers with;
 # the control plane only approves a CARLA node whose version is this commit.
 # SIMFORGE_CARLA_VERSION/SIMFORGE_ENGINE_VERSION are the pinned base image's

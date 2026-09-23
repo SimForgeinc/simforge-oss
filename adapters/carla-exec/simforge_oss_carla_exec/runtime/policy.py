@@ -161,8 +161,11 @@ def bone_pose_signature(bones: Any) -> dict[str, tuple[float, float, float]]:
         )
     all_bones: dict[str, tuple[float, float, float]] = {}
     for item in transforms:
-        # carla.BoneTransformDataOut: bone_name, world, component, relative.
-        name = getattr(item, "bone_name", None)
+        # carla.BoneTransformDataOut: `name` on CARLA 0.10 (UE5), `bone_name`
+        # on 0.9; world, component, relative on both.
+        name = getattr(item, "name", None)
+        if not isinstance(name, str) or not name:
+            name = getattr(item, "bone_name", None)
         relative = getattr(item, "relative", None)
         rotation = getattr(relative, "rotation", None)
         if not isinstance(name, str) or not name or rotation is None:

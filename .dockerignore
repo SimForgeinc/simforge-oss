@@ -25,6 +25,8 @@ scripts/*
 adapters/*
 !adapters/carla-exec/
 !adapters/carla-exec/**
+!adapters/timeline/
+!adapters/timeline/**
 # pnpm-workspace.yaml patchedDependencies, and the CARLA object catalog that
 # @simforge-oss/asset-catalog generates from at build time.
 !patches/
