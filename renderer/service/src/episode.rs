@@ -95,6 +95,10 @@ impl Episode {
             return Err("episode requires a nonempty, contiguous source interval".into());
         }
         let mut authored = Vec::with_capacity(document.frames.len());
+        // Odometer per actor, the render timeline's `wheelSpinRad` rule over this
+        // contiguous source interval: Σ |v|·dt on ticks after spawn. It phases
+        // ridden two-wheelers deterministically from the document alone.
+        let mut odometer: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
         for frame in &document.frames {
             let mut actors = Vec::with_capacity(frame.actors.len());
             for pose in &frame.actors {
@@ -106,6 +110,11 @@ impl Episode {
                 if !desc.dims.is_some_and(|d| [d.l,d.w,d.h].iter().all(|v| v.is_finite() && *v>0.0)) {
                     return Err(format!("actor {} requires positive declared dimensions for collision/replay checks",pose.id));
                 }
+                let distance = odometer.entry(pose.id.clone()).or_insert(0.0);
+                if matches!(pose.kind, ActorTickKind::Update) {
+                    *distance += pose.velocity.iter().map(|v| v * v).sum::<f64>().sqrt() / hz;
+                }
+                let wheel_spin_rad = Some(*distance / render_core::vehicle_model::TIMELINE_WHEEL_RADIUS_M);
                 actors.push(ActorState {
                     id: pose.id.clone(),
                     kind: match pose.kind { ActorTickKind::Spawn => "spawn", ActorTickKind::Update => "update", ActorTickKind::Despawn => "despawn" }.into(),
@@ -113,6 +122,7 @@ impl Episode {
                     color: desc.color.clone(), dims: desc.dims.map(|d| ActorDims { l: d.l as f32, w: d.w as f32, h: d.h as f32 }),
                     transform: ActorTransform { position: pose.position.map(|v| v as f32), rotation: pose.rotation.map(|v| v as f32) },
                     velocity: pose.velocity.map(|v| v as f32),
+                    wheel_spin_rad,
                 });
             }
             if !actors.iter().any(|a| a.id == ego_id && a.kind != "despawn") {

@@ -1721,6 +1721,8 @@ pub struct SceneApp {
     /// Per-actor cloned tint material handles. Catalog materials are shared
     /// assets, so tinting must never mutate the source GLB material.
     actor_tint_materials: HashMap<String, Vec<Handle<StandardMaterial>>>,
+    /// Per-actor clones of palette-coloured material slots (ridden two-wheelers).
+    actor_palette_materials: HashMap<String, Vec<Handle<StandardMaterial>>>,
     /// Asset handles are retained by absolute path so repeated actor spawns
     /// instantiate an already-resident GLB rather than reloading it.
     actor_asset_cache: HashMap<String, Handle<Gltf>>,
@@ -1963,6 +1965,7 @@ impl SceneApp {
             actor_models: HashMap::new(),
             actor_id_clones: HashMap::new(),
             actor_tint_materials: HashMap::new(),
+            actor_palette_materials: HashMap::new(),
             actor_asset_cache: HashMap::new(),
             actor_animations: HashMap::new(),
             actor_classes: HashMap::new(),
@@ -3558,6 +3561,90 @@ impl SceneApp {
         Ok(())
     }
 
+    /// Write linear-RGB base colours into named material slots of an attached
+    /// actor model (a ridden two-wheeler's `rider_*` palette slots). Each slot
+    /// is cloned per actor, so instances sharing the GLB keep their own
+    /// colours. Every requested slot must exist in the model: a missing slot
+    /// fails instead of leaving the authored colour in place.
+    pub fn set_actor_material_colors(&mut self, actor_id: &str, colors: &[(String, [f32; 3])]) -> Result<()> {
+        if colors.is_empty() {
+            return Ok(());
+        }
+        let (model_root, _, _) = *self
+            .actor_models
+            .get(actor_id)
+            .ok_or_else(|| anyhow::anyhow!("set material colours before attaching a model: {actor_id}"))?;
+        let targets = {
+            let world = self.app.world();
+            let mut stack = vec![model_root];
+            let mut targets: Vec<(Entity, String, Handle<StandardMaterial>)> = Vec::new();
+            while let Some(entity) = stack.pop() {
+                if let Some(children) = world.get::<Children>(entity) {
+                    stack.extend(children.iter());
+                }
+                let (Some(name), Some(material)) = (
+                    world.get::<GltfMaterialName>(entity),
+                    world.get::<MeshMaterial3d<StandardMaterial>>(entity),
+                ) else {
+                    continue;
+                };
+                if colors.iter().any(|(slot, _)| slot == &**name) {
+                    targets.push((entity, name.to_string(), material.0.clone()));
+                }
+            }
+            targets.sort_by_key(|(entity, _, _)| entity.index());
+            targets
+        };
+        let mut owned = Vec::new();
+        for (slot, color) in colors {
+            let slot_targets: Vec<_> = targets.iter().filter(|(_, name, _)| name == slot).collect();
+            let Some((_, _, source)) = slot_targets.first() else {
+                bail!("actor {actor_id} model has no material slot {slot:?}");
+            };
+            let handle = {
+                let world = self.app.world_mut();
+                let mut material = world
+                    .resource::<Assets<StandardMaterial>>()
+                    .get(source)
+                    .cloned()
+                    .ok_or_else(|| anyhow::anyhow!("material {slot:?} missing after actor model load"))?;
+                material.base_color = Color::linear_rgb(color[0], color[1], color[2]);
+                world.resource_mut::<Assets<StandardMaterial>>().add(material)
+            };
+            for (entity, _, _) in slot_targets {
+                self.app.world_mut().entity_mut(*entity).insert(MeshMaterial3d(handle.clone()));
+            }
+            owned.push(handle);
+        }
+        self.actor_palette_materials.insert(actor_id.to_string(), owned);
+        self.scene_revision += 1;
+        Ok(())
+    }
+
+    /// Linear-RGB base colours of the named slots on an attached model, in
+    /// entity order (diagnostics and tests).
+    pub fn actor_material_colors(&self, actor_id: &str, slot: &str) -> Vec<[f32; 3]> {
+        let Some((model_root, _, _)) = self.actor_models.get(actor_id) else {
+            return Vec::new();
+        };
+        let world = self.app.world();
+        let materials = world.resource::<Assets<StandardMaterial>>();
+        let mut stack = vec![*model_root];
+        let mut out = Vec::new();
+        while let Some(entity) = stack.pop() {
+            if let Some(children) = world.get::<Children>(entity) {
+                stack.extend(children.iter());
+            }
+            if world.get::<GltfMaterialName>(entity).is_some_and(|name| &**name == slot) {
+                if let Some(material) = world.get::<MeshMaterial3d<StandardMaterial>>(entity).and_then(|m| materials.get(&m.0)) {
+                    let c = material.base_color.to_linear();
+                    out.push([c.red, c.green, c.blue]);
+                }
+            }
+        }
+        out
+    }
+
     /// The world transform the renderer last drew for an actor's canonical
     /// body (the centre-origin cuboid that also drives the ID/sensor passes),
     /// read back from the ECS after propagation: an observation, not the
@@ -3625,6 +3712,7 @@ impl SceneApp {
                 world.despawn(model);
             }
             self.actor_tint_materials.remove(id);
+            self.actor_palette_materials.remove(id);
             self.actor_animations.remove(id);
         }
     }

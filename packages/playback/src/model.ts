@@ -215,6 +215,12 @@ export interface SampledActor {
    */
   readonly steerRad?: number;
   readonly wheelAngularSpeedRadps?: number;
+  /**
+   * Distance travelled, metres: the render timeline's `wheelSpinRad` rule
+   * (Σ |speed|·dt over present ticks after spawn) interpolated to the sample
+   * time. Ridden two-wheelers phase their pedal/wheel clip by it.
+   */
+  readonly odometerM?: number;
 }
 
 export interface SampledSignal extends PlaybackSignal {
@@ -778,6 +784,36 @@ export function sampleBracket(times: readonly number[], time: number): SampleBra
 }
 
 const collisionTimesByTrace = new WeakMap<SceneTrace, ReadonlyMap<string, readonly number[]>>();
+const odometersByTrace = new WeakMap<SceneTrace, Map<string, Float64Array>>();
+
+/**
+ * Per-tick odometer of one actor, metres. Mirrors the render timeline's
+ * `wheelSpinRad · 0.35`: a tick adds `|speed|·dt` when the actor is present
+ * on it and on the tick before (the spawn tick adds nothing), and the sum
+ * carries across despawn/respawn gaps.
+ */
+export function actorOdometer(trace: SceneTrace, actorId: string): Float64Array {
+  let byActor = odometersByTrace.get(trace);
+  if (!byActor) {
+    byActor = new Map();
+    odometersByTrace.set(trace, byActor);
+  }
+  const cached = byActor.get(actorId);
+  if (cached) return cached;
+  const track = trace.ticks.actors[actorId];
+  if (!track) throw new Error(`validated trace lost actor track ${actorId}`);
+  const times = trace.ticks.t;
+  const odometer = new Float64Array(times.length);
+  let distance = 0;
+  for (let i = 0; i < times.length; i++) {
+    if (i > 0 && Number(track.present[i]) !== 0 && Number(track.present[i - 1]) !== 0) {
+      distance += Math.abs(track.speedMps[i] as number) * ((times[i] as number) - (times[i - 1] as number));
+    }
+    odometer[i] = distance;
+  }
+  byActor.set(actorId, odometer);
+  return odometer;
+}
 
 function collisionTimes(trace: SceneTrace): ReadonlyMap<string, readonly number[]> {
   const cached = collisionTimesByTrace.get(trace);
@@ -860,6 +896,7 @@ export function samplePlaybackActors(bundle: PlaybackBundle, time: number): Samp
         bundle.trace.ticks.t[bracket.upper] as number,
       );
     const alpha = discontinuous && bracket.alpha < 1 ? 0 : bracket.alpha;
+    const odometer = actorOdometer(bundle.trace, actor.id);
     // Wheel and steer motion a renderer articulates with: recorded, so
     // scrubbing shows the wheels the solver actually had at that instant.
     const physics = track.physics;
@@ -883,6 +920,7 @@ export function samplePlaybackActors(bundle: PlaybackBundle, time: number): Samp
       static: false,
       motionDirection,
       downProgress: knockdownProgress(track.downSinceS, time),
+      odometerM: lerp(odometer[bracket.lower] as number, odometer[bracket.upper] as number, alpha),
       ...(physics ? {
         steerRad: lerp(physics.steerRad[bracket.lower] as number, physics.steerRad[bracket.upper] as number, alpha),
         wheelAngularSpeedRadps: lerp(

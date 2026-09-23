@@ -607,6 +607,7 @@ export class PlaybackController {
           // A body on the ground has no gait: leaving speed here would keep the
           // walk cycle and the bob running while it slides.
           speedMps: (actor.downProgress ?? 0) > 0 ? 0 : actor.speedMps,
+          ...(actor.odometerM === undefined ? {} : { odometerM: actor.odometerM }),
           reversing: actor.motionDirection === -1,
           // A rigged model rolls its wheels and turns its front axle from the
           // recorded channels; a knocked-down body is no longer driving.
