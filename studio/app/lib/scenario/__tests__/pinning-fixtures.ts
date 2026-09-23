@@ -79,12 +79,15 @@ export async function seedPinnedMap(): Promise<void> {
        :inventory, 'asset-catalog@1.0.0', '{}'::jsonb, '{}'::jsonb) ON CONFLICT (id) DO NOTHING`,
     { workspace_id: LOCAL_WORKSPACE_ID, sha256: "1".repeat(64), inventory: "7".repeat(64) },
   );
+  // A published map version names its source map asset; the worker-authoritative
+  // simulation reads the map through it (`readSimulationMapIdentity`).
+  await execute(`INSERT INTO public.map_assets (id, name) VALUES ('map-pin', 'Pin St') ON CONFLICT (id) DO NOTHING`);
   await execute(
     `INSERT INTO simforge.map_versions (
-       id, workspace_id, source_map_id, label, browser_manifest_url, topology_artifact_url,
+       id, workspace_id, source_map_id, source_map_asset_id, label, browser_manifest_url, topology_artifact_url,
        xodr_artifact_id, xodr_sha256, coordinate_system_id, coordinate_system_sha256,
        descriptor, asset_catalog_version_id
-     ) VALUES ('usmapv_pin', :workspace_id, 'map-pin', 'Pin St', 'local://manifest', 'local://topology',
+     ) VALUES ('usmapv_pin', :workspace_id, 'map-pin', 'map-pin', 'Pin St', 'local://manifest', 'local://topology',
        'usart_pin_xodr', :xodr, 'epsg:32610', :coordinate, '{}'::jsonb, 'usacv_pin') ON CONFLICT (id) DO NOTHING`,
     { workspace_id: LOCAL_WORKSPACE_ID, xodr: "2".repeat(64), coordinate: "c".repeat(64) },
   );
