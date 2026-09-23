@@ -126,6 +126,31 @@ describe('applyRepair', () => {
     expect(() => document.applyRepair({ roles: [ghost], extensions: { x: 1 } })).toThrow(/unknown role "Ghost"/);
     expect(document.data).toBe(before);
     expect(document.canUndo).toBe(false);
+  });
+});
+
+describe('setAmbientTrafficExtensions', () => {
+  it('writes a traffic source and its density as one undoable edit', async () => {
+    const document = await openedRecord();
+    const edits = vi.fn();
+    document.subscribeEdits(edits);
+    const profile = { version: 1, preset: 'city', seed: 'ambient-1' };
+    document.setAmbientTrafficExtensions({
+      'studio.ambientTraffic.provider.v1': 'sumo',
+      'studio.ambientTraffic.profile.v1': profile,
+    });
+    expect(edits).toHaveBeenCalledTimes(1);
+    expect(document.data.extensions?.['studio.ambientTraffic.provider.v1']).toBe('sumo');
+    expect(document.data.extensions?.['studio.ambientTraffic.profile.v1']).toEqual(profile);
+    document.undo();
+    expect(document.data.extensions?.['studio.ambientTraffic.provider.v1']).toBeUndefined();
+    expect(document.data.extensions?.['studio.ambientTraffic.profile.v1']).toBeUndefined();
+    document.dispose();
+  });
+
+  it('refuses keys outside the ambient traffic namespace', async () => {
+    const document = await openedRecord();
+    expect(() => document.setAmbientTrafficExtensions({ 'studio.presentation.x': 1 })).toThrow(/studio\.ambientTraffic\./);
     document.dispose();
   });
 });

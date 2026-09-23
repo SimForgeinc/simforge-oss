@@ -9,9 +9,9 @@ import {
   deleteMapAssetById,
   getMapAssetByIdFromDb,
   mapVersionsBindingSourceAsset,
-  unreferencedStorageKeys,
   upsertMapAsset,
 } from "@/app/lib/db/map-asset-store";
+import { partitionReferencedObjects } from "@/app/lib/db/retention-refs";
 import { getMapAssetById } from "@/app/lib/map-assets";
 import {
   FLYBY_PREVIEW_ARTIFACT_TYPE,
@@ -27,6 +27,7 @@ void UpdateMapAssetResponse;
 import { S3_BUCKET } from "@/app/lib/s3/s3-config";
 import { putS3Object } from "@/app/lib/s3/s3-put-object";
 import { listS3Keys, deleteS3Keys } from "@/app/lib/s3/s3-delete";
+import { cleanupRemovedMapAssetObjects } from "@/app/lib/maps/map-asset-object-cleanup";
 
 const BUCKET = S3_BUCKET;
 
@@ -258,37 +259,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     await upsertMapAsset(updatedAsset);
 
-    // Delete removed artifacts from S3 (best-effort, after DB commit)
-    if (removedArtifacts.length > 0) {
-      const s3KeysToDelete = removedArtifacts
-        .map((a) => a.uri.replace(/^s3:\/\/[^/]+\//, ""))
-        .filter(Boolean);
-      if (s3KeysToDelete.length > 0) {
-        await deleteS3Keys(s3KeysToDelete).catch((err) => {
-          console.error("Failed to delete S3 artifacts (orphaned):", err);
-        });
-      }
+    // Delete the dropped artifacts' objects after the DB commit, except objects a
+    // map version (retired or not), revision, simulation result or render job
+    // still references; those stay in place for a later orphan sweep.
+    const cleanup = await cleanupRemovedMapAssetObjects({ mapAssetId, bucket: BUCKET, removedArtifacts });
 
-      // If a 3d_manifest artifact was removed, purge the entire 3d/ folder
-      // because tile files are not individually tracked as artifact rows.
-      // Best-effort: failures must not surface as 500 since the DB is already committed.
-      const removed3d = removedArtifacts.some(
-        (a) => a.artifact_type === "3d_manifest",
-      );
-      if (removed3d) {
-        try {
-          const prefix3d = `maps/${mapAssetId}/3d/`;
-          const allKeys3d = await listS3Keys(prefix3d);
-          if (allKeys3d.length > 0) {
-            await deleteS3Keys(allKeys3d);
-          }
-        } catch (err) {
-          console.error("Failed to delete 3D folder from S3:", err);
-        }
-      }
-    }
-
-    return NextResponse.json({ mapAssetId });
+    return NextResponse.json({ mapAssetId, ...cleanup });
   } catch (e) {
     const err = e as { name?: string };
     if (err?.name === "CredentialsProviderError" || String(e).includes("Could not load credentials")) {
@@ -376,15 +352,25 @@ export async function DELETE(request: NextRequest, { params }: Params) {
         { status: 409 },
       );
     }
+    // Digests of the asset's own artifacts, so content a map version, revision,
+    // simulation result or render job references by digest is kept too.
+    const digestByKey = new Map<string, string>();
+    for (const artifact of existing.artifacts ?? []) {
+      const prefix = `s3://${BUCKET}/`;
+      if (artifact.uri.startsWith(prefix) && artifact.sha256) digestByKey.set(artifact.uri.slice(prefix.length), artifact.sha256);
+    }
     await deleteMapAssetById(mapAssetId);
     const candidates = await listS3Keys(`maps/${mapAssetId}/`);
-    const deletable = await unreferencedStorageKeys(BUCKET, candidates);
+    const { deletable, retained } = await partitionReferencedObjects(
+      BUCKET,
+      candidates.map((key) => ({ key, sha256: digestByKey.get(key) ?? null })),
+    );
     await deleteS3Keys(deletable);
     return NextResponse.json({
       ok: true,
       mapAssetId,
       deletedS3Objects: deletable.length,
-      retainedS3Objects: candidates.length - deletable.length,
+      retainedS3Objects: retained.length,
     });
   } catch (e) {
     const err = e as { name?: string };

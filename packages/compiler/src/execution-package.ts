@@ -44,6 +44,14 @@ import { clampDeclaredAxisHolds, type AxisUntilClamp } from './template-axis-cla
 import type { MapBundle } from './types.js';
 import { buildXodrElevationResolver } from './xodr-elevation.js';
 import { persistAmbientTurnVerdictsToDisk } from './maps.js';
+import {
+  EMPTY_SCENARIO_SITE_ID,
+  emptyScenarioBaseInput,
+  emptyScenarioManifest,
+  isEmptyScenarioClockActor,
+  isEmptyScenarioTemplate,
+  withoutRedundantEmptyScenarioClock,
+} from './empty-scenario.js';
 
 export const EXECUTION_PACKAGE_CONTRACT = 'uniscenario.execution-package/v1';
 export const CAPABILITY_REPORT_CONTRACT = 'uniscenario.capability-report/v1';
@@ -238,6 +246,8 @@ function withMapControls(input: SimScenarioInput, controls: MapControlPlan): Sim
 
 function assertRuntimeAssetIdentities(input: SimScenarioInput): void {
   for (const actor of input.actors) {
+    // The blank world's clock is never rendered and has no catalog model.
+    if (isEmptyScenarioClockActor(actor)) continue;
     const assetIds = actor.tags
       .filter((tag) => tag.startsWith('catalog:'))
       .map((tag) => tag.slice('catalog:'.length))
@@ -253,7 +263,8 @@ function concreteInput(
   ambientMode: AmbientExecutionMode,
   catalogEntries: MaterializeOptions['catalogEntries'],
 ): ConcreteExecutionInput {
-  if (template.roles.length === 0 || template.roles.some((role) => role.kind !== 'scene_absolute')) {
+  if (isEmptyScenarioTemplate(template)) return emptyConcreteInput(template, bundle, ambientMode);
+  if (template.roles.some((role) => role.kind !== 'scene_absolute')) {
     throw new Error('unsupported_portable_semantics');
   }
   if (!template.sourceMap || template.sourceMap.mapId !== bundle.mapId) throw new Error('map_bound_source_mismatch');
@@ -270,13 +281,7 @@ function concreteInput(
   // The document's Studio content (paint tags, then baked parked cars), by the
   // same native implementation the editor worker applies at the same point.
   const controlled = runtime.studioConcreteInput(withMapControls(product.input, bundle.controlPlan()), template);
-  const ambient = runtime.materializeAmbientTraffic(
-    controlled,
-    bundle.graph,
-    ambientMode === 'native'
-      ? ambientTrafficProfileForDocument(template)
-      : { version: 1, preset: 'off', seed: 'execution-provider-off' },
-  );
+  const ambient = runtime.materializeAmbientTraffic(controlled, bundle.graph, executionAmbientProfile(template, ambientMode));
   // The next process on this closure skips the turn probes (timing only).
   void persistAmbientTurnVerdictsToDisk(bundle);
   return {
@@ -284,6 +289,45 @@ function concreteInput(
     siteId: product.manifest.replayKey.siteId,
     materialization: product.manifest,
     ambientTraffic: ambient.provenance,
+  };
+}
+
+/** The ambient profile a concrete input is populated with: the document's own for native traffic, else none. */
+function executionAmbientProfile(template: ScenarioTemplateV2, ambientMode: AmbientExecutionMode) {
+  return ambientMode === 'native'
+    ? ambientTrafficProfileForDocument(template)
+    : { version: 1 as const, preset: 'off' as const, seed: 'execution-provider-off' };
+}
+
+/**
+ * A scenario with no authored actors: the map's blank world, with parked
+ * cars and background traffic when the document asks for them. It binds no
+ * site. The editor's scenario worker builds the identical input
+ * (`emptyScenarioBaseInput`), so the local preview verifies against this.
+ */
+function emptyConcreteInput(
+  template: ScenarioTemplateV2,
+  bundle: MapBundle,
+  ambientMode: AmbientExecutionMode,
+): ConcreteExecutionInput {
+  if (template.sourceMap && template.sourceMap.mapId !== bundle.mapId) throw new Error('map_bound_source_mismatch');
+  if (template.anchor.pin && template.anchor.pin.mapId !== bundle.mapId) throw new Error('map_bound_pin_mismatch');
+  const runtime = engine();
+  const base = JSON.parse(runtime.studioConcreteInput(
+    withMapControls(emptyScenarioBaseInput(bundle.mapId), bundle.controlPlan()),
+    template,
+  ).toJson()) as SimScenarioInput;
+  const ambient = runtime.materializeAmbientTraffic(base, bundle.graph, executionAmbientProfile(template, ambientMode));
+  void persistAmbientTurnVerdictsToDisk(bundle);
+  const populated = withoutRedundantEmptyScenarioClock({
+    input: JSON.parse(ambient.scenario.toJson()) as SimScenarioInput,
+    provenance: ambient.provenance,
+  });
+  return {
+    input: populated.input,
+    siteId: EMPTY_SCENARIO_SITE_ID,
+    materialization: emptyScenarioManifest(bundle.mapId, bundle.graph.digest, base),
+    ambientTraffic: populated.provenance,
   };
 }
 

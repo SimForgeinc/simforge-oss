@@ -6,6 +6,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { gzip } from 'node:zlib';
 import { promisify } from 'node:util';
 import { isRegistryWriteConflict, type RegistryBackend } from './backend.js';
+import { RetainedReferenceError, RetentionRefsRequiredError, type RetentionReferenceSource } from './retention.js';
 import {
   assertClosure,
   assertRelease,
@@ -414,8 +415,19 @@ export interface PruneInput {
   keepLatest?: boolean;
   /** Remove the whole map, including its ledgers and index entry. */
   wholeMap?: boolean;
-  /** Also delete blobs no surviving closure in the registry references. */
+  /**
+   * Also delete blobs no surviving closure in the registry references AND no
+   * host record references. Requires `retentionRefs`: without it the prune is
+   * refused, because the registry cannot see revisions, saved simulation
+   * results or render jobs.
+   */
   collectGarbage?: boolean;
+  /**
+   * What the host (scenario revisions, simulation results, render jobs) still
+   * references. Referenced blobs are retained by garbage collection, and a
+   * selected version whose closure or release digest is referenced is refused.
+   */
+  retentionRefs?: RetentionReferenceSource;
   /** Report what would be deleted without writing. */
   dryRun?: boolean;
 }
@@ -425,7 +437,11 @@ export interface PruneResult {
   removedVersions: MapVersion[];
   removedObjects: string[];
   removedBlobs: string[];
+  /** Unreachable blobs kept because the retention source still references them. */
+  retainedBlobs: string[];
   retainedVersions: MapVersion[];
+  /** The reference source consulted, when one was supplied. */
+  retentionSource?: string;
 }
 
 /** Every blob digest reachable from a closure descriptor under `maps/**`. */
@@ -449,7 +465,11 @@ async function reachableDigests(backend: RegistryBackend, skip: (key: string) =>
 export async function pruneVersions(backend: RegistryBackend, input: PruneInput): Promise<PruneResult> {
   validateMapName(input.name);
   if (backend.remove === undefined) throw new Error(`registry backend is read-only: ${backend.url}`);
+  if (input.collectGarbage && input.retentionRefs === undefined) {
+    throw new RetentionRefsRequiredError('maps prune --gc');
+  }
   const remove = backend.remove.bind(backend);
+  const retentionSource = input.retentionRefs === undefined ? {} : { retentionSource: input.retentionRefs.description };
   const index = await listMaps(backend);
   const entry = index[input.name];
   if (entry === undefined) throw new Error(`unknown map: ${input.name}`);
@@ -472,11 +492,35 @@ export async function pruneVersions(backend: RegistryBackend, input: PruneInput)
       removedVersions: [],
       removedObjects: [],
       removedBlobs: [],
+      retainedBlobs: [],
       retainedVersions: records.map((record) => record.version),
+      ...retentionSource,
     };
   }
   if (!input.wholeMap && doomed.has(entry.latest)) {
     throw new Error(`refusing to prune the latest version ${input.name}@${entry.latest}; pass --whole-map instead`);
+  }
+
+  if (input.retentionRefs !== undefined) {
+    // A version's closure and release digests are what host records pin; a
+    // referenced version is refused outright rather than silently skipped,
+    // because the caller asked for exactly this deletion.
+    const identities = records
+      .filter((record) => doomed.has(record.version))
+      .flatMap((record) => [
+        { version: record.version, digest: record.closureDigest, what: 'closure' },
+        ...(record.releaseDigest === undefined ? [] : [{ version: record.version, digest: record.releaseDigest, what: 'release' }]),
+      ]);
+    const referenced = await input.retentionRefs.referenced(identities.map((identity) => identity.digest));
+    const blocked = identities.filter((identity) => referenced.has(identity.digest));
+    if (blocked.length > 0) {
+      throw new RetainedReferenceError(
+        `refusing to prune ${[...new Set(blocked.map((identity) => `${input.name}@${identity.version}`))].join(', ')}: ` +
+        `${blocked.map((identity) => `${identity.what} ${identity.digest}`).join(', ')} still referenced per ` +
+        `${input.retentionRefs.description}. Nothing was deleted.`,
+        blocked.map((identity) => identity.digest),
+      );
+    }
   }
 
   const retained = records.filter((record) => !doomed.has(record.version));
@@ -490,16 +534,20 @@ export async function pruneVersions(backend: RegistryBackend, input: PruneInput)
   }
 
   let removedBlobs: string[] = [];
-  if (input.collectGarbage) {
+  const retainedBlobs: string[] = [];
+  if (input.collectGarbage && input.retentionRefs !== undefined) {
     const doomedPrefixes = [...doomed].map((version) => `maps/${input.name}/${version}/`);
     const live = await reachableDigests(backend, (key) =>
       input.wholeMap
         ? key.startsWith(`maps/${input.name}/`)
         : doomedPrefixes.some((prefix) => key.startsWith(prefix)));
+    const unreachable: Array<{ key: string; digest: string }> = [];
     for (const key of await backend.list('blobs/sha256/')) {
       const digest = key.slice(key.lastIndexOf('/') + 1);
-      if (/^[a-f0-9]{64}$/.test(digest) && !live.has(digest)) removedBlobs.push(key);
+      if (/^[a-f0-9]{64}$/.test(digest) && !live.has(digest)) unreachable.push({ key, digest });
     }
+    const referenced = await input.retentionRefs.referenced(unreachable.map((blob) => blob.digest));
+    for (const blob of unreachable) (referenced.has(blob.digest) ? retainedBlobs : removedBlobs).push(blob.key);
   }
 
   if (input.dryRun) {
@@ -508,7 +556,9 @@ export async function pruneVersions(backend: RegistryBackend, input: PruneInput)
       removedVersions: [...doomed],
       removedObjects,
       removedBlobs,
+      retainedBlobs,
       retainedVersions: retained.map((record) => record.version),
+      ...retentionSource,
     };
   }
 
@@ -543,7 +593,9 @@ export async function pruneVersions(backend: RegistryBackend, input: PruneInput)
     removedVersions: [...doomed],
     removedObjects,
     removedBlobs,
+    retainedBlobs,
     retainedVersions: retained.map((record) => record.version),
+    ...retentionSource,
   };
 }
 

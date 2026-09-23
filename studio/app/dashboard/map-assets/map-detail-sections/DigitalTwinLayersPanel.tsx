@@ -6,8 +6,10 @@ import { useCallback, useState } from "react";
 import { Building2, Check, Sun, Trash2, TreePine } from "lucide-react";
 import { clearMapAssetCache } from "@simforge-oss/studio-ui/lib/maps/frontend/map-asset-cache";
 import {
+  DEFAULT_RENDERING_PREFERENCE,
   useRenderingPreference,
   RENDERING_PREFERENCE_CHOICES,
+  renderingPreferenceChoiceLabel,
   saveRenderingPreference,
 } from "@simforge-oss/studio-ui/components/rendering-preference";
 import { hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
@@ -15,7 +17,7 @@ import { hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.s
 
 /** Controls shared authoring quality for the packaged @simforge-oss/viewer. */
 export function DigitalTwinLayersPanel() {
-  const quality = useRenderingPreference() ?? "low";
+  const quality = useRenderingPreference() ?? DEFAULT_RENDERING_PREFERENCE;
   const [cacheState, setCacheState] = useState<"idle" | "clearing" | "cleared">("idle");
 
   const handleClearCache = useCallback(async () => {
@@ -33,7 +35,7 @@ export function DigitalTwinLayersPanel() {
       <div>
         <span {...stylex.props(styles.qualityLabel)}>Render quality</span>
         <div {...stylex.props([hairline.all, styles.qualityOptions], styles.stackY1_5)}>
-          {RENDERING_PREFERENCE_CHOICES.map(({ id: value, label }) => (
+          {RENDERING_PREFERENCE_CHOICES.map(({ id: value }) => (
             <button
               key={value}
               type="button"
@@ -43,7 +45,7 @@ export function DigitalTwinLayersPanel() {
                   quality === value ? styles.qualitySegmentActive : styles.qualitySegmentInactive,
                 )}
             >
-              {label}
+              {renderingPreferenceChoiceLabel(value)}
             </button>
           ))}
         </div>

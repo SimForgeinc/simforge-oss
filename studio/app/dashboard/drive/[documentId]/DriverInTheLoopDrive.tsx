@@ -13,7 +13,7 @@ import { mapsIncludingPinnedVersion } from "@simforge-oss/studio-ui/scenario/sce
 import type { CityViewer } from "@simforge-oss/viewer";
 import { CloudLoadingSurface } from "@simforge-oss/studio-ui/components/CloudLoadingSurface";
 import { MapLoadDebugPanel } from "@simforge-oss/studio-ui/scenario/scene/MapLoadDebugPanel";
-import { renderingPreferenceQuality, useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
+import { DEFAULT_RENDERING_PREFERENCE, renderingPreferenceQuality, useRenderingPreference } from "@simforge-oss/studio-ui/components/rendering-preference";
 import type {
   ScenarioWorldState,
   ScenarioWorldTarget,
@@ -76,7 +76,7 @@ export function DriverInTheLoopDrive({
   const [worldState, setWorldState] = useState<ScenarioWorldState>(EMPTY_WORLD_STATE);
   // The level picked in the app switcher applies to this drive, exactly as it
   // does to the world it plays on.
-  const quality = renderingPreferenceQuality(useRenderingPreference() ?? "medium");
+  const quality = renderingPreferenceQuality(useRenderingPreference() ?? DEFAULT_RENDERING_PREFERENCE);
 
   useEffect(() => {
     // Activity resumes effects without discarding state. Keep the completed

@@ -7,7 +7,7 @@ import { CityView, waitForCanvasPresentation } from "@simforge-oss/viewer/react"
 import { cn } from "../../lib/utils";
 import { readRenderingPreference,
 RENDERING_PREFERENCE_CHANGE_EVENT,
-type RenderingPreference, renderingPreferenceQuality, RENDERING_PREFERENCE_CHOICES } from "../../components/rendering-preference"
+type RenderingPreference, renderingPreferenceLabel, renderingPreferenceQuality } from "../../components/rendering-preference"
 import { applySceneFidelity } from "../editor/EditorSceneEnvironmentBridge";
 import { AUTHORING_QUALITY, sceneViewerOptions } from "../editor/authoring-quality";
 import { applyDefaultSceneEnvironment } from "../editor/scene-environment";
@@ -737,9 +737,6 @@ export function ScenarioWorldHost({
 }
 
 
-function renderingPreferenceLabel(preference: RenderingPreference): string {
-  return RENDERING_PREFERENCE_CHOICES.find(choice => choice.id === preference)!.label;
-}
 
 function prefersReducedMotion(): boolean {
   return (

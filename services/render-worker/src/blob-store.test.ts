@@ -3,7 +3,7 @@ import { createServer, type ServerResponse } from 'node:http';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { hasBlobStamp } from '@simforge-oss/render';
 
@@ -48,22 +48,27 @@ it('lets a job join an in-flight prewarm transfer instead of downloading twice',
   const origin = await slowOrigin(body);
   const store = new BlobStore({ root: await tempRoot(), log: () => undefined });
   const source = { url: async () => ({ url: origin.url, headers: {} }) };
-  const prewarm = store.ensure({ sha256: sha(body), sizeBytes: body.length, source, priority: 'prewarm' }, AbortSignal.timeout(5000))
-    .catch((error: unknown) => error);
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const job = store.ensure({ sha256: sha(body), sizeBytes: body.length, source, priority: 'job' }, AbortSignal.timeout(5000));
-  // Promotion parks the prewarm transfer and resumes it on a job lane.
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  origin.release();
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  const half = Math.floor(body.length / 2);
+  let prewarmed = 0;
+  const prewarm = store.ensure(
+    { sha256: sha(body), sizeBytes: body.length, source, priority: 'prewarm', onBytes: (bytes) => { prewarmed += bytes; } },
+    AbortSignal.timeout(10_000),
+  ).catch((error: unknown) => error);
+  // The job arrives once the prewarm transfer holds the origin's first half,
+  // not after a fixed sleep: on a loaded machine 100 ms was not always enough
+  // for any byte to land, and a transfer with nothing on disk has nothing to resume.
+  await vi.waitFor(() => expect(prewarmed).toBe(half), { timeout: 5000, interval: 10 });
+  const job = store.ensure({ sha256: sha(body), sizeBytes: body.length, source, priority: 'job' }, AbortSignal.timeout(10_000));
+  // Promotion parks the prewarm transfer and resumes it on a job lane from its partial bytes.
+  await vi.waitFor(() => expect(origin.requests).toHaveLength(2), { timeout: 5000, interval: 10 });
   origin.release();
   const file = await job;
   // The prewarm caller sees its transfer parked; the bytes arrived for the job.
   expect(String(await prewarm)).toMatch(/parked/);
   expect(sha(await readFile(file))).toBe(sha(body));
   expect(await hasBlobStamp(file, sha(body), body.length)).toBe(true);
-  // One fresh transfer and at most one ranged resume: never two full downloads.
-  expect(origin.requests.filter((request) => !request.range)).toHaveLength(1);
+  // One fresh transfer and one ranged resume from where it stopped: never two full downloads.
+  expect(origin.requests).toEqual([{}, { range: `bytes=${half}-` }]);
 });
 
 it('parks prewarm while a job downloads and resumes it from its partial bytes', async () => {
@@ -71,16 +76,22 @@ it('parks prewarm while a job downloads and resumes it from its partial bytes', 
   const origin = await slowOrigin(body);
   const store = new BlobStore({ root: await tempRoot(), log: () => undefined });
   const source = { url: async () => ({ url: origin.url, headers: {} }) };
-  const parked = store.ensure({ sha256: sha(body), sizeBytes: body.length, source, priority: 'prewarm' }, AbortSignal.timeout(5000));
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  const half = Math.floor(body.length / 2);
+  let prewarmed = 0;
+  const parked = store.ensure(
+    { sha256: sha(body), sizeBytes: body.length, source, priority: 'prewarm', onBytes: (bytes) => { prewarmed += bytes; } },
+    AbortSignal.timeout(10_000),
+  );
+  // Park once the first half is on disk (see the join case above for why not a sleep).
+  await vi.waitFor(() => expect(prewarmed).toBe(half), { timeout: 5000, interval: 10 });
   store.setMode('job-downloading');
   await expect(parked).rejects.toThrow(/parked/);
   store.setMode('idle');
-  const resumed = store.ensure({ sha256: sha(body), sizeBytes: body.length, source, priority: 'prewarm' }, AbortSignal.timeout(5000));
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  const resumed = store.ensure({ sha256: sha(body), sizeBytes: body.length, source, priority: 'prewarm' }, AbortSignal.timeout(10_000));
+  await vi.waitFor(() => expect(origin.requests).toHaveLength(2), { timeout: 5000, interval: 10 });
   origin.release();
   expect(sha(await readFile(await resumed))).toBe(sha(body));
-  expect(origin.requests.at(-1)?.range).toMatch(/^bytes=\d+-$/);
+  expect(origin.requests).toEqual([{}, { range: `bytes=${half}-` }]);
 });
 
 it('halves job lanes on connection failures and fails only after the stall timeout', async () => {
