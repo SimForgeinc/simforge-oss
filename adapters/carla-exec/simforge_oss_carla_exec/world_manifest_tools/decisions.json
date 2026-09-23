@@ -6,5 +6,89 @@
   "  acceptDecisionItems: exact decisionRequired strings a human accepted; any new item re-opens the decision.",
   "  hold: keep an otherwise bindable source unbound, with the reason.",
   "Every entry must say who decided and when (decidedBy, date)."
- ]
+ ],
+ "derived/San_Ramon_25_P2": {
+  "acceptDecisionItems": [
+   "elevation-only refit of San_Ramon_25_P2 (9098904a93bd): reference-line elevation moves up to 1.735 m (p95 0.132 m) against the source the cooked world was matched to; the cooked mesh is unchanged"
+  ],
+  "decidedBy": "orchestrator (main), under the user's standing instruction: elevation-only map changes are benign and should be fixed",
+  "date": "2026-09-23",
+  "condition": "refit XODR surface vs the cooked CARLA ground at driving-lane centres (4 m step, cast_ray): p95 <= 0.10 m and max <= 0.5 m, excluding bridge/overpass stacks",
+  "groundResiduals": {
+   "refit": {
+    "samples": 16657,
+    "p50M": 0.0004,
+    "p95M": 0.0051,
+    "maxM": 0.1976,
+    "bridgeOrOverpassStacks": 2,
+    "noGroundHit": 0,
+    "method": "semantic road/ground hit nearest the XODR z"
+   },
+   "original": {
+    "p95M": 0.1046,
+    "maxM": 0.9504
+   }
+  },
+  "cookedImage": "sha256:a2d11ebd7bca598e1d7117a23c221e3f8f79b44131041a6a56bdd3e4b80a64af",
+  "measuredWith": "carla-render-worker:0.1.0-rc.73-worlds-228f0295"
+ },
+ "derived/San_Ramon_Phase_1_P1": {
+  "acceptDecisionItems": [
+   "elevation-only refit of San_Ramon_Phase_1_P1 (eaeebc429898): reference-line elevation moves up to 1.318 m (p95 0.181 m) against the source the cooked world was matched to; the cooked mesh is unchanged"
+  ],
+  "decidedBy": "orchestrator (main), under the user's standing instruction: elevation-only map changes are benign and should be fixed",
+  "date": "2026-09-23",
+  "condition": "refit XODR surface vs the cooked CARLA ground at driving-lane centres (4 m step, cast_ray): p95 <= 0.10 m and max <= 0.5 m, excluding bridge/overpass stacks",
+  "groundResiduals": {
+   "refit": {
+    "samples": 17774,
+    "p50M": 0.0002,
+    "p95M": 0.0046,
+    "maxM": 0.2499,
+    "bridgeOrOverpassStacks": 43,
+    "noGroundHit": 0,
+    "overpassOccludedSamplesByRoad": {
+     "178": 20,
+     "281": 32,
+     "2243": 2,
+     "2244": 2,
+     "2245": 2,
+     "2246": 1,
+     "2248": 2
+    },
+    "method": "semantic road/ground hit nearest the XODR z"
+   },
+   "original": {
+    "p95M": 0.1418,
+    "maxM": 6.9588
+   }
+  },
+  "cookedImage": "sha256:a2d11ebd7bca598e1d7117a23c221e3f8f79b44131041a6a56bdd3e4b80a64af",
+  "measuredWith": "carla-render-worker:0.1.0-rc.73-worlds-228f0295"
+ },
+ "derived/Saratoga_School_Area": {
+  "acceptDecisionItems": [
+   "elevation-only refit of Saratoga_School_Area (ff368b92160b): reference-line elevation moves up to 2.929 m (p95 1.887 m) against the source the cooked world was matched to; the cooked mesh is unchanged"
+  ],
+  "decidedBy": "orchestrator (main), under the user's standing instruction: elevation-only map changes are benign and should be fixed",
+  "date": "2026-09-23",
+  "condition": "refit XODR surface vs the cooked CARLA ground at driving-lane centres (4 m step, cast_ray): p95 <= 0.10 m and max <= 0.5 m, excluding bridge/overpass stacks",
+  "groundResiduals": {
+   "refit": {
+    "samples": 5789,
+    "p50M": 0.0003,
+    "p95M": 0.0035,
+    "maxM": 0.1124,
+    "bridgeOrOverpassStacks": 0,
+    "noGroundHit": 0,
+    "method": "unlabelled cook: lowest hit"
+   },
+   "original": {
+    "p95M": 0.2284,
+    "maxM": 0.5844
+   }
+  },
+  "cookedImage": "sha256:a2d11ebd7bca598e1d7117a23c221e3f8f79b44131041a6a56bdd3e4b80a64af",
+  "measuredWith": "carla-render-worker:0.1.0-rc.73-worlds-228f0295"
+ }
 }
