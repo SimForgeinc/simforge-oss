@@ -1534,6 +1534,12 @@ impl WasmTrace {
     pub fn digest(&self) -> Result<String, JsValue> {
         self.inner.digest().js()
     }
+    /// `simforge.trace-upgrade/v1` JSON when the stored trace was an older
+    /// format upgraded in memory; `undefined` for a current-format trace.
+    #[wasm_bindgen(js_name = upgradeJson)]
+    pub fn upgrade_json(&self) -> Result<Option<String>, JsValue> {
+        self.inner.upgrade_json().js()
+    }
     #[wasm_bindgen(js_name = toJson)]
     pub fn to_json(&self) -> Result<String, JsValue> {
         self.inner.to_json().js()
@@ -1740,18 +1746,38 @@ impl WasmRenderTimeline {
             .map_err(timeline_err)
     }
 
-    /// Build a timeline from a trace (JSON bytes, gzip ok) and the map's
-    /// `.xodr` + topology sidecar bytes.
+    /// Parse a stored timeline of any sampler version, for inspection only
+    /// (motion comparison across sampler versions). Never render it: a
+    /// timeline from another sampler is re-derived from its trace.
+    #[wasm_bindgen(js_name = inspect)]
+    pub fn inspect(bytes: &[u8]) -> Result<WasmRenderTimeline, JsValue> {
+        render_timeline::RenderTimeline::inspect_json_slice(bytes)
+            .map(|inner| Self { inner })
+            .map_err(timeline_err)
+    }
+
+    /// Build a timeline from a trace (JSON bytes, gzip ok; any released
+    /// trace format, upgraded in memory) and the map's `.xodr` + topology
+    /// sidecar bytes. `recorded_trace_sha256` binds the identity recorded
+    /// next to a stored trace (verified by the caller against the stored
+    /// bytes): a current-format trace must recompute to it, an upgraded one
+    /// adopts it.
     #[wasm_bindgen(js_name = build)]
     pub fn build(
         trace: &[u8],
         xodr: &[u8],
         topology: &[u8],
         catalog_digest: Option<String>,
+        recorded_trace_sha256: Option<String>,
     ) -> Result<WasmRenderTimeline, JsValue> {
         let trace = render_timeline::maybe_gunzip(trace).map_err(timeline_err)?;
-        let trace =
+        let mut trace =
             simforge_core::trace::SimTrace::from_json_slice(&trace).map_err(timeline_err)?;
+        if let Some(recorded) = recorded_trace_sha256.as_deref() {
+            trace
+                .bind_recorded_identity(recorded)
+                .map_err(timeline_err)?;
+        }
         let height =
             render_timeline::HeightField::from_xodr(xodr, topology).map_err(timeline_err)?;
         render_timeline::build_render_timeline(&trace, &height, catalog_digest.as_deref())

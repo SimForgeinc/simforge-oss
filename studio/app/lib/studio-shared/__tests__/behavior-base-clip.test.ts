@@ -355,7 +355,7 @@ describe("autopilot desired speed", () => {
       enabled: true,
     });
     // The field stays freely writable, so a later direct write — a generator, a
-    // .xosc import, a server reload — is not undone by the next recompile.
+    // server reload — is not undone by the next recompile.
     const rewritten = normalizeActorBaseClip({ ...normalized, speed_kph: 20 });
     expect(rewritten.speed_kph).toBe(20);
   });

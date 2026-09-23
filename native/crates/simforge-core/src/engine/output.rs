@@ -305,6 +305,8 @@ pub struct LateralCommandState {
     pub pending: Option<PendingRetargetState>,
     pub side: Option<LaneChangeSide>,
     pub done: bool,
+    #[serde(default)]
+    pub origin_s: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -350,6 +352,8 @@ pub struct ActorState {
     pub position: Vec2,
     pub heading_rad: f64,
     pub present: bool,
+    #[serde(default)]
+    pub pending_present: Option<bool>,
     pub retired: bool,
     pub long_cmd: Option<LongitudinalCommand>,
     pub lat_cmd: Option<LateralCommandState>,
@@ -445,6 +449,7 @@ impl Simulation {
                 position: a.position,
                 heading_rad: a.heading_rad,
                 present: a.present,
+                pending_present: a.pending_present,
                 retired: a.retired,
                 long_cmd: a.long_cmd.clone(),
                 lat_cmd: a.lat_cmd.as_ref().map(|c| LateralCommandState {
@@ -463,6 +468,7 @@ impl Simulation {
                     }),
                     side: c.side,
                     done: c.done,
+                    origin_s: c.origin_s,
                 }),
                 until_by_axis: a
                     .until_by_axis
@@ -636,6 +642,7 @@ impl Simulation {
             a.position = state.position;
             a.heading_rad = state.heading_rad;
             a.present = state.present;
+            a.pending_present = state.pending_present;
             a.retired = state.retired;
             a.long_cmd = state.long_cmd.clone();
             a.lat_cmd = match &state.lat_cmd {
@@ -660,6 +667,7 @@ impl Simulation {
                     },
                     side: c.side,
                     done: c.done,
+                    origin_s: c.origin_s,
                 }),
             };
             a.until_by_axis.clear();

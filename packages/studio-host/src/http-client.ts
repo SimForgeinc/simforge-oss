@@ -335,11 +335,77 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     evaluateSimulation(simKey, filters, signal) {
       return call(documents.evaluateSimulation, { params: { simKey }, body: filters ? { filters } : {}, signal });
     },
-    resolveRevisionSimulation(revisionId, opts = {}) {
-      return call(documents.resolveRevisionSimulation, {
+    getRevisionMotion(revisionId, signal) {
+      return call(documents.getRevisionMotion, { params: { revisionId }, signal });
+    },
+    resimulateRevision(revisionId, opts = {}) {
+      return call(documents.resimulateRevision, {
         params: { revisionId },
+        body: opts.waitMs === undefined ? { action: "resimulate" } : { action: "resimulate", waitMs: opts.waitMs },
+        signal: opts.signal,
+      });
+    },
+
+    listVersions(documentId, signal) {
+      return call(documents.listVersions, { params: { documentId }, signal });
+    },
+    saveVersion(document, opts = {}) {
+      return call(documents.saveVersion, {
+        params: { documentId: document.id },
+        body: { expectedVersion: document.draftVersion, ...(opts.label ? { label: opts.label } : {}) },
+        signal: opts.signal,
+      });
+    },
+    keepPreviousMotion(document, change, signal) {
+      return call(documents.keepPreviousMotion, {
+        params: { documentId: document.id },
+        body: { expectedVersion: document.draftVersion, previousSimKey: change.previousSimKey, currentSimKey: change.currentSimKey },
+        signal,
+      });
+    },
+    async acceptDraftSimulation(document, simKey, signal) {
+      await call(documents.acceptDraftSimulation, {
+        params: { documentId: document.id },
+        body: { expectedVersion: document.draftVersion, simKey },
+        signal,
+      });
+    },
+    resimulateVersion(documentId, revisionId, opts = {}) {
+      return call(documents.resimulateVersion, {
+        params: { documentId, revisionId },
         body: opts.waitMs === undefined ? {} : { waitMs: opts.waitMs },
         signal: opts.signal,
+      });
+    },
+    async setVersionActiveSimulation(documentId, revisionId, simKey, signal) {
+      await call(documents.setVersionActiveSimulation, { params: { documentId, revisionId }, body: { simKey }, signal });
+    },
+    getVersionContent(documentId, revisionId, signal) {
+      return call(documents.getVersionContent, { params: { documentId, revisionId }, signal });
+    },
+    restoreVersion(document, revisionId, signal) {
+      return call(documents.restoreVersion, {
+        params: { documentId: document.id, revisionId },
+        body: { expectedVersion: document.draftVersion },
+        signal,
+      });
+    },
+    compareSimulations(baseSimKey, candidateSimKey, signal) {
+      return call(documents.compareSimulations, { query: { base: baseSimKey, candidate: candidateSimKey }, signal });
+    },
+    async getMapPinStatus(documentId, signal) {
+      const status = await call(documents.getMapPinStatus, { params: { documentId }, signal });
+      const { pinnedDescriptor, ...rest } = status;
+      return { ...rest, pinnedMap: pinnedDescriptor ? mapEntry(pinnedDescriptor) : null };
+    },
+    previewMapRepin(documentId, request, signal) {
+      return call(documents.previewMapRepin, { params: { documentId }, body: request, signal });
+    },
+    moveToMapVersion(document, targetMapVersionId, signal) {
+      return call(documents.moveToMapVersion, {
+        params: { documentId: document.id },
+        body: { expectedVersion: document.draftVersion, targetMapVersionId },
+        signal,
       });
     },
   };
@@ -348,6 +414,14 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     listMaps(signal, opts) {
       if (opts?.fresh) shared.invalidate(MAP_READ_KEY);
       return shared.read(MAP_READ_KEY, MAP_SHARE_MS, async () => (await call(maps.list, {})).maps.map(mapEntry), signal);
+    },
+    async getMapVersionIdentity(mapVersionId, signal) {
+      try {
+        return await call(maps.versionIdentity, { params: { mapVersionId }, signal });
+      } catch (error) {
+        if (error instanceof StudioHostRequestError && error.status === 404) return null;
+        throw error;
+      }
     },
     listMapFootprints(signal) {
       return shared.read(MAP_FOOTPRINT_READ_KEY, MAP_SHARE_MS, () => call(maps.footprints, {}), signal);

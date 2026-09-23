@@ -40,6 +40,11 @@ jobs:
       - run: pnpm verify:naming
       - run: pnpm verify:origins
       - run: pnpm typecheck
+      - name: scenarioVersion bump rule (packages/scenario/src/upgrade/chain.ts)
+        # A non-additive document schema change or a changed absent-field
+        # meaning needs a scenarioVersion bump with TS and Rust upgraders;
+        # additive changes need the refreshed scenario-contract.lock.json.
+        run: pnpm scenario:contract:check --base "origin/${{ github.base_ref || 'main' }}"
       - run: pnpm test:release
       - name: Test the repository scripts
         # Nothing referenced scripts/__tests__ before this step: five test
@@ -118,6 +123,27 @@ jobs:
           cargo test --manifest-path native/Cargo.toml -p simforge-core --test canonical_json_vectors
         env:
           CARGO_TARGET_DIR: native/target
+      - name: Archive corpus (fixtures/archive-corpus/README.md)
+        # Artifacts from every past release still load, upgrade in memory,
+        # keep their identity and replay the same motion through a CPU-built
+        # render timeline. Append-only; adding to it is a release step.
+        run: |
+          pnpm archive-corpus:verify
+          cargo test --manifest-path native/Cargo.toml -p simforge-core --test archive_corpus
+          pnpm --filter @simforge-oss/scenario exec vitest run src/__tests__/archive-corpus.test.ts
+        env:
+          CARGO_TARGET_DIR: native/target
+      - name: OpenSCENARIO conformance (docs/engineering/openscenario-conformance.md)
+        # Primary suite: SimForge vs the ASAM-derived oracle and the storyboard
+        # protocol properties (hand-written probes are esmini evidence only).
+        # Needs no third-party simulator. The pinned esmini 3.6.0 then adds the
+        # cross-check and the trajectory-replay round trip; if it cannot be
+        # fetched the script reports those parts as skipped.
+        run: |
+          pnpm --filter @simforge-oss/engine exec vitest run src/__tests__/storyboard-protocol.test.ts
+          pnpm --filter @simforge-oss/cli exec vitest run src/__tests__/osc-conformance.test.ts
+          node packages/openscenario/scripts-esmini/fetch-pinned-esmini.mjs || echo "::warning::esmini unavailable; conformance cross-check skipped"
+          pnpm osc-conformance:verify
       - name: Cross-renderer pose parity (hook; runs once the WS-B comparator is configured)
         run: node scripts/determinism/renderer-parity.mjs
 

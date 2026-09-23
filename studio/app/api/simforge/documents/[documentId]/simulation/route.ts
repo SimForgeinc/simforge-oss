@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { GalleryCatalogResolutionError } from "@/app/lib/asset-gallery/store";
 import { ScenarioMapResolutionError } from "@simforge-oss/studio-host";
 import { ResolveScenarioSimulationSchema } from "@/app/lib/scenario/contracts";
 import { resolveDocumentSimulation } from "@/app/lib/scenario/document-simulation";
@@ -32,10 +33,13 @@ export async function POST(request: Request, route: Context) {
       );
     }
     return NextResponse.json(
-      { draftVersion: result.draftVersion, ...result.status },
+      { draftVersion: result.draftVersion, ...result.status, engineChange: result.engineChange },
       { status: result.status.state === "succeeded" || result.status.state === "failed" ? 200 : 202, headers: SCENARIO_PRIVATE_CACHE_HEADERS },
     );
   } catch (error) {
+    if (error instanceof GalleryCatalogResolutionError) {
+      return NextResponse.json({ error: error.code, message: error.message, missing: error.missing }, { status: 422, headers: SCENARIO_PRIVATE_CACHE_HEADERS });
+    }
     if (error instanceof ScenarioMapResolutionError || error instanceof SimulationClosureUnavailableError) {
       return NextResponse.json({ error: error.code, message: error.message }, { status: 409, headers: SCENARIO_PRIVATE_CACHE_HEADERS });
     }

@@ -26,16 +26,30 @@ import type {
   ScenarioRevisionDto,
   ScenarioSimulationResultDto,
   ScenarioSimulationStatusDto,
+  ScenarioRevisionMotionDto,
+  ScenarioMapVersionIdentityDto,
+  ScenarioRevisionResimulationDto,
   ScenarioSimulationVerificationDto,
   ScenarioTagDto,
   ScenarioValidationRunDto,
   IndexedArtifact,
 } from "./contracts";
 import type {
+  DraftSimulationStatusDto,
+  MapRepinPreviewRequest,
+  ResimulateVersionResultDto,
   ScenarioTransferOptionsDto,
   TransferDocumentRequest,
   TransferOptionsRequest,
+  VersionContentDto,
 } from "./protocol/documents";
+import type {
+  ScenarioMapPinStatusDto,
+  ScenarioMapMoveResultDto,
+  ScenarioMapRepinPreviewDto,
+  ScenarioVersionsDto,
+  SimulationComparisonDto,
+} from "./contracts";
 
 /** A published map as both the editor (`ScenarioMapEntry`) and the list surfaces need it. */
 export type StudioMapEntry = ScenarioMapEntry & {
@@ -166,7 +180,7 @@ export interface StudioProjectService {
   resolveSimulation(
     document: Pick<ScenarioDocumentDto, "id" | "draftVersion">,
     options?: { waitMs?: number; signal?: AbortSignal },
-  ): Promise<ScenarioSimulationStatusDto & { draftVersion: number }>;
+  ): Promise<DraftSimulationStatusDto>;
   /** One immutable authoritative result by key. */
   getSimulation(simKey: string, signal?: AbortSignal): Promise<ScenarioSimulationResultDto>;
   /** Report the local preview's digest against the authoritative result; a mismatch is a determinism bug. */
@@ -181,17 +195,74 @@ export interface StudioProjectService {
     filters?: Record<string, unknown>,
     signal?: AbortSignal,
   ): Promise<{ simKey: string; traceSha256: string; evaluation: Record<string, unknown> & { verdict: "accept" | "reject" } }>;
-  /** The authoritative simulation a revision renders and is evaluated against. */
-  resolveRevisionSimulation(
+  /** Which motion a revision's renders replay (its original result by default). Never simulates. */
+  getRevisionMotion(revisionId: string, signal?: AbortSignal): Promise<ScenarioRevisionMotionDto>;
+  /**
+   * Explicitly re-simulate a revision under the current engine: adds a result
+   * without changing what renders by default, and returns the motion diff
+   * against the active result.
+   */
+  resimulateRevision(
     revisionId: string,
     options?: { waitMs?: number; signal?: AbortSignal },
-  ): Promise<ScenarioSimulationStatusDto>;
+  ): Promise<ScenarioRevisionResimulationDto>;
+
+  // ── Versions: the document's revisions and their simulation history ──
+  listVersions(documentId: string, signal?: AbortSignal): Promise<ScenarioVersionsDto>;
+  /** "Save version": the draft, simulated under the current engine, as a (named) version. */
+  saveVersion(
+    document: Pick<ScenarioDocumentDto, "id" | "draftVersion">,
+    options?: { label?: string | null; signal?: AbortSignal },
+  ): Promise<CreateScenarioRevisionResultDto>;
+  /** After an engine change: freeze the motion the draft showed before it as a version. */
+  keepPreviousMotion(
+    document: Pick<ScenarioDocumentDto, "id" | "draftVersion">,
+    change: { previousSimKey: string; currentSimKey: string },
+    signal?: AbortSignal,
+  ): Promise<CreateScenarioRevisionResultDto>;
+  /** After an engine change: the draft moves on with the current engine's motion. */
+  acceptDraftSimulation(
+    document: Pick<ScenarioDocumentDto, "id" | "draftVersion">,
+    simKey: string,
+    signal?: AbortSignal,
+  ): Promise<void>;
+  /** Re-simulate a version under the current engine; the result joins its history (not active). */
+  resimulateVersion(
+    documentId: string,
+    revisionId: string,
+    options?: { waitMs?: number; signal?: AbortSignal },
+  ): Promise<ResimulateVersionResultDto>;
+  /** "Use this simulation": what the version's renders replay from now on. */
+  setVersionActiveSimulation(documentId: string, revisionId: string, simKey: string, signal?: AbortSignal): Promise<void>;
+  getVersionContent(documentId: string, revisionId: string, signal?: AbortSignal): Promise<VersionContentDto>;
+  /** Restore a version onto the draft on the host (content and map pin together). */
+  restoreVersion(
+    document: Pick<ScenarioDocumentDto, "id" | "draftVersion">,
+    revisionId: string,
+    signal?: AbortSignal,
+  ): Promise<ScenarioDocumentDto>;
+  compareSimulations(baseSimKey: string, candidateSimKey: string, signal?: AbortSignal): Promise<SimulationComparisonDto>;
+  /** The draft's map pin (with its exact descriptor, superseded or not) and any newer publication. */
+  getMapPinStatus(documentId: string, signal?: AbortSignal): Promise<ScenarioMapPinStatusDto & { pinnedMap: StudioMapEntry | null }>;
+  previewMapRepin(
+    documentId: string,
+    request: MapRepinPreviewRequest,
+    signal?: AbortSignal,
+  ): Promise<ScenarioMapRepinPreviewDto>;
+  /** "Move to new map version": saves the current state as a version, then moves the draft. */
+  moveToMapVersion(
+    document: Pick<ScenarioDocumentDto, "id" | "draftVersion">,
+    targetMapVersionId: string,
+    signal?: AbortSignal,
+  ): Promise<ScenarioMapMoveResultDto>;
 }
 
 /** Map catalog and artifact resolution. URLs may be presigned and short-lived. */
 export interface StudioArtifactService {
   /** The usable map catalog. Refresh after installation or an authorization change. */
   listMaps(signal?: AbortSignal, options?: { fresh?: boolean }): Promise<StudioMapEntry[]>;
+  /** One map version by id, including superseded publications; null when it does not exist here. */
+  getMapVersionIdentity(mapVersionId: string, signal?: AbortSignal): Promise<ScenarioMapVersionIdentityDto | null>;
   /**
    * WGS84 footprints of the installed maps, for drawing scenario coverage on
    * a 2D basemap. Immutable per map version, so it shares the map catalog's

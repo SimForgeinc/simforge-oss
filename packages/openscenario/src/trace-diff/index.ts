@@ -18,3 +18,13 @@ export {
   COMPARISON_PROFILES,
   toComparisonUiModel,
 } from './compare.js';
+export {
+  buildSimulationDualPlayback,
+  describeSimulationMotionDiff,
+  diffSimulationTraces,
+  MOTION_IDENTICAL_HEADING_RAD,
+  MOTION_IDENTICAL_POSITION_M,
+  SIMULATION_MOTION_DIFF_FORMAT,
+  type SimulationDualPlayback,
+  type SimulationMotionDiff,
+} from './simulation-diff.js';

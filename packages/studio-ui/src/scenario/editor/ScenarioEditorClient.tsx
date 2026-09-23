@@ -27,6 +27,10 @@ import {
   useScenarioWorkspaceStatus,
 } from "./status";
 import { SaveStatus } from "./SaveStatus";
+import { NewerMapBanner } from "./versions/NewerMapBanner";
+import { versionsChanged } from "./versions/versions-events";
+import { mapsIncludingPinnedVersion } from "../scene/pinned-map";
+import type { StudioMapEntry } from "@simforge-oss/studio-host";
 import type { ScenarioWorldTarget } from "../scene/ScenarioWorldHost";
 import type { ScenarioMapOption } from "../list/document-map-groups";
 import { mapSupportsScenarioPreview } from "../scene/previewPolicy";
@@ -469,6 +473,45 @@ function ScenarioEditorWorkspace({
   }, [persist]);
   changeQualityRef.current = changeQuality;
 
+  // A draft pinned to a superseded (or retired) map version opens on exactly that version: its
+  // descriptor joins the catalog, which only lists each map's newest publication.
+  const pinnedMapVersionId = record?.mapVersionId ?? null;
+  const pinnedDocumentId = record?.id ?? null;
+  useEffect(() => {
+    if (!maps || !pinnedDocumentId || !pinnedMapVersionId) return;
+    if (maps.some((entry) => entry.mapVersionId === pinnedMapVersionId)) return;
+    const abort = new AbortController();
+    mapsIncludingPinnedVersion(studioHost, maps as StudioMapEntry[], { id: pinnedDocumentId, mapVersionId: pinnedMapVersionId }, abort.signal)
+      .then((next) => {
+        if (!abort.signal.aborted && next.length !== maps.length) setMaps([...next] as ScenarioMapEntry[]);
+      })
+      .catch((reason: unknown) => {
+        if ((reason as { name?: string } | null)?.name !== "AbortError") {
+          setError(`The scenario's pinned map version could not be loaded: ${reason instanceof Error ? reason.message : String(reason)}`);
+        }
+      });
+    return () => abort.abort();
+  }, [maps, pinnedDocumentId, pinnedMapVersionId, studioHost]);
+
+  /**
+   * "Move to new map version" (NewerMapBanner): save pending edits, then let the host keep the
+   * state before the move as a version and move the draft to the planned content.
+   */
+  const [mapMoveNotice, setMapMoveNotice] = useState<string | null>(null);
+  const moveToNewerMap = useCallback(async (targetMapVersionId: string) => {
+    const current = recordRef.current;
+    if (!current) return;
+    await persist();
+    const saved = await studioHost.projects.getDocument(current.id);
+    const result = await studioHost.projects.moveToMapVersion(saved, targetMapVersionId);
+    versionsChanged(result.document.id);
+    setMapMoveNotice(
+      `Moved to ${result.plan.target.name}. The scenario as it was is saved as Version ${result.before.revisionNumber}; revert to it from Versions at any time.`,
+    );
+    recordRef.current = result.document;
+    setRecord(result.document);
+  }, [persist, studioHost]);
+
   // Boot and failure conditions, published rather than rendered. Only one can be
   // blocking at a time and the gate resolves severity itself, so the order here
   // is just precedence of message, not of display.
@@ -580,6 +623,14 @@ function ScenarioEditorWorkspace({
         sharedPlayback={sharedPlayback}
         sharedActorRenderer={sharedActorRenderer}
         active={active}
+        statusBanners={
+          <NewerMapBanner
+            documentId={record?.id ?? null}
+            mapVersionId={record?.mapVersionId ?? null}
+            notice={mapMoveNotice}
+            onMove={moveToNewerMap}
+          />
+        }
       />
     </>,
   );

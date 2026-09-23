@@ -49,9 +49,14 @@
     "e2e:interop": "playwright test -c e2e/playwright.config.ts --project=interop",
     "e2e:all": "playwright test -c e2e/playwright.config.ts",
     "dev:all": "SIMFORGE_LOCAL_WORKER=1 pnpm --filter @simforge-oss/studio dev",
+    "archive-corpus": "tsx scripts/archive-corpus/archive-corpus.ts",
+    "archive-corpus:verify": "tsx scripts/archive-corpus/archive-corpus.ts verify",
     "golden-traces:verify": "pnpm --filter @simforge-oss/cli exec node --conditions=development --import tsx scripts/golden-traces.ts verify",
     "golden-traces:update": "pnpm --filter @simforge-oss/cli exec node --conditions=development --import tsx scripts/golden-traces.ts update",
-    "determinism:semver": "node scripts/determinism/check-engine-semver.mjs"
+    "osc-conformance:verify": "pnpm --filter @simforge-oss/cli exec node --conditions=development --import tsx scripts/osc-conformance.ts verify",
+    "osc-conformance:update-xosc": "pnpm --filter @simforge-oss/cli exec node --conditions=development --import tsx scripts/osc-conformance.ts update-xosc",
+    "determinism:semver": "node scripts/determinism/check-engine-semver.mjs",
+    "scenario:contract:check": "pnpm --filter @simforge-oss/scenario exec tsx scripts/scenario-contract.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

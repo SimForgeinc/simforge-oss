@@ -4,7 +4,7 @@ import { ALPAMAYO_RENDER_WIDTH, ALPAMAYO_RENDER_HEIGHT } from "@simforge-oss/sce
 import { useStudioHost } from "../../../host";
 import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
 import { isCloudHost } from "@simforge-oss/studio-host";
-import type { ScenarioRendererEngine, StudioHostCapabilities } from "@simforge-oss/studio-host";
+import type { ScenarioMotionSource, ScenarioRendererEngine, StudioHostCapabilities } from "@simforge-oss/studio-host";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
@@ -40,6 +40,7 @@ import {
 } from "./RenderWizardChrome";
 import { RenderSettingsFields } from "./RenderSettingsFields";
 import { formatElapsed } from "./render-view-model";
+import { motionDiffSummary, revisionMotionPlan, type RevisionMotionPlan } from "./render-motion-model";
 import { authoredRenderSensors, buildCanonicalRenderSpec, defaultModalities, renderModalityLabel, sensorKey, backendModalities, type AuthoredRenderSensor } from "@simforge-oss/scenario";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderConfigPanel.stylex";
@@ -118,9 +119,11 @@ const ENGINE_OPTIONS: {
 
 /**
  * The host's truthful answer for one engine card. esmini runs on the CPU job lane and is not a
- * registered renderer. Every other engine is either not offered by this host at all (no
- * capability key: submission would be rejected), offered without healthy capacity right now, or
- * ready.
+ * registered renderer: it is a validation run (`openscenario_validate`), so it is offered only
+ * when the host lists that job family in `jobs.families`. A host that has no executor for that
+ * lane (SimCloud, today) leaves the family out and the card is not a choice. Every other engine
+ * is either not offered by this host at all (no capability key: submission would be rejected),
+ * offered without healthy capacity right now, or ready.
  *
  * A LOCAL host runs the native renderer from a binary it installed on its own machine, so it
  * additionally reports whether that runtime is present and the card says when it is not. A cloud
@@ -128,12 +131,16 @@ const ENGINE_OPTIONS: {
  * engine has is whether a worker is serving it, and "not installed" would be a claim about a
  * machine that is not in this deployment.
  */
-function engineAvailability(
+export function engineAvailability(
   engine: RenderBackend,
   capabilities: StudioHostCapabilities | null,
 ): { offered: boolean; badge: string | null; reason: string | null } {
-  if (engine === "esmini") return { offered: true, badge: null, reason: null };
   if (!capabilities) return { offered: false, badge: "Checking host", reason: null };
+  if (engine === "esmini") {
+    return capabilities.jobs.families.includes("openscenario_validate")
+      ? { offered: true, badge: null, reason: null }
+      : { offered: false, badge: "Not offered", reason: `${capabilities.host.label} does not run esmini validation.` };
+  }
   const worker = capabilities.execution.renderWorkers[engine];
   if (!worker) {
     if (engine === "carla") {
@@ -336,6 +343,15 @@ export function RenderConfigPanel({
   );
   const [stage, setStage] = useState<null | "package" | "submit">(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Which motion the render replays (the revision's original simulation by
+  // default); set once the snapshot is known. A missing original stops the
+  // submission until the user picks an explicit alternative.
+  const [motionChoice, setMotionChoice] = useState<null | {
+    revisionId: string;
+    executionPackageId: string;
+    plan: RevisionMotionPlan;
+    resimulation: null | { state: "running" } | { state: "failed"; message: string } | { state: "done"; simKey: string; summary: string | null };
+  }>(null);
   /**
    * CARLA actor drop/substitution preflight. `error` is shown as such: a compatibility table that
    * could not be loaded must not read as "no known limitations".
@@ -469,15 +485,13 @@ export function RenderConfigPanel({
    * host would reject as an invalid render job. Missing capacity is different — a durable job may
    * queue until a worker appears — and is shown, not gated.
    */
-  const hostBlock = backend === "esmini"
-    ? null
-    : hostCapabilitiesState.status === "loading"
-      ? "Checking which render engines this host accepts…"
-      : hostCapabilitiesState.status === "error"
-        ? `Could not read this host's render capabilities: ${hostCapabilitiesState.error.message}`
-        : engineAvailabilityState.offered
-          ? null
-          : engineAvailabilityState.reason;
+  const hostBlock = hostCapabilitiesState.status === "loading"
+    ? "Checking which render engines this host accepts…"
+    : hostCapabilitiesState.status === "error"
+      ? `Could not read this host's render capabilities: ${hostCapabilitiesState.error.message}`
+      : engineAvailabilityState.offered
+        ? null
+        : engineAvailabilityState.reason;
 
   const submitDisabled = stage != null || issues.length > 0 || hostBlock !== null;
 
@@ -590,49 +604,70 @@ export function RenderConfigPanel({
     return { revisionId, executionPackageId: record.executionPackageId };
   }
 
+  function currentRenderSpec() {
+    if (!currentContent) throw new Error("The scenario is not ready to render.");
+    return buildCanonicalRenderSpec({
+      content: currentContent,
+      selections: selectedModalities,
+      clip: { startSeconds: 0, endSeconds: durationSeconds },
+      video: outputs.includes("video") ? {
+        width: resolution.width,
+        height: resolution.height,
+        fps,
+        container: backend === "browser" ? "webm" : "mp4",
+        codec: backend === "browser" ? "vp9" : "h264",
+        quality: quality === "preview" ? "draft" : quality === "cinematic" ? "high" : quality,
+      } : null,
+      artifacts: [...new Set([
+        ...outputs,
+        "trace" as const,
+        "manifest" as const,
+      ])],
+      staticSemantics: false,
+      // Browser captures are explicitly bounded previews, never native final output.
+      fidelity: backend === "native" ? "dataset" : "review",
+      environment: renderEnvironment,
+    });
+  }
+
+  async function submitIntent(
+    revisionId: string,
+    executionPackageId: string,
+    motion: { motionSource: ScenarioMotionSource; simKey?: string },
+  ) {
+    if (backend === "esmini") throw new Error("esmini runs are validation runs, not renders.");
+    const renderSpec = currentRenderSpec();
+    setStage("submit");
+    const job = await studioHost.jobs.submitRenderIntent({
+      schema: "uniscenario.render-intent-submission/v1",
+      engine: backend,
+      ...(backend === "native" ? {
+        renderProfile,
+        ...(nativeBudgetGiB === "" ? {} : { nativeVramBudgetBytes: Math.floor(Number(nativeBudgetGiB) * 1024 ** 3) }),
+      } : {}),
+      revisionId,
+      executionPackageId,
+      renderSpec,
+      motionSource: motion.motionSource,
+      ...(motion.simKey ? { simKey: motion.simKey } : {}),
+      idempotencyKey: `render-intent:${revisionId}:${randomUuid()}`,
+    });
+    onManagedJobCreated(job.id);
+  }
+
   async function submitGpuRender() {
     if (stage != null || backend === "esmini" || hostBlock !== null) return;
     setSubmitError(null);
     setStage("package");
     try {
-      if (!currentContent) throw new Error("The scenario is not ready to render.");
-      const renderSpec = buildCanonicalRenderSpec({
-        content: currentContent,
-        selections: selectedModalities,
-        clip: { startSeconds: 0, endSeconds: durationSeconds },
-        video: outputs.includes("video") ? {
-          width: resolution.width,
-          height: resolution.height,
-          fps,
-          container: backend === "browser" ? "webm" : "mp4",
-          codec: backend === "browser" ? "vp9" : "h264",
-          quality: quality === "preview" ? "draft" : quality === "cinematic" ? "high" : quality,
-        } : null,
-        artifacts: [...new Set([
-          ...outputs,
-          "trace" as const,
-          "manifest" as const,
-        ])],
-        staticSemantics: false,
-        // Browser captures are explicitly bounded previews, never native final output.
-        fidelity: backend === "native" ? "dataset" : "review",
-        environment: renderEnvironment,
-      });
+      currentRenderSpec();
       const { revisionId, executionPackageId } = await ensureExecutionPackage();
-      setStage("submit");
-      const job = await studioHost.jobs.submitRenderIntent({
-        schema: "uniscenario.render-intent-submission/v1",
-        engine: backend,
-        ...(backend === "native" ? {
-          renderProfile,
-          ...(nativeBudgetGiB === "" ? {} : { nativeVramBudgetBytes: Math.floor(Number(nativeBudgetGiB) * 1024 ** 3) }),
-        } : {}),
-        revisionId,
-        executionPackageId,
-        renderSpec,
-        idempotencyKey: `render-intent:${revisionId}:${randomUuid()}`,
-      });
-      onManagedJobCreated(job.id);
+      // Renders replay the revision's ORIGINAL stored simulation, whatever
+      // engine produced it; nothing re-simulates implicitly.
+      const plan = revisionMotionPlan(await studioHost.projects.getRevisionMotion(revisionId));
+      setMotionChoice({ revisionId, executionPackageId, plan, resimulation: null });
+      if (plan.kind === "original-missing") return;
+      await submitIntent(revisionId, executionPackageId, { motionSource: "original" });
     } catch (cause) {
       setSubmitError(cause instanceof Error ? cause.message : "The render could not be submitted.");
     } finally {
@@ -640,6 +675,112 @@ export function RenderConfigPanel({
       setPackageWait(null);
     }
   }
+
+  /** The explicit alternatives: the legacy OpenSCENARIO replay, or a re-simulated result. */
+  async function submitChosenMotion(motion: { motionSource: ScenarioMotionSource; simKey?: string }) {
+    if (stage != null || !motionChoice) return;
+    setSubmitError(null);
+    try {
+      await submitIntent(motionChoice.revisionId, motionChoice.executionPackageId, motion);
+    } catch (cause) {
+      setSubmitError(cause instanceof Error ? cause.message : "The render could not be submitted.");
+    } finally {
+      setStage(null);
+    }
+  }
+
+  /** "Re-simulate on engine X": a new result for this revision, with its motion diff. Never automatic. */
+  async function resimulate() {
+    if (!motionChoice || motionChoice.resimulation?.state === "running") return;
+    const { revisionId } = motionChoice;
+    setMotionChoice((previous) => previous && { ...previous, resimulation: { state: "running" } });
+    try {
+      let result = await studioHost.projects.resimulateRevision(revisionId, { waitMs: 20_000 });
+      for (let polls = 0; polls < 30 && (result.status.state === "queued" || result.status.state === "running"); polls += 1) {
+        result = await studioHost.projects.resimulateRevision(revisionId, { waitMs: 20_000 });
+      }
+      const status = result.status;
+      if (status.state !== "succeeded") {
+        const message = status.state === "failed" ? status.message ?? status.failureCode : "The re-simulation is still queued; try again shortly.";
+        setMotionChoice((previous) => previous && { ...previous, resimulation: { state: "failed", message } });
+        return;
+      }
+      setMotionChoice((previous) => previous && {
+        ...previous,
+        resimulation: {
+          state: "done",
+          simKey: status.result.simKey,
+          summary: result.motionDiff ? motionDiffSummary(result.motionDiff) : null,
+        },
+      });
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "The re-simulation failed.";
+      setMotionChoice((previous) => previous && { ...previous, resimulation: { state: "failed", message } });
+    }
+  }
+
+  const motionNotice = motionChoice ? (
+    <section {...stylex.props(styles.xsMutedBordered3)} aria-label="Render motion" data-testid="render-motion" data-motion-plan={motionChoice.plan.kind}>
+      {motionChoice.plan.kind === "original-missing" ? (
+        <p role="alert">{motionChoice.plan.message}</p>
+      ) : (
+        <p>
+          Replays the original simulation from engine {motionChoice.plan.engineSemVer}
+          {motionChoice.plan.engineIsCurrent ? "." : " (not re-simulated on the current engine)."}
+          {motionChoice.plan.kind === "replay-active" ? ` ${motionChoice.plan.note}` : ""}
+        </p>
+      )}
+      <div {...stylex.props(styles.flexBetweenBaseline2)}>
+        {motionChoice.plan.kind === "original-missing" || motionChoice.plan.resimulateLabel ? (
+          <button
+            className={stylex.props(focus.ring, typography.eyebrow).className}
+            data-testid="render-motion-resimulate"
+            disabled={motionChoice.resimulation?.state === "running"}
+            onClick={() => void resimulate()}
+            type="button"
+          >
+            {motionChoice.resimulation?.state === "running"
+              ? "Re-simulating…"
+              : motionChoice.plan.kind === "original-missing" ? motionChoice.plan.resimulateLabel : motionChoice.plan.resimulateLabel}
+          </button>
+        ) : null}
+        {motionChoice.plan.kind === "original-missing" && motionChoice.plan.legacyXoscAvailable ? (
+          <button
+            className={stylex.props(focus.ring, typography.eyebrow).className}
+            data-testid="render-motion-legacy"
+            disabled={stage != null}
+            onClick={() => void submitChosenMotion({ motionSource: "original-xosc" })}
+            type="button"
+          >
+            Render original motion (legacy OpenSCENARIO replay)
+          </button>
+        ) : null}
+      </div>
+      {motionChoice.resimulation?.state === "failed" ? (
+        <p {...stylex.props(styles.xsDangerBreakWords)} role="alert">{motionChoice.resimulation.message}</p>
+      ) : null}
+      {motionChoice.resimulation?.state === "done" ? (
+        <>
+          <p data-testid="render-motion-diff">
+            {motionChoice.resimulation.summary ?? "Re-simulated. There is no stored original to compare against."}
+          </p>
+          <button
+            className={stylex.props(focus.ring, typography.eyebrow).className}
+            data-testid="render-motion-resimulated"
+            disabled={stage != null}
+            onClick={() => {
+              if (motionChoice.resimulation?.state === "done") {
+                void submitChosenMotion({ motionSource: "resimulated", simKey: motionChoice.resimulation.simKey });
+              }
+            }}
+            type="button"
+          >
+            Render the re-simulated motion
+          </button>
+        </>
+      ) : null}
+    </section>
+  ) : null;
 
   async function submitEsminiRun() {
     if (stage != null) return;
@@ -1153,6 +1294,7 @@ export function RenderConfigPanel({
                 ) : null}
               </section>
             ) : null}
+            {motionNotice}
             {submitError ? (
               <p {...stylex.props(styles.xsDangerBreakWords)} role="alert">
                 {submitError}

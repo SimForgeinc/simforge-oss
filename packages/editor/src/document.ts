@@ -1274,6 +1274,46 @@ export class EditorDocument {
   }
 
   /**
+   * Apply a one-time repair of stored data (for example
+   * `fixMirroredOpenScenarioImport`) as one undoable, autosaved gesture: the
+   * named roles are replaced verbatim and the extension values set as given.
+   *
+   * Nothing is derived. {@link update} re-authors an actor (it quantises,
+   * carries timed routes with the pose and drops runtime lane chains); a repair
+   * corrects what was stored and must write exactly what it computed.
+   */
+  applyRepair(repair: {
+    readonly roles?: readonly RoleBinding[];
+    readonly extensions?: Readonly<Record<string, unknown>>;
+  }): void {
+    const roles = repair.roles ?? [];
+    const unknown = roles.find((role) => !this.#doc.role(role.id));
+    if (unknown) throw new Error(`repair names unknown role "${unknown.id}"`);
+    this.#transaction(() => {
+      for (const role of roles) this.#doc.replaceRole(role.id, role);
+      for (const [key, value] of Object.entries(repair.extensions ?? {})) this.#doc.setExtension(key, value);
+    });
+  }
+
+  /**
+   * Restore a saved version's content onto this draft as ONE undoable, autosaved edit (the
+   * Versions panel's "Restore this version"). The content is validated first; its map identity is
+   * reconciled to this session's map version exactly as an import is, so a version from another
+   * map version is restored through the host's explicit re-pin instead.
+   */
+  restoreTemplate(value: unknown): void {
+    const parsed = TemplateDocument.fromJSON(value, { historyLimit: HISTORY_LIMIT }).data;
+    const bound = reconcileTemplateMapIdentity(parsed, {
+      mapVersionId: editorMapVersionId(this.map),
+      sourceMapId: editorSourceMapId(this.map),
+      label: this.map.label,
+    });
+    this.#transaction(() => {
+      this.#doc.apply({ type: 'replaceTemplate', template: normalizeAuthoringGraph(bound).template });
+    });
+  }
+
+  /**
    * Persist several execution-bearing ambient-traffic options as ONE undoable
    * gesture (a traffic source together with the density it needs).
    */

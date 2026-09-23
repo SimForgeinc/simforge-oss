@@ -434,6 +434,7 @@ impl TraceRecorder {
             events,
             metrics,
             semantic_ledger,
+            upgrade: None,
         };
         trace.validate()?;
         Ok(trace)

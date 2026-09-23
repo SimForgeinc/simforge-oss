@@ -1,7 +1,8 @@
 "use client";
 
 import { useStudioHost } from "../../host";
-import { resolveScenarioMap } from "@simforge-oss/studio-host";
+import { resolveScenarioMap, type ScenarioEngineChangeDto } from "@simforge-oss/studio-host";
+import { mapsIncludingPinnedVersion } from "./pinned-map";
 import {
   previewAmbientTrafficProfile,
   previewExecutionTrafficProvider,
@@ -47,6 +48,13 @@ const VERIFY_ATTEMPTS = 12;
 
 export type { SimulationVerificationState } from "../../lib/scenario/playback/authoritativeSimulation";
 
+/** An engine change the author has not decided on yet, for the saved draft version it was found on. */
+export type DraftEngineChange = {
+  readonly documentId: string;
+  readonly draftVersion: number;
+  readonly change: ScenarioEngineChangeDto;
+};
+
 export type ScenarioSharedPlayback = {
   readonly bundle: PlaybackBundle | null;
   /** Canonical authored-content identity that produced `bundle`; null fails browser capture closed. */
@@ -65,6 +73,12 @@ export type ScenarioSharedPlayback = {
    */
   readonly simulationVerification?: SimulationVerificationState;
   readonly retrySimulationVerification?: () => void;
+  /**
+   * The saved draft is unchanged but its authoritative result moved (an engine upgrade) and the
+   * motion differs: the editor offers to keep the old motion as a version (EngineChangeBanner).
+   */
+  readonly simulationEngineChange?: DraftEngineChange | null;
+  readonly clearSimulationEngineChange?: () => void;
   readonly inspecting: boolean;
   readonly setInspecting: (inspecting: boolean) => void;
   /** Status published by the one workspace-owned SUMO runtime. */
@@ -167,6 +181,7 @@ export function useScenarioSession({
   const [recordingCamera, setRecordingCamera] = useState<ScenarioRecordingCamera | null>(null);
   const [sumoStatus, setSumoStatus] = useState<SumoTrafficStatus>(DISABLED_SUMO_STATUS);
   const [simulationVerification, setSimulationVerification] = useState<SimulationVerificationState>({ status: "local" });
+  const [simulationEngineChange, setSimulationEngineChange] = useState<DraftEngineChange | null>(null);
   const verifyPreviewRef = useRef<((nextBundle: PlaybackBundle, force?: boolean) => void) | null>(null);
   const workerRef = useRef<ScenarioWorkerClient | null>(null);
   /** The one in-flight or completed verification of the current trace, by content identity and saved version. */
@@ -218,8 +233,16 @@ export function useScenarioSession({
     setBundle(null);
     setMessage("Preparing scenario preview…");
     setSimulationVerification({ status: "local" });
-    void studioHost.projects.getDocument(documentId, abort.signal).then((nextDocument) => {
+    void studioHost.projects.getDocument(documentId, abort.signal).then(async (nextDocument) => {
       if (abort.signal.aborted || generation !== fetchGenerationRef.current) return;
+      // A draft pinned to a superseded or retired map version previews on exactly that version.
+      // Without the pinned version's descriptor, resolution below still fails loudly as before.
+      const withPin = await mapsIncludingPinnedVersion(studioHost, maps, nextDocument, abort.signal).catch((reason: unknown) => {
+        console.warn(`[scenario] pinned map version ${nextDocument.mapVersionId} could not be loaded: ${reason instanceof Error ? reason.message : String(reason)}`);
+        return maps;
+      });
+      if (abort.signal.aborted || generation !== fetchGenerationRef.current) return;
+      if (withPin.length !== maps.length) setMaps([...withPin] as typeof maps);
       const canonical = withCanonicalEditorTimeline(nextDocument);
       persistedDocumentIdentityRef.current = {
         id: canonical.id,
@@ -291,6 +314,8 @@ export function useScenarioSession({
       verificationRef.current = { key, abort };
       const current = () => verificationRef.current?.key === key && !abort.signal.aborted;
       const target = { id: persisted.id, draftVersion: persisted.draftVersion };
+      // An undecided engine change belongs to the draft version it was found on.
+      setSimulationEngineChange((pending) => (pending && pending.documentId === target.id && pending.draftVersion === target.draftVersion ? pending : null));
       setSimulationVerification({ status: "verifying" });
       void (async () => {
         for (let attempt = 0; attempt < VERIFY_ATTEMPTS && current(); attempt += 1) {
@@ -305,6 +330,9 @@ export function useScenarioSession({
             continue;
           }
           const result = status.result;
+          setSimulationEngineChange(status.engineChange
+            ? { documentId: target.id, draftVersion: target.draftVersion, change: status.engineChange }
+            : null);
           const localTraceSha256 = nextBundle.traceSha256 ?? null;
           const verified = localTraceSha256 !== null && comparableTraceSha256(result).includes(localTraceSha256);
           const runtime = await worker().engineIdentity().catch(() => null);
@@ -574,6 +602,8 @@ export function useScenarioSession({
       retrySimulationVerification: () => {
         if (bundle) verifyPreviewRef.current?.(bundle, true);
       },
+      simulationEngineChange,
+      clearSimulationEngineChange: () => setSimulationEngineChange(null),
       setInspecting,
       sumoStatus,
       setSumoStatus,

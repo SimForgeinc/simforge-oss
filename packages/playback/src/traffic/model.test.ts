@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TemplateDocument } from '@simforge-oss/scenario';
+import { SCENARIO_ABSENT_FIELD_SEMANTICS, TemplateDocument } from '@simforge-oss/scenario';
 import { contentHash } from '@simforge-oss/engine';
 import {
   ACCELERATED_SIGNAL_CYCLES_EXTENSION_KEY,
@@ -134,6 +134,14 @@ describe('ambient traffic preference', () => {
   });
 });
 
+describe('absent-field semantics registry', () => {
+  it('an absent accelerated-signal-cycles flag means real map timing', () => {
+    const entry = SCENARIO_ABSENT_FIELD_SEMANTICS.find((candidate) => candidate.id === 'ambient.acceleratedSignalCycles');
+    expect(entry?.field).toBe(`extensions["${ACCELERATED_SIGNAL_CYCLES_EXTENSION_KEY}"]`);
+    expect(ambientSignalCycleSettingsFromExtensions({})).toEqual(entry?.meaning);
+    expect(ambientSignalCycleSettingsFromExtensions(undefined)).toEqual(entry?.meaning);
+  });
+});
 
 describe('choosing a traffic source', () => {
   const PROVIDER = 'studio.ambientTraffic.provider.v1';

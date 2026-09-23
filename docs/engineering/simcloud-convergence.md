@@ -30,7 +30,7 @@ by the platform, never copied from the platform back into this repository.
 | OpenDRIVE intelligence and world compilation | `@simforge-oss/maps`, `@simforge-oss/compiler` | Authorized map and artifact references |
 | Authoring, viewport, playback, and assets | `@simforge-oss/editor`, `@simforge-oss/viewer`, `@simforge-oss/playback`, `@simforge-oss/asset-catalog` | Product layout, collaboration, and cloud-backed media |
 | Render contracts and engines | `@simforge-oss/render`, `renderer/` | Leasing, credentials, capacity, and observability |
-| OpenSCENARIO import, export, and conformance | `@simforge-oss/openscenario` | Endpoints and object storage |
+| OpenSCENARIO export and conformance | `@simforge-oss/openscenario` | Endpoints and object storage |
 | Training and evaluation protocols | `@simforge-oss/training-env`, `@simforge-oss/evaluation` | Managed training and evaluation jobs |
 | Command-line workflows | `@simforge-oss/cli` | Product orchestration only |
 | Map ingestion and publication | `@simforge-oss/map-pipeline`, `@simforge-oss/map-registry` | Managed source intake and access control |

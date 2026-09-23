@@ -2,6 +2,7 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 import { hostname } from "node:os";
+import { gunzipSync } from "node:zlib";
 
 import {
   collectGalleryCatalogIds,
@@ -24,12 +25,19 @@ import {
   type SimulationTimeline,
 } from "@simforge-oss/compiler/node";
 import type {
+  RevisionSimulationReason,
+  ScenarioActiveSimulationReason,
+  ScenarioMotionDiffDto,
+  ScenarioMotionSource,
+  ScenarioRevisionMotionDto,
+  ScenarioRevisionResimulationDto,
   ScenarioSimulationResultDto,
   ScenarioSimulationStatusDto,
   ScenarioSimulationTrafficProvider,
+  SimulationMotionDiffDto,
 } from "@simforge-oss/studio-host";
 
-import { resolveGalleryCatalogIds } from "@/app/lib/asset-gallery/store";
+import { GalleryCatalogResolutionError, requireGalleryCatalogEntries } from "@/app/lib/asset-gallery/store";
 import { queryOne, queryRows, withTransaction, type Transaction } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import { getPresignedGetUrl, getPresignedPutUrl, headS3Object } from "@/app/lib/s3/s3-presign";
@@ -42,6 +50,7 @@ import { simforgeEnv } from "@/lib/simforge-env";
 import { simContentHash } from "@simforge-oss/scenario";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import { createLocalArtifactProducer } from "./jobs/local-artifact-producer-store";
+import { motionDiff } from "./motion-diff";
 import {
   loadServerSimulationClosure,
   readServerMapMember,
@@ -71,8 +80,10 @@ import {
  * Bump when the TypeScript half of the pipeline changes what a request resolves to.
  * 3: documents with no authored actors resolve to the blank world instead of
  * failing `unsupported_portable_semantics`, so their memoized failures re-resolve.
+ * 4: portable documents (transferred variations, templates) execute at their pinned site exactly
+ * as the editor previews them instead of failing `unsupported_portable_semantics`.
  */
-export const SIMULATION_PIPELINE_REVISION = 3;
+export const SIMULATION_PIPELINE_REVISION = 4;
 const REQUEST_CONTRACT = "simforge.sim-request/v1";
 const RESOLUTION_MEDIA_TYPE = SIMULATION_RESOLUTION_MEDIA_TYPE;
 const MATERIALIZED_TRAFFIC_MEDIA_TYPE = "application/vnd.uniscenarios.materialized-traffic+json";
@@ -116,8 +127,9 @@ type RequestIdentity = {
 };
 
 async function catalogEntriesFor(content: unknown) {
-  const gallery = await resolveGalleryCatalogIds(collectGalleryCatalogIds(content as Record<string, unknown>));
-  return gallery.entries.map(galleryCatalogEntry);
+  // Exact versions or a loud `actor_catalog_entry_missing` (a scenario error: the request fails).
+  const entries = await requireGalleryCatalogEntries(collectGalleryCatalogIds(content as Record<string, unknown>));
+  return entries.map(galleryCatalogEntry);
 }
 
 async function requestIdentity(subject: SimulationSubject): Promise<RequestIdentity & { catalogEntries: Awaited<ReturnType<typeof catalogEntriesFor>> }> {
@@ -168,6 +180,8 @@ type ResultRow = {
   ambient_provenance: unknown;
   timeline_sha256: string | null;
   timeline_byte_length: number | string | null;
+  timeline_key: string | null;
+  timeline_storage_key: string | null;
   producer: string;
   created_at: string;
 };
@@ -176,7 +190,8 @@ const RESULT_COLUMNS = `r.sim_key, r.trace_sha256, r.authored_trace_sha256, r.en
   r.trace_schema, r.resolved_input_digest, r.map_closure_digest, r.map_version_id, r.traffic_provider,
   r.storage_bucket, r.trace_storage_key, r.trace_byte_length, r.trace_gzip_sha256,
   r.resolution_storage_key, r.resolution_byte_length, r.resolution_sha256,
-  r.traffic_artifact_id, r.ambient_provenance, r.timeline_sha256, r.timeline_byte_length, r.producer,
+  r.traffic_artifact_id, r.ambient_provenance, r.timeline_sha256, r.timeline_byte_length,
+  r.timeline_key, r.timeline_storage_key, r.producer,
   r.created_at::text AS created_at`;
 
 async function resultDto(row: ResultRow): Promise<ScenarioSimulationResultDto> {
@@ -318,8 +333,10 @@ export function simulationObjectKeys(workspaceId: string, completion: Pick<Simul
 
 /**
  * The render timeline step (WS-B): trace + the map's height source → the
- * canonical timeline every renderer samples. Best effort: a render without it
- * falls back to the XOSC, so a failure here never fails the simulation.
+ * canonical timeline every renderer samples, recorded with the result. A
+ * failure here never fails the simulation: a render derives the timeline
+ * again from the stored trace (`resolveRenderTimeline`) and fails loudly if
+ * it still can't, never falling back to the OpenSCENARIO export.
  */
 export async function buildSimulationTimeline(
   simulation: AuthoritativeSimulation,
@@ -646,7 +663,7 @@ async function executeInline(
         ? error.message.split(":")[0]!.slice(0, 100)
         : "simulation_failed";
     // Scenario errors (infeasible, invalid) fail the request; infrastructure errors requeue it.
-    const scenarioError = /^(template_invalid|materialization_infeasible|semantic_loss|unsupported_portable_semantics|map_bound_|runtime_asset_identity|actor_catalog|sumo_network_unavailable)/.test(code);
+    const scenarioError = /^(template_invalid|materialization_infeasible|semantic_loss|unsupported_portable_semantics|portable_site_unresolved|map_bound_|runtime_asset_identity|actor_catalog|sumo_network_unavailable)/.test(code);
     console.warn(`[simulation] inline execution of ${identity.requestKey} failed (${scenarioError ? "scenario" : "retryable"}): ${error instanceof Error ? error.message : String(error)}`);
     await failSimulationRequest({
       workspaceId: subject.workspaceId,
@@ -784,9 +801,9 @@ export async function claimSimulationJob(input: { workerId: string; leaseSeconds
         workspaceId: candidate.workspace_id,
         requestKey: candidate.request_key,
         fenceToken: claim.fenceToken,
-        code: "simulation_claim_map_unavailable",
+        code: error instanceof GalleryCatalogResolutionError ? error.code : "simulation_claim_map_unavailable",
         message: error instanceof Error ? error.message : String(error),
-        retryable: true,
+        retryable: !(error instanceof GalleryCatalogResolutionError),
       });
     }
   }
@@ -857,51 +874,429 @@ export async function reserveSimulationJobOutputs(input: {
 
 // ── Revisions ─────────────────────────────────────────────────────────────────
 
-/** Bind a revision to its result under the result's engine semantics. */
+/**
+ * Append a result to a revision's simulation history (`revision_simulations`, append-only; see
+ * sim-history.ts). A commit also makes it the revision's active simulation: the motion its renders
+ * replay from then on, under every later engine. `reason` defaults from `origin` ('commit' →
+ * commit, 'lazy' → resimulate); `previousSimKey`/`motionDiff` record what it was compared against.
+ * Returns whether a new history row was written (a result is in a revision's history at most once).
+ */
 export async function linkRevisionSimulation(
   tx: Transaction | null,
-  input: { workspaceId: string; revisionId: string; simKey: string; engineSemVer: string; origin: "commit" | "lazy" },
-): Promise<void> {
-  const sql = `INSERT INTO simforge.revision_simulations (workspace_id, revision_id, engine_sem_ver, sim_key, origin)
-     VALUES (:workspace_id, :revision_id, :engine_sem_ver, :sim_key, :origin)
-     ON CONFLICT (workspace_id, revision_id, engine_sem_ver) DO NOTHING`;
+  input: {
+    workspaceId: string;
+    revisionId: string;
+    simKey: string;
+    engineSemVer: string;
+    origin: "commit" | "lazy";
+    reason?: RevisionSimulationReason;
+    userId?: string | null;
+    previousSimKey?: string | null;
+    motionDiff?: SimulationMotionDiffDto | null;
+  },
+): Promise<boolean> {
+  const reason = input.reason ?? (input.origin === "commit" ? "commit" : "resimulate");
+  const previous = input.previousSimKey && input.previousSimKey !== input.simKey ? input.previousSimKey : null;
+  // `origin` stays written during the expand window (rc.73 readers); ON CONFLICT covers both the
+  // (revision, engine) compatibility key and the (revision, sim_key) history key.
+  const sql = `INSERT INTO simforge.revision_simulations (
+       workspace_id, revision_id, engine_sem_ver, sim_key, origin, reason, created_by_user_id,
+       previous_sim_key, motion_diff
+     ) VALUES (
+       :workspace_id, :revision_id, :engine_sem_ver, :sim_key, :origin, :reason, :user_id,
+       :previous_sim_key, CAST(:motion_diff AS jsonb)
+     ) ON CONFLICT DO NOTHING
+     RETURNING sim_key`;
   const params = {
     workspace_id: input.workspaceId,
     revision_id: input.revisionId,
     engine_sem_ver: input.engineSemVer,
     sim_key: input.simKey,
     origin: input.origin,
+    reason,
+    user_id: input.userId ?? null,
+    previous_sim_key: previous,
+    motion_diff: previous ? input.motionDiff ?? null : null,
   };
+  const rows = tx ? await tx.queryRows<{ sim_key: string }>(sql, params) : await queryRows<{ sim_key: string }>(sql, params);
+  if (input.origin === "commit") {
+    await setRevisionActiveSimulation(tx, {
+      workspaceId: input.workspaceId,
+      revisionId: input.revisionId,
+      simKey: input.simKey,
+      reason: "commit",
+      userId: input.userId ?? null,
+    });
+  }
+  return rows.length > 0;
+}
+
+export class RevisionReplayError extends Error {
+  constructor(readonly code: string, message: string, readonly status: number, readonly detail: Record<string, unknown> = {}) {
+    super(message);
+    this.name = "RevisionReplayError";
+  }
+}
+
+/**
+ * Point a revision's renders at one of its results. `commit` only ever fills
+ * an empty pointer (a revision's original never changes); `user` moves it,
+ * and only to a result already bound to this revision.
+ */
+export async function setRevisionActiveSimulation(
+  tx: Transaction | null,
+  input: { workspaceId: string; revisionId: string; simKey: string; reason: ScenarioActiveSimulationReason; userId: string | null },
+): Promise<void> {
+  const params = {
+    workspace_id: input.workspaceId,
+    revision_id: input.revisionId,
+    sim_key: input.simKey,
+    reason: input.reason,
+    user_id: input.userId,
+  };
+  if (input.reason !== "commit") {
+    const boundSql = `SELECT sim_key FROM simforge.revision_simulations
+        WHERE workspace_id = :workspace_id AND revision_id = :revision_id AND sim_key = :sim_key LIMIT 1`;
+    const bound = tx
+      ? await tx.queryOne<{ sim_key: string }>(boundSql, params)
+      : await queryOne<{ sim_key: string }>(boundSql, params);
+    if (!bound) {
+      throw new RevisionReplayError("revision_simulation_not_bound", `result ${input.simKey} is not a simulation of revision ${input.revisionId}`, 409);
+    }
+  }
+  const sql = input.reason === "commit"
+    ? `INSERT INTO simforge.revision_active_simulation (workspace_id, revision_id, sim_key, reason, set_by_user_id)
+       VALUES (:workspace_id, :revision_id, :sim_key, :reason, :user_id)
+       ON CONFLICT (workspace_id, revision_id) DO NOTHING`
+    : `INSERT INTO simforge.revision_active_simulation (workspace_id, revision_id, sim_key, reason, set_by_user_id)
+       VALUES (:workspace_id, :revision_id, :sim_key, :reason, :user_id)
+       ON CONFLICT (workspace_id, revision_id) DO UPDATE
+         SET sim_key = EXCLUDED.sim_key, reason = EXCLUDED.reason,
+             set_by_user_id = EXCLUDED.set_by_user_id, set_at = NOW()`;
   if (tx) await tx.execute(sql, params);
   else await queryRows(`${sql} RETURNING revision_id`, params);
 }
 
+type RevisionRow = { canonical_content: unknown; content_sha256: string; map_version_id: string };
+
+async function readRevision(workspaceId: string, revisionId: string): Promise<RevisionRow | null> {
+  return queryOne<RevisionRow>(
+    `SELECT canonical_content, content_sha256, map_version_id FROM simforge.revisions
+      WHERE workspace_id = :workspace_id AND id = :revision_id`,
+    { workspace_id: workspaceId, revision_id: revisionId },
+  );
+}
+
+/** Which motion a revision's renders replay, and what else is stored for it. Never simulates. */
+export async function revisionMotion(workspaceId: string, revisionId: string): Promise<ScenarioRevisionMotionDto | null> {
+  const revision = await queryOne<{ id: string }>(
+    `SELECT id FROM simforge.revisions WHERE workspace_id = :workspace_id AND id = :revision_id`,
+    { workspace_id: workspaceId, revision_id: revisionId },
+  );
+  if (!revision) return null;
+  const active = await queryOne<{ sim_key: string; reason: ScenarioActiveSimulationReason; set_at: string; engine_sem_ver: string; trace_sha256: string }>(
+    `SELECT a.sim_key, a.reason, a.set_at::text AS set_at, r.engine_sem_ver, r.trace_sha256
+       FROM simforge.revision_active_simulation a
+       JOIN simforge.sim_results r ON r.workspace_id = a.workspace_id AND r.sim_key = a.sim_key
+      WHERE a.workspace_id = :workspace_id AND a.revision_id = :revision_id`,
+    { workspace_id: workspaceId, revision_id: revisionId },
+  );
+  const results = await queryRows<{ sim_key: string; engine_sem_ver: string; trace_sha256: string; origin: "commit" | "lazy"; created_at: string }>(
+    `SELECT rs.sim_key, r.engine_sem_ver, r.trace_sha256, rs.origin, rs.created_at::text AS created_at
+       FROM simforge.revision_simulations rs
+       JOIN simforge.sim_results r ON r.workspace_id = rs.workspace_id AND r.sim_key = rs.sim_key
+      WHERE rs.workspace_id = :workspace_id AND rs.revision_id = :revision_id
+      ORDER BY rs.created_at, rs.sim_key`,
+    { workspace_id: workspaceId, revision_id: revisionId },
+  );
+  const legacy = await queryOne<{ available: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM simforge.execution_packages ep
+         JOIN simforge.artifacts xosc ON xosc.id = ep.xosc_artifact_id AND xosc.workspace_id = ep.workspace_id
+          AND xosc.artifact_state = 'available'
+         JOIN simforge.artifacts xodr ON xodr.id = ep.xodr_artifact_id
+         JOIN simforge.revisions r ON r.id = ep.revision_id AND r.workspace_id = ep.workspace_id
+         JOIN simforge.map_versions mv ON mv.id = r.map_version_id
+        WHERE ep.workspace_id = :workspace_id AND ep.revision_id = :revision_id
+          -- The export replays on the revision's roads only if it was compiled
+          -- against them: a revision re-pointed to another map is not offered it.
+          AND xodr.sha256 = mv.xodr_sha256
+     ) AS available`,
+    { workspace_id: workspaceId, revision_id: revisionId },
+  );
+  return {
+    revisionId,
+    currentEngineSemVer: engineSemantics().engineSemVer,
+    active: active
+      ? {
+          simKey: active.sim_key,
+          engineSemVer: active.engine_sem_ver,
+          traceSha256: active.trace_sha256,
+          reason: active.reason,
+          original: active.reason === "commit" || active.reason === "backfill-commit",
+          setAt: active.set_at,
+        }
+      : null,
+    results: results.map((row) => ({
+      simKey: row.sim_key,
+      engineSemVer: row.engine_sem_ver,
+      traceSha256: row.trace_sha256,
+      origin: row.origin,
+      createdAt: row.created_at,
+      active: row.sim_key === active?.sim_key,
+    })),
+    legacyXoscAvailable: Boolean(legacy?.available),
+  };
+}
+
+/** The stored trace of a result, verified against its recorded digest (gzip bytes). */
+async function readStoredTraceBytes(row: ResultRow): Promise<Uint8Array> {
+  const bytes = await getS3ObjectBytes(row.storage_bucket, row.trace_storage_key);
+  if (bytes.byteLength !== Number(row.trace_byte_length) || sha256(bytes) !== row.trace_gzip_sha256) {
+    throw new SimulationFailedError("simulation_trace_corrupt", `stored trace for ${row.sim_key} does not match its recorded digest`);
+  }
+  return bytes;
+}
+
+function traceDocument(bytes: Uint8Array): Parameters<typeof motionDiff>[0]["trace"] {
+  const plain = bytes[0] === 0x1f && bytes[1] === 0x8b ? gunzipSync(bytes) : Buffer.from(bytes);
+  return JSON.parse(plain.toString("utf8"));
+}
+
+/** Motion diff of two stored results (base first). */
+export async function resultMotionDiff(workspaceId: string, baseSimKey: string, candidateSimKey: string): Promise<ScenarioMotionDiffDto> {
+  const [base, candidate] = await Promise.all([
+    readSimulationRecord(workspaceId, baseSimKey),
+    readSimulationRecord(workspaceId, candidateSimKey),
+  ]);
+  if (!base || !candidate) throw new RevisionReplayError("simulation_result_missing", "a compared simulation result does not exist", 404);
+  const [a, b] = await Promise.all([readStoredTraceBytes(base), readStoredTraceBytes(candidate)]);
+  return motionDiff(
+    { trace: traceDocument(a), traceSha256: base.trace_sha256, engineSemVer: base.engine_sem_ver },
+    { trace: traceDocument(b), traceSha256: candidate.trace_sha256, engineSemVer: candidate.engine_sem_ver },
+  );
+}
+
 /**
- * The authoritative simulation a revision renders under the current engine
- * semantics. A revision committed without one (before this pipeline, or under
- * another engine) is simulated now, lazily, and bound with `origin = 'lazy'`;
- * its original artifacts are untouched.
+ * The render timeline of a stored result under the CURRENT sampler, keyed by
+ * `timelineKey` in `sim_timelines`. A timeline from an older sampler is never
+ * rendered and never rewritten: a new one is derived from the stored trace
+ * (upgraded in memory if its format is older) and the result's pinned map
+ * version, and stored under its own key. A failure is an error, never a
+ * fallback to the OpenSCENARIO export.
  */
-export async function resolveRevisionSimulation(
+export async function resolveRenderTimeline(
+  workspaceId: string,
+  row: ResultRow,
+): Promise<{ timelineKey: string; timelineSha256: string; sizeBytes: number; samplerVersion: string; derived: boolean }> {
+  const { buildRenderTimeline, TIMELINE_SAMPLER_VERSION } = await import("@simforge-oss/render/timeline");
+  const existing = await queryOne<{ timeline_key: string; timeline_sha256: string; byte_length: number | string }>(
+    `SELECT timeline_key, timeline_sha256, byte_length FROM simforge.sim_timelines
+      WHERE workspace_id = :workspace_id AND trace_sha256 = :trace_sha256 AND sampler_version = :sampler
+        AND storage_encoding = 'identity'
+      ORDER BY created_at, timeline_key LIMIT 1`,
+    { workspace_id: workspaceId, trace_sha256: row.trace_sha256, sampler: TIMELINE_SAMPLER_VERSION },
+  );
+  if (existing) {
+    return {
+      timelineKey: existing.timeline_key,
+      timelineSha256: existing.timeline_sha256,
+      sizeBytes: Number(existing.byte_length),
+      samplerVersion: TIMELINE_SAMPLER_VERSION,
+      derived: false,
+    };
+  }
+  const recorded = await adoptRecordedTimeline(workspaceId, row, TIMELINE_SAMPLER_VERSION);
+  if (recorded) return recorded;
+  const traceBytes = await readStoredTraceBytes(row);
+  let built;
+  try {
+    // The result's own pinned map version (retired or not): never the newest.
+    const closure = await loadServerSimulationClosure(await readSimulationMapIdentity(row.map_version_id));
+    built = await buildRenderTimeline({
+      trace: traceBytes,
+      xodr: closure.xodr,
+      topology: closure.topology,
+      catalogDigest: null,
+      recordedTraceSha256: row.trace_sha256,
+    });
+  } catch (error) {
+    throw new RevisionReplayError(
+      "render_timeline_unavailable",
+      `the render timeline of result ${row.sim_key} could not be derived: ${error instanceof Error ? error.message : String(error)}`,
+      422,
+    );
+  }
+  if (built.traceSha256 !== row.trace_sha256) {
+    throw new RevisionReplayError("render_timeline_identity_mismatch", `timeline names trace ${built.traceSha256}, result ${row.sim_key} is ${row.trace_sha256}`, 500);
+  }
+  if (built.samplerVersion !== TIMELINE_SAMPLER_VERSION) {
+    throw new RevisionReplayError(
+      "render_timeline_sampler_mismatch",
+      `the runtime built sampler ${built.samplerVersion}; this host expects ${TIMELINE_SAMPLER_VERSION}`,
+      500,
+    );
+  }
+  const bucket = artifactBucket();
+  const key = `${workspaceId}/timelines/sha256/${built.timelineSha256}.json`;
+  await putS3Object(bucket, key, built.bytes, TIMELINE_MEDIA_TYPE);
+  await queryRows(
+    `INSERT INTO simforge.sim_timelines (
+       workspace_id, timeline_key, trace_sha256, height_field_digest, catalog_digest, sampler_version,
+       timeline_sha256, byte_length, storage_bucket, storage_key, storage_encoding, stored_byte_length,
+       stored_sha256, source_sim_key, producer
+     ) VALUES (
+       :workspace_id, :timeline_key, :trace_sha256, :height_field_digest, :catalog_digest, :sampler_version,
+       :timeline_sha256, :byte_length, :bucket, :key, 'identity', :byte_length, :timeline_sha256, :sim_key, :producer
+     ) ON CONFLICT (workspace_id, timeline_key) DO NOTHING
+     RETURNING timeline_key`,
+    {
+      workspace_id: workspaceId,
+      timeline_key: built.timelineKey,
+      trace_sha256: row.trace_sha256,
+      height_field_digest: built.heightFieldDigest,
+      catalog_digest: built.catalogDigest,
+      sampler_version: built.samplerVersion,
+      timeline_sha256: built.timelineSha256,
+      byte_length: built.bytes.byteLength,
+      bucket,
+      key,
+      sim_key: row.sim_key,
+      producer: `derive:${hostname()}`.slice(0, 200),
+    },
+  );
+  return {
+    timelineKey: built.timelineKey,
+    timelineSha256: built.timelineSha256,
+    sizeBytes: built.bytes.byteLength,
+    samplerVersion: built.samplerVersion,
+    derived: true,
+  };
+}
+
+/**
+ * The timeline recorded with the result at completion (`sim_results.timeline_*`),
+ * registered under its key when it was built by the current sampler. Its
+ * identity comes from the stored document itself, verified by digest.
+ */
+async function adoptRecordedTimeline(workspaceId: string, row: ResultRow, sampler: string) {
+  if (!row.timeline_sha256 || !row.timeline_storage_key || row.timeline_byte_length === null || !row.timeline_key) return null;
+  const bytes = await getS3ObjectBytes(row.storage_bucket, row.timeline_storage_key);
+  if (bytes.byteLength !== Number(row.timeline_byte_length) || sha256(bytes) !== row.timeline_sha256) {
+    throw new RevisionReplayError("render_timeline_corrupt", `stored timeline of result ${row.sim_key} does not match its recorded digest`, 500);
+  }
+  const identity = (JSON.parse(Buffer.from(bytes).toString("utf8")) as {
+    identity?: { samplerVersion?: string; heightFieldDigest?: string; catalogDigest?: string | null; timelineKey?: string; traceSha256?: string };
+  }).identity;
+  if (identity?.samplerVersion !== sampler) return null;
+  if (identity.timelineKey !== row.timeline_key || identity.traceSha256 !== row.trace_sha256) {
+    throw new RevisionReplayError("render_timeline_identity_mismatch", `stored timeline of result ${row.sim_key} names another trace or key`, 500);
+  }
+  await queryRows(
+    `INSERT INTO simforge.sim_timelines (
+       workspace_id, timeline_key, trace_sha256, height_field_digest, catalog_digest, sampler_version,
+       timeline_sha256, byte_length, storage_bucket, storage_key, storage_encoding, stored_byte_length,
+       stored_sha256, source_sim_key, producer
+     ) VALUES (
+       :workspace_id, :timeline_key, :trace_sha256, :height_field_digest, :catalog_digest, :sampler_version,
+       :timeline_sha256, :byte_length, :bucket, :key, 'identity', :byte_length, :timeline_sha256, :sim_key, 'completion'
+     ) ON CONFLICT (workspace_id, timeline_key) DO NOTHING
+     RETURNING timeline_key`,
+    {
+      workspace_id: workspaceId,
+      timeline_key: row.timeline_key,
+      trace_sha256: row.trace_sha256,
+      height_field_digest: identity.heightFieldDigest ?? null,
+      catalog_digest: identity.catalogDigest ?? null,
+      sampler_version: sampler,
+      timeline_sha256: row.timeline_sha256,
+      byte_length: Number(row.timeline_byte_length),
+      bucket: row.storage_bucket,
+      key: row.timeline_storage_key,
+      sim_key: row.sim_key,
+    },
+  );
+  return {
+    timelineKey: row.timeline_key,
+    timelineSha256: row.timeline_sha256,
+    sizeBytes: Number(row.timeline_byte_length),
+    samplerVersion: sampler,
+    derived: false,
+  };
+}
+
+export type RevisionReplay =
+  | {
+      kind: "simulation";
+      motionSource: "original" | "resimulated";
+      result: ScenarioSimulationResultDto;
+      timeline: { timelineSha256: string; sizeBytes: number };
+    }
+  | { kind: "legacy-xosc"; motionSource: "original-xosc" };
+
+/**
+ * What a render of `revisionId` replays. By default the revision's ACTIVE
+ * simulation (its original result, under whatever engine produced it); a
+ * revision without one is refused (`original_simulation_missing`) rather
+ * than re-simulated. `resimulated` renders one of the revision's explicitly
+ * re-simulated results; `original-xosc` is the labelled legacy replay.
+ */
+export async function resolveRevisionReplay(
+  context: { workspaceId: string },
+  revisionId: string,
+  request: { motionSource?: ScenarioMotionSource; simKey?: string } = {},
+): Promise<RevisionReplay> {
+  const motion = await revisionMotion(context.workspaceId, revisionId);
+  if (!motion) throw new RevisionReplayError("revision_not_found", `revision ${revisionId} does not exist`, 404);
+  const source = request.motionSource ?? "original";
+  if (source === "original-xosc") {
+    if (!motion.legacyXoscAvailable) {
+      throw new RevisionReplayError("legacy_xosc_unavailable", `revision ${revisionId} has no OpenSCENARIO export to replay`, 409);
+    }
+    return { kind: "legacy-xosc", motionSource: "original-xosc" };
+  }
+  let simKey: string;
+  if (source === "resimulated") {
+    const entry = motion.results.find((result) => result.simKey === request.simKey);
+    if (!entry) {
+      throw new RevisionReplayError("revision_simulation_not_bound", `result ${request.simKey ?? "(none)"} is not a simulation of revision ${revisionId}`, 409);
+    }
+    simKey = entry.simKey;
+  } else {
+    if (!motion.active) {
+      throw new RevisionReplayError(
+        "original_simulation_missing",
+        `revision ${revisionId} has no stored simulation. Re-simulate it on engine ${motion.currentEngineSemVer}, or render its original motion from the legacy OpenSCENARIO export.`,
+        409,
+        { currentEngineSemVer: motion.currentEngineSemVer, legacyXoscAvailable: motion.legacyXoscAvailable },
+      );
+    }
+    simKey = motion.active.simKey;
+  }
+  const row = await readSimulationRecord(context.workspaceId, simKey);
+  if (!row) throw new RevisionReplayError("simulation_result_missing", `result ${simKey} of revision ${revisionId} is missing`, 409);
+  const timeline = await resolveRenderTimeline(context.workspaceId, row);
+  return {
+    kind: "simulation",
+    motionSource: source === "resimulated" ? "resimulated" : "original",
+    result: await resultDto(row),
+    timeline: { timelineSha256: timeline.timelineSha256, sizeBytes: timeline.sizeBytes },
+  };
+}
+
+/**
+ * Explicitly re-simulate a revision under the CURRENT engine: its content on
+ * its pinned map version. The result is bound to the revision
+ * (`revision_simulations`, one per engine) but does not become what renders
+ * by default; the response carries the motion diff against the active
+ * result so the user sees what the new engine changes.
+ */
+export async function resimulateRevision(
   context: { workspaceId: string; userId: string | null },
   revisionId: string,
   options: { waitMs?: number } = {},
-): Promise<ScenarioSimulationStatusDto | null> {
-  const { engineSemVer } = engineSemantics();
-  const linked = await queryOne<{ sim_key: string; origin: string }>(
-    `SELECT sim_key, origin FROM simforge.revision_simulations
-      WHERE workspace_id = :workspace_id AND revision_id = :revision_id AND engine_sem_ver = :engine_sem_ver`,
-    { workspace_id: context.workspaceId, revision_id: revisionId, engine_sem_ver: engineSemVer },
-  );
-  if (linked) {
-    const result = await getSimulationResult(context.workspaceId, linked.sim_key);
-    if (result) return { state: "succeeded", requestKey: "", result, resimulated: linked.origin === "lazy" };
-  }
-  const revision = await queryOne<{ canonical_content: unknown; content_sha256: string; map_version_id: string }>(
-    `SELECT canonical_content, content_sha256, map_version_id FROM simforge.revisions
-      WHERE workspace_id = :workspace_id AND id = :revision_id`,
-    { workspace_id: context.workspaceId, revision_id: revisionId },
-  );
+): Promise<ScenarioRevisionResimulationDto | null> {
+  const revision = await readRevision(context.workspaceId, revisionId);
   if (!revision) return null;
   const status = await resolveSimulation({
     workspaceId: context.workspaceId,
@@ -910,20 +1305,31 @@ export async function resolveRevisionSimulation(
     contentSha256: revision.content_sha256,
     mapVersionId: revision.map_version_id,
   }, options);
-  if (status.state !== "succeeded") return status;
-  await linkRevisionSimulation(null, {
-    workspaceId: context.workspaceId,
-    revisionId,
-    simKey: status.result.simKey,
-    engineSemVer: status.result.engineSemVer,
-    origin: "lazy",
-  });
-  const origin = await queryOne<{ origin: string }>(
-    `SELECT origin FROM simforge.revision_simulations
-      WHERE workspace_id = :workspace_id AND revision_id = :revision_id AND engine_sem_ver = :engine_sem_ver`,
-    { workspace_id: context.workspaceId, revision_id: revisionId, engine_sem_ver: status.result.engineSemVer },
-  );
-  return { ...status, resimulated: origin?.origin === "lazy" };
+  if (status.state === "succeeded") {
+    // The history row records what it was compared against: the active result at this moment.
+    const active = await queryOne<{ sim_key: string }>(
+      `SELECT sim_key FROM simforge.revision_active_simulation WHERE workspace_id = :workspace_id AND revision_id = :revision_id`,
+      { workspace_id: context.workspaceId, revision_id: revisionId },
+    );
+    const previousSimKey = active && active.sim_key !== status.result.simKey ? active.sim_key : null;
+    const { simulationMotionDiff } = await import("./sim-diff");
+    await linkRevisionSimulation(null, {
+      workspaceId: context.workspaceId,
+      revisionId,
+      simKey: status.result.simKey,
+      engineSemVer: status.result.engineSemVer,
+      origin: "lazy",
+      reason: "resimulate",
+      userId: context.userId,
+      previousSimKey,
+      motionDiff: previousSimKey ? await simulationMotionDiff(context.workspaceId, previousSimKey, status.result.simKey) : null,
+    });
+  }
+  const motion = (await revisionMotion(context.workspaceId, revisionId))!;
+  const motionDiffDto = status.state === "succeeded" && motion.active
+    ? await resultMotionDiff(context.workspaceId, motion.active.simKey, status.result.simKey)
+    : null;
+  return { status, motion, motionDiff: motionDiffDto };
 }
 
 /** Record the editor's comparison of its local preview against the authoritative trace. */

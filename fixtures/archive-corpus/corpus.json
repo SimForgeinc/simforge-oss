@@ -1,0 +1,538 @@
+{
+  "schema": "simforge.archive-corpus/v1",
+  "entries": [
+    {
+      "id": "rc43-doc-double-park",
+      "kind": "document",
+      "release": "v0.1.0-rc.43",
+      "recorded": "2026-08-07",
+      "source": "git v0.1.0-rc.43:research/edge-case-corpus/vista-corpus/templates/c11-double-park.template.json",
+      "path": "documents/rc43-doc-double-park.json",
+      "storedSha256": "97ed2d0f667fc1734c0f4144c943d21bb7ab080349b02d01d8aa11155f8b6f9d",
+      "expect": {
+        "scenarioVersion": 2,
+        "documentSha256": "e3a3b84f98e4c4ba4005f6c9c3e5c465c05111c2f59c0c21cb9ed42a56355a45"
+      }
+    },
+    {
+      "id": "rc12-doc-lead-hard-brake",
+      "kind": "document",
+      "release": "v0.1.0-rc.12",
+      "recorded": "2026-08-09",
+      "source": "git v0.1.0-rc.12:research/edge-case-corpus/templates/lead-hard-brake.template.json",
+      "path": "documents/rc12-doc-lead-hard-brake.json",
+      "storedSha256": "2a85acfcefeca548c6f15e1f9e45fa06c94496759377cbabca761ae7dbdaf80a",
+      "expect": {
+        "scenarioVersion": 2,
+        "documentSha256": "95ed9a492830b9ba09e569467695733af009f3ff5d4fec1ac71b3d1f686ae518"
+      }
+    },
+    {
+      "id": "rc12-doc-ltap-unsignalized",
+      "kind": "document",
+      "release": "v0.1.0-rc.12",
+      "recorded": "2026-08-09",
+      "source": "git v0.1.0-rc.12:research/edge-case-corpus/templates/ltap-od-unsignalized-v2.template.json",
+      "path": "documents/rc12-doc-ltap-unsignalized.json",
+      "storedSha256": "0f1bd014bae10878acf45e33d35ca909e8f72d9fa85bd9e677ef7131a2dcc07b",
+      "expect": {
+        "scenarioVersion": 2,
+        "documentSha256": "90e5c00ad8787f6ea6c5f5abeaef8b4f10d510ce43916d3b0680a39981c850f1"
+      }
+    },
+    {
+      "id": "rc65-doc-animal-crossing",
+      "kind": "document",
+      "release": "v0.1.0-rc.65",
+      "recorded": "2026-08-09",
+      "source": "git v0.1.0-rc.65:research/edge-case-corpus/generator/templates/cross-animal-furniture-stop-unexp.template.json",
+      "path": "documents/rc65-doc-animal-crossing.json",
+      "storedSha256": "639bf4847c37eb50b94eb544f375cade49b994a5d33564762900bbe04b87bed3",
+      "expect": {
+        "scenarioVersion": 2,
+        "documentSha256": "e506ea6c9e09bfbff2ca5999888a9af102c74583968f0cd6716c4c4d2e85e93f"
+      }
+    },
+    {
+      "id": "rc73-doc-child-reveal",
+      "kind": "document",
+      "release": "v0.1.0-rc.73",
+      "recorded": "2026-08-09",
+      "source": "git release/0.1.0-rc.73:research/edge-case-corpus/generator/templates/cross-pchild-largeveh-sz-reveal.template.json",
+      "path": "documents/rc73-doc-child-reveal.json",
+      "storedSha256": "dc59cf6755229184f57310e7d009c0123a08e848f9435ea5d70609f0bed6eb14",
+      "expect": {
+        "scenarioVersion": 2,
+        "documentSha256": "6e501310ab50695de9d9c6b4a31d068ff1774866f8046f1524ad0a4519368041"
+      }
+    },
+    {
+      "id": "rc12-v1-yale-bus-stop",
+      "kind": "trace",
+      "release": "v0.1.0-rc.12",
+      "recorded": "2026-08-01",
+      "source": "git v0.1.0-rc.12:fixtures/evidence/golden-yale-bus-stop/trace.json.gz",
+      "path": "traces/rc12-v1-yale-bus-stop.trace.json.gz",
+      "storedSha256": "81af87e5f9bf66f5c69d346ad46b842ef620d37e6be751c4a5beefbf7b4004d0",
+      "note": "trace v1, engine 0.2.0, bus doors + pedestrian",
+      "expect": {
+        "timeline": "builds",
+        "shape": "v1",
+        "traceVersion": 1,
+        "engineVersion": "0.2.0",
+        "mapId": "yale-street",
+        "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+        "actors": 3,
+        "ticks": 701,
+        "dt": 0.02,
+        "unrecorded": [
+          "header.ego",
+          "header.physics.crashes",
+          "header.physics.resolvedProfileDigest",
+          "metrics.criticalitySamples",
+          "semanticLedger",
+          "ticks.actors.*.lateralOffsetM"
+        ],
+        "documentSha256": "0b26240555eb4fc1cbf139082ef27cf0e12a0741e4b835a7947ba5d298f8d06a",
+        "identity": "0b26240555eb4fc1cbf139082ef27cf0e12a0741e4b835a7947ba5d298f8d06a",
+        "recordedTraceSha256": null,
+        "motionSha256": "21cfda133fc5da33d91042482634257fde914ecff6c30a16ee98bb97de005fd5"
+      }
+    },
+    {
+      "id": "rc12-v1-belmont-midblock-crossing",
+      "kind": "trace",
+      "release": "v0.1.0-rc.12",
+      "recorded": "2026-08-02",
+      "source": "git v0.1.0-rc.12:catalog/evidence/belmont-research-center/belmont-research-center-006-adult-midblock-crossing-d27a7ac0ec84/trace.json.gz",
+      "path": "traces/rc12-v1-belmont-midblock-crossing.trace.json.gz",
+      "storedSha256": "675c7f18a1d4ccc593e0ea873daf1280f6fcb95362175450124e7f92bde18c25",
+      "note": "trace v1, engine 0.2.3, pedestrian",
+      "expect": {
+        "timeline": "builds",
+        "shape": "v1",
+        "traceVersion": 1,
+        "engineVersion": "0.2.3",
+        "mapId": "belmont-research-center",
+        "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+        "actors": 2,
+        "ticks": 701,
+        "dt": 0.02,
+        "unrecorded": [
+          "header.ego",
+          "header.physics.crashes",
+          "header.physics.resolvedProfileDigest",
+          "metrics.criticalitySamples",
+          "semanticLedger",
+          "ticks.actors.*.lateralOffsetM"
+        ],
+        "documentSha256": "96d1ff9648a0ca8d615c06d65664199ff734362809c6166946c994eca84969a1",
+        "identity": "96d1ff9648a0ca8d615c06d65664199ff734362809c6166946c994eca84969a1",
+        "recordedTraceSha256": null,
+        "motionSha256": "63f00746dc9a9583833e0aa1d0df5f80e237387634084443dfa4184b0e55c05e"
+      }
+    },
+    {
+      "id": "rc12-v1-belmont-queue-tail",
+      "kind": "trace",
+      "release": "v0.1.0-rc.12",
+      "recorded": "2026-08-02",
+      "source": "git v0.1.0-rc.12:catalog/evidence/belmont-research-center/belmont-research-center-009-queue-tail-2b85d18fc6ac/trace.json.gz",
+      "path": "traces/rc12-v1-belmont-queue-tail.trace.json.gz",
+      "storedSha256": "590e4379ce8341138b17bcd049dd48925b6c3392384973774386deee3a528d2a",
+      "note": "trace v1, engine 0.2.3, catalogSlot header",
+      "expect": {
+        "timeline": "builds",
+        "shape": "v1",
+        "traceVersion": 1,
+        "engineVersion": "0.2.3",
+        "mapId": "belmont-research-center",
+        "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+        "actors": 3,
+        "ticks": 651,
+        "dt": 0.02,
+        "unrecorded": [
+          "header.ego",
+          "header.physics.crashes",
+          "header.physics.resolvedProfileDigest",
+          "metrics.criticalitySamples",
+          "semanticLedger",
+          "ticks.actors.*.lateralOffsetM"
+        ],
+        "documentSha256": "ccdd0a378cdb3d50802316121b534d768ea75a9e5a7041f17fcdca4307f5dc39",
+        "identity": "ccdd0a378cdb3d50802316121b534d768ea75a9e5a7041f17fcdca4307f5dc39",
+        "recordedTraceSha256": null,
+        "motionSha256": "e8ae91fa33b0ad267afa160b4e69c51726b14bbb9bae9697028e9c18bc4265ac"
+      }
+    },
+    {
+      "id": "rc12-v3-construction-chicane",
+      "kind": "trace",
+      "release": "v0.1.0-rc.12",
+      "recorded": "2026-08-03",
+      "source": "git v0.1.0-rc.12:examples/edge-cases/01-construction-chicane-reversing-truck/scenario.trace.json.gz",
+      "path": "traces/rc12-v3-construction-chicane.trace.json.gz",
+      "storedSha256": "b37a783e8ea32b615d573d69f47a5913d2b160cb1a8b667e1d63f6b8e823904c",
+      "note": "trace v3, engine 0.4.0, signals, reversing truck",
+      "expect": {
+        "timeline": "builds",
+        "shape": "v3",
+        "traceVersion": 3,
+        "engineVersion": "0.4.0",
+        "mapId": "belmont-research-center",
+        "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+        "actors": 3,
+        "ticks": 1001,
+        "dt": 0.02,
+        "unrecorded": [
+          "header.ego",
+          "semanticLedger",
+          "ticks.actors.*.lateralOffsetM"
+        ],
+        "documentSha256": "f51d29198a72ec25f224f37824192505128e16bc0ddc629ceb7c31c38e5b5eda",
+        "identity": "f51d29198a72ec25f224f37824192505128e16bc0ddc629ceb7c31c38e5b5eda",
+        "recordedTraceSha256": null,
+        "motionSha256": "233c1f3374cfa278346af20ea8cc03b9834076beee78332a786fbc941f64c89c"
+      }
+    },
+    {
+      "id": "rc12-v3-cyclist-occlusion",
+      "kind": "trace",
+      "release": "v0.1.0-rc.12",
+      "recorded": "2026-08-03",
+      "source": "git v0.1.0-rc.12:examples/edge-cases/05-cyclist-occlusion-conflict/scenario.trace.json.gz",
+      "path": "traces/rc12-v3-cyclist-occlusion.trace.json.gz",
+      "storedSha256": "b363bee4a9a1b89b8244d09054d1d0651e4b126096ad56041562520c135f79fa",
+      "note": "trace v3, engine 0.4.0, bicycle/pedestrian/truck",
+      "expect": {
+        "timeline": "builds",
+        "shape": "v3",
+        "traceVersion": 3,
+        "engineVersion": "0.4.0",
+        "mapId": "yale-street",
+        "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+        "actors": 4,
+        "ticks": 1001,
+        "dt": 0.02,
+        "unrecorded": [
+          "header.ego",
+          "semanticLedger",
+          "ticks.actors.*.lateralOffsetM"
+        ],
+        "documentSha256": "c4bd07f9d33c3ede140e4b9feab4a4b64cb0225163f2bc8966bb28fea8e48008",
+        "identity": "c4bd07f9d33c3ede140e4b9feab4a4b64cb0225163f2bc8966bb28fea8e48008",
+        "recordedTraceSha256": null,
+        "motionSha256": "37675fd6556ca09d99aadbdf582cde8c44269ca271410041dc298aab2040e74f"
+      }
+    },
+    {
+      "id": "rc12-v4pre-workzone-18",
+      "kind": "trace",
+      "release": "v0.1.0-rc.12",
+      "recorded": "2026-08-09",
+      "source": "git v0.1.0-rc.12:research/edge-case-corpus/gold-toolauthored/wz-18/scenario.trace.json.gz",
+      "path": "traces/rc12-v4pre-workzone-18.trace.json.gz",
+      "storedSha256": "e32865ffc67a555b503406791e0e3f2ee2b04bc97e8cc45059aa0336c3cc49c2",
+      "note": "trace v4 before ego/ledger, engine 0.4.0, signals",
+      "expect": {
+        "timeline": "builds",
+        "shape": "v4-pre-ledger",
+        "traceVersion": 4,
+        "engineVersion": "0.4.0",
+        "mapId": "yale-street",
+        "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+        "actors": 3,
+        "ticks": 801,
+        "dt": 0.02,
+        "unrecorded": [
+          "header.ego",
+          "semanticLedger"
+        ],
+        "documentSha256": "5e939d0a9381d9d283f0b657019d61f1642e3877fd5ce120b66d8df5cae20bbd",
+        "identity": "5e939d0a9381d9d283f0b657019d61f1642e3877fd5ce120b66d8df5cae20bbd",
+        "recordedTraceSha256": null,
+        "motionSha256": "4ea8a4e45ecef3014fef4f852a7915e32505e225dee30d54ed9fa318049ffab8"
+      }
+    },
+    {
+      "id": "rc43-v4pre-worker-intrusion",
+      "kind": "trace",
+      "release": "v0.1.0-rc.43",
+      "recorded": "2026-08-09",
+      "source": "git v0.1.0-rc.43:research/edge-case-corpus/gold-agent-authored/c8-worker-intrusion/belmont-research-center__121aeeb1946e3936__draw-000.trace.json.gz",
+      "path": "traces/rc43-v4pre-worker-intrusion.trace.json.gz",
+      "storedSha256": "f8ec7f75959a872d4bdc696efe9fea3f0d966d5acb221bb0dcc5138156d69699",
+      "note": "trace v4 before ego/ledger, engine 0.4.0, pedestrian",
+      "expect": {
+        "timeline": "builds",
+        "shape": "v4-pre-ledger",
+        "traceVersion": 4,
+        "engineVersion": "0.4.0",
+        "mapId": "belmont-research-center",
+        "engineGraphDigest": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+        "actors": 2,
+        "ticks": 801,
+        "dt": 0.02,
+        "unrecorded": [
+          "header.ego",
+          "semanticLedger"
+        ],
+        "documentSha256": "6c14ee9b72e44ab215b71e4ad18c18495aa11c4a66958393f01621bd9bf23a7e",
+        "identity": "6c14ee9b72e44ab215b71e4ad18c18495aa11c4a66958393f01621bd9bf23a7e",
+        "recordedTraceSha256": null,
+        "motionSha256": "30d29004b8cfe99d200c969139ba98758c0bd751b96e41476eb581efb28309e0"
+      }
+    },
+    {
+      "id": "rc43-preview-v2-dt005",
+      "kind": "trace",
+      "release": "v0.1.0-rc.43",
+      "recorded": "2026-08-10",
+      "source": "dev editor simulation preview (preview schema v2), engine 0.4.0",
+      "path": "traces/rc43-preview-v2-dt005.trace.json.gz",
+      "storedSha256": "e4947e784a63d2a707ea70583e7a20aaf2f65b17811d380dce3c6167aa2c0653",
+      "note": "scene frame, dt 0.05: readable, but the render timeline refuses it",
+      "container": "browser-preview",
+      "expect": {
+        "timeline": "refused-unsupported-dt",
+        "shape": "v4-pre-ego",
+        "traceVersion": 4,
+        "engineVersion": "0.4.0",
+        "mapId": "yale-street_20260409-234639",
+        "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+        "actors": 1,
+        "ticks": 401,
+        "dt": 0.05,
+        "unrecorded": [
+          "header.ego"
+        ],
+        "documentSha256": "ee802d1d84040b2a25ff987e1ec2fd8b11ed3b6f704b10d83efe92598399ca20",
+        "identity": "ee802d1d84040b2a25ff987e1ec2fd8b11ed3b6f704b10d83efe92598399ca20",
+        "recordedTraceSha256": null,
+        "motionSha256": "84b6b5636afa7d17ec0592a59c13a99ed03539f2373435c52fbdf0907fb61086"
+      }
+    },
+    {
+      "id": "rc45-preview-v2-engine060",
+      "kind": "trace",
+      "release": "v0.1.0-rc.45",
+      "recorded": "2026-08-17",
+      "source": "dev editor simulation preview (preview schema v2), engine 0.6.0",
+      "path": "traces/rc45-preview-v2-engine060.trace.json.gz",
+      "storedSha256": "be21de6623223959b4417f83ca797f9cca1bc855cba8016954e8b6fdc186006a",
+      "note": "scene frame; trace v4 with a semantic ledger but no ego block",
+      "container": "browser-preview",
+      "expect": {
+        "timeline": "builds",
+        "shape": "v4-pre-ego",
+        "traceVersion": 4,
+        "engineVersion": "0.6.0",
+        "mapId": "easterbrook-discovery-school_20260410-191436",
+        "engineGraphDigest": "ae48d9dbee5577e7e8506f99ab7dc242f5bcbb13f55dc686344dcfc1068638e0",
+        "actors": 2,
+        "ticks": 151,
+        "dt": 0.02,
+        "unrecorded": [
+          "header.ego"
+        ],
+        "documentSha256": "316af4cca04351a42706b6f2a6fd9063ea387c0595b9dd16ea05608008099619",
+        "identity": "316af4cca04351a42706b6f2a6fd9063ea387c0595b9dd16ea05608008099619",
+        "recordedTraceSha256": null,
+        "motionSha256": "e7b8200fe14500418d83fb93032d99b2cfae671f6fc936dd3d42316c53ced672"
+      }
+    },
+    {
+      "id": "rc65-v4-geometry-proxy",
+      "kind": "trace",
+      "release": "v0.1.0-rc.65",
+      "recorded": "2026-09-06",
+      "source": "git v0.1.0-rc.65:qualification/native-migration/reference/experimental-1e2a63b-20260905/sit-generated-geometry-proxy/trace.json.gz",
+      "path": "traces/rc65-v4-geometry-proxy.trace.json.gz",
+      "storedSha256": "0abbfb0f298a04d3fa4b4833420d9142c0a4c61a8af0a11c62d3237e27e9d0f7",
+      "note": "trace v4, engine 0.6.0 (native migration), static object, topologyDigest header",
+      "expect": {
+        "timeline": "builds",
+        "shape": "v4",
+        "traceVersion": 4,
+        "engineVersion": "0.6.0",
+        "mapId": "yale-street",
+        "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+        "actors": 3,
+        "ticks": 1001,
+        "dt": 0.02,
+        "unrecorded": [],
+        "documentSha256": "79b66d2fd904fda2f3f41ab7eafebd9bacf5d55e4b42376a1624378ce3adf0ba",
+        "identity": null,
+        "recordedTraceSha256": null,
+        "motionSha256": "7ec193f55f33af93e2a2b15dd8303fb13f4e3b00ac9db4bc7a5bf8e503c7ed9d"
+      }
+    },
+    {
+      "id": "rc65-v4-lane-drop-taper",
+      "kind": "trace",
+      "release": "v0.1.0-rc.65",
+      "recorded": "2026-09-06",
+      "source": "git v0.1.0-rc.65:qualification/native-migration/reference/experimental-1e2a63b-20260905/thr-lane-drop-merge-taper-t35p1750/trace.json.gz",
+      "path": "traces/rc65-v4-lane-drop-taper.trace.json.gz",
+      "storedSha256": "4b35d311b4729a0b4562a5fa46596529127bc44c47c8e6e431dba59de3f20121",
+      "note": "trace v4, engine 0.6.0, signals",
+      "expect": {
+        "timeline": "builds",
+        "shape": "v4",
+        "traceVersion": 4,
+        "engineVersion": "0.6.0",
+        "mapId": "el-camino-road",
+        "engineGraphDigest": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+        "actors": 3,
+        "ticks": 601,
+        "dt": 0.02,
+        "unrecorded": [],
+        "documentSha256": "fd93629300b2368e755d1c8eab63bfe1fd0549ffc7ab97cb7b8a01d9eae95995",
+        "identity": null,
+        "recordedTraceSha256": null,
+        "motionSha256": "3ac49b41241e397b3fcc99390fa9c3a04922b9b6168e9458ca5e86f9c1236599"
+      }
+    },
+    {
+      "id": "rc72-engine070-richmond-commit",
+      "kind": "trace",
+      "release": "v0.1.0-rc.72",
+      "recorded": "2026-09-22",
+      "source": "dev simulation result (QA workspace), engine 0.7.0, revision commit",
+      "path": "traces/rc72-engine070-richmond-commit.trace.json.gz",
+      "storedSha256": "e9e967f1671e4a24716d4b7efc98db18bb2ab9dd03385652f6ca331f1c8cea08",
+      "note": "first worker-authoritative results; sampler 1 timeline; same scenario as rc73-engine090-richmond-resimulated",
+      "height": {
+        "xodr": "fixtures/golden-traces/maps/richmond-field-station/map.xodr.gz",
+        "topology": "fixtures/golden-traces/maps/richmond-field-station/topology-index.json.gz"
+      },
+      "expect": {
+        "timeline": "builds",
+        "shape": "v4",
+        "traceVersion": 4,
+        "engineVersion": "0.7.0",
+        "mapId": "richmond-field-station",
+        "engineGraphDigest": "5b08367524edbc0c46cfb2f4cd77ef6a204f263bb14cf7e8f90a1fffde1c14d6",
+        "actors": 1,
+        "ticks": 1001,
+        "dt": 0.02,
+        "unrecorded": [],
+        "documentSha256": "8fdb913bf65165c37de6ee46f33f12bddf0d5d8dd95d67861171a4e5f212e081",
+        "identity": "7f73ef33ce690eacf08dd731b76bc47610314644f1d7ec5cbbe2596bb8bcd96c",
+        "recordedTraceSha256": "7f73ef33ce690eacf08dd731b76bc47610314644f1d7ec5cbbe2596bb8bcd96c",
+        "motionSha256": "0e0ae43774845085fe05286314398df8af2fe262c658c45d8d29c57f87dc3118"
+      },
+      "timeline": {
+        "path": "timelines/rc72-engine070-richmond-commit.timeline.json",
+        "storedSha256": "d8bb0b9d45a064fb1968a5e8d1b04f8f28ad7df1f50367cee4fe0a15af629074",
+        "samplerVersion": "simforge.timeline-sampler/1",
+        "timelineKey": "5422b259b0f0f1734bfa3e324038ad24e88ac8a5bcff70ba491c089e3a0fb46a",
+        "heightFieldDigest": "682c159171f948b4bf5955ba8ec33fbcbc80777b3b47cb27cb1f47edb2d3e0c0",
+        "motionSha256": "0e0ae43774845085fe05286314398df8af2fe262c658c45d8d29c57f87dc3118"
+      }
+    },
+    {
+      "id": "rc72-preview-v3-engine070",
+      "kind": "trace",
+      "release": "v0.1.0-rc.72",
+      "recorded": "2026-09-22",
+      "source": "dev editor simulation preview (preview schema v3), engine 0.7.0",
+      "path": "traces/rc72-preview-v3-engine070.trace.json.gz",
+      "storedSha256": "5e6930f29d37fdbd5b2c88aefac195adb97d9d4117d1aac3697145dba4785d93",
+      "note": "last legacy preview schema; dt 0.05",
+      "container": "browser-preview",
+      "expect": {
+        "timeline": "refused-unsupported-dt",
+        "shape": "v4",
+        "traceVersion": 4,
+        "engineVersion": "0.7.0",
+        "mapId": "easterbrook-discovery-school",
+        "engineGraphDigest": "ff368b92160bf1d8bc726a39039cb225be81a85518b0630ba8671e69f649c4f6",
+        "actors": 1,
+        "ticks": 401,
+        "dt": 0.05,
+        "unrecorded": [],
+        "documentSha256": "f59c1a51ffd4d2b3120db30a48c60b86468349f00266e533f64a816cc10c412c",
+        "identity": null,
+        "recordedTraceSha256": null,
+        "motionSha256": "84b6b5636afa7d17ec0592a59c13a99ed03539f2373435c52fbdf0907fb61086"
+      }
+    },
+    {
+      "id": "rc73-engine090-richmond-resimulated",
+      "kind": "trace",
+      "release": "v0.1.0-rc.73",
+      "recorded": "2026-09-23",
+      "source": "dev simulation result (QA workspace), engine 0.9.0, lazy re-simulation of an engine 0.7.0 revision",
+      "path": "traces/rc73-engine090-richmond-resimulated.trace.json.gz",
+      "storedSha256": "91b1a9d222df423015ac0ae2580d482139ee2df09ccca979b8423a432c8a2f89",
+      "note": "the render path re-simulated this revision under 0.9.0 (pre-replay-by-default)",
+      "height": {
+        "xodr": "fixtures/golden-traces/maps/richmond-field-station/map.xodr.gz",
+        "topology": "fixtures/golden-traces/maps/richmond-field-station/topology-index.json.gz"
+      },
+      "expect": {
+        "timeline": "builds",
+        "shape": "v4",
+        "traceVersion": 4,
+        "engineVersion": "0.9.0",
+        "mapId": "richmond-field-station",
+        "engineGraphDigest": "5b08367524edbc0c46cfb2f4cd77ef6a204f263bb14cf7e8f90a1fffde1c14d6",
+        "actors": 1,
+        "ticks": 1001,
+        "dt": 0.02,
+        "unrecorded": [],
+        "documentSha256": "d519cd90e9832356e863ea531543f879326618cf11f75cbc58ef220203294736",
+        "identity": "ab97bcbe4ac3b8a0b10b6e7f0d24269f1937d26aa21a767f8f713259b0db1317",
+        "recordedTraceSha256": "ab97bcbe4ac3b8a0b10b6e7f0d24269f1937d26aa21a767f8f713259b0db1317",
+        "motionSha256": "0e0ae43774845085fe05286314398df8af2fe262c658c45d8d29c57f87dc3118"
+      },
+      "timeline": {
+        "path": "timelines/rc73-engine090-richmond-resimulated.timeline.json",
+        "storedSha256": "b4f2d09b89e74969ab769aa995cd1acbc1ab27883593b8dac9bd57ddb980d342",
+        "samplerVersion": "simforge.timeline-sampler/1",
+        "timelineKey": "7bcc7b03d8878e16475c16fdafbf48a41d74c1c9b89a5ccbab1d5d74d96390f0",
+        "heightFieldDigest": "682c159171f948b4bf5955ba8ec33fbcbc80777b3b47cb27cb1f47edb2d3e0c0",
+        "motionSha256": "0e0ae43774845085fe05286314398df8af2fe262c658c45d8d29c57f87dc3118"
+      }
+    },
+    {
+      "id": "rc73-engine090-richmond-small",
+      "kind": "trace",
+      "release": "v0.1.0-rc.73",
+      "recorded": "2026-09-23",
+      "source": "dev simulation result (QA workspace), engine 0.9.0",
+      "path": "traces/rc73-engine090-richmond-small.trace.json.gz",
+      "storedSha256": "57f830173a06fb7744668b61f04e1f0bf7a594f02a68548be65a71ab35b8eb5d",
+      "note": "smallest stored result",
+      "height": {
+        "xodr": "fixtures/golden-traces/maps/richmond-field-station/map.xodr.gz",
+        "topology": "fixtures/golden-traces/maps/richmond-field-station/topology-index.json.gz"
+      },
+      "expect": {
+        "timeline": "builds",
+        "shape": "v4",
+        "traceVersion": 4,
+        "engineVersion": "0.9.0",
+        "mapId": "richmond-field-station",
+        "engineGraphDigest": "5b08367524edbc0c46cfb2f4cd77ef6a204f263bb14cf7e8f90a1fffde1c14d6",
+        "actors": 1,
+        "ticks": 1001,
+        "dt": 0.02,
+        "unrecorded": [],
+        "documentSha256": "e16bbbc1d592a3a4f2c3cffd28c14c527e54e21f7557730aee037d78e33facf6",
+        "identity": "a49b1f18d221ebab7c35358487e09cd85f7abde4f409cb617a27812fa5fed88a",
+        "recordedTraceSha256": "a49b1f18d221ebab7c35358487e09cd85f7abde4f409cb617a27812fa5fed88a",
+        "motionSha256": "f4a1a8c528b188b9cd9b713754211a423b5ea0bec087fae5c86fc31f8eef85aa"
+      },
+      "timeline": {
+        "path": "timelines/rc73-engine090-richmond-small.timeline.json",
+        "storedSha256": "c98ca4cd30f5cde8ac9f2b6b59037669074dba137a5badc63a0ec3db9ccb1c1c",
+        "samplerVersion": "simforge.timeline-sampler/1",
+        "timelineKey": "5fc7eac1ede98a48aef934ce6f50f8d99c0d8b2c6a2f80819127195ca9ddbbfd",
+        "heightFieldDigest": "682c159171f948b4bf5955ba8ec33fbcbc80777b3b47cb27cb1f47edb2d3e0c0",
+        "motionSha256": "f4a1a8c528b188b9cd9b713754211a423b5ea0bec087fae5c86fc31f8eef85aa"
+      }
+    }
+  ]
+}

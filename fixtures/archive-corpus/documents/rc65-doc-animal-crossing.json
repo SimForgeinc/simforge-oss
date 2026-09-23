@@ -1,0 +1,335 @@
+{
+ "scenarioVersion": 2,
+ "meta": {
+  "name": "crossing lateral / animal / roadside_furniture / stop_controlled / challenger_unexpected_entry",
+  "description": "Auto-synthesised archetype from the mechanism grammar. {'topology': 'crossing_lateral', 'challenger': 'animal', 'occlusion': 'roadside_furniture', 'control': 'stop_controlled', 'fault': 'challenger_unexpected_entry', 'id': 'cross-animal-furniture-stop-unexp'}",
+  "createdAt": "2026-08-06T00:00:00.000Z",
+  "modifiedAt": "2026-08-06T00:00:00.000Z",
+  "appVersion": "simforge/0.0.1",
+  "archetype": "cross-animal-furniture-stop-unexp",
+  "tags": [
+   "crossing_lateral",
+   "animal",
+   "roadside_furniture",
+   "stop_controlled",
+   "challenger_unexpected_entry"
+  ],
+  "author": "agent/archetype-grammar",
+  "negativeControl": false
+ },
+ "params": {
+  "declarations": [
+   {
+    "id": "arrivalTtc",
+    "type": "continuous",
+    "description": "arrivalTtc",
+    "unit": "s",
+    "tier": 1,
+    "range": [
+     0.3,
+     2.6
+    ],
+    "default": 1.45,
+    "distribution": "uniform"
+   },
+   {
+    "id": "vruSpeedKph",
+    "type": "continuous",
+    "description": "vruSpeedKph",
+    "unit": "kph",
+    "tier": 1,
+    "range": [
+     6,
+     14
+    ],
+    "default": 10.0,
+    "distribution": "uniform"
+   },
+   {
+    "id": "dartLeadM",
+    "type": "continuous",
+    "description": "dartLeadM",
+    "unit": "m",
+    "tier": 1,
+    "range": [
+     1.0,
+     4.0
+    ],
+    "default": 2.5,
+    "distribution": "uniform"
+   },
+   {
+    "id": "occluderGapM",
+    "type": "continuous",
+    "description": "occluderGapM",
+    "unit": "m",
+    "tier": 1,
+    "range": [
+     1.0,
+     2.6
+    ],
+    "default": 1.8,
+    "distribution": "uniform"
+   }
+  ]
+ },
+ "environment": {
+  "weather": "clear",
+  "timeOfDay": "noon"
+ },
+ "anchor": {
+  "id": "cross-animal-furniture-stop-unexp",
+  "corridor": {
+   "throughLanesSameDir": {
+    "value": [
+     1,
+     8
+    ],
+    "essentiality": "required"
+   },
+   "speedLimitKph": {
+    "value": [
+     25,
+     80
+    ],
+    "essentiality": "preferred",
+    "weight": 2
+   },
+   "curvatureDegPer10m": {
+    "value": [
+     0,
+     6
+    ],
+    "essentiality": "required"
+   },
+   "runwayDownstreamM": {
+    "value": [
+     215,
+     null
+    ],
+    "essentiality": "required"
+   },
+   "requiresAdjacent": {
+    "value": [
+     "sidewalk"
+    ],
+    "essentiality": "preferred",
+    "weight": 2
+   }
+  },
+  "features": [
+   {
+    "id": "occf",
+    "kind": "occlusion_zone",
+    "label": "sight-line geometry",
+    "essentiality": "preferred",
+    "weight": 2,
+    "atM": {
+     "value": [
+      -40,
+      10
+     ],
+     "essentiality": "preferred"
+    }
+   }
+  ],
+  "policy": {
+   "allowMirror": true,
+   "maxSitesPerMap": 8,
+   "diversity": "moderate",
+   "minScore": 0.4
+  }
+ },
+ "roles": [
+  {
+   "id": "ego",
+   "kind": "on_reference",
+   "label": "vehicle under test",
+   "actor": {
+    "class": "car",
+    "catalogId": "vehicle.sedan"
+   },
+   "essentiality": "required",
+   "pose": {
+    "laneOffset": 0,
+    "s": "125 - (clamp(0.7*lane.speedLimitKph,18,42))/3.6*8",
+    "tFrac": 0,
+    "headingOffsetRad": 0
+   },
+   "initialSpeedKph": "clamp(0.7*lane.speedLimitKph,18,42)"
+  },
+  {
+   "id": "challenger",
+   "kind": "on_reference",
+   "label": "animal creating the conflict",
+   "actor": {
+    "class": "animal"
+   },
+   "essentiality": "required",
+   "pose": {
+    "laneOffset": 0,
+    "s": 113.0,
+    "tFrac": -1,
+    "headingOffsetRad": 0
+   },
+   "initialSpeedKph": "param.vruSpeedKph"
+  }
+ ],
+ "props": [
+  {
+   "id": "occ-a",
+   "catalogId": "vehicle.suv",
+   "label": "roadside_furniture occluder",
+   "essentiality": "required",
+   "pose": {
+    "laneOffset": 0,
+    "s": "125 - param.occluderGapM/2 - 2.3 - 4.6",
+    "tFrac": -0.88,
+    "headingOffsetRad": 0
+   },
+   "headingOffsetRad": 0,
+   "scale": 1,
+   "repeat": {
+    "count": 2,
+    "spacingM": 4.6,
+    "tFracStep": 0
+   }
+  }
+ ],
+ "choreography": {
+  "clipSeconds": 14,
+  "warmupSeconds": 2,
+  "interactions": [
+   {
+    "id": "ego-open-loop",
+    "actor": "ego",
+    "verb": "set",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "key": "rules.collisionAvoidance",
+     "value": false
+    }
+   },
+   {
+    "id": "challenger-commits",
+    "actor": "challenger",
+    "verb": "set",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "key": "rules.collisionAvoidance",
+     "value": false
+    }
+   },
+   {
+    "id": "challenger-no-yield",
+    "actor": "challenger",
+    "verb": "set",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "key": "rules.yieldToVehicles",
+     "value": false
+    }
+   },
+   {
+    "id": "challenger-acts",
+    "actor": "challenger",
+    "verb": "route",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "mode": "polyline",
+     "points": [
+      {
+       "laneOffset": 0,
+       "s": 113.0,
+       "tFrac": -1,
+       "headingOffsetRad": 0
+      },
+      {
+       "laneOffset": 0,
+       "s": 125.0,
+       "tFrac": -1,
+       "headingOffsetRad": 0
+      },
+      {
+       "laneOffset": 0,
+       "s": "125 + param.dartLeadM",
+       "tFrac": 0.1,
+       "headingOffsetRad": 0
+      },
+      {
+       "laneOffset": 0,
+       "s": "125 + 2*param.dartLeadM",
+       "tFrac": 1.0,
+       "headingOffsetRad": 0
+      }
+     ]
+    }
+   },
+   {
+    "id": "challenger-arrives",
+    "actor": "challenger",
+    "verb": "speed",
+    "trigger": {
+     "kind": "arrival",
+     "of": "challenger",
+     "at": {
+      "pose": {
+       "laneOffset": 0,
+       "s": 125.0,
+       "tFrac": 0,
+       "headingOffsetRad": 0
+      }
+     },
+     "syncWith": "ego",
+     "ttc": "param.arrivalTtc"
+    },
+    "target": {
+     "mode": "absolute",
+     "valueKph": "param.vruSpeedKph"
+    },
+    "dynamics": {
+     "shape": "step",
+     "constraint": "time",
+     "value": 0.1
+    }
+   }
+  ]
+ },
+ "invariants": [
+  {
+   "id": "criticality",
+   "kind": "ttc",
+   "label": "the ego must be genuinely threatened",
+   "essentiality": "required",
+   "of": "ego",
+   "to": "challenger",
+   "range": [
+    0.5,
+    2.5
+   ],
+   "window": [
+    3,
+    11
+   ]
+  },
+  {
+   "id": "ego-decel-budget",
+   "kind": "decel_budget",
+   "of": "ego",
+   "maxMps2": 8.0,
+   "essentiality": "preferred"
+  }
+ ]
+}

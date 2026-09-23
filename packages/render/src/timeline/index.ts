@@ -68,6 +68,13 @@ export interface BuildRenderTimelineInput {
   readonly topology: Uint8Array | string;
   /** v1: `null` (everything is derived from the trace). */
   readonly catalogDigest?: string | null;
+  /**
+   * The identity recorded next to a STORED trace (`sim_results.trace_sha256`),
+   * after the caller verified the stored bytes. A current-format trace must
+   * recompute to it; a trace upgraded in memory from an older format adopts
+   * it (its writer's digest can't be recomputed after a format change).
+   */
+  readonly recordedTraceSha256?: string;
 }
 
 export interface BuiltRenderTimeline {
@@ -101,12 +108,25 @@ export async function buildRenderTimeline(input: BuildRenderTimelineInput): Prom
   const wasm = await timelineRuntime();
   const timeline = wasm.RenderTimeline.build(
     bytesOf(input.trace), bytesOf(input.xodr), bytesOf(input.topology), input.catalogDigest ?? undefined,
+    input.recordedTraceSha256,
   );
   try {
     return built(timeline);
   } finally {
     timeline.free();
   }
+}
+
+/**
+ * Open a stored timeline of ANY sampler version for inspection only (motion
+ * comparison across sampler versions). Never render it: a timeline from
+ * another sampler is re-derived from its trace under the current one.
+ */
+export async function inspectRenderTimeline(bytes: Uint8Array | string): Promise<RenderTimelineHandle> {
+  const wasm = await timelineRuntime();
+  let raw = bytesOf(bytes);
+  if (raw[0] === 0x1f && raw[1] === 0x8b) raw = gunzipSync(raw);
+  return wasm.RenderTimeline.inspect(raw);
 }
 
 /** Open (parse and validate) timeline bytes: plain or gzipped canonical JSON. */
