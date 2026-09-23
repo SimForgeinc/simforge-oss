@@ -1,0 +1,94 @@
+{
+  "id": "parallel-axes-speed-and-light",
+  "feature": "Two events on different domains of one entity run in parallel",
+  "osc": [
+    "Event.priority",
+    "SpeedAction",
+    "LightStateAction"
+  ],
+  "description": "A: 20->30 m/s linear 4 s at t=1. S: brake lights on at t=2. They act on different domains.",
+  "clipSeconds": 7,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 20
+    }
+  ],
+  "interactions": [
+    {
+      "id": "a",
+      "actorId": "ego",
+      "verb": "speed",
+      "target": {
+        "mode": "absolute",
+        "value": 30
+      },
+      "dynamics": {
+        "shape": "linear",
+        "constraint": "time",
+        "value": 4
+      },
+      "trigger": {
+        "kind": "at",
+        "t": 1
+      }
+    },
+    {
+      "id": "s",
+      "actorId": "ego",
+      "verb": "set",
+      "target": {
+        "key": "lights.brake",
+        "value": true
+      },
+      "trigger": {
+        "kind": "at",
+        "t": 2
+      }
+    }
+  ],
+  "oracle": {
+    "clauses": [
+      "8.4.2.2 Event priority (override/skip/parallel)",
+      "7.5.1 Conflicting actions (same domain: newer action overrides)",
+      "LightStateAction (class reference)"
+    ],
+    "derivation": "SimForge preempts per axis, so the storyboard that expresses this is two events that do not stop each other (priority parallel, or separate Maneuvers). A is not in conflict with a LightStateAction (7.5.1), so it runs to 30 m/s at t=5.",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 1,
+            "to": 30,
+            "shape": "linear",
+            "durationS": 4
+          }
+        ]
+      }
+    },
+    "events": {
+      "a": {
+        "start": 1.0,
+        "end": 5.0
+      },
+      "s": {
+        "start": 2.0
+      }
+    },
+    "decisions": [
+      "D-01",
+      "D-12"
+    ]
+  },
+  "expect": {
+    "ours": "deviates",
+    "finding": "F-02,F-05",
+    "esmini": "agrees",
+    "esminiNote": "before the F-10 fix our export put both events in one Maneuver with priority=overwrite and esmini (correctly for that file) stopped A at t=2, freezing 22.5 m/s"
+  }
+}

@@ -118,6 +118,17 @@ jobs:
           cargo test --manifest-path native/Cargo.toml -p simforge-core --test canonical_json_vectors
         env:
           CARGO_TARGET_DIR: native/target
+      - name: OpenSCENARIO conformance (docs/engineering/openscenario-conformance.md)
+        # Primary suite: SimForge vs the ASAM-derived oracle, the live importer's
+        # disposition of every probe, and the storyboard protocol properties.
+        # Needs no third-party simulator. The pinned esmini 3.6.0 then adds the
+        # cross-check and the trajectory-replay round trip; if it cannot be
+        # fetched the script reports those parts as skipped.
+        run: |
+          pnpm --filter @simforge-oss/engine exec vitest run src/__tests__/storyboard-protocol.test.ts
+          pnpm --filter @simforge-oss/cli exec vitest run src/__tests__/osc-conformance.test.ts
+          node packages/openscenario/scripts-esmini/fetch-pinned-esmini.mjs || echo "::warning::esmini unavailable; conformance cross-check skipped"
+          pnpm osc-conformance:verify
       - name: Cross-renderer pose parity (hook; runs once the WS-B comparator is configured)
         run: node scripts/determinism/renderer-parity.mjs
 

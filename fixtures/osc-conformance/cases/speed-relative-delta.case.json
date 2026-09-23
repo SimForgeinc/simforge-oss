@@ -1,0 +1,78 @@
+{
+  "id": "speed-relative-delta",
+  "feature": "SpeedAction RelativeTargetSpeed delta",
+  "osc": [
+    "SpeedAction",
+    "RelativeTargetSpeed.delta"
+  ],
+  "description": "Own speed -6 m/s, linear over 2 s, at t=1 s.",
+  "clipSeconds": 8,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 20
+    }
+  ],
+  "interactions": [
+    {
+      "id": "change",
+      "actorId": "ego",
+      "verb": "speed",
+      "target": {
+        "mode": "delta",
+        "value": -6
+      },
+      "dynamics": {
+        "shape": "linear",
+        "constraint": "time",
+        "value": 2
+      },
+      "trigger": {
+        "kind": "at",
+        "t": 1
+      }
+    }
+  ],
+  "oracle": {
+    "clauses": [
+      "SpeedAction / SpeedActionTarget (class reference)",
+      "DynamicsShape (class reference: linear/cubic/sinusoidal/step)",
+      "DynamicsDimension (class reference: rate/time/distance)",
+      "7.5.2.1 Completing a private action (SpeedAction ends when the speed is reached)",
+      "8.4.2 Execution of an event"
+    ],
+    "derivation": "RelativeTargetSpeed delta, continuous=false: target fixed at start = 20-6 = 14 m/s; linear over 2 s; ends t=3 s.",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 1,
+            "to": 14,
+            "shape": "linear",
+            "durationS": 2
+          }
+        ]
+      }
+    },
+    "events": {
+      "change": {
+        "start": 1.0,
+        "end": 3.0
+      }
+    },
+    "decisions": [
+      "D-01"
+    ]
+  },
+  "expect": {
+    "ours": "deviates",
+    "finding": "F-02,F-05",
+    "esmini": "disagrees",
+    "esminiNote": "esmini 3.6.0 mishandles a RelativeTargetSpeed that references the acting entity itself (our export does that): speed runs away towards 0 m/s"
+  }
+}
