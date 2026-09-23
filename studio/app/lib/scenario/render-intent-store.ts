@@ -5,6 +5,7 @@ import { hashRenderIntent, PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSO
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput, assertNativeMapMemberCapacity } from "@simforge-oss/render/native";
 import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
+import { boundGeometryLod, geometryLodExtraMembers } from "./map-geometry-lod";
 import type { ScenarioRenderJobDto } from "./contracts";
 import {
   ScenarioRenderIntentSchema,
@@ -87,6 +88,35 @@ function cameraAttributes(source: RenderSpecV3["sources"][number]) {
     || source.modality === "instance"
     ? source.attributes
     : null;
+}
+
+/**
+ * `descriptor.geometryLod` members of a map version that its native closure
+ * does not already carry, each backed by a verified native blob. A binding
+ * whose blobs are missing is a broken backfill and fails the submission.
+ */
+async function boundGeometryLodMembers(
+  tx: { queryRows<T>(sql: string, params?: Record<string, unknown>): Promise<T[]> },
+  mapVersionId: string,
+  closurePaths: ReadonlySet<string>,
+): Promise<NativeMapMemberRow[]> {
+  const [row] = await tx.queryRows<{ geometry_lod: unknown }>(
+    `SELECT descriptor->'geometryLod' AS geometry_lod FROM simforge.map_versions WHERE id = :map_version_id`,
+    { map_version_id: mapVersionId },
+  );
+  const raw = typeof row?.geometry_lod === "string" ? JSON.parse(row.geometry_lod) : row?.geometry_lod;
+  const extra = geometryLodExtraMembers(boundGeometryLod(raw), closurePaths);
+  if (extra.length === 0) return [];
+  const blobs = await tx.queryRows<{ sha256: string; byte_length: number | string }>(
+    `SELECT DISTINCT sha256, byte_length FROM simforge.native_map_asset_blobs
+      WHERE verification_state = 'verified' AND sha256 = ANY(string_to_array(:digests, ','))`,
+    { digests: extra.map((member) => member.sha256).join(",") },
+  );
+  const verified = new Set(blobs.map((blob) => `${blob.sha256}:${Number(blob.byte_length)}`));
+  return extra.map((member) => {
+    if (!verified.has(`${member.sha256}:${member.byteLength}`)) throw new Error("geometry_lod_member_unavailable");
+    return { relative_path: member.relativePath, sha256: member.sha256, byte_length: member.byteLength, object_count: 0 };
+  });
 }
 
 export function deriveRenderIntentResources(spec: RenderSpecV3): RenderResourceRequestV2 {
@@ -462,6 +492,9 @@ export async function createRenderIntentJob(
       if (!renderMembers.some((member) => member.relative_path === "master.gltf")) {
         throw new Error("native_map_master_unavailable");
       }
+      // Geometry derivatives a backfill bound to this map version ride with
+      // the closure as ordinary map members (map-geometry-lod.ts).
+      renderMembers.push(...await boundGeometryLodMembers(tx, lineage.map_revision_id, new Set(renderMembers.map((member) => member.relative_path))));
       assertNativeMapMemberCapacity(renderMembers.length);
       nativeAssets = renderMembers.map((member) => ({
         assetId: member.relative_path === "master.gltf"

@@ -20,7 +20,12 @@ import { withStageLock } from './stage-lock.js';
 import { buildTextureTiers, TEXTURE_TIERS_REVISION } from '../scripts/texture-tiers.mjs';
 import { buildSumoDerivative, SUMO_DERIVATIVE_FINGERPRINT, SUMO_DERIVED_DIR } from '../scripts/sumo-network.mjs';
 import { composeNativeTextureClosure } from './native-texture-closure.js';
+import { buildGeometryLod, GEOMETRY_LOD_DIR, geometryLodFingerprint } from './geometry-lod/index.js';
+import type { GeometryLodOptions } from './geometry-lod/index.js';
 export { composeNativeTextureClosure } from './native-texture-closure.js';
+export * from './geometry-lod/index.js';
+export { substituteLods } from './geometry-lod/substitute.js';
+export type { SubstituteOptions, SubstituteReport } from './geometry-lod/substitute.js';
 
 export { resolveMapSource } from './source.js';
 export type { MapSourceManifest, ResolvedMapSource } from './source.js';
@@ -96,6 +101,13 @@ export interface RunMapPipelineOptions {
    * Absent: the web closure ships no table (hosts then probe on first use).
    */
   ambientTurnVerdicts?: AmbientTurnVerdictBuilder;
+  /**
+   * Geometry derivatives (`derived/geometry-lod/*`: render LOD chains,
+   * vegetation impostors, sensor collision proxy; see
+   * docs/engineering/map-geometry-lod.md). Built by default from the scene
+   * stage; `false` (or SIMFORGE_MAP_GEOMETRY_LOD=skip) builds the map without.
+   */
+  geometryLod?: false | GeometryLodOptions;
 }
 
 /** Builds a map's ambient turn-verdict table from its master and web-runtime stage content. */
@@ -273,7 +285,10 @@ export async function masterStage(options: RunMapPipelineOptions): Promise<Maste
   const sumo = options.sumo ?? (process.env['SIMFORGE_MAP_SUMO'] === 'skip' ? false : {});
   const sumoRuntimeDir = sumo === false ? undefined : sumo.runtimeDir ?? process.env['SIMFORGE_SUMO_RUNTIME_DIR'];
   const sumoKey = sumo === false || !source.xodrPath ? 'none' : `${SUMO_DERIVATIVE_FINGERPRINT}:${sumoRuntimeDir ? 'simulated' : 'structural'}`;
-  const toolFingerprint = sha256(`${sceneTool}\0sidecars=${ROAD_SIDECAR_REVISION}\0sumo=${sumoKey}`);
+  const geometryLod = options.geometryLod ?? (process.env['SIMFORGE_MAP_GEOMETRY_LOD'] === 'skip' ? false : {});
+  // Folded in only when built, so a skipped build keeps its historical key.
+  const lodKey = geometryLod === false ? '' : `\0geometryLod=${geometryLodFingerprint(geometryLod, options.ktx2)}`;
+  const toolFingerprint = sha256(`${sceneTool}\0sidecars=${ROAD_SIDECAR_REVISION}\0sumo=${sumoKey}${lodKey}`);
   const inputDigest = sha256(`${scene.closureDigest}\0${semanticDigest}`);
   const cacheKey = sha256(`${inputDigest}\0${toolFingerprint}`);
   const outputDir = path.resolve(options.workDir, 'master', cacheKey);
@@ -303,10 +318,34 @@ export async function masterStage(options: RunMapPipelineOptions): Promise<Maste
         });
       }
     }
+    if (geometryLod !== false) {
+      const lod = await geometryLodStage(scene, options.workDir, geometryLod, options.ktx2);
+      await copyMembers(lod.outputDir, path.join(contentDir, ...GEOMETRY_LOD_DIR.split('/')), Object.keys(lod.closure.members));
+    }
     await writeFile(path.join(contentDir, 'source-manifest.json'), `${canonicalJson({ schema: 'simforge.map-source-receipt.v1', name: options.name, sceneSourceDigest: sceneSource, semanticSourceDigest: semanticDigest, sceneClosureDigest: scene.closureDigest, donorDigest: donorKey, toolFingerprint })}\n`);
     const stage = await finishStage('master', outputDir, 'canonical', keys, { master: true, viewerOnly: !source.xodrPath });
     const report = JSON.parse(await readFile(path.join(contentDir, 'master-report.json'), 'utf8')) as MasterReport;
     return { ...stage, report };
+  });
+}
+
+/**
+ * The geometry derivative of a scene stage, cached by the scene closure and
+ * the builder fingerprint (so a SUMO, sidecar or semantic change never
+ * rebuilds it). Its files land under `derived/geometry-lod/` of the master.
+ */
+export async function geometryLodStage(scene: { closureDigest: string; outputDir: string }, workDir: string, options: GeometryLodOptions = {}, ktx2?: Ktx2Options): Promise<ClosureStageResult> {
+  const toolFingerprint = geometryLodFingerprint(options, ktx2);
+  const inputDigest = scene.closureDigest;
+  const cacheKey = sha256(`${inputDigest}\0${toolFingerprint}`);
+  const outputDir = path.resolve(workDir, 'geometry-lod', cacheKey);
+  const keys = { inputDigest, toolFingerprint, cacheKey };
+  return withStageLock(outputDir, async () => {
+    const cached = await cachedStage(outputDir);
+    if (cached) return { ...keys, ...cached, outputDir: path.join(outputDir, 'content'), viewerOnly: false };
+    const contentDir = await resetStageContent(outputDir);
+    await buildGeometryLod({ ...options, masterDir: scene.outputDir, outputDir: contentDir, ...(ktx2 ? { ktx2 } : {}) });
+    return finishStage('geometry-lod', outputDir, 'canonical', keys, { toolFingerprint });
   });
 }
 

@@ -16,7 +16,7 @@ import { approveRenderWorker } from "../control-plane-store";
 import { createRenderIntentJob } from "../render-intent-store";
 import { claimResponseV2, registerRenderWorkerV2, signRenderInputsV2 } from "../render-worker-control-store";
 import { ScenarioRendererCapabilitySchema } from "../render-wire-contracts";
-import { canonicalJsonSha256 } from "../core";
+import { canonicalJsonSha256, sha256 } from "../core";
 import {
   activeNativeGpuCapacities,
   approvedRenderWorker,
@@ -309,6 +309,39 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   ]);
   assert.deepEqual(Object.keys((await signPrewarmBlobs("usnset_prewarm", [verdictsSha])).downloads), [verdictsSha]);
 
+  // Geometry derivatives a backfill bound by descriptor ride along the same way
+  // (map-geometry-lod.ts): listed once on the last page, signable, in the generation.
+  const lodManifestSha = DIGEST("5"), lodBinSha = DIGEST("6");
+  for (const [id, sha, bytes] of [["usnblob_lod_manifest", lodManifestSha, 4096], ["usnblob_lod_bin", lodBinSha, 65536]] as const) {
+    await execute(
+      `INSERT INTO simforge.native_map_asset_blobs (id, storage_bucket, storage_key, sha256, byte_length, media_type, verification_state)
+       VALUES (:id, 'local-artifacts', :key, :sha256, :bytes, 'application/octet-stream', 'verified')`,
+      { id, key: `blobs/sha256/${sha.slice(0, 2)}/${sha}`, sha256: sha, bytes },
+    );
+  }
+  const geometryLod = {
+    state: "ready", schema: "simforge.map-geometry-lod.v1", buildKey: DIGEST("4"), manifestSha256: lodManifestSha,
+    members: [
+      { relativePath: "derived/geometry-lod/manifest.json", sha256: lodManifestSha, byteLength: 4096 },
+      { relativePath: "derived/geometry-lod/lod.bin", sha256: lodBinSha, byteLength: 65536 },
+    ],
+  };
+  await execute(
+    `UPDATE simforge.map_versions SET descriptor = descriptor || jsonb_build_object('geometryLod', CAST(:lod AS jsonb)) WHERE id = 'usmapv_prewarm'`,
+    { lod: JSON.stringify(geometryLod) },
+  );
+  const withLod = await listPrewarmSets();
+  assert.notEqual(withLod.generation, bound.generation, "binding geometry derivatives changes the generation");
+  const lodPage1 = await listPrewarmMembers("usnset_prewarm", null, 2);
+  const lodPage2 = await listPrewarmMembers("usnset_prewarm", lodPage1.next, 2);
+  assert.deepEqual([...lodPage1.members, ...lodPage2.members].filter((member) => member.relativePath.startsWith("derived/geometry-lod/")), [
+    { relativePath: "derived/geometry-lod/lod.bin", sha256: lodBinSha, sizeBytes: 65536 },
+    { relativePath: "derived/geometry-lod/manifest.json", sha256: lodManifestSha, sizeBytes: 4096 },
+  ]);
+  assert.deepEqual(Object.keys((await signPrewarmBlobs("usnset_prewarm", [lodBinSha, lodManifestSha])).downloads).sort(), [lodManifestSha, lodBinSha].sort());
+  await execute(`UPDATE simforge.map_versions SET descriptor = descriptor - 'geometryLod' WHERE id = 'usmapv_prewarm'`);
+  assert.deepEqual(Object.keys((await signPrewarmBlobs("usnset_prewarm", [lodBinSha])).downloads), [], "an unbound derivative is not signed");
+
   // Only digests of that published set are signed.
   const signed = await signPrewarmBlobs("usnset_prewarm", [DIGEST("a"), DIGEST("e"), "not-a-digest"]);
   assert.deepEqual(Object.keys(signed.downloads), [DIGEST("a")]);
@@ -366,6 +399,43 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
     ),
     (error: unknown) => error instanceof NativeSceneMemoryError && /largest available render GPU has 24.0 GB/.test(error.detail),
   );
+  // With geometry derivatives bound, a native intent declares them as map members.
+  await execute(
+    `UPDATE simforge.map_versions SET descriptor = descriptor || jsonb_build_object('geometryLod', CAST(:lod AS jsonb)) WHERE id = 'usmapv_prewarm'`,
+    { lod: JSON.stringify(geometryLod) },
+  );
+  assert.ok(await recordWorkerCacheStatus(WORKER_NODE_ID, registration.registrationId, {
+    ...status,
+    gpu: { totalBytes: 24 * 1024 ** 3, freeBytes: 20 * 1024 ** 3 },
+    demand: [{ mapVersionId: "usmapv_prewarm", renderTextures: "uastc-full", sceneBytes: 2 * 1024 ** 3, textureBytes: 1024 ** 3 }],
+  }));
+  const nativeJob = await createRenderIntentJob(
+    { workspaceId: LOCAL_WORKSPACE_ID, userId: LOCAL_USER_ID },
+    {
+      schema: "simforge.submit-render-intent/v1", revisionId: REVISION_ID, executionPackageId: EXECUTION_PACKAGE_ID,
+      engine: "native", renderSpec: RENDER_SPEC, idempotencyKey: "prewarm-native-geometry-lod",
+    } as Parameters<typeof createRenderIntentJob>[1],
+  );
+  assert.ok(nativeJob);
+  const nativeIntent = await queryOne<{ intent: { assets: Array<{ assetId: string; sha256: string; sizeBytes: number }> } }>(
+    `SELECT render_intent AS intent FROM simforge.render_jobs WHERE id = :id`, { id: nativeJob.id },
+  );
+  const declared = new Map(nativeIntent!.intent.assets.map((asset) => [asset.assetId, asset]));
+  assert.equal(declared.get(`map.resource.${sha256("derived/geometry-lod/lod.bin")}`)?.sha256, lodBinSha);
+  assert.equal(declared.get(`map.resource.${sha256("derived/geometry-lod/manifest.json")}`)?.sizeBytes, 4096);
+  assert.equal(declared.get("map.tile.000000")?.sha256, DIGEST("a"), "the closure members are still declared");
+  // A binding whose blob is gone is a broken backfill: refused, not half-declared.
+  await execute(`UPDATE simforge.native_map_asset_blobs SET verification_state = 'pending' WHERE id = 'usnblob_lod_bin'`);
+  await assert.rejects(createRenderIntentJob(
+    { workspaceId: LOCAL_WORKSPACE_ID, userId: LOCAL_USER_ID },
+    {
+      schema: "simforge.submit-render-intent/v1", revisionId: REVISION_ID, executionPackageId: EXECUTION_PACKAGE_ID,
+      engine: "native", renderSpec: RENDER_SPEC, idempotencyKey: "prewarm-native-geometry-lod-broken",
+    } as Parameters<typeof createRenderIntentJob>[1],
+  ), /geometry_lod_member_unavailable/);
+  await execute(`UPDATE simforge.native_map_asset_blobs SET verification_state = 'verified' WHERE id = 'usnblob_lod_bin'`);
+  await execute(`UPDATE simforge.render_jobs SET job_state = 'cancelled' WHERE id = :id`, { id: nativeJob.id });
+  await execute(`UPDATE simforge.map_versions SET descriptor = descriptor - 'geometryLod' WHERE id = 'usmapv_prewarm'`);
   await execute(`UPDATE simforge.worker_nodes SET renderer_engine = 'carla' WHERE id = :id`, { id: WORKER_NODE_ID });
 
   const job = await createRenderIntentJob(

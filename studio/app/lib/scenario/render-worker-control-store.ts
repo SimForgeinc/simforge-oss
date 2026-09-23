@@ -33,6 +33,7 @@ import {
 } from "@simforge-oss/studio-shared";
 import { z } from "zod";
 import { canonicalJsonSha256, sha256, scenarioId } from "./core";
+import { boundGeometryLod, geometryLodExtraMembers } from "./map-geometry-lod";
 import { expectedNativeClosure } from "./jobs/local-native-render-store";
 import {
   ScenarioRenderIntentSchema,
@@ -691,6 +692,13 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
         if (!renderMembers.some((member) => member.relative_path === "master.gltf")) {
           throw new Error("native_map_master_unavailable");
         }
+        // Descriptor-bound geometry derivatives the intent declared (an intent
+        // created before a backfill declares none and gets none).
+        renderMembers.push(...await leasedGeometryLodMembers(
+          tx, row.revision_id, row.workspace_id,
+          new Set(renderMembers.map((member) => member.relative_path)),
+          new Set(intent.assets.map((asset) => asset.assetId)),
+        ));
         assertNativeMapMemberCapacity(renderMembers.length);
         inputs.push(...renderMembers.map((member) => ({
           inputId: member.relative_path === "master.gltf"
@@ -1664,4 +1672,43 @@ export async function renderProgressForJob(context: Pick<AppContext, "workspaceI
       ORDER BY p.render_attempt_id, p.sequence LIMIT 5000`,
     { workspace_id: context.workspaceId, job_id: jobId },
   );
+}
+
+/** `descriptor.geometryLod` members (map-geometry-lod.ts) a native intent declared, with their blob locations. */
+async function leasedGeometryLodMembers(
+  tx: { queryRows<T>(sql: string, params?: Record<string, unknown>): Promise<T[]> },
+  revisionId: string,
+  workspaceId: string,
+  closurePaths: ReadonlySet<string>,
+  declaredInputIds: ReadonlySet<string>,
+) {
+  const [row] = await tx.queryRows<{ geometry_lod: unknown }>(
+    `SELECT mv.descriptor->'geometryLod' AS geometry_lod
+       FROM simforge.revisions r JOIN simforge.map_versions mv ON mv.id = r.map_version_id
+      WHERE r.id = :revision_id AND r.workspace_id = :workspace_id`,
+    { revision_id: revisionId, workspace_id: workspaceId },
+  );
+  const raw = typeof row?.geometry_lod === "string" ? JSON.parse(row.geometry_lod) : row?.geometry_lod;
+  const declared = geometryLodExtraMembers(boundGeometryLod(raw), closurePaths)
+    .filter((member) => declaredInputIds.has(`map.resource.${sha256(member.relativePath)}`));
+  if (declared.length === 0) return [];
+  const blobs = await tx.queryRows<{ sha256: string; byte_length: number | string; storage_bucket: string; storage_key: string }>(
+    `SELECT DISTINCT ON (sha256) sha256, byte_length, storage_bucket, storage_key FROM simforge.native_map_asset_blobs
+      WHERE verification_state = 'verified' AND sha256 = ANY(string_to_array(:digests, ','))
+      ORDER BY sha256, id`,
+    { digests: declared.map((member) => member.sha256).join(",") },
+  );
+  const bySha = new Map(blobs.map((blob) => [blob.sha256, blob]));
+  return declared.map((member) => {
+    const blob = bySha.get(member.sha256);
+    if (!blob || Number(blob.byte_length) !== member.byteLength) throw new Error("geometry_lod_member_unavailable");
+    return {
+      relative_path: member.relativePath,
+      sha256: member.sha256,
+      byte_length: member.byteLength,
+      storage_bucket: blob.storage_bucket,
+      storage_key: blob.storage_key,
+      object_count: 0,
+    };
+  });
 }
