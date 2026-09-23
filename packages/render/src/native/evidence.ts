@@ -57,6 +57,18 @@ export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
     autoMeter: z.boolean(),
     provenance: z.record(z.string(), z.unknown()),
   }),
+  /**
+   * How captured pixels relate to time; gated by `native-evidence.capture-clock`.
+   * `simulation-time`: each frame is a function of its scene and simulation
+   * time (one capture per frame, pinned sky clock and noise seed, explicit
+   * AA samples). `update-count`: rc.73 and earlier, where the sky and the
+   * TAA history advanced with every frame the renderer drew.
+   */
+  capture: z.strictObject({
+    clock: z.enum(['simulation-time', 'update-count']),
+    antiAlias: z.string().min(1).max(32),
+    samplesPerFrame: z.number().int().min(1).max(16),
+  }).optional(),
   videos: z.array(z.strictObject({
     actorId: IdentifierSchema,
     sensorId: IdentifierSchema,
