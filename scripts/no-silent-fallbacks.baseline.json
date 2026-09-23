@@ -236,18 +236,6 @@
       "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
     },
     {
-      "file": "packages/render/src/native/sensor-cache.ts",
-      "rule": "ts-nullish-literal",
-      "count": 1,
-      "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
-    },
-    {
-      "file": "packages/render/src/native/sensor-cache.ts",
-      "rule": "ts-promise-catch",
-      "count": 1,
-      "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
-    },
-    {
       "file": "packages/render/src/native/service-client.ts",
       "rule": "ts-nullish-literal",
       "count": 3,
@@ -576,12 +564,6 @@
       "rule": "rs-unwrap-or",
       "count": 1,
       "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
-      "file": "renderer/service/src/bin/native-render-service.rs",
-      "rule": "rs-let-underscore",
-      "count": 1,
-      "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
     },
     {
       "file": "renderer/service/src/bin/native-render-service.rs",
