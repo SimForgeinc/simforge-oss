@@ -77,7 +77,7 @@
     "test:golden": "vitest run src/__tests__/render-timeline-identity.test.ts"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.0",
+    "@napi-rs/cli": "3.10.5",
     "@types/node": "^22.10.0",
     "tsup": "^8.5.0",
     "typescript": "^5.6.0",
