@@ -263,14 +263,14 @@ export function runCase({ testCase, graph, esmini, workDir, roadXodr, corpusDir 
   const actorIds = Object.keys(testCase.oracle.actors);
   const eventIds = [...new Set([...Object.keys(testCase.oracle.events ?? {}), ...testCase.interactions.map((interaction) => String(interaction['id']))])];
 
-  const runExternal = (xosc: string, subdir: string, nameOf: (id: string) => string) => {
+  const runExternal = (xosc: string, subdir: string, nameOf: (id: string) => string, polylineInterpolation?: 'segment') => {
     if (!esmini) return null;
     const dir = path.join(workDir, subdir);
     mkdirSync(dir, { recursive: true });
     writeFileSync(path.join(dir, ROAD_FILE), roadXodr);
     writeFileSync(path.join(dir, 'scenario.xosc'), xosc);
     if (kind === 'xosc') cpSync(path.join(corpusDir, 'probes', 'catalogs'), path.join(dir, 'catalogs'), { recursive: true });
-    const run = runEsmini(esmini, path.join(dir, 'scenario.xosc'), dir);
+    const run = runEsmini(esmini, path.join(dir, 'scenario.xosc'), dir, polylineInterpolation ? { polylineInterpolation } : {});
     const series = run.exitCode === 0 && run.csv ? csvSeries(run.csv, warmup, actorIds, nameOf) : null;
     return { run, series };
   };
@@ -376,7 +376,7 @@ export function runCase({ testCase, graph, esmini, workDir, roadXodr, corpusDir 
       });
       // esmini 3.6.0 predates OSC 1.4 and aborts on <Interpolation/>; strip it exactly
       // as SimCloud's esmini lane does (linear is esmini's Polyline default anyway).
-      const external = runExternal(replay.content.replace(/\n\s*<Interpolation\/>/g, ''), 'replay', entityName)!;
+      const external = runExternal(replay.content.replace(/\n\s*<Interpolation\/>/g, ''), 'replay', entityName, 'segment')!;
       if (!external.series) {
         roundTrip = { verdict: 'deviation', actors: [], reasons: [`esmini failed (exit ${external.run.exitCode})`] };
       } else {

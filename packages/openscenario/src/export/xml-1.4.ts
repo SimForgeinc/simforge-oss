@@ -222,15 +222,17 @@ function actorEntity(actor: SimActor, name: string, trustedAmbientActorIds: Read
   }[actor.kind];
   const wheel = Math.min(0.8, Math.max(0.3, actor.dims.h * 0.45));
   const track = Math.max(0.5, actor.dims.w * 0.84);
-  const axleX = Math.max(0.5, actor.dims.l * 0.58);
+  // The reference point is the footprint centre (docs D-06), so the axles sit
+  // either side of it, a wheelbase of 0.58·l apart, inside the bumpers (F-16).
+  const halfWheelbase = Math.min(0.45 * actor.dims.l, Math.max(0.25, actor.dims.l * 0.29));
   return [
     `<ScenarioObject name="${xml(name)}">`,
     `  <Vehicle name="uniscenarios_${actor.kind}" vehicleCategory="${vehicleCategory}">`,
     lines(boundingBox(actor), 4),
     '    <Performance maxSpeed="100" maxAcceleration="12" maxDeceleration="12"/>',
     '    <Axles>',
-    `      <FrontAxle maxSteering="0.7" wheelDiameter="${finite(wheel)}" trackWidth="${finite(track)}" positionX="${finite(axleX)}" positionZ="${finite(wheel / 2)}"/>`,
-    `      <RearAxle maxSteering="0" wheelDiameter="${finite(wheel)}" trackWidth="${finite(track)}" positionX="0" positionZ="${finite(wheel / 2)}"/>`,
+    `      <FrontAxle maxSteering="0.7" wheelDiameter="${finite(wheel)}" trackWidth="${finite(track)}" positionX="${finite(halfWheelbase)}" positionZ="${finite(wheel / 2)}"/>`,
+    `      <RearAxle maxSteering="0" wheelDiameter="${finite(wheel)}" trackWidth="${finite(track)}" positionX="${finite(-halfWheelbase)}" positionZ="${finite(wheel / 2)}"/>`,
     '    </Axles>',
     '    <Properties>',
     ...properties.map((property) => `      ${property}`),
@@ -288,11 +290,10 @@ function speedAction(interaction: Extract<Interaction, { verb: 'speed' }>, actor
 function laneChangeAction(
   interaction: Extract<Interaction, { verb: 'changeLane' }>,
   actorName: string,
-  effectiveDurationS?: number,
 ): string | AsamExportIssue {
-  const dynamics = effectiveDurationS === undefined
-    ? interaction.dynamics
-    : { ...interaction.dynamics, shape: 'cubic' as const, constraint: 'time' as const, value: effectiveDurationS };
+  // The engine executes the authored shape and duration (F-08), so the file
+  // carries them as written.
+  const dynamics = interaction.dynamics;
   if (interaction.target.mode !== 'left' && interaction.target.mode !== 'right') {
     if (interaction.target.mode === 'actorLane') {
       return [
@@ -454,14 +455,13 @@ function interactionActions(
   resolved: ResolvedAsamScenario,
   interaction: Interaction,
   options: AsamExportOptions,
-  effectiveLateralDurations: ReadonlyMap<string, number> = new Map(),
 ): string[] | AsamExportIssue {
   const actorName = resolved.actorNames.get(interaction.actorId)!;
   switch (interaction.verb) {
     case 'speed':
       return [speedAction(interaction, actorName)];
     case 'changeLane': {
-      const action = laneChangeAction(interaction, actorName, effectiveLateralDurations.get(interaction.id));
+      const action = laneChangeAction(interaction, actorName);
       return typeof action === 'string' ? [action] : action;
     }
     case 'route': {
@@ -884,21 +884,20 @@ function validateXmlProfile(input: SimScenarioInput, executionMode: 'actions' | 
 }
 
 /**
- * Resolve the runtime's authoritative lateral duration before emitting an OSC
- * action. This also makes missing multi-lane neighbours fail closed instead of
- * exporting a count the engine could not execute. Freeform actors retain the
- * legacy action path because they have no map-lane topology to preflight.
+ * Prove every lane change executes before emitting it as an OSC action, so a
+ * missing multi-lane neighbour fails closed instead of exporting a count the
+ * engine could not execute. Freeform actors have no map-lane topology to
+ * preflight. The authored dynamics are exported unchanged.
  */
-function preflightLateralActionDurations(input: SimScenarioInput, options: AsamExportOptions): ReadonlyMap<string, number> {
+function preflightLateralActions(input: SimScenarioInput, options: AsamExportOptions): void {
   const candidates = input.interactions.filter((interaction): interaction is Interaction & { verb: 'changeLane' } => {
     if (interaction.verb !== 'changeLane') return false;
     const actor = input.actors.find((item) => item.id === interaction.actorId);
     return actor?.behavior.route.kind !== 'polyline';
   });
-  if (candidates.length === 0) return new Map();
+  if (candidates.length === 0) return;
   const simulation = options.engine.runSimulation(input, { graph: options.graph });
   const issues: AsamExportIssue[] = [];
-  const durations = new Map<string, number>();
   for (const interaction of candidates) {
     const aborted = simulation.trace.events.find((event): event is Extract<SimEvent, { kind: 'interaction_aborted' }> => event.kind === 'interaction_aborted' && event.interactionId === interaction.id);
     const planned = simulation.trace.events.find((event): event is Extract<SimEvent, { kind: 'lateral_maneuver_planned' }> => event.kind === 'lateral_maneuver_planned' && event.interactionId === interaction.id);
@@ -913,10 +912,8 @@ function preflightLateralActionDurations(input: SimScenarioInput, options: AsamE
       });
       continue;
     }
-    durations.set(interaction.id, planned.effectiveDurationS);
   }
   if (issues.length > 0) throw new AsamExportError(issues);
-  return durations;
 }
 
 function signalConditions(condition: Condition): Extract<Condition, { kind: 'signal' }>[] {
@@ -1034,11 +1031,9 @@ export function exportOpenScenarioXml14(
     input,
     executionMode === 'trajectory-replay' ? 'xml-1.4-trajectory-replay' : 'xml-1.4-actions',
   );
-  if (executionMode === 'actions') assertDefaultControllerRules(input, false);
+  const controllerWarnings = executionMode === 'actions' ? assertDefaultControllerRules(input) : [];
   validateXmlProfile(input, executionMode);
-  const effectiveLateralDurations = executionMode === 'actions'
-    ? preflightLateralActionDurations(input, options)
-    : new Map<string, number>();
+  if (executionMode === 'actions') preflightLateralActions(input, options);
   let replayTrace: SimTrace | null = null;
   if (executionMode === 'trajectory-replay' && options.replayTrace) {
     // The authoritative trace, not a re-run: bind it to exactly this input.
@@ -1083,7 +1078,7 @@ export function exportOpenScenarioXml14(
 
   if (executionMode === 'actions') {
     for (const { interaction, name } of resolved.interactions) {
-      const actions = interactionActions(resolved, interaction, options, effectiveLateralDurations);
+      const actions = interactionActions(resolved, interaction, options);
       const trigger = startTrigger(resolved, interaction);
       if (!Array.isArray(actions)) issues.push(actions);
       if (typeof trigger !== 'string') issues.push(trigger);
@@ -1136,7 +1131,9 @@ export function exportOpenScenarioXml14(
         if (track.present[index - 1] !== 1 || track.present[index] !== 0) continue;
         const name = identifier('event', `${actor.id}_trajectory_despawn_${index}`);
         const action = `<GlobalAction><EntityAction entityRef="${xml(identifier('actor', actor.id))}"><DeleteEntityAction/></EntityAction></GlobalAction>`;
-        const at = input.warmupSeconds + trace.ticks.t[index]!;
+        // The delete fires on the trigger tick, the last sample that still
+        // shows the entity; its effect is visible from the next tick (D-01).
+        const at = input.warmupSeconds + trace.ticks.t[index - 1]!;
         const trigger = `<StartTrigger><ConditionGroup><Condition name="${xml(`${name}_start`)}" delay="0" conditionEdge="none"><ByValueCondition><SimulationTimeCondition value="${finite(at)}" rule="greaterOrEqual"/></ByValueCondition></Condition></ConditionGroup></StartTrigger>`;
         actorEvents.get(actor.id)!.push([
           `<Event name="${xml(name)}" priority="override" maximumExecutionCount="1">`,
@@ -1401,7 +1398,7 @@ export function exportOpenScenarioXml14(
     profile: capabilities.report.profile,
     intent: capabilities.report.intent,
     capabilityReport: capabilities.report,
-    warnings: mergeAsamWarnings(resolved.warnings, capabilities.warnings, [
+    warnings: mergeAsamWarnings(resolved.warnings, capabilities.warnings, controllerWarnings, [
       ...((options.nearMissCriteria?.length || input.nearMissCriteria?.length) ? [{
         code: 'near_miss_criterion_metadata',
         path: 'FileHeader.Properties',
