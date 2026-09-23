@@ -1,0 +1,78 @@
+{
+  "id": "lane-offset-step",
+  "feature": "LaneOffsetAction step (the only form our exporter emits)",
+  "osc": [
+    "LaneOffsetAction",
+    "AbsoluteTargetLaneOffset",
+    "LaneOffsetActionDynamics.step"
+  ],
+  "description": "Absolute lane offset +0.5 m (left), step, at t=1 s.",
+  "clipSeconds": 6,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 20
+    }
+  ],
+  "interactions": [
+    {
+      "id": "offset",
+      "actorId": "ego",
+      "verb": "laneOffset",
+      "target": {
+        "mode": "meters",
+        "value": 0.5
+      },
+      "dynamics": {
+        "shape": "step",
+        "constraint": "time",
+        "value": 1
+      },
+      "trigger": {
+        "kind": "at",
+        "t": 1
+      }
+    }
+  ],
+  "tolerance": {
+    "headingDeg": 90
+  },
+  "oracle": {
+    "clauses": [
+      "LaneOffsetAction / LaneOffsetActionDynamics (class reference)",
+      "6.3.3 Lane coordinate system (t positive to the left)",
+      "DynamicsShape (class reference: linear/cubic/sinusoidal/step)"
+    ],
+    "derivation": "Lane t axis is positive to the left; for lane -2 travelling +x, left is +y. Step: y=-5.25+0.5=-4.75 from t=1 s.",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "lateral": [
+          {
+            "t0": 1,
+            "toY": -4.75,
+            "shape": "step",
+            "durationS": 1
+          }
+        ]
+      }
+    },
+    "events": {
+      "offset": {
+        "start": 1.0
+      }
+    },
+    "decisions": [
+      "D-01",
+      "D-04"
+    ]
+  },
+  "expect": {
+    "ours": "conforms",
+    "esmini": "agrees"
+  }
+}

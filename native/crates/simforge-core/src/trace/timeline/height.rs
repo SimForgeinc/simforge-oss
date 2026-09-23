@@ -22,8 +22,15 @@ use crate::hash::{cmp_locale, content_hash_of, sha256_bytes};
 use crate::map::topology::TopologyIndex;
 use crate::math::{hypot, pow, Vec2};
 
-/// Height-source kind covered by this module.
+/// Retired height-source kind (OpenDRIVE reference-line elevation on lane
+/// ribbons). Kept as the engine's spawn deck hint; the render timeline
+/// refuses it (the rendered mesh and the XODR disagree by up to a metre,
+/// docs/engineering/ground-height.md).
 pub const XODR_ELEVATION_KIND: &str = "xodr-elevation/v1";
+/// The production height source: bodies stand on the map ground surface
+/// (`derived/ground`), with contact from the trace or, for a trace recorded
+/// without it, from the engine's contact solver at timeline build time.
+pub const GROUND_CONTACT_KIND: &str = "ground-contact/v1";
 /// A constant-elevation source for maps without profiles and for tests.
 pub const FLAT_KIND: &str = "flat/v1";
 /// A synthetic inclined plane `z = z0 + gx*x + gy*y` (tests and the binding
@@ -69,6 +76,8 @@ pub enum HeightError {
     NonFiniteSurface(String),
     #[error("topology: {0}")]
     Topology(String),
+    #[error("{0}")]
+    Ground(String),
 }
 
 /// Identity of a height source; `digest` enters the timeline key.
@@ -89,7 +98,11 @@ pub struct HeightSource {
     /// `[gx, gy]` slopes of a `plane/v1` source.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plane_gradient: Option<[f64; 2]>,
-    /// `sha256(canonicalJson({kind, xodrSha256?, topologyDigest?, flatZM?}))`.
+    /// sha256 of `derived/ground/ground-mesh.bin` (`ground-contact/v1`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ground_sha256: Option<String>,
+    /// `sha256(canonicalJson({kind, xodrSha256?, topologyDigest?, flatZM?,
+    /// planeGradient?, groundSha256?}))`.
     pub digest: String,
 }
 
@@ -105,6 +118,8 @@ struct HeightSourceDigestInput<'a> {
     flat_z_m: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     plane_gradient: Option<[f64; 2]>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ground_sha256: Option<&'a str>,
 }
 
 impl HeightSource {
@@ -114,6 +129,7 @@ impl HeightSource {
         topology_digest: Option<String>,
         flat_z_m: Option<f64>,
         plane_gradient: Option<[f64; 2]>,
+        ground_sha256: Option<String>,
     ) -> Self {
         let digest = content_hash_of(&HeightSourceDigestInput {
             kind,
@@ -121,6 +137,7 @@ impl HeightSource {
             topology_digest: topology_digest.as_deref(),
             flat_z_m,
             plane_gradient,
+            ground_sha256: ground_sha256.as_deref(),
         })
         .expect("height source digest input is always finite JSON");
         Self {
@@ -129,6 +146,7 @@ impl HeightSource {
             topology_digest,
             flat_z_m,
             plane_gradient,
+            ground_sha256,
             digest,
         }
     }
@@ -188,6 +206,11 @@ pub enum HeightField {
         gradient: [f64; 2],
         source: HeightSource,
     },
+    /// The map ground surface (production).
+    Ground {
+        ground: std::sync::Arc<crate::engine::contact::GroundContext>,
+        source: HeightSource,
+    },
 }
 
 /// Query options for one elevation lookup.
@@ -221,6 +244,7 @@ impl HeightField {
             (!digest.is_empty()).then(|| digest.to_owned()),
             None,
             None,
+            None,
         );
         Ok(HeightField::Xodr {
             field: Box::new(field),
@@ -234,8 +258,22 @@ impl HeightField {
         let z_m = if z_m.is_finite() { z_m } else { 0.0 };
         HeightField::Flat {
             z_m,
-            source: HeightSource::new(FLAT_KIND, None, None, Some(z_m), None),
+            source: HeightSource::new(FLAT_KIND, None, None, Some(z_m), None, None),
         }
+    }
+
+    /// The map ground surface (`ground-contact/v1`): what every production
+    /// timeline is baked from.
+    pub fn ground(ground: std::sync::Arc<crate::engine::contact::GroundContext>) -> Self {
+        let source = HeightSource::new(
+            GROUND_CONTACT_KIND,
+            None,
+            None,
+            None,
+            None,
+            Some(ground.digest().to_owned()),
+        );
+        HeightField::Ground { ground, source }
     }
 
     /// A synthetic plane `z = z0 + gx*x + gy*y` (tests, identity corpus).
@@ -243,7 +281,7 @@ impl HeightField {
         HeightField::Plane {
             z0_m,
             gradient: [gx, gy],
-            source: HeightSource::new(PLANE_KIND, None, None, Some(z0_m), Some([gx, gy])),
+            source: HeightSource::new(PLANE_KIND, None, None, Some(z0_m), Some([gx, gy]), None),
         }
     }
 
@@ -251,7 +289,8 @@ impl HeightField {
         match self {
             HeightField::Xodr { source, .. }
             | HeightField::Flat { source, .. }
-            | HeightField::Plane { source, .. } => source,
+            | HeightField::Plane { source, .. }
+            | HeightField::Ground { source, .. } => source,
         }
     }
 
@@ -271,6 +310,12 @@ impl HeightField {
                 Ok(z0_m + gradient[0] * x + gradient[1] * y)
             }
             HeightField::Xodr { field, .. } => field.elevation(x, y, query),
+            // A point with no body history stands on the topmost surface.
+            HeightField::Ground { ground, .. } => ground
+                .surface()
+                .top(x, y, query.label)
+                .map(|hit| hit.z)
+                .map_err(|e| HeightError::Ground(e.to_string())),
         }
     }
 }

@@ -23,7 +23,7 @@ export const RENDER_TIMELINE_INPUT_ID = 'render.timeline';
 /** Width of one sampled pose in `poseArray` / `posesArray`. */
 export const POSE_ARRAY_LEN = 20;
 /** Width of one actor record in `sceneFramesArray`. */
-export const SCENE_FRAME_RECORD_LEN = 12;
+export const SCENE_FRAME_RECORD_LEN = 19;
 
 export type RenderTimelineHandle = ReturnType<NativeWasm['RenderTimeline']['fromBytes']>;
 
@@ -68,7 +68,20 @@ export interface BuildRenderTimelineInput {
   readonly topology: Uint8Array | string;
   /** v1: `null` (everything is derived from the trace). */
   readonly catalogDigest?: string | null;
+  /**
+   * The map's ground surface, `derived/ground/ground-mesh.bin` (engine 0.11):
+   * the timeline's height source (`ground-contact/v1`). Every map version
+   * published with it must pass it. Without it (versions published before the
+   * ground derivative) the timeline is built on the retired OpenDRIVE
+   * resolver and says so: `contactOrigin: 'legacy-xodr-elevation'`.
+   */
+  readonly ground?: Uint8Array | null;
+  /** The identity recorded next to a stored trace (`sim_results.trace_sha256`). */
+  readonly recordedTraceSha256?: string | null;
 }
+
+/** Where a timeline's z and road attitude came from. */
+export type TimelineContactOrigin = 'trace' | 'derived-at-timeline-build' | 'legacy-xodr-elevation' | 'synthetic';
 
 export interface BuiltRenderTimeline {
   readonly timelineKey: string;
@@ -77,6 +90,8 @@ export interface BuiltRenderTimeline {
   readonly heightFieldDigest: string;
   readonly catalogDigest: string | null;
   readonly samplerVersion: string;
+  /** Renders surface anything but `trace` / `derived-at-timeline-build` as a warning. */
+  readonly contactOrigin: TimelineContactOrigin;
   /** `canonicalJson(timeline)`; `sha256(bytes) === timelineSha256`. */
   readonly bytes: Uint8Array;
 }
@@ -89,6 +104,7 @@ function built(timeline: RenderTimelineHandle): BuiltRenderTimeline {
     heightFieldDigest: timeline.heightFieldDigest,
     catalogDigest: timeline.catalogDigest ?? null,
     samplerVersion: timeline.samplerVersion,
+    contactOrigin: timeline.contactOrigin as TimelineContactOrigin,
     bytes: new TextEncoder().encode(timeline.toCanonicalJson()),
   };
 }
@@ -99,9 +115,15 @@ function built(timeline: RenderTimelineHandle): BuiltRenderTimeline {
  */
 export async function buildRenderTimeline(input: BuildRenderTimelineInput): Promise<BuiltRenderTimeline> {
   const wasm = await timelineRuntime();
-  const timeline = wasm.RenderTimeline.build(
-    bytesOf(input.trace), bytesOf(input.xodr), bytesOf(input.topology), input.catalogDigest ?? undefined,
-  );
+  const timeline = input.ground
+    ? wasm.RenderTimeline.buildOnGround(
+      bytesOf(input.trace), input.ground, bytesOf(input.xodr), bytesOf(input.topology),
+      input.catalogDigest ?? undefined, input.recordedTraceSha256 ?? undefined,
+    )
+    : wasm.RenderTimeline.build(
+      bytesOf(input.trace), bytesOf(input.xodr), bytesOf(input.topology),
+      input.catalogDigest ?? undefined, input.recordedTraceSha256 ?? undefined,
+    );
   try {
     return built(timeline);
   } finally {

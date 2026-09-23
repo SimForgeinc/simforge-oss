@@ -101,6 +101,27 @@ pub struct ActorTick {
     /// Backward finite difference of the velocity channel (carries the
     /// centripetal term when a body turns); zero on spawn.
     pub acceleration: [f64; 3],
+    /// Unwrapped wheel rotation since spawn (timeline `wheelSpinRad`), every
+    /// wheeled actor: `odometerM = wheelSpinRad * 0.35`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wheel_spin_rad: Option<f64>,
+    /// Four-wheelers: the sprung body's attitude over its wheels, applied to
+    /// the model's `body` node only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub body_attitude: Option<BodyAttitude>,
+    /// Four-wheelers: per-wheel drop `[FL, FR, RL, RR]`, metres, applied to
+    /// the `wheel_*` nodes along the body's up axis.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wheel_drop_m: Option<[f64; 4]>,
+}
+
+/// Body-node attitude (OpenSCENARIO signs: pitch positive nose down, roll
+/// positive right side down).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BodyAttitude {
+    pub pitch_rad: f64,
+    pub roll_rad: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -159,14 +180,23 @@ pub fn catalog_id_for(kind: ActorKind, tags: &[String]) -> String {
     if let Some(tag) = tags.iter().find_map(|t| t.strip_prefix("catalog:")) {
         return tag.to_owned();
     }
+    // Total and exhaustive (no wildcard): the documented kind defaults, the
+    // same table as `@simforge-oss/render` `NATIVE_KIND_DEFAULT_CATALOG_IDS`
+    // and `@simforge-oss/playback` `defaultCatalogIdForActorKind`. A new kind
+    // does not compile until it has a body of its own (engine 0.11.0 stopped
+    // drawing vans, scooters, robots, drones and animals as sedans).
     match kind {
-        ActorKind::Pedestrian => "pedestrian.adult",
-        ActorKind::Bicycle => "vehicle.bicycle",
-        ActorKind::Bus => "vehicle.bus",
+        ActorKind::Vehicle | ActorKind::Car => "vehicle.sedan",
         ActorKind::Truck => "vehicle.box_truck",
+        ActorKind::Bus => "vehicle.bus",
+        ActorKind::Van => "vehicle.van",
         ActorKind::Motorcycle => "vehicle.motorcycle",
+        ActorKind::Bicycle | ActorKind::Scooter => "vehicle.bicycle",
+        ActorKind::Pedestrian => "pedestrian.adult",
+        ActorKind::SidewalkRobot => "sidewalk_robot.delivery_rover",
+        ActorKind::Drone => "drone.camera_quadcopter",
+        ActorKind::Animal => "animal.dog",
         ActorKind::StaticObject => "hazard.cardboard_box",
-        _ => "vehicle.sedan",
     }
     .to_owned()
 }
@@ -363,6 +393,9 @@ fn actor_tick(
             0.0,
             quantize(acceleration[2], PRECISION),
         ],
+        wheel_spin_rad: None,
+        body_attitude: None,
+        wheel_drop_m: None,
     }
 }
 

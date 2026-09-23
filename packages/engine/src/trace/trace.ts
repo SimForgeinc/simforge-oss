@@ -99,6 +99,12 @@ export type SimEvent =
   | { t: number; kind: 'interaction_completed'; actorId: string; interactionId: string; finalLateralOffsetM?: number }
   | { t: number; kind: 'interaction_aborted'; actorId: string; interactionId: string; reason: 'collision' | 'preempted' | 'until' | 'rejected' | 'tracking_error' | 'clip_end' }
   | { t: number; kind: 'lateral_maneuver_planned'; actorId: string; interactionId: string; requestedDurationS: number; effectiveDurationS: number; displacementM: number }
+  /**
+   * An authored transition (speed or lateral) owns the actor's kinematic state
+   * from `t` until at most `untilT` and executes its shape exactly, including
+   * non-physical steps; the plausibility audit explains findings inside it.
+   */
+  | { t: number; kind: 'prescribed_motion'; actorId: string; interactionId: string; axis: 'longitudinal' | 'lateral'; untilT: number }
   | { t: number; kind: 'lane_change'; actorId: string; fromRsl: string | null; toRsl: string | null; legal: boolean }
   | { t: number; kind: 'lane_change_rejected'; actorId: string; interactionId: string; reason: string }
   | { t: number; kind: 'route_change_rejected'; actorId: string; interactionId: string; reason: string; requestedTurn?: string }

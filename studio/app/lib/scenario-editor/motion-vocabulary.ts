@@ -31,7 +31,7 @@
  * `actor_behavior`, hashed as `actor_behavior_hash`, attested on the way back,
  * persisted in every saved draft, and read by a worker in another repository —
  * and several of them are deliberately OpenSCENARIO-aligned (`lane_offset` ↔
- * `LaneOffsetAction`), which `.xosc` import and export depend on. So the
+ * `LaneOffsetAction`), which `.xosc` export depends on. So the
  * identifier is the wire format and this module is the language.
  */
 

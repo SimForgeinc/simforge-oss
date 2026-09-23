@@ -103,6 +103,15 @@ export interface NativeMapBundle {
    */
   readonly closureDigest?: string;
   readonly graph: NativeLaneGraph;
+  /**
+   * Attach the map's ground surface (`derived/ground/ground-mesh.bin`, engine
+   * 0.11): worlds built from `graph` afterwards ground every body on it and
+   * the closure digest includes it. Returns the surface digest. Absent on
+   * runtimes before 0.11.0.
+   */
+  attachGround?(groundMesh: Uint8Array): string;
+  /** Digest of the attached ground surface. */
+  readonly groundDigest?: string | null;
   /** `MapControlPlan` JSON derived from the bundle's signal catalog. */
   controlPlanJson(): string;
   /** The merged `TopologyIndex` (map speed limits applied) as JSON. */

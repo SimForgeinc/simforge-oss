@@ -267,7 +267,7 @@ export function exportOpenScenarioDsl22(
   options: AsamExportOptions,
 ): AsamExportResult {
   const capabilities = analyzeAsamCapabilities(input, 'dsl-2.2-actions');
-  assertDefaultControllerRules(input, true);
+  const controllerWarnings = assertDefaultControllerRules(input);
   validateDslProfile(input);
   const resolved = resolveScenario(input, options, true);
   const issues: AsamExportIssue[] = [];
@@ -342,6 +342,6 @@ export function exportOpenScenarioDsl22(
     profile: capabilities.report.profile,
     intent: capabilities.report.intent,
     capabilityReport: capabilities.report,
-    warnings: mergeAsamWarnings(resolved.warnings, capabilities.warnings),
+    warnings: mergeAsamWarnings(resolved.warnings, capabilities.warnings, controllerWarnings),
   };
 }

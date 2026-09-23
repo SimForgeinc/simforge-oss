@@ -292,10 +292,9 @@ function castWheel(x: number, width: number, discs: readonly number[]): Mesh[] {
 /**
  * Naked standard motorcycle, no rider.
  *
- * The 2D tile draws a tucked rider; this mesh deliberately does not, because
- * the catalog entry is "no rider" and its 1.23 m height is the bar-and-mirror
- * height that downstream occlusion and collision extents read. `buildMotorcyclist`
- * is the ridden variant — do not "fix" this one by adding a rider to it.
+ * The catalog's `vehicle.motorcycle` is ridden (engine 0.11.0: its dims
+ * include the helmeted rider, as the rendered GLB does) and builds with
+ * `buildMotorcyclist`; this riderless machine is the parked variant's body.
  */
 export function buildMotorcycle(params: VehicleParams = { color: '#25282c' }): Group {
   const group = new Group();

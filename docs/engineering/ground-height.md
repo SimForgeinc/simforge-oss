@@ -93,16 +93,26 @@ exists only for the ingest report.
 
 ## Consumers
 
-The rollout across consumers is tracked in the "Rollout" section below.
+| consumer | z / pitch / roll | notes |
+|---|---|---|
+| engine (native, WASM, Python) | `engine::contact` on `GroundSurface` every tick | `RunOptions.ground`; `MapAsset.attach_ground` / `MapBundle.attachGround(bytes)`; trace v5 `contact` + `header.groundDigest`; the map closure digest includes the ground |
+| render timeline | copied from the trace, or derived with the same solver for older traces | `ground-contact/v1`, `contactOrigin`; `buildRenderTimeline({ground})`, WASM `RenderTimeline.buildOnGround`, Python `build_timeline(ground_mesh=)` |
+| Bevy | the timeline pose; body attitude on the `body` node, `wheelDropM` on `wheel_*` | scene-state `bodyAttitude`, `wheelDropM`, `wheelSpinRad` |
+| editor, drive mode | the engine's contact (session snapshots carry `contact`) | map descriptor `ground` (member + ingest status) |
+| CARLA | the timeline pose | unchanged path |
+
+Map versions published before the ground derivative keep simulating without
+contact (their pins and simulation keys are unchanged); their timelines are
+labelled `legacy-xodr-elevation`.
 
 ## Rollout
 
-1. Derivative, Rust surface, ingest gates and the Richmond fixture
-   (`fixtures/golden-traces/maps/richmond-field-station/derived/ground`).
-2. The engine owns vertical contact: trace v5 carries z, pitch and roll
-   (ENGINE_SEM_VER 0.11.0).
-3. The timeline uses height source `trace-contact/v1` under sampler version
-   `simforge.timeline-sampler/2`.
-4. Consumers:
-   - the editor and drive mode read the engine's z;
-   - Bevy, CARLA and the render contact gate.
+1. Derivative, Rust surface, ingest gates, the Richmond fixture: done.
+2. Engine contact, trace v5, ENGINE_SEM_VER 0.11.0, goldens: done.
+3. Timeline sampler/2 with the body-node split, two-wheeler lean and
+   `wheelSpinRad`: done.
+4. Bindings, TS closure loading, `SIMULATION_MAP_MEMBERS`, Bevy
+   articulation: done. Editor and drive-mode presentation of engine contact
+   and removal of the viewer's `?? 0` height paths: next.
+5. New map versions carrying `derived/ground` (with the refitted XODRs) on
+   dev; a render contact gate.
