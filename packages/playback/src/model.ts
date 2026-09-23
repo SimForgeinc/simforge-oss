@@ -217,7 +217,7 @@ export interface SampledActor {
   readonly wheelAngularSpeedRadps?: number;
   /**
    * Distance travelled, metres: the render timeline's `wheelSpinRad` rule
-   * (Σ |speed|·dt over present ticks after spawn) interpolated to the sample
+   * (Σ signed speed·dt over present ticks after spawn) interpolated to the sample
    * time. Ridden two-wheelers phase their pedal/wheel clip by it.
    */
   readonly odometerM?: number;
@@ -788,7 +788,7 @@ const odometersByTrace = new WeakMap<SceneTrace, Map<string, Float64Array>>();
 
 /**
  * Per-tick odometer of one actor, metres. Mirrors the render timeline's
- * `wheelSpinRad · 0.35`: a tick adds `|speed|·dt` when the actor is present
+ * `wheelSpinRad · 0.35`: a tick adds signed `speed·dt` when the actor is present
  * on it and on the tick before (the spawn tick adds nothing), and the sum
  * carries across despawn/respawn gaps.
  */
@@ -807,7 +807,11 @@ export function actorOdometer(trace: SceneTrace, actorId: string): Float64Array 
   let distance = 0;
   for (let i = 0; i < times.length; i++) {
     if (i > 0 && Number(track.present[i]) !== 0 && Number(track.present[i - 1]) !== 0) {
-      distance += Math.abs(track.speedMps[i] as number) * ((times[i] as number) - (times[i - 1] as number));
+      // The timeline's signed speed: a negative sample stays negative, a
+      // positive one takes the tick's motion direction (reversing runs back).
+      const raw = track.speedMps[i] as number;
+      const signed = raw < 0 ? raw : raw * (track.motionDirection?.[i] === -1 ? -1 : 1);
+      distance += signed * ((times[i] as number) - (times[i - 1] as number));
     }
     odometer[i] = distance;
   }

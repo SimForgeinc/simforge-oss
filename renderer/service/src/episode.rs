@@ -96,7 +96,7 @@ impl Episode {
         }
         let mut authored = Vec::with_capacity(document.frames.len());
         // Odometer per actor, the render timeline's `wheelSpinRad` rule over this
-        // contiguous source interval: Σ |v|·dt on ticks after spawn. It phases
+        // contiguous source interval: Σ signed speed·dt on ticks after spawn. It phases
         // ridden two-wheelers deterministically from the document alone.
         let mut odometer: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
         for frame in &document.frames {
@@ -112,7 +112,13 @@ impl Episode {
                 }
                 let distance = odometer.entry(pose.id.clone()).or_insert(0.0);
                 if matches!(pose.kind, ActorTickKind::Update) {
-                    *distance += pose.velocity.iter().map(|v| v * v).sum::<f64>().sqrt() / hz;
+                    // Signed like the timeline's speed: travelling rear-first
+                    // (velocity against the body's +X) runs the odometer back.
+                    let [x, y, z, w] = pose.rotation;
+                    let forward = [1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y + z * w), 2.0 * (x * z - y * w)];
+                    let along: f64 = pose.velocity.iter().zip(forward).map(|(v, f)| v * f).sum();
+                    let speed = pose.velocity.iter().map(|v| v * v).sum::<f64>().sqrt();
+                    *distance += if along < 0.0 { -speed } else { speed } / hz;
                 }
                 let wheel_spin_rad = Some(*distance / render_core::vehicle_model::TIMELINE_WHEEL_RADIUS_M);
                 actors.push(ActorState {

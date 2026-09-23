@@ -402,15 +402,19 @@ describe('SimForge concrete playback import', () => {
   });
 
   it('carries an odometer with the render timeline wheelSpinRad rule', () => {
-    // Reversing still turns the wheels; the spawn tick and absent ticks add nothing.
+    // Reversing runs the odometer back (signed speed, or motionDirection -1);
+    // the spawn tick and absent ticks add nothing.
     const gapped = {
-      ticks: { t: [0, 1, 2, 3, 4], actors: { bike: { present: [1, 1, 0, 1, 1], speedMps: [-10, -10, -4, -4, 2] } } },
+      ticks: { t: [0, 1, 2, 3, 4, 5], actors: { bike: {
+        present: [1, 1, 0, 1, 1, 1], speedMps: [-10, -10, -4, -4, 2, 3], motionDirection: [1, 1, 1, 1, 1, -1],
+      } } },
     } as unknown as Parameters<typeof actorOdometer>[0];
-    expect([...actorOdometer(gapped, 'bike')]).toEqual([0, 10, 10, 10, 12]);
+    expect([...actorOdometer(gapped, 'bike')]).toEqual([0, -10, -10, -10, -8, -11]);
     const fixture = pair();
     const bundle = parsePlaybackPair(fixture.instance, fixture.trace);
     const sampled = samplePlaybackActors(bundle, 0.5);
-    expect(sampled.find((actor) => actor.id === 'ego')!.odometerM).toBeCloseTo(5, 9);
+    // The fixture ego drives at 10 m/s with motionDirection -1: 5 m backwards.
+    expect(sampled.find((actor) => actor.id === 'ego')!.odometerM).toBeCloseTo(-5, 9);
     // A static actor has no odometer: a parked bike shows the clip's first pose.
     expect(sampled.find((actor) => actor.id === 'bus')!.odometerM).toBeUndefined();
   });
