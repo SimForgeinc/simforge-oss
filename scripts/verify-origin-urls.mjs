@@ -44,14 +44,21 @@ const EXEMPT_BASE = /^(import\.meta\.url|(window\.|globalThis\.|self\.)?(locatio
 
 /**
  * @type {Record<string, number>} matches still tolerated per file; removed by
- * the authority migration. The redirect-following sites (`new URL(location,
- * current)`) resolve a `Location` header against the URL just fetched and
- * stay; every other entry is an unbranded host or Cloud authority.
+ * the authority migration. Three kinds stay because they are not a host or
+ * Cloud authority at all: redirect following (`new URL(location, current)`
+ * resolves a `Location` header against the URL just fetched), the worker's
+ * one object-URL rule (`studio/worker/object-url.ts`, which resolves a URL the
+ * host handed out against that same host and replaced the separate sites in
+ * `compiler.ts` and `http-client.ts`), and non-network or non-Studio bases (an
+ * in-process synthetic origin whose Requests go straight to a route handler;
+ * the loopback jevdrive sidecar). Every other entry is an unbranded host or
+ * Cloud authority.
  */
 const ALLOWED = {
   "packages/cli/src/commands/cloud-eval.ts": 1,
   "packages/cli/src/commands/render-jobs.ts": 1,
   "packages/cli/src/commands/scenario.ts": 2,
+  "studio/app/api/simforge/drive/jev/route.ts": 1,
   "studio/app/lib/cloud/access.ts": 1,
   "studio/app/lib/cloud/connection.ts": 5,
   "studio/app/lib/cloud/storage.ts": 1,
@@ -59,11 +66,12 @@ const ALLOWED = {
   "studio/app/lib/map-cache/transfer.ts": 1,
   "studio/app/lib/s3/s3-presign.ts": 1,
   "studio/app/lib/scenario/routes.ts": 1,
+  "studio/app/lib/scenario/sim-closure.server.ts": 2,
   "studio/desktop/map-cache.mjs": 2,
   "studio/desktop/update-check.mjs": 1,
   "studio/scripts/bootstrap-public-maps.ts": 1,
-  "studio/worker/compiler.ts": 2,
-  "studio/worker/http-client.ts": 1,
+  "studio/worker/compiler.ts": 1,
+  "studio/worker/object-url.ts": 1,
 };
 
 function* files(path) {
