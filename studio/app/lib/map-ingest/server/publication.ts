@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Readable } from "node:stream";
+import { xodrGeometrySha256 } from "@simforge-oss/maps/node";
+import { groundDescriptor, type GroundDescriptor } from "./ground-descriptor";
 import { withTransaction } from "@/app/lib/db/data-api";
 import { streamLocalObject } from "@/app/lib/s3/s3-object";
 import { mapFootprintGeometry, type MapFootprintGeometry } from "@/app/lib/maps/footprint-geometry";
@@ -35,6 +37,11 @@ async function readPrefix(stream: Readable, limit: number): Promise<string> {
     }
   }
   return Buffer.concat(chunks).subarray(0, limit).toString("utf8");
+}
+async function readAll(stream: Readable): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks).toString("utf8");
 }
 const MAP_THUMBNAIL_ARTIFACT_KIND = "map-thumbnail-v2";
 const SHA256 = /^[a-f0-9]{64}$/;
@@ -191,6 +198,22 @@ export async function publishUploadedMapVersion(
   const producer = producerProvenance(input.draftId);
   const xodr = plan.members.find((member) => member.relativePath === "map.xodr");
   let footprint: MapFootprintGeometry | null = null;
+  // Road-geometry identity (the XODR without its vertical profile): equal
+  // digests let a pinned document move to an elevation-only republication
+  // (docs/engineering/xodr-elevation-refit.md, document-pinning.md). A read
+  // failure fails the publication.
+  const geometrySha256 = xodr ? xodrGeometrySha256(await readAll(streamLocalObject(xodr.bucket, xodr.key))) : null;
+  // Ground derivative (engine 0.11 contact): the ingest validation recorded
+  // next to the mesh member it describes (`descriptor.ground`, read by
+  // listScenarioMapDescriptors). A manifest that names a different mesh
+  // fails the publication.
+  const groundManifestMember = plan.members.find((member) => member.relativePath === "derived/ground/ground-manifest.json");
+  const groundMeshMember = plan.members.find((member) => member.relativePath === "derived/ground/ground-mesh.bin");
+  let ground: GroundDescriptor | null = null;
+  if (groundManifestMember || groundMeshMember) {
+    if (!groundManifestMember || !groundMeshMember) throw new Error("ground_derivative_incomplete: derived/ground needs both ground-manifest.json and ground-mesh.bin");
+    ground = groundDescriptor(await readAll(streamLocalObject(groundManifestMember.bucket, groundManifestMember.key)), groundMeshMember.sha256);
+  }
   if (xodr) {
     try {
       footprint = mapFootprintGeometry(
@@ -357,6 +380,8 @@ export async function publishUploadedMapVersion(
           reportSha256: digest("derived/sumo/sumo-build-report.json"),
         }
         : { state: "missing", reason: "This map revision was published without a SUMO road network." },
+      ...(geometrySha256 ? { xodrGeometrySha256: geometrySha256 } : {}),
+      ...(ground ? { ground } : {}),
       artifactDigests: {
         xodrSha256: digest("map.xodr"),
         topologySha256: digest("topology-index.json.gz"),
