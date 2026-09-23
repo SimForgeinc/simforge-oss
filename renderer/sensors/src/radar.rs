@@ -44,7 +44,7 @@ impl RadarConfig {
     ) -> RadarConfig {
         let per_frame = pps
             .map(|p| ((p as f32 / tick_hz.max(1e-6)).round() as u32).max(64))
-            .unwrap_or(256);
+            .unwrap_or(256); // fallback-ok: sensor-capture harness budget; the render service uses from_points_per_second
         let side = ((per_frame as f32).sqrt().round() as u32).max(4);
         RadarConfig { hfov_deg, vfov_deg, range_m, azimuth_rays: side, elevation_rows: side }
     }

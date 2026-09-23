@@ -166,7 +166,7 @@ pub fn run_job(job: &RenderJob) -> Result<RenderResults> {
     let mut geoms: HashMap<String, CamGeom> = HashMap::new();
     for entry in &job.schedule {
         for cam in &entry.cameras {
-            let profile = cam.profile.unwrap_or(job.profile);
+            let profile = cam.profile.unwrap_or(job.profile); // fallback-ok: documented: a camera without a profile uses the job profile
             match geoms.get(&cam.sensor_id) {
                 Some(g) => {
                     if g.width != cam.width

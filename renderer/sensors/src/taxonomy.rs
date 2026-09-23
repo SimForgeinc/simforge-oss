@@ -63,7 +63,7 @@ impl SemanticClass {
 
     /// Classify a scenario-model actor class/kind string.
     pub fn from_actor_class(actor_class: &str) -> SemanticClass {
-        Self::try_from_actor_class(actor_class).unwrap_or(SemanticClass::Prop)
+        Self::try_from_actor_class(actor_class).unwrap_or(SemanticClass::Prop) // fallback-ok: lenient mapping for the sensor-capture harness; the render service uses try_from_actor_class
     }
 
     /// Strict actor-class mapping (every class the render engine emits:

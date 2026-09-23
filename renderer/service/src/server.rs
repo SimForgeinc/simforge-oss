@@ -94,7 +94,7 @@ impl SceneSpec {
         match self.capture_clock.as_deref() {
             None | Some("free") => Ok(render_core::engine::CaptureClock::Free),
             Some("pinned") => {
-                let samples = self.taa_samples.unwrap_or(4);
+                let samples = self.taa_samples.unwrap_or(4); // fallback-ok: documented pinned-clock default; the samples used are recorded in the capture manifest
                 anyhow::ensure!((1..=16).contains(&samples), "taaSamples must be 1..=16, got {samples}");
                 Ok(render_core::engine::CaptureClock::Pinned { samples })
             }
@@ -321,7 +321,7 @@ fn load_cached_sensor_scenes(dir: &Path, key: &str) -> Option<MapSensorScenes> {
             // Touch for the keep-newest pruning.
             let now = std::time::SystemTime::now();
             for path in [&static_path, &road_path] {
-                let _ = std::fs::File::options().append(true).open(path).and_then(|file| file.set_modified(now));
+                let _ = std::fs::File::options().append(true).open(path).and_then(|file| file.set_modified(now)); // fallback-ok: sensor-scene cache LRU touch; a cache is an optimisation, bytes are identical
             }
             Some(MapSensorScenes { static_scene, road })
         }
@@ -341,7 +341,7 @@ fn free_bytes(dir: &Path) -> Option<u64> {
     #[cfg(unix)]
     {
         use std::os::unix::ffi::OsStrExt;
-        let path = std::ffi::CString::new(dir.as_os_str().as_bytes()).ok()?;
+        let path = std::ffi::CString::new(dir.as_os_str().as_bytes()).ok()?; // fallback-ok: free-space probe for the optional sensor-scene cache
         let mut stat: libc::statvfs = unsafe { std::mem::zeroed() };
         if unsafe { libc::statvfs(path.as_ptr(), &mut stat) } != 0 {
             return None;
@@ -350,7 +350,7 @@ fn free_bytes(dir: &Path) -> Option<u64> {
     }
     #[cfg(not(unix))]
     {
-        let _ = dir;
+        let _ = dir; // fallback-ok: unused on this platform
         None
     }
 }
@@ -385,22 +385,22 @@ fn store_cached_sensor_scenes(dir: &Path, key: &str, scenes: &MapSensorScenes) -
             std::fs::rename(&tmp, &path)
         })();
         if let Err(error) = written {
-            let _ = std::fs::remove_file(&tmp);
+            let _ = std::fs::remove_file(&tmp); // fallback-ok: cache temp cleanup after a failed write (the error is returned)
             return Err(error);
         }
     }
     let mut entries: Vec<(std::time::SystemTime, String)> = std::fs::read_dir(dir)?
-        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| entry.ok()) // fallback-ok: cache pruning scan; unreadable entries are simply not pruned
         .filter_map(|entry| {
-            let name = entry.file_name().into_string().ok()?;
+            let name = entry.file_name().into_string().ok()?; // fallback-ok: cache pruning scan
             let key = name.strip_suffix(".static.bvh")?.to_string();
-            Some((entry.metadata().ok()?.modified().ok()?, key))
+            Some((entry.metadata().ok()?.modified().ok()?, key)) // fallback-ok: cache pruning scan
         })
         .collect();
     entries.sort_by(|a, b| b.0.cmp(&a.0));
     for (_, stale) in entries.into_iter().skip(SENSOR_SCENE_CACHE_KEEP) {
         for suffix in ["static", "road"] {
-            let _ = std::fs::remove_file(dir.join(format!("{stale}.{suffix}.bvh")));
+            let _ = std::fs::remove_file(dir.join(format!("{stale}.{suffix}.bvh"))); // fallback-ok: cache pruning; failure leaves an extra cache entry
         }
     }
     Ok(true)
@@ -673,7 +673,7 @@ impl ServiceState {
             if self.sync_sensor_cache_writes {
                 write();
             } else {
-                std::thread::Builder::new().name("sensor-cache-write".into()).spawn(write).ok();
+                std::thread::Builder::new().name("sensor-cache-write".into()).spawn(write).ok(); // fallback-ok: background cache write; a failure only loses the optimisation
             }
         }
         self.sensor_scenes = Some(scenes);
@@ -760,7 +760,7 @@ impl ServiceState {
             sensor_cache_dir: spec
                 .sensor_cache_dir
                 .clone()
-                .or_else(|| std::env::var("SIMFORGE_NATIVE_SENSOR_CACHE_DIR").ok().filter(|dir| !dir.is_empty()))
+                .or_else(|| std::env::var("SIMFORGE_NATIVE_SENSOR_CACHE_DIR").ok().filter(|dir| !dir.is_empty())) // fallback-ok: optional cache location from the environment
                 .map(PathBuf::from),
             overlap_sensors: std::env::var("SIMFORGE_NATIVE_SERIAL_SENSORS").map_or(true, |value| value.is_empty() || value == "0"),
             vehicle_models,
@@ -985,7 +985,7 @@ fn read_ready(connection: &mut crate::endpoint::Connection, buf: &mut [u8]) -> R
     }
     #[cfg(not(unix))]
     {
-        let _ = (connection, buf);
+        let _ = (connection, buf); // fallback-ok: unused on this platform
         Ok(None)
     }
 }
@@ -997,7 +997,7 @@ fn read_ready(connection: &mut crate::endpoint::Connection, buf: &mut [u8]) -> R
 fn pipelined_bundle(state: &ServiceState, request: &WireRequest) -> bool {
     match &request.body {
         RequestBody::RenderBundle { pipeline, device_sensors, passes, .. } => {
-            pipeline.unwrap_or(false)
+            pipeline.unwrap_or(false) // fallback-ok: documented optional request flag
                 && device_sensors.as_ref().is_none_or(Vec::is_empty)
                 && passes.as_ref().is_none_or(|passes| !passes.iter().any(|pass| pass == "semantic"))
                 && state.episode.is_none()
@@ -1011,7 +1011,7 @@ fn bundle_request(request: WireRequest) -> BundleRequest {
     match request.body {
         RequestBody::RenderBundle { sim_tick, cameras, lidars, radars, tick_index, passes, device_sensors, sim_time_s, observe, .. } => BundleRequest {
             i, sim_tick, cameras, lidars, radars, tick_index, passes,
-            device_sensors: device_sensors.unwrap_or_default(), sim_time_s, observe: observe.unwrap_or(false),
+            device_sensors: device_sensors.unwrap_or_default(), sim_time_s, observe: observe.unwrap_or(false), // fallback-ok: documented optional request fields (none requested)
         },
         _ => unreachable!("bundle_request on a non-bundle request"),
     }
@@ -1047,11 +1047,19 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
                 return WireResponse::error(i,"declared occupancy requires at least one lidar");
             }
             for camera in &mut cameras {
-                camera.width=episode.consumer.width;
-                camera.height=episode.consumer.height;
+                // The consumer product defines the policy image; a camera that
+                // asks for something else is refused, not silently rewritten.
+                if (camera.width,camera.height)!=(episode.consumer.width,episode.consumer.height)
+                    || camera.profile.is_some_and(|profile| profile!=Profile::Cinematic)
+                    || camera.semantic
+                    || camera.depth_encoding.is_some()
+                {
+                    return WireResponse::error(i,format!(
+                        "[native_episode_camera_conflict] camera {} asks for {}x{} {:?} semantic={} depth={:?}; policy episodes render {}x{} cinematic rgb (depth via the consumer spec)",
+                        camera.sensor_id,camera.width,camera.height,camera.profile,camera.semantic,camera.depth_encoding,
+                        episode.consumer.width,episode.consumer.height));
+                }
                 camera.profile=Some(Profile::Cinematic);
-                camera.semantic=false;
-                camera.depth_encoding=None;
                 if camera.attach.as_ref().is_some_and(|mount| mount.roll_deg!=0.0) {
                     return WireResponse::error(i,"SceneApp eye/target cameras do not support calibrated roll");
                 }
@@ -1174,7 +1182,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
         }
         RequestBody::SetLighting { lighting, profile_config, advance } => {
             let started = std::time::Instant::now();
-            let profile_config = profile_config.unwrap_or(state.profile_config);
+            let profile_config = profile_config.unwrap_or(state.profile_config); // fallback-ok: documented: a relight without settings keeps the ones in force
             let outcome = if advance {
                 state.app.advance_lighting(&lighting, profile_config)
             } else {
@@ -1236,7 +1244,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
         } => {
             let request = BundleRequest {
                 i, sim_tick, cameras, lidars, radars, tick_index, passes,
-                device_sensors: device_sensors.unwrap_or_default(), sim_time_s, observe: observe.unwrap_or(false),
+                device_sensors: device_sensors.unwrap_or_default(), sim_time_s, observe: observe.unwrap_or(false), // fallback-ok: documented optional request fields (none requested)
             };
             match begin_bundle(state, request) {
                 Ok(flight) => finish_bundle(state, flight),
@@ -1532,7 +1540,7 @@ fn apply_actor_model(
             format!(
                 "[native_actor_animation_missing] actor {} ({}) is {motion}ing but its catalog model binds no {motion:?} clip (has {:?})",
                 actor.id,
-                actor.catalog_id.as_deref().unwrap_or("-"),
+                actor.catalog_id.as_deref().unwrap_or("-"), // fallback-ok: error message text only
                 { let mut names: Vec<_> = model.animations.keys().collect(); names.sort(); names }
             )
         })?;
@@ -1797,7 +1805,7 @@ fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera) {
         far: state.far_m,
         passes: SERVICE_PASSES,
     };
-    let profile = cam.profile.unwrap_or(state.profile);
+    let profile = cam.profile.unwrap_or(state.profile); // fallback-ok: documented: a camera without a profile uses the scene profile
     if state.app.camera(&cam.sensor_id) == Some((&spec, profile)) {
         return;
     }
@@ -2372,7 +2380,7 @@ pub(crate) fn begin_bundle(state: &mut ServiceState, request: BundleRequest) -> 
     let mut stages = crate::proto::BundleStages::default();
     let ms = |since: std::time::Instant| since.elapsed().as_secs_f64() * 1000.0;
     // Default rgb-only: the policy hot loop.
-    let requested = passes.unwrap_or_else(|| vec!["rgb".to_string()]);
+    let requested = passes.unwrap_or_else(|| vec!["rgb".to_string()]); // fallback-ok: documented protocol default: rgb-only bundles
     let (want, want_id_output, want_semantic) = parse_bundle_passes(&requested).map_err(|error| WireResponse::error(i, error))?;
     for cam in cameras.iter().flatten() {
         upsert_rig(state, cam).map_err(|error| WireResponse::error(i, error))?;
@@ -2491,7 +2499,7 @@ pub(crate) fn finish_bundle(state: &mut ServiceState, flight: BundleInFlight) ->
         Ok(captured) => captured,
         Err(error) => {
             if let Some(scan) = scan {
-                let _ = scan.join();
+                let _ = scan.join(); // fallback-ok: the render already failed; the scan result is discarded with it
             }
             return WireResponse::error(i, format!("render: {error:#}"));
         }
