@@ -984,7 +984,13 @@ export async function revisionMotion(workspaceId: string, revisionId: string): P
        SELECT 1 FROM simforge.execution_packages ep
          JOIN simforge.artifacts xosc ON xosc.id = ep.xosc_artifact_id AND xosc.workspace_id = ep.workspace_id
           AND xosc.artifact_state = 'available'
+         JOIN simforge.artifacts xodr ON xodr.id = ep.xodr_artifact_id
+         JOIN simforge.revisions r ON r.id = ep.revision_id AND r.workspace_id = ep.workspace_id
+         JOIN simforge.map_versions mv ON mv.id = r.map_version_id
         WHERE ep.workspace_id = :workspace_id AND ep.revision_id = :revision_id
+          -- The export replays on the revision's roads only if it was compiled
+          -- against them: a revision re-pointed to another map is not offered it.
+          AND xodr.sha256 = mv.xodr_sha256
      ) AS available`,
     { workspace_id: workspaceId, revision_id: revisionId },
   );
