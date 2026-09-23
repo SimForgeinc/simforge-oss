@@ -1,3 +1,4 @@
+"""XODR road surface vs the cooked CARLA ground, sampled along driving-lane centres.
 
 Runs inside a CARLA worker container. For each (world, label, xodr) it loads the
 world, walks every driving lane centre every STEP metres, computes the XODR surface
@@ -65,6 +66,7 @@ for world, items in jobs.items():
                 ground = []
                 for hit in hits:
                     name = str(hit.label)
+                    # fallback-ok: offline measurement counter starts at zero
                     labels_seen[name] = labels_seen.get(name, 0) + 1
                     if name in GROUND_LABELS:
                         ground.append(hit.location.z)
@@ -83,6 +85,7 @@ for world, items in jobs.items():
                 if mesh - z > 3.0:
                     # Only a deck far above the lane: a grade-separated structure over it
                     # (the lower surface is occluded for this ray). Excluded, recorded.
+                    # fallback-ok: offline measurement counter starts at zero
                     overpass[road.id] = overpass.get(road.id, 0) + 1
                     continue
                 residuals.append(z - mesh)

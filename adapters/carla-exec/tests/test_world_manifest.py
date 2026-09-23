@@ -211,7 +211,7 @@ def test_validate_rejects_a_world_bound_twice_and_unbound_signal_maps(tmp_path):
         world_manifest.validate(twice)
     stray = json.loads(json.dumps(manifest))
     {e["sourceFolder"]: e for e in stray["maps"]}["Changed"]["signalIdMap"] = {"1": "2"}
-    with pytest.raises(ValueError, match="must not carry a signal id map"):
+    with pytest.raises(ValueError, match="must not carry signal bindings"):
         world_manifest.validate(stray)
 
 
@@ -351,7 +351,7 @@ def test_parity_substitutions_must_agree_with_the_object_catalog():
     from simforge_oss_carla_exec import actor_bindings
     with pytest.raises(ValueError, match="binds vehicle.bicycle"):
         actor_bindings.generate(_object_catalog(), "0" * 64,
-                                {"substitutions": {"vehicle.bicycle": {"carla": "vehicle.diamondback.century"}}}, "1" * 64)
+                                {"substitutions": {"vehicle.bicycle": {"carla": "vehicle.diamondback.century", "reason": "r"}}}, "1" * 64)
 
 
 def test_checked_in_actor_binding_table_covers_the_dev_road_users():

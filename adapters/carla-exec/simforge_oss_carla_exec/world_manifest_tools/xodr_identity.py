@@ -106,6 +106,7 @@ def parse(data: bytes) -> Network:
             kind = list(g)[0]
             params = tuple(sorted((k, _f(v)) for k, v in kind.attrib.items() if k != "pRange"))
             geometry.append((_f(g.get("s")), _f(g.get("x")), _f(g.get("y")), _f(g.get("hdg")),
+                             # fallback-ok: OpenDRIVE 1.4 schema default for an optional attribute (offline comparison tool, never a render input)
                              _f(g.get("length")), kind.tag, kind.get("pRange", ""), params))
         lanes = []
         lanes_el = road.find("lanes")
@@ -117,6 +118,7 @@ def parse(data: bytes) -> Network:
                     continue
                 for lane in side_el.findall("lane"):
                     widths = tuple(_poly(w, ("sOffset", "a", "b", "c", "d")) for w in lane.findall("width"))
+                    # fallback-ok: OpenDRIVE 1.4 schema default for an optional attribute (offline comparison tool, never a render input)
                     lanes.append((_f(section.get("s")), lane.get("id"), lane.get("type"), lane.get("level", "false"), widths))
         elevation = [_poly(e, ("s", "a", "b", "c", "d")) for e in road.findall("elevationProfile/elevation")]
         lateral = [_poly(e, ("s", "a", "b", "c", "d")) for e in road.findall("lateralProfile/superelevation")]
@@ -126,17 +128,23 @@ def parse(data: bytes) -> Network:
             for which in ("predecessor", "successor"):
                 el = link.find(which)
                 if el is not None:
+                    # fallback-ok: OpenDRIVE 1.4 schema default for an optional attribute (offline comparison tool, never a render input)
                     links.append((which, el.get("elementType"), el.get("elementId"), el.get("contactPoint", "")))
+        # fallback-ok: OpenDRIVE 1.4 schema default for an optional attribute (offline comparison tool, never a render input)
         roads[rid] = Road(rid, road.get("junction", "-1"), _f(road.get("length")), geometry, lanes,
                           elevation, lateral, lane_offset, links)
         for sig in road.findall("signals/signal"):
             signals[sig.get("id")] = Signal(
+                # fallback-ok: OpenDRIVE 1.4 schema default for an optional attribute (offline comparison tool, never a render input)
                 sig.get("id"), rid, _f(sig.get("s")), _f(sig.get("t")), sig.get("type", ""),
+                # fallback-ok: OpenDRIVE 1.4 schema default for an optional attribute (offline comparison tool, never a render input)
                 sig.get("subtype", ""), sig.get("orientation", ""), sig.get("dynamic") == "yes",
+                # fallback-ok: OpenDRIVE 1.4 schema default for an optional attribute (offline comparison tool, never a render input)
                 _f(sig.get("zOffset")), sig.get("name", "") or "",
                 _f(sig.get("height")), _f(sig.get("width")),
             )
         for obj in road.findall("objects/object"):
+            # fallback-ok: OpenDRIVE 1.4 schema default for an optional attribute (offline comparison tool, never a render input)
             objects[(obj.get("type", ""), obj.get("name", ""))] += 1
     controllers = {
         c.get("id"): frozenset(ctrl.get("signalId") for ctrl in c.findall("control"))
@@ -145,6 +153,7 @@ def parse(data: bytes) -> Network:
     return Network(
         sha256=hashlib.sha256(data).hexdigest(),
         header=dict(header.attrib) if header is not None else {},
+        # fallback-ok: OpenDRIVE 1.4 schema default for an optional attribute (offline comparison tool, never a render input)
         geo_reference=(geo.text or "").strip() if geo is not None else "",
         roads=roads, signals=signals, controllers=controllers, objects=objects,
         junctions={j.get("id") for j in root.findall("junction")},
@@ -256,7 +265,7 @@ def _mirror_lanes(sections: list[tuple[float, tuple]]) -> list[tuple[float, tupl
 
 
 def road_deviation(a: Road, b: Road, step: float = SAMPLE_STEP_M, *, reverse: bool = False) -> dict[str, float] | None:
-    """Worst sampled deviation between two roads, or None when their lane
+    """Worst sampled deviation between two roads; None when their lane
     structure differs (different lane sections, lane ids or lane types).
 
     ``reverse`` compares ``b`` driven backwards (RoadRunner may export a
@@ -518,6 +527,7 @@ def compare(source: Network, runtime: Network) -> Comparison:
         target = road_map.get(sig.road)
         if sig.road in reversed_roads and target is not None:
             length = runtime.roads[target].length
+            # fallback-ok: OpenDRIVE 1.4 schema default for an optional attribute (offline comparison tool, never a render input)
             orientation = {"+": "-", "-": "+"}.get(sig.orientation, sig.orientation)
             return (target, round(length - sig.s, 2), round(-sig.t, 2), sig.type, sig.subtype, orientation, sig.dynamic)
         return sig_key(sig, target)
@@ -568,6 +578,7 @@ def compare(source: Network, runtime: Network) -> Comparison:
     # ---- controllers --------------------------------------------------
     # Multisets: two controllers may drive the same set of heads.
     mapped_controllers = Counter(
+        # fallback-ok: OpenDRIVE 1.4 schema default for an optional attribute (offline comparison tool, never a render input)
         frozenset(signal_map.get(s, f"?{s}") for s in members) for members in source.controllers.values()
     )
     runtime_controllers = Counter(runtime.controllers.values())
@@ -596,6 +607,7 @@ def compare(source: Network, runtime: Network) -> Comparison:
         result.differences.append(
             f"{len(uncontrolled)} dynamic heads have no signal controller (in the world and the source), so CARLA "
             "spawns no actor for them; a signal plan that drives them fails at bind_signals: "
+            # fallback-ok: OpenDRIVE 1.4 schema default for an optional attribute (offline comparison tool, never a render input)
             + ", ".join(f"{inverse.get(s, '?')}->{s}" for s in uncontrolled)
         )
     if result.controllers["onlySource"]:

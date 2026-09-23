@@ -42,14 +42,16 @@
     "2288": "2295",
     "2289": "2296"
    },
-   "sourceXodrSha256": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a"
+   "sourceXodrSha256": "00293fb5a40e6665257770f20eddbd0cbd711b301cce17496544c0e1fa15900a",
+   "unownedCookedSignalIds": []
   },
   {
    "carlaWorld": "Belmont_Office_Park_Belmont_CA",
    "cookedXodrSha256": "a345d71de6cee091ee7d2ad4d0dfbf0a49db59ab9927cd22d4dd0dcd3e3eca4d",
    "note": "Belmont pre-2026-08-27 export; runtime digest measured 2026-09-22 on the carla-rfs-munich-belmont 0.10.0 cook",
    "signalIdMap": {},
-   "sourceXodrSha256": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63"
+   "sourceXodrSha256": "35cf2b16a1d308c6436089a0edf66f20c87a79da12e79472a03a2f568ba28f63",
+   "unownedCookedSignalIds": []
   },
   {
    "carlaWorld": "Richmond_Field_Station_Richmond_CA",
@@ -123,7 +125,8 @@
     "1549": "1693",
     "1550": "1704"
    },
-   "sourceXodrSha256": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5"
+   "sourceXodrSha256": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+   "unownedCookedSignalIds": []
   }
  ],
  "maps": [
@@ -211,6 +214,8 @@
     "name": "Belmont_Office_Park_Belmont_CA_GLB.glb",
     "sha256": "84cd25007830e14988c48bd3157afff0f202cc0bd0addb34bcfe0f7c10bf1d3a"
    },
+   "hold": null,
+   "reason": null,
    "signalIdMap": {},
    "simforge": {
     "dev": {
@@ -232,8 +237,8 @@
       {
        "createdAt": "2026-09-20 21:59:56.278094+00",
        "dependents": {
-        "documents": 982,
-        "drafts": 982,
+        "documents": 989,
+        "drafts": 989,
         "revisions": 3,
         "simulationPreviews": 9
        },
@@ -262,10 +267,10 @@
       {
        "createdAt": "2026-09-20 23:55:00.086217+00",
        "dependents": {
-        "documents": 973,
-        "drafts": 973,
+        "documents": 975,
+        "drafts": 975,
         "revisions": 4,
-        "simulationPreviews": 5
+        "simulationPreviews": 8
        },
        "id": "usmap_03acd4170256057b3f3bf4a9e6eea5c6",
        "retiredAt": null
@@ -276,6 +281,7 @@
    },
    "sourceFolder": "Belmont_Office_Park_Belmont_CA",
    "status": "needs-recook",
+   "unownedCookedSignalIds": [],
    "worldMatch": {
     "candidates": [
      {
@@ -552,6 +558,8 @@
     "name": "Di_Rosa_SF.glb",
     "sha256": "ee0870bc1b6319c91058cb28df1ab206053947b0303cc1e321f1068c4177b906"
    },
+   "hold": null,
+   "reason": null,
    "signalIdMap": {},
    "simforge": {
     "dev": {
@@ -603,10 +611,10 @@
       {
        "createdAt": "2026-09-20 23:58:26.938361+00",
        "dependents": {
-        "documents": 8,
-        "drafts": 8,
+        "documents": 14,
+        "drafts": 14,
         "revisions": 0,
-        "simulationPreviews": 0
+        "simulationPreviews": 5
        },
        "id": "usmap_d3ae297f295df19f9e5ed61b1d36368b",
        "retiredAt": null
@@ -617,6 +625,7 @@
    },
    "sourceFolder": "Di_Rosa_SF",
    "status": "needs-recook",
+   "unownedCookedSignalIds": [],
    "worldMatch": {
     "candidates": [
      {
@@ -802,6 +811,8 @@
     "name": "El_Camino_Rd_Palo_Alto_CA_GLB.glb",
     "sha256": "c5aee79482c9a6554af208772c2027e753c16fecda1bb2b68d562563fa72227f"
    },
+   "hold": null,
+   "reason": null,
    "signalIdMap": {},
    "simforge": {
     "dev": {
@@ -853,10 +864,10 @@
       {
        "createdAt": "2026-09-21 00:01:09.449415+00",
        "dependents": {
-        "documents": 827,
-        "drafts": 827,
+        "documents": 828,
+        "drafts": 828,
         "revisions": 4,
-        "simulationPreviews": 4
+        "simulationPreviews": 5
        },
        "id": "usmap_34209b2ae639f8aa5bc052c5f90432c5",
        "retiredAt": null
@@ -867,6 +878,7 @@
    },
    "sourceFolder": "El_Camino_Rd_Palo_Alto_CA",
    "status": "needs-recook",
+   "unownedCookedSignalIds": [],
    "worldMatch": {
     "candidates": [
      {
@@ -894,7 +906,9 @@
    }
   },
   {
+   "blocking": [],
    "carlaWorld": null,
+   "decisionRequired": [],
    "extraFiles": [],
    "glb": {
     "bytes": 2244638864,
@@ -902,7 +916,9 @@
     "name": "Garching_Phase_1_2.glb",
     "sha256": "318d85ec3b2d3f9bd88824d255b2d42e5c20415d711626adfff6b36faddef9ab"
    },
+   "hold": null,
    "reason": "no cooked world shares this source's geoReference and extent",
+   "signalIdMap": {},
    "simforge": {
     "dev": {
      "carlaMapName": null,
@@ -967,6 +983,7 @@
    },
    "sourceFolder": "Garching_Phase_1_2",
    "status": "no-world",
+   "unownedCookedSignalIds": [],
    "worldMatch": {
     "candidates": [],
     "method": "geoReference+headerBoundsIoU"
@@ -1086,6 +1103,8 @@
     "name": "Richmond_Field_Station_Richmond_CA_GLB.glb",
     "sha256": "dc718925b9b01a1371eb14239b7fc88f97befc79615ecf0c392b359f836a11b5"
    },
+   "hold": null,
+   "reason": null,
    "signalIdMap": {},
    "simforge": {
     "dev": {
@@ -1107,9 +1126,9 @@
       {
        "createdAt": "2026-09-20 22:14:41.862601+00",
        "dependents": {
-        "documents": 663,
-        "drafts": 663,
-        "revisions": 7,
+        "documents": 676,
+        "drafts": 676,
+        "revisions": 9,
         "simulationPreviews": 9
        },
        "id": "usmap_a81a248d69e9b6fda3c5afee075ff83a",
@@ -1137,9 +1156,9 @@
       {
        "createdAt": "2026-09-21 00:14:59.001649+00",
        "dependents": {
-        "documents": 649,
-        "drafts": 649,
-        "revisions": 1,
+        "documents": 650,
+        "drafts": 650,
+        "revisions": 2,
         "simulationPreviews": 4
        },
        "id": "usmap_a81a248d69e9b6fda3c5afee075ff83a",
@@ -1151,6 +1170,7 @@
    },
    "sourceFolder": "Richmond_Field_Station_Richmond_CA",
    "status": "needs-recook",
+   "unownedCookedSignalIds": [],
    "worldMatch": {
     "candidates": [
      {
@@ -1293,6 +1313,8 @@
     "name": "San_Ramon_25_P2.glb",
     "sha256": "7b952e87e39359c5cf7754ee1a9cda0ddbfb7a5e1246a3a03e01b2aa2ffd5c96"
    },
+   "hold": null,
+   "reason": null,
    "signalIdMap": {
     "20292": "20306",
     "20293": "20307",
@@ -1403,7 +1425,7 @@
    },
    "simforge": {
     "dev": {
-     "carlaMapName": null,
+     "carlaMapName": "San_Ramon_Phase_1_P2",
      "label": "San Ramon 25 P2",
      "mapAssetId": "san-ramon-25-p2",
      "mapVersions": [
@@ -1421,8 +1443,8 @@
       {
        "createdAt": "2026-09-20 22:24:19.864548+00",
        "dependents": {
-        "documents": 1,
-        "drafts": 1,
+        "documents": 8,
+        "drafts": 8,
         "revisions": 0,
         "simulationPreviews": 1
        },
@@ -1430,7 +1452,7 @@
        "retiredAt": null
       }
      ],
-     "ue5CarlaMapName": null
+     "ue5CarlaMapName": "San_Ramon_Phase_1_P2"
     },
     "staging": {
      "carlaMapName": null,
@@ -1451,10 +1473,10 @@
       {
        "createdAt": "2026-09-21 00:19:21.38294+00",
        "dependents": {
-        "documents": 0,
-        "drafts": 0,
+        "documents": 1,
+        "drafts": 1,
         "revisions": 0,
-        "simulationPreviews": 0
+        "simulationPreviews": 1
        },
        "id": "usmap_b66053edc0f201102457c7f84b8511f9",
        "retiredAt": null
@@ -1619,6 +1641,8 @@
     "name": "San_Ramon_Phase_1_P1_GLB.glb",
     "sha256": "d8abf369405d0fced6b67799fdff0fcdc883db8ec5c3aeb68520843178b624ae"
    },
+   "hold": null,
+   "reason": null,
    "signalIdMap": {
     "5814": "5794",
     "5815": "5795",
@@ -1771,7 +1795,7 @@
    },
    "simforge": {
     "dev": {
-     "carlaMapName": null,
+     "carlaMapName": "San_Ramon_Phase_1_P1",
      "label": "San Ramon Phase 1",
      "mapAssetId": "san-ramon-phase-1",
      "mapVersions": [
@@ -1789,16 +1813,16 @@
       {
        "createdAt": "2026-09-20 23:03:58.086134+00",
        "dependents": {
-        "documents": 5,
-        "drafts": 5,
-        "revisions": 0,
+        "documents": 11,
+        "drafts": 11,
+        "revisions": 2,
         "simulationPreviews": 1
        },
        "id": "usmap_f29e4b023d53283bf4e451cc19e5bbcc",
        "retiredAt": null
       }
      ],
-     "ue5CarlaMapName": null
+     "ue5CarlaMapName": "San_Ramon_Phase_1_P1"
     },
     "staging": {
      "carlaMapName": null,
@@ -2434,6 +2458,8 @@
     "name": "San_Ramon_Phase_2.glb",
     "sha256": "92f5ef4c7981343d8bc77290e04fa09b3f5a78fa66545e40234c6d288eced795"
    },
+   "hold": null,
+   "reason": null,
    "signalIdMap": {},
    "simforge": {
     "dev": {
@@ -2455,8 +2481,8 @@
       {
        "createdAt": "2026-09-20 23:10:22.809205+00",
        "dependents": {
-        "documents": 3,
-        "drafts": 3,
+        "documents": 6,
+        "drafts": 6,
         "revisions": 0,
         "simulationPreviews": 1
        },
@@ -2499,6 +2525,7 @@
    },
    "sourceFolder": "San_ramon_Phase2",
    "status": "needs-decision",
+   "unownedCookedSignalIds": [],
    "worldMatch": {
     "candidates": [
      {
@@ -2597,10 +2624,12 @@
     "name": "Saratoga_School_Area_GLB.glb",
     "sha256": "0427fd314449a937b471cd9bf7b330da894b5eeb8bd6f9770ed620d39ffdb4c9"
    },
+   "hold": null,
+   "reason": null,
    "signalIdMap": {},
    "simforge": {
     "dev": {
-     "carlaMapName": null,
+     "carlaMapName": "Saratoga_School_Area",
      "label": "Easterbrook Discovery School",
      "mapAssetId": "easterbrook-discovery-school",
      "mapVersions": [
@@ -2618,16 +2647,16 @@
       {
        "createdAt": "2026-09-20 21:55:08.984803+00",
        "dependents": {
-        "documents": 554,
-        "drafts": 554,
-        "revisions": 2,
+        "documents": 559,
+        "drafts": 559,
+        "revisions": 7,
         "simulationPreviews": 4
        },
        "id": "usmap_4aac2577010fd2a497a3071922503019",
        "retiredAt": null
       }
      ],
-     "ue5CarlaMapName": null
+     "ue5CarlaMapName": "Saratoga_School_Area"
     },
     "staging": {
      "carlaMapName": null,
@@ -2662,6 +2691,7 @@
    },
    "sourceFolder": "Saratoga_School_Area",
    "status": "approved-equivalent",
+   "unownedCookedSignalIds": [],
    "worldMatch": {
     "candidates": [
      {
@@ -2863,6 +2893,8 @@
     "name": "Yale_St_Palo_Alto_CA_GLB.glb",
     "sha256": "a93ad1edcced7a6b908924e0b1fe2caa6a1278bf341983e10b8ff0228cc8f4db"
    },
+   "hold": null,
+   "reason": null,
    "signalIdMap": {},
    "simforge": {
     "dev": {
@@ -2914,10 +2946,10 @@
       {
        "createdAt": "2026-09-21 00:39:28.348816+00",
        "dependents": {
-        "documents": 1252,
-        "drafts": 1252,
+        "documents": 1253,
+        "drafts": 1253,
         "revisions": 3,
-        "simulationPreviews": 7
+        "simulationPreviews": 9
        },
        "id": "usmap_9fcd80480e445745cc1d1312ba994ac9",
        "retiredAt": null
@@ -2928,6 +2960,7 @@
    },
    "sourceFolder": "Yale_St_Palo_Alto_CA",
    "status": "needs-recook",
+   "unownedCookedSignalIds": [],
    "worldMatch": {
     "candidates": [
      {
@@ -2951,7 +2984,9 @@
    }
   },
   {
+   "blocking": [],
    "carlaWorld": "Belmont_Office_Park_Belmont_CA",
+   "decisionRequired": [],
    "derivedFrom": "e4ec8cab3f9ce8c7faa4804348e1978e70d52acd5d0dcd0696b30e6d2d498e10",
    "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
    "extraFiles": [
@@ -2977,6 +3012,7 @@
    "geometryEqualsOriginal": true,
    "geometrySha256": "915dba7bfb3e090f092e1a677a5e5d0693169f183065173b033660c806652639",
    "glb": null,
+   "hold": null,
    "reason": "its original Belmont_Office_Park_Belmont_CA is needs-recook",
    "refitReport": {
     "schema": "simforge.xodr-elevation-refit.v1",
@@ -2999,9 +3035,11 @@
      "roadsRefit": 548
     }
    },
+   "signalIdMap": {},
    "simforge": {},
    "sourceFolder": "derived/Belmont_Office_Park_Belmont_CA",
    "status": "needs-recook",
+   "unownedCookedSignalIds": [],
    "xodr": {
     "bytes": 8704109,
     "mtime": "2026-09-23T00:37:04.0482436630Z",
@@ -3010,7 +3048,9 @@
    }
   },
   {
+   "blocking": [],
    "carlaWorld": "Di_Rosa_SF",
+   "decisionRequired": [],
    "derivedFrom": "112ad93fdd020c552d3fb6f77fd6732d0671ade6cc1faee8b506cde5c8df9bd6",
    "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
    "extraFiles": [
@@ -3036,6 +3076,7 @@
    "geometryEqualsOriginal": true,
    "geometrySha256": "913c3571fcd195de1cbfd60846bf4dac57271e35150b4a09960c7d7c0cfc1775",
    "glb": null,
+   "hold": null,
    "reason": "its original Di_Rosa_SF is needs-recook",
    "refitReport": {
     "schema": "simforge.xodr-elevation-refit.v1",
@@ -3058,9 +3099,11 @@
      "roadsRefit": 370
     }
    },
+   "signalIdMap": {},
    "simforge": {},
    "sourceFolder": "derived/Di_Rosa_SF",
    "status": "needs-recook",
+   "unownedCookedSignalIds": [],
    "xodr": {
     "bytes": 6367504,
     "mtime": "2026-09-23T00:37:04.7802436320Z",
@@ -3069,7 +3112,9 @@
    }
   },
   {
+   "blocking": [],
    "carlaWorld": "El_Camino_Rd_Palo_Alto_CA",
+   "decisionRequired": [],
    "derivedFrom": "e90cc708cc75f9c9eacac8e8831a63b258edf05033d02a22b6d005e4b34213e9",
    "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
    "extraFiles": [
@@ -3095,6 +3140,7 @@
    "geometryEqualsOriginal": true,
    "geometrySha256": "d38e965df342bdc8250b9e5f2a99cb71dbaeee025f8d1df40420ad81dff110d8",
    "glb": null,
+   "hold": null,
    "reason": "its original El_Camino_Rd_Palo_Alto_CA is needs-recook",
    "refitReport": {
     "schema": "simforge.xodr-elevation-refit.v1",
@@ -3117,9 +3163,11 @@
      "roadsRefit": 373
     }
    },
+   "signalIdMap": {},
    "simforge": {},
    "sourceFolder": "derived/El_Camino_Rd_Palo_Alto_CA",
    "status": "needs-recook",
+   "unownedCookedSignalIds": [],
    "xodr": {
     "bytes": 5877259,
     "mtime": "2026-09-23T00:37:05.4282436050Z",
@@ -3128,7 +3176,9 @@
    }
   },
   {
+   "blocking": [],
    "carlaWorld": null,
+   "decisionRequired": [],
    "derivedFrom": "09d8e88639a31ad7752c3061cebd1756928c283c86e4446c388f1160388c4c5e",
    "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
    "extraFiles": [
@@ -3154,6 +3204,7 @@
    "geometryEqualsOriginal": true,
    "geometrySha256": "462d495497ea12fbbf1ddf235ef589c78b8f3d4af56ce757a65989555f1958d3",
    "glb": null,
+   "hold": null,
    "reason": "its original Garching_Phase_1_2 is no-world",
    "refitReport": {
     "schema": "simforge.xodr-elevation-refit.v1",
@@ -3176,9 +3227,11 @@
      "roadsRefit": 762
     }
    },
+   "signalIdMap": {},
    "simforge": {},
    "sourceFolder": "derived/Garching_Phase_1_2",
    "status": "no-world",
+   "unownedCookedSignalIds": [],
    "xodr": {
     "bytes": 13855012,
     "mtime": "2026-09-23T00:37:06.2842435690Z",
@@ -3187,7 +3240,9 @@
    }
   },
   {
+   "blocking": [],
    "carlaWorld": "Richmond_Field_Station_Richmond_CA",
+   "decisionRequired": [],
    "derivedFrom": "5b08367524edbc0c46cfb2f4cd77ef6a204f263bb14cf7e8f90a1fffde1c14d6",
    "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
    "extraFiles": [
@@ -3213,6 +3268,7 @@
    "geometryEqualsOriginal": true,
    "geometrySha256": "abab6a910779fb8e4a8956deb1f56067c557d0a2ed68208c6bcdb8c0839a5fe7",
    "glb": null,
+   "hold": null,
    "reason": "its original Richmond_Field_Station_Richmond_CA is needs-recook",
    "refitReport": {
     "schema": "simforge.xodr-elevation-refit.v1",
@@ -3235,9 +3291,11 @@
      "roadsRefit": 132
     }
    },
+   "signalIdMap": {},
    "simforge": {},
    "sourceFolder": "derived/Richmond_Field_Station_Richmond_CA",
    "status": "needs-recook",
+   "unownedCookedSignalIds": [],
    "xodr": {
     "bytes": 2167063,
     "mtime": "2026-09-23T00:37:06.7162435510Z",
@@ -3298,6 +3356,8 @@
    "geometryEqualsOriginal": true,
    "geometrySha256": "4bf4b6ac9729e4179833a53ef1946caa2ce77772ec3e24a5e43db3087f58e461",
    "glb": null,
+   "hold": null,
+   "reason": null,
    "refitReport": {
     "schema": "simforge.xodr-elevation-refit.v1",
     "structuralDiff": {
@@ -3511,6 +3571,8 @@
    "geometryEqualsOriginal": true,
    "geometrySha256": "f29421acf7f954783b6d024ee424ff428525cd00e741187805fc554206eee399",
    "glb": null,
+   "hold": null,
+   "reason": null,
    "refitReport": {
     "schema": "simforge.xodr-elevation-refit.v1",
     "structuralDiff": {
@@ -3719,7 +3781,9 @@
    }
   },
   {
+   "blocking": [],
    "carlaWorld": "San_Ramon_Phase_2",
+   "decisionRequired": [],
    "derivedFrom": "c40e43731e4b4f5ab7c92e5ed9aec30452d58bfe2f17919fd1bd21fff67a6845",
    "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
    "extraFiles": [
@@ -3745,6 +3809,7 @@
    "geometryEqualsOriginal": true,
    "geometrySha256": "464115753c4c3258a999d689c4ed6c01eebd2d27f2c5e99cb93fe25121dcb38d",
    "glb": null,
+   "hold": null,
    "reason": "its original San_ramon_Phase2 is needs-decision",
    "refitReport": {
     "schema": "simforge.xodr-elevation-refit.v1",
@@ -3767,9 +3832,11 @@
      "roadsRefit": 3492
     }
    },
+   "signalIdMap": {},
    "simforge": {},
    "sourceFolder": "derived/San_ramon_Phase2",
    "status": "needs-decision",
+   "unownedCookedSignalIds": [],
    "xodr": {
     "bytes": 55445719,
     "mtime": "2026-09-23T00:37:11.5402433480Z",
@@ -3830,6 +3897,8 @@
    "geometryEqualsOriginal": true,
    "geometrySha256": "3097e80f86a339fd1718ff6d42c4bd78fc14c242d0a35b2094e8bf1acee252da",
    "glb": null,
+   "hold": null,
+   "reason": null,
    "refitReport": {
     "schema": "simforge.xodr-elevation-refit.v1",
     "structuralDiff": {
@@ -3855,6 +3924,7 @@
    "simforge": {},
    "sourceFolder": "derived/Saratoga_School_Area",
    "status": "approved-equivalent",
+   "unownedCookedSignalIds": [],
    "xodr": {
     "bytes": 8535535,
     "mtime": "2026-09-23T00:37:12.3842433130Z",
@@ -3863,7 +3933,9 @@
    }
   },
   {
+   "blocking": [],
    "carlaWorld": "Yale_St_Palo_Alto_CA",
+   "decisionRequired": [],
    "derivedFrom": "c8d8401dabdfa9420f3231cdbd7a37bd400cc517f8fa9af8fcaadc489b41d6ae",
    "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
    "extraFiles": [
@@ -3889,6 +3961,7 @@
    "geometryEqualsOriginal": true,
    "geometrySha256": "680b8e077f390e701194f4c4255586cb21de9d01a7bc7275f204eaec77d11469",
    "glb": null,
+   "hold": null,
    "reason": "its original Yale_St_Palo_Alto_CA is needs-recook",
    "refitReport": {
     "schema": "simforge.xodr-elevation-refit.v1",
@@ -3911,9 +3984,11 @@
      "roadsRefit": 375
     }
    },
+   "signalIdMap": {},
    "simforge": {},
    "sourceFolder": "derived/Yale_St_Palo_Alto_CA",
    "status": "needs-recook",
+   "unownedCookedSignalIds": [],
    "xodr": {
     "bytes": 5399240,
     "mtime": "2026-09-23T00:37:13.0322432860Z",
