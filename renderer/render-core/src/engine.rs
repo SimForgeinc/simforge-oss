@@ -385,11 +385,11 @@ impl Lighting {
         let haze = self.haze.clamp(0.0, 1.0);
         crate::atmosphere::AtmosphereInputs {
             sun_elevation_deg: self.sun_elev_deg,
-            turbidity: self.turbidity.unwrap_or(seed.turbidity) + 6.0 * haze,
+            turbidity: self.turbidity.unwrap_or(seed.turbidity) + 6.0 * haze, // fallback-ok: optional atmosphere overrides; None means the documented weather-preset value
             ozone_du: self.ozone_du.unwrap_or(crate::atmosphere::REFERENCE_OZONE_DU),
-            air_density: self.air_density.unwrap_or(1.0),
+            air_density: self.air_density.unwrap_or(1.0), // fallback-ok: optional override; None is the documented standard density
             visibility_m: self.visibility_m.unwrap_or(seed.visibility_m),
-            deck: self.cloud_deck.unwrap_or(seed.deck),
+            deck: self.cloud_deck.unwrap_or(seed.deck), // fallback-ok: optional override of the weather preset
             cloud_cover: self.cloud_cover.unwrap_or(seed.cloud_cover),
             cloud_base_m: self.night.cloud_base_m,
             cloud_beam_transmittance,
@@ -406,7 +406,7 @@ impl Lighting {
     pub fn cloud_params(&self, time_s: f32) -> crate::clouds::CloudParams {
         let cover = self
             .cloud_cover
-            .unwrap_or_else(|| self.weather.atmosphere().cloud_cover)
+            .unwrap_or_else(|| self.weather.atmosphere().cloud_cover) // fallback-ok: optional override of the weather preset
             .clamp(0.0, 1.0);
         let night = &self.night;
         crate::clouds::CloudParams {
@@ -474,7 +474,7 @@ impl Lighting {
         // above it.
         let night_lx = night_ledger_illuminance_lx(self);
         let (incident_ev, highlight_ev) = meter_readings(&readback, night_lx);
-        let ev100 = (incident_ev.max(highlight_ev.unwrap_or(f32::NEG_INFINITY))
+        let ev100 = (incident_ev.max(highlight_ev.unwrap_or(f32::NEG_INFINITY)) // fallback-ok: no highlight reading means the incident meter alone (max identity)
             + self.night.exposure_offset_stops.clamp(-6.0, 12.0)
             + self.ev100_bias)
             .clamp(CAMERA_EV100_FLOOR, 20.0);
@@ -554,14 +554,14 @@ impl Lighting {
             return self.resolve_atmosphere(far_plane_m, cloud_beam_transmittance);
         }
         let base = self.weather.lighting_plan(None, self.sun_elev_deg);
-        let cloud = self.cloud_cover.unwrap_or(0.0).clamp(0.0, 1.0);
+        let cloud = self.cloud_cover.unwrap_or(0.0).clamp(0.0, 1.0); // fallback-ok: legacy cubemap path: absent cover is clear sky by definition
         let sun_color = match self.sun_temperature_k {
             Some(k) if k > 0.0 => crate::lighting::kelvin_to_rgb(k.clamp(1000.0, 20000.0)),
             _ => base.sun_color,
         };
         let ev100 = base
             .ev100_fixed
-            .unwrap_or_else(|| self.weather.sensor_ev100(self.sun_elev_deg))
+            .unwrap_or_else(|| self.weather.sensor_ev100(self.sun_elev_deg)) // fallback-ok: optional fixed exposure; None is the documented weather-derived EV
             + self.ev100_bias;
         let plan = crate::lighting::LightingPlan {
             sun_lux: base.sun_lux * self.sun_scale.max(0.0) * (1.0 - 0.85 * cloud),
@@ -621,7 +621,7 @@ impl Lighting {
         let color = match self.fog_color {
             Some([r, g, b]) => Color::linear_rgb(r, g, b),
             None => {
-                let ev100 = plan.ev100_fixed.unwrap_or(15.0);
+                let ev100 = plan.ev100_fixed.unwrap_or(15.0); // fallback-ok: fog tint reference exposure constant, not scene data
                 let exposure = 1.0 / (2.0f32.powf(ev100) * 1.2);
                 // Aerial perspective is slightly cooler than the sky disc.
                 let level = (plan.skybox_brightness * exposure).clamp(0.0, 1.6);
@@ -1541,7 +1541,7 @@ fn spawn_night_sources(
             let head_mesh = meshes.add(
                 SphereMeshBuilder::new(0.16, SphereKind::Uv { sectors: 12, stacks: 8 }).build(),
             );
-            let _ = &lighting;
+            let _ = &lighting; // fallback-ok: borrow marker only
             let mut commands = world.commands();
             for (idx, fixture) in fixtures.iter().enumerate() {
                 let position = Vec3::from_array(fixture.position);

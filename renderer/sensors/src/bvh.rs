@@ -66,9 +66,9 @@ impl Node {
 fn centroid_cmp(a: &Tri, b: &Tri) -> std::cmp::Ordering {
     let (ca, cb) = (a.centroid(), b.centroid());
     ca.x.partial_cmp(&cb.x)
-        .unwrap_or(std::cmp::Ordering::Equal)
+        .unwrap_or(std::cmp::Ordering::Equal) // fallback-ok: NaN-safe comparator in the historical sort order
         .then(ca.y.partial_cmp(&cb.y).unwrap_or(std::cmp::Ordering::Equal))
-        .then(ca.z.partial_cmp(&cb.z).unwrap_or(std::cmp::Ordering::Equal))
+        .then(ca.z.partial_cmp(&cb.z).unwrap_or(std::cmp::Ordering::Equal)) // fallback-ok: NaN-safe comparator in the historical sort order
 }
 
 /// Stable sort by [`centroid_cmp`], identical to `tris.sort_by(centroid_cmp)`:

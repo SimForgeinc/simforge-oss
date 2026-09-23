@@ -150,7 +150,7 @@ fn detect_facades(world: &mut World, observer: Vec3) -> (Vec<Facade>, FacadeStat
         query
             .iter(world)
             .filter(|(_, _, layers)| {
-                layers.map(|l| l.intersects(&RenderLayers::layer(0))).unwrap_or(true)
+                layers.map(|l| l.intersects(&RenderLayers::layer(0))).unwrap_or(true) // fallback-ok: Bevy semantics: no RenderLayers component means layer 0
             })
             .map(|(mesh, transform, _)| (mesh.0.clone(), *transform))
             .collect()

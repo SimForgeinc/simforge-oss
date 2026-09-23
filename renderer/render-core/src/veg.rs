@@ -111,7 +111,7 @@ pub struct VegErrors(pub Vec<String>);
 /// (the sidecars are LOD-independent: `veg_2_4.lod0.glb` →
 /// `veg_2_4.instances.json`).
 fn sidecar_path(glb: &str) -> PathBuf {
-    let stem = glb.strip_suffix(".glb").unwrap_or(glb);
+    let stem = glb.strip_suffix(".glb").unwrap_or(glb); // fallback-ok: path stem computation, not data
     let stem = match stem.rfind(".lod") {
         // ".lod" must be a suffix segment: ".lod0", ".lod12", …
         Some(i)
@@ -255,7 +255,7 @@ pub fn instantiate_veg(
         parts_q: &Query<(&Mesh3d, &MeshMaterial3d<StandardMaterial>)>,
         parts: &mut Vec<ProtoPart>,
     ) {
-        let t = transforms.get(e).copied().unwrap_or(Transform::IDENTITY);
+        let t = transforms.get(e).copied().unwrap_or(Transform::IDENTITY); // fallback-ok: spawned scene nodes always carry a Transform; identity is the glTF node default
         let here = acc * t;
         if let Ok((mesh, mat)) = parts_q.get(e) {
             parts.push(ProtoPart {
@@ -322,7 +322,7 @@ pub fn instantiate_veg(
                 continue;
             }
             // Prototype node transform (quantization decode scale/offset).
-            let pt = transforms.get(proto_e).copied().unwrap_or(Transform::IDENTITY);
+            let pt = transforms.get(proto_e).copied().unwrap_or(Transform::IDENTITY); // fallback-ok: spawned scene nodes always carry a Transform; identity is the glTF node default
             let proto_local =
                 Mat4::from_scale_rotation_translation(pt.scale, pt.rotation, pt.translation);
             for (i, m) in vr.matrices[offset - count..offset].iter().enumerate() {
