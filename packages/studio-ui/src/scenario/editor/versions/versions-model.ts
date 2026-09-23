@@ -21,6 +21,7 @@ const CREATED_FOR: Record<ScenarioVersionCreatedFor, string> = {
   save: "Saved version",
   engine_upgrade: "Kept previous motion",
   import: "Imported",
+  map_move: "Before moving to another map version",
 };
 
 const REASON: Record<RevisionSimulationReason, string> = {
