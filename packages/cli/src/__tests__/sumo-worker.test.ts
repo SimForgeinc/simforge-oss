@@ -40,7 +40,8 @@ async function scenario(mapId: string, template: string, siteId: string, clipSec
   return { bundle, input };
 }
 
-const profile = resolveAmbientTrafficProfile({ version: 1, preset: 'city', seed: 'ambient-1', maxActors: 48 });
+// SUMO demand is vehicles only: a SUMO profile asks for no pedestrians or cyclists.
+const profile = resolveAmbientTrafficProfile({ version: 1, preset: 'city', seed: 'ambient-1', maxActors: 48, pedestrianShare: 0, cyclistShare: 0 });
 
 describe.skipIf(!available)('worker SUMO traffic on installed maps', () => {
   for (const { mapId, template, site } of CASES) {

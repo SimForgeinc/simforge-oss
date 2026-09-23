@@ -1905,6 +1905,51 @@ mod sensor_mesh_tests {
     }
 }
 
+/// Instance-ID pass encoding: the id's three low bytes as RGB, exact.
+///
+/// The value written for byte `b` is `b / 255` in linear space. Together
+/// with [`id_pass_camera`] and [`ID_PASS_FORMAT`] nothing between the unlit
+/// fragment and the readback rounds, dithers, filters or re-encodes it:
+/// - the view is HDR, so the main target is Rgba16Float (b/255 is held within
+///   0.03 of an 8-bit step) and no tonemap-in-shader/dither runs;
+/// - tonemapping and deband dither are off (Bevy's default `DebandDither`
+///   adds per-pixel screen-space noise before 8-bit quantisation; that
+///   noise is what turned id 2024 into 2280 = 2024 + 256 at edges);
+/// - MSAA is off, and no FXAA/SMAA/TAA is ever attached (profiles apply to
+///   RGB views only);
+/// - the target is `Rgba8Unorm` (no sRGB encode), and the final blit samples
+///   texel centres of an equal-size source, so the byte written is b.
+/// A float colour target, not an integer one: Bevy's forward pipelines
+/// (skinned meshes included) write the view's float main texture, and an
+/// integer attachment would need a separate pipeline for every material.
+pub fn instance_id_color(id: u32) -> Color {
+    let [r, g, b, _] = id.to_le_bytes();
+    Color::linear_rgb(f32::from(r) / 255.0, f32::from(g) / 255.0, f32::from(b) / 255.0)
+}
+
+/// The unlit, fog-free material an instance id is drawn with.
+pub fn instance_id_material(id: u32) -> StandardMaterial {
+    StandardMaterial {
+        base_color: instance_id_color(id),
+        unlit: true,
+        fog_enabled: false,
+        ..default()
+    }
+}
+
+/// Instance-ID render target format: raw bytes, never sRGB-encoded.
+pub const ID_PASS_FORMAT: TextureFormat = TextureFormat::Rgba8Unorm;
+
+/// Camera components that keep the ID pass exact (see [`instance_id_color`]).
+pub fn id_pass_camera() -> impl Bundle {
+    (
+        bevy::camera::Hdr,
+        Msaa::Off,
+        Tonemapping::None,
+        bevy::core_pipeline::tonemapping::DebandDither::Disabled,
+    )
+}
+
 #[derive(Resource, Default)]
 struct Legend(Vec<LegendEntry>);
 
@@ -3501,12 +3546,7 @@ impl SceneApp {
         let id_entity = if spec.passes.id {
             let id_image = {
                 let mut images = self.app.world_mut().resource_mut::<Assets<Image>>();
-                setup_target_image(
-                    &mut images,
-                    spec.width,
-                    spec.height,
-                    TextureFormat::Rgba8UnormSrgb,
-                )
+                setup_target_image(&mut images, spec.width, spec.height, ID_PASS_FORMAT)
             };
             self.app.world_mut().spawn(ReadbackTarget {
                 key: format!("{}:id", spec.sensor_id),
@@ -3526,8 +3566,7 @@ impl SceneApp {
                     far: spec.far,
                     ..default()
                 }),
-                Msaa::Off,
-                Tonemapping::None,
+                id_pass_camera(),
                 Transform::IDENTITY,
                 RenderTarget::Image(id_image.into()),
                 RenderLayers::layer(1),
@@ -3784,14 +3823,9 @@ impl SceneApp {
         };
         // Deterministic instance-ID material for the layer-1 clone: same
         // RGB24 encoding as finalize_scene.
-        let bytes = instance_id.to_le_bytes();
         let id_mat = {
             let mut materials = world.resource_mut::<Assets<StandardMaterial>>();
-            materials.add(StandardMaterial {
-                base_color: Color::srgb_u8(bytes[0], bytes[1], bytes[2]),
-                unlit: true,
-                ..default()
-            })
+            materials.add(instance_id_material(instance_id))
         };
         let e = world.spawn((
             Name::new(format!("actor:{id}")),
@@ -4089,12 +4123,7 @@ impl SceneApp {
                 };
                 self.actor_classes.insert(rider_id, "rider".to_string());
                 self.actor_riders.insert(actor_id.to_string(), (rider_id, rider_meshes.clone()));
-                let bytes = rider_id.to_le_bytes();
-                Some(world.resource_mut::<Assets<StandardMaterial>>().add(StandardMaterial {
-                    base_color: Color::srgb_u8(bytes[0], bytes[1], bytes[2]),
-                    unlit: true,
-                    ..default()
-                }))
+                Some(world.resource_mut::<Assets<StandardMaterial>>().add(instance_id_material(rider_id)))
             };
             for (entity, mesh, skin) in sources {
                 let material = match &rider_material {
@@ -4713,12 +4742,7 @@ impl SceneApp {
                 .enumerate()
                 .map(|(i, (name, _, _, _, entity, mesh_h, parent, transform, skin))| {
                     let id = (i + 1) as u32; // 0 reserved as background
-                    let bytes = id.to_le_bytes();
-                    let mat = materials.add(StandardMaterial {
-                        base_color: Color::srgb_u8(bytes[0], bytes[1], bytes[2]),
-                        unlit: true,
-                        ..default()
-                    });
+                    let mat = materials.add(instance_id_material(id));
                     (id, name, entity, mesh_h, mat, parent, transform, skin)
                 })
                 .collect()
@@ -4741,12 +4765,16 @@ impl SceneApp {
             }
             legend.push(LegendEntry { id, name });
         }
-        let static_ids = legend.len() as u32;
+        // Dynamic actors take ids above the static legend: before this, the
+        // first actors reused ids 1..N of static meshes, so the ID/semantic
+        // passes, lidar/radar classes and radar velocities confused an actor
+        // with a static mesh.
+        let static_max = legend.iter().map(|entry| entry.id).max().unwrap_or(0); // fallback-ok: an empty legend has no ids to stay above
         world.resource_mut::<Legend>().0 = legend;
-        // Dynamic actors (and riders) number above the static legend, as
-        // `upsert_actor` documents: an actor id equal to a static id would
-        // make the ID pass, semantic output and lidar labels ambiguous.
-        self.next_instance_id = self.next_instance_id.max(static_ids);
+        if !self.actors.is_empty() {
+            bail!("actors were spawned before the static instance-ID legend was frozen");
+        }
+        self.next_instance_id = static_max;
 
         // One update so the newly spawned ID clones are extracted before the
         // first real render request.
@@ -5427,6 +5455,8 @@ impl SceneApp {
                     height,
                     format: if plane.depth {
                         PlaneFormat::Depth32Float
+                    } else if plane.name == "id" {
+                        PlaneFormat::Rgba8Unorm
                     } else {
                         PlaneFormat::Rgba8UnormSrgb
                     },
@@ -6166,7 +6196,11 @@ mod tests {
 
         let body = [0.0, 0.8, -20.0];
         app.upsert_actor("car", "car", body, Quat::IDENTITY, [4.5, 1.6, 1.8], [0.5, 0.5, 0.5], false);
-        // Before a model is attached the cuboid is what the camera draws.
+        let legend_max = app.legend().iter().map(|entry| entry.id).max().unwrap();
+        assert!(app.actor_instance_id("car").unwrap() > legend_max, "actor ids never reuse static legend ids");
+        // Before a model is attached the cuboid is what the camera draws
+        // (read after an update, like the service's post-readiness snapshot).
+        app.warmup(1);
         let cuboid = app.actor_sensor_meshes().unwrap();
         assert_eq!(cuboid.len(), 1);
         let ActorSensorGeometry::Rigid { mesh, .. } = &cuboid[0].geometry else { panic!("cuboid is rigid") };
@@ -6234,6 +6268,65 @@ mod tests {
         assert!(app.actor_sensor_meshes().is_err(), "an actor whose model was detached has no visible geometry");
         app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("idle"), 0.0).unwrap();
         assert!(!posed(&mut app).is_empty());
+        std::mem::forget(app);
+    }
+
+    /// Every ID-pass pixel decodes to the background, a static legend entry
+    /// or a live actor: no dithered, blended or sRGB-rounded neighbour ids
+    /// (formerly ~10k px per 960x540 frame decoded to id +/- 1, 256 or 65536).
+    /// A cinematic view (post-process AA on its RGB camera) and a sensor view
+    /// both hold. Runs on a GPU or on lavapipe (see the actor mesh test).
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn every_id_pass_pixel_decodes_to_a_known_instance() {
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let pedestrian = repo.join("catalog/pedestrians-carla/models/pedestrian_0015.glb");
+        let mut app = SceneApp::new(&Lighting::default()).unwrap();
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+        for (sensor, profile) in [("sensor", Profile::Sensor), ("cinematic", Profile::Cinematic)] {
+            app.add_camera(
+                CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera(sensor, 320, 180) },
+                profile,
+            );
+        }
+        app.wait_until_ready().unwrap();
+        for (k, x) in [-6.0f32, 0.0, 6.0].into_iter().enumerate() {
+            let id = format!("car{k}");
+            app.upsert_actor(&id, "car", [x, 0.8, -18.0], Quat::from_rotation_y(0.4 * k as f32), [4.5, 1.6, 1.8], [0.5, 0.5, 0.5], false);
+            app.attach_actor_asset(&id, &vehicle, 1.0, Some([0.2, 0.3, 0.6]), None, 0.0).unwrap();
+            app.set_actor_asset_pose(&id, [x, 0.0, -18.0], Quat::from_rotation_y(0.4 * k as f32)).unwrap();
+        }
+        app.upsert_actor("ped", "pedestrian", [3.0, 0.9, -14.0], Quat::IDENTITY, [0.5, 1.8, 0.5], [0.5, 0.5, 0.5], false);
+        app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("walk"), 0.3).unwrap();
+        app.set_actor_asset_pose("ped", [3.0, 0.0, -14.0], Quat::IDENTITY).unwrap();
+        let mut known: std::collections::HashSet<u32> = app.legend().iter().map(|entry| entry.id).collect();
+        for id in app.actor_ids() {
+            known.insert(app.actor_instance_id(&id).unwrap());
+        }
+        known.insert(0);
+        let mut tick = 0;
+        for eye in [[9.0, 2.5, -8.0], [-10.0, 1.2, -12.0], [0.5, 6.0, -2.0]] {
+            for cam in ["sensor", "cinematic"] {
+                app.set_pose(cam, &eye, &[0.0, 0.8, -18.0]).unwrap();
+            }
+            app.warmup(2);
+            tick += 1;
+            let frame = app.render_once(tick).unwrap();
+            for cam in ["sensor", "cinematic"] {
+                let bytes = &frame.passes[&format!("{cam}:id")].bytes;
+                let raw = strip_padding(bytes, 320, 180, 4);
+                let mut hist: HashMap<u32, usize> = HashMap::new();
+                for px in raw.chunks_exact(4) {
+                    *hist.entry(u32::from_le_bytes([px[0], px[1], px[2], 0])).or_default() += 1;
+                }
+                let unknown: Vec<(u32, usize)> = hist.iter().filter(|(id, _)| !known.contains(id)).map(|(id, n)| (*id, *n)).collect();
+                assert!(unknown.is_empty(), "{cam} at {eye:?}: pixels with unknown ids {unknown:?}");
+                let actor_px: usize = app.actor_ids().iter().map(|id| hist.get(&app.actor_instance_id(id).unwrap()).copied().unwrap_or(0)).sum();
+                assert!(actor_px > 100, "{cam} at {eye:?}: actors must be in view ({actor_px} px)");
+                assert!(raw.chunks_exact(4).all(|px| px[3] == 255), "{cam}: ID pixels are opaque");
+            }
+        }
         std::mem::forget(app);
     }
 

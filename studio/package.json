@@ -52,7 +52,7 @@
     "test:worker-presence": "tsx --test app/lib/scenario/__tests__/cpu-worker-presence.test.ts",
     "test:simulate-lane": "node --conditions=development --import tsx --test worker/__tests__/simulate-lane.test.ts worker/__tests__/simulate-lane.sumo.test.ts",
     "test:sim-results": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/sim-result-store.test.ts",
-    "test:worker-prewarm": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/workers-prewarm.test.ts app/lib/scenario/__tests__/native-texture-tier.test.ts app/lib/scenario/__tests__/native-admission.test.ts app/lib/scenario/__tests__/evidence-tolerant.test.ts app/lib/scenario/__tests__/render-worker-rtx3090-lease.test.ts",
+    "test:worker-prewarm": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/workers-prewarm.test.ts app/lib/scenario/__tests__/native-texture-tier.test.ts app/lib/scenario/__tests__/native-admission.test.ts app/lib/scenario/__tests__/evidence-tolerant.test.ts app/lib/scenario/__tests__/render-worker-rtx3090-lease.test.ts app/lib/scenario/__tests__/render-evidence-completion.test.ts",
     "test:pinning": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/document-pinning.test.ts app/lib/scenario/__tests__/pg/revision-race.pg.test.ts",
     "test:host-modules": "tsx --test app/host/__tests__/host-modules.test.ts",
     "typecheck": "next typegen && tsc --noEmit",

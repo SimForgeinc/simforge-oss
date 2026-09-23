@@ -235,6 +235,20 @@ export function RenderTheater({
             {detail?.failureDetail ? ` — ${detail.failureDetail}` : ""}
           </p>
         ) : null}
+        {detail && ((detail.substitutions?.length ?? 0) > 0 || (detail.warnings?.length ?? 0) > 0) ? (
+          <ul aria-label="Render result notes" data-testid="render-result-notes" {...stylex.props(styles.resultNotes)}>
+            {(detail.substitutions ?? []).map((item, index) => (
+              <li {...stylex.props(styles.resultNote)} key={`substitution-${index}-${item.kind}-${item.subject}`}>
+                Substituted, as the render request allowed ({item.allowedBy}): {item.subject} rendered {item.rendered} instead of {item.requested}
+              </li>
+            ))}
+            {(detail.warnings ?? []).map((item, index) => (
+              <li {...stylex.props(styles.resultNote)} key={`warning-${index}-${item.code}`}>
+                {humanizeCode(item.code)}: {item.message}
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {error ? (
           <p {...stylex.props(styles.xsDanger)} role="alert">
             {error}

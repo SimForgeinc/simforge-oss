@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 from .transport import download, upload
-from .backend import RenderBackend, runtime_asset_bindings
+from .backend import RenderBackend, presentation_video_codec_args, runtime_asset_bindings
 # historical name retained for stored-data compat
 from .compiler import (
     LIFECYCLE_ABSENT,
@@ -50,9 +50,16 @@ from .contract import (
 from .parity import ParityAccumulator
 from .replay import RenderPose, ReplayParityGate, expected_replay_poses, timeline_observation
 from .timeline import BoundTimeline, PlanTimeline, load_bound_timeline
-from .sensor_video import encode_sensor_video
+from .sensor_video import SENSOR_VISUALIZATION_CODEC_ARGS, encode_sensor_video, visualization_scales
 from .materialized_traffic import merge_materialized_traffic, parse_materialized_traffic
 from .validation import validate_xosc14
+from .policy import (
+    SUBSTITUTION_CARLA_ACTOR_BODY,
+    CarlaRenderError,
+    RenderPolicy,
+    lidar_ticks_per_revolution,
+    substitution_record,
+)
 
 Download = Callable[[str, int], bytes]
 ArtifactBody = bytes | Path
@@ -121,14 +128,17 @@ def _attestation(
     execution_mode: str,
     runtime_evidence: Mapping[str, object],
 ) -> dict[str, object]:
-    worker_image = os.environ.get("SIMFORGE_WORKER_IMAGE_DIGEST", "unavailable")
-    worker_revision = os.environ.get("SIMFORGE_WORKER_REVISION", "unavailable")
+    # Identity is attested from the worker environment and never invented: an
+    # unset value is recorded as null, not as the version the image usually has.
+    worker_image = os.environ.get("SIMFORGE_WORKER_IMAGE_DIGEST")
+    worker_revision = os.environ.get("SIMFORGE_WORKER_REVISION")
     return {
         "schema": "simforge.worker-attestation/v1",
         "workerImageDigest": worker_image,
         "workerRevision": worker_revision,
-        "carlaVersion": os.environ.get("SIMFORGE_CARLA_VERSION", "0.10.0"),
-        "engineVersion": os.environ.get("SIMFORGE_ENGINE_VERSION", "UE5.5"),
+        "carlaVersion": os.environ.get("SIMFORGE_CARLA_VERSION"),
+        "carlaServerVersion": runtime_evidence.get("carlaServerVersion"),
+        "engineVersion": os.environ.get("SIMFORGE_ENGINE_VERSION"),
         "pythonVersion": platform.python_version(),
         "hostNode": platform.node(),
         "hostPlatform": platform.platform(),
@@ -137,7 +147,7 @@ def _attestation(
         "scenarioRender": execution_mode == EXECUTION_MODE_TRACE_REPLAY,
         "physicsAuthority": execution_mode == EXECUTION_MODE_PHYSICS_VALIDATION,
         "acceptanceEligible": True,
-        "workerIdentityComplete": worker_image != "unavailable" and worker_revision != "unavailable",
+        "workerIdentityComplete": bool(worker_image) and bool(worker_revision),
         "runtimeEvidence": dict(runtime_evidence),
         "xoscValidation": dict(validation),
     }
@@ -216,6 +226,20 @@ def _collect_camera_video(
         raise RuntimeError(f"camera {camera_name} produced no encoded video stream")
     if stream.stat().st_size > max_bytes:
         raise ContractError(f"camera video {camera_name} exceeds its output budget")
+    _verify_video_frames(stream, f"camera video {camera_name}", fps, expected_frame_count, check_abort, deadline_monotonic)
+    shutil.copyfile(stream, destination)
+    return destination
+
+
+def _verify_video_frames(
+    stream: Path,
+    label: str,
+    fps: float,
+    expected_frame_count: int,
+    check_abort: Callable[[str, int, int], None],
+    deadline_monotonic: Callable[[], float],
+) -> None:
+    """Prove an encoded video holds exactly the scheduled frames."""
     probe = _run_process([
         "ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0",
         "-show_entries", "stream=nb_read_frames,duration", "-of", "json", str(stream),
@@ -231,11 +255,9 @@ def _collect_camera_video(
     expected_duration = expected_frame_count / fps
     if frame_count != expected_frame_count or abs(duration - expected_duration) > (1 / fps):
         raise RuntimeError(
-            f"camera video {camera_name} is not frame-closed: {frame_count} frames/{duration}s, "
+            f"{label} is not frame-closed: {frame_count} frames/{duration}s, "
             f"expected {expected_frame_count}/{expected_duration}s"
         )
-    shutil.copyfile(stream, destination)
-    return destination
 
 
 def _catalog_dims(entry: Mapping[str, object]) -> Mapping[str, float] | None:
@@ -251,98 +273,139 @@ def _catalog_dims(entry: Mapping[str, object]) -> Mapping[str, float] | None:
     return narrowed
 
 
-def _apply_actor_fallbacks(
+#: Catalog binding fidelities that mean "this blueprint is the authored body".
+#: Anything else (`semantic-substitute`, a generated blueprint the image does
+#: not ship) is a different body, i.e. a substitution.
+EXACT_BINDING_FIDELITIES = frozenset({"exact", "native-blueprint"})
+ROAD_USER_VEHICLE_KINDS = frozenset({"vehicle", "car", "truck", "bus", "van", "motorcycle", "bicycle", "scooter"})
+
+
+def _native_prefixes(kind: str) -> tuple[str, ...] | None:
+    if kind in ROAD_USER_VEHICLE_KINDS:
+        return ("vehicle.", "bike.")
+    if kind == "pedestrian":
+        return ("walker.",)
+    return None
+
+
+def _resolve_actor_bodies(
     plan: ExecutionPlan,
     catalog: Mapping[str, Mapping[str, object]],
+    policy: RenderPolicy,
     abort: Callable[[], None] | None = None,
     spawnable: frozenset[str] | None = None,
-) -> tuple[ExecutionPlan, tuple[Mapping[str, object], ...]]:
-    """Resolve road-user bindings to deterministic same-class CARLA bodies.
+) -> tuple[ExecutionPlan, tuple[dict[str, object], ...]]:
+    """Bind every actor to the CARLA body it is rendered with, or fail.
 
-    `spawnable`, when given, is the set of blueprint ids the live runtime was
-    observed to actually place. A cook registers the official *superset*
-    blueprint registry while shipping assets for only part of it, so a
-    blueprint id can resolve through `blueprint_library.find()` and still be
-    refused by `try_spawn_actor` with no error. Without this set the authored
-    id is trusted purely because it looks native, and every actor bound to an
-    uncooked body is dropped at spawn.
+    An actor renders its catalog binding when that binding is the authored
+    body (`fidelity` exact or native-blueprint) and, once the world is loaded,
+    the runtime was observed to place it (`spawnable`: a cook registers the
+    superset blueprint registry while shipping assets for only part of it).
 
-    Substitution never crosses `actorClass`: a car cannot become a bus and a
-    bicycle cannot become an ambulance. Within the class the dimensionally
-    nearest body wins, with the catalog id as a deterministic tie-break.
+    Anything else is a substitution and fails `carla_blueprint_unavailable`
+    unless the intent allows `carla-actor-body`. When allowed, a road user
+    moves to the dimensionally nearest same-class body the runtime can place
+    (never across `actorClass`, so a car cannot become a bus and a child
+    walker can become an adult only because the intent said so, recorded);
+    a catalog-declared substitute body (`semantic-substitute`) is used as the
+    catalog binds it. Each substitution is returned as a manifest record.
     """
-    vehicle_kinds = {"vehicle", "car", "truck", "bus", "van", "motorcycle", "bicycle", "scooter"}
-    substitutions: dict[str, str] = {}
-    diagnostics: list[Mapping[str, object]] = []
-    for actor_id, binding in sorted(plan.actors.items()):
-        is_vehicle = binding.kind in vehicle_kinds
-        is_pedestrian = binding.kind == "pedestrian"
-        if not is_vehicle and not is_pedestrian:
-            continue
-        authored_entry = catalog.get(binding.catalog_name)
-        if not isinstance(authored_entry, Mapping):
-            raise ContractError(f"asset catalog has no CARLA binding for road user {actor_id}")
-        native_prefixes = ("vehicle.", "bike.") if is_vehicle else ("walker.",)
-        authored_blueprint = authored_entry.get("blueprintId")
-        if (
-            isinstance(authored_blueprint, str)
-            and authored_blueprint.startswith(native_prefixes)
-            and (spawnable is None or authored_blueprint in spawnable)
-        ):
-            continue
-        authored_class = authored_entry.get("actorClass")
-        if not isinstance(authored_class, str) or not authored_class:
-            raise ContractError(
-                f'road user {actor_id} catalog "{binding.catalog_name}" declares no actorClass'
-            )
-        authored_dims = _catalog_dims(authored_entry)
-        candidates: list[tuple[float, str, Mapping[str, float] | None]] = []
-        for catalog_id, entry in catalog.items():
-            blueprint = entry.get("blueprintId")
-            if entry.get("actorClass") != authored_class or not isinstance(blueprint, str):
-                continue
-            if not blueprint.startswith(native_prefixes):
-                continue
-            if spawnable is not None and blueprint not in spawnable:
-                continue
-            dims = _catalog_dims(entry)
-            distance = (
-                abs(dims["l"] - authored_dims["l"])
-                + abs(dims["w"] - authored_dims["w"])
-                if dims is not None and authored_dims is not None
-                else float("inf")
-            )
-            candidates.append((distance, catalog_id, dims))
-        if not candidates:
-            raise ContractError(
-                "road user has no same-class native CARLA fallback the runtime can place: "
-                f'actor={actor_id} catalog="{binding.catalog_name}" class="{authored_class}"'
-            )
-        _, fallback_id, fallback_dims = min(candidates, key=lambda item: (item[0], item[1]))
-        substitutions[actor_id] = fallback_id
-        diagnostics.append({
-            "actorId": actor_id,
-            "authoredCatalogId": binding.catalog_name,
-            "fallbackCatalogId": fallback_id,
-            "vehicleClass": authored_class,
-            "lengthDeltaM": (
-                fallback_dims["l"] - authored_dims["l"]
-                if fallback_dims is not None and authored_dims is not None else 0.0
-            ),
-            "widthDeltaM": (
-                fallback_dims["w"] - authored_dims["w"]
-                if fallback_dims is not None and authored_dims is not None else 0.0
-            ),
-            "heightDeltaM": (
-                fallback_dims["h"] - authored_dims["h"]
-                if fallback_dims is not None and authored_dims is not None else 0.0
-            ),
-        })
-    return (
-        substitute_actor_catalog_bindings(plan, substitutions, abort),
-        tuple(diagnostics),
-    )
+    check = abort or (lambda: None)
+    replacements: dict[str, str] = {}
+    records: list[dict[str, object]] = []
+    allowed = policy.allows(SUBSTITUTION_CARLA_ACTOR_BODY)
 
+    def refuse(actor_id: str, catalog_id: str, reason: str) -> None:
+        raise CarlaRenderError(
+            "carla_blueprint_unavailable",
+            f'actor {actor_id} (catalog "{catalog_id}"): {reason}; the render intent does not allow '
+            f"the {SUBSTITUTION_CARLA_ACTOR_BODY} substitution",
+        )
+
+    for actor_id, binding in sorted(plan.actors.items()):
+        check()
+        entry = catalog.get(binding.catalog_name)
+        if not isinstance(entry, Mapping):
+            raise ContractError(f"asset catalog has no CARLA binding for {actor_id} ({binding.catalog_name})")
+        blueprint = entry.get("blueprintId")
+        fidelity = entry.get("fidelity")
+        if not isinstance(fidelity, str) or not fidelity:
+            raise CarlaRenderError(
+                "carla_catalog_binding_incomplete",
+                f'catalog "{binding.catalog_name}" (actor {actor_id}) declares no CARLA binding fidelity, '
+                "so CARLA cannot tell its body from a substitute",
+            )
+        prefixes = _native_prefixes(binding.kind)
+        native = isinstance(blueprint, str) and (prefixes is None or blueprint.startswith(prefixes))
+        placeable = native and (spawnable is None or blueprint in spawnable)
+        if placeable and fidelity in EXACT_BINDING_FIDELITIES:
+            continue
+        if placeable:
+            # The catalog itself binds a different body (e.g. a cone of other
+            # dimensions for the authored one).
+            if not allowed:
+                refuse(actor_id, binding.catalog_name, f"the catalog binds {blueprint}, a {fidelity} of the authored body")
+            records.append(substitution_record(
+                SUBSTITUTION_CARLA_ACTOR_BODY, actor_id, binding.catalog_name, str(blueprint),
+                reason=f"catalog binding fidelity {fidelity}", renderedCatalogId=binding.catalog_name,
+            ))
+            continue
+        reason = (
+            f"the catalog binds no native CARLA body ({blueprint!r})" if not native
+            else f"this CARLA runtime cannot place {blueprint}"
+        )
+        if prefixes is None:
+            # Props and other non-road users have no class-level substitute.
+            raise CarlaRenderError("carla_blueprint_unavailable", f'actor {actor_id} (catalog "{binding.catalog_name}"): {reason}')
+        if not allowed:
+            refuse(actor_id, binding.catalog_name, reason)
+        authored_class = entry.get("actorClass")
+        if not isinstance(authored_class, str) or not authored_class:
+            raise ContractError(f'road user {actor_id} catalog "{binding.catalog_name}" declares no actorClass')
+        authored_dims = _catalog_dims(entry)
+        if authored_dims is None:
+            raise CarlaRenderError(
+                "carla_blueprint_unavailable",
+                f'actor {actor_id} (catalog "{binding.catalog_name}"): {reason}, and the catalog gives no '
+                "dimensions to choose the nearest substitute body by",
+            )
+        candidates: list[tuple[float, str, Mapping[str, float], str]] = []
+        for candidate_id, candidate in catalog.items():
+            candidate_blueprint = candidate.get("blueprintId")
+            if (
+                candidate.get("actorClass") != authored_class
+                or not isinstance(candidate_blueprint, str)
+                or not candidate_blueprint.startswith(prefixes)
+                or candidate.get("fidelity") not in EXACT_BINDING_FIDELITIES
+                or (spawnable is not None and candidate_blueprint not in spawnable)
+            ):
+                continue
+            dims = _catalog_dims(candidate)
+            if dims is None:
+                continue
+            distance = sum(abs(dims[axis] - authored_dims[axis]) for axis in ("l", "w", "h"))
+            candidates.append((distance, candidate_id, dims, candidate_blueprint))
+        if not candidates:
+            raise CarlaRenderError(
+                "carla_blueprint_unavailable",
+                f'actor {actor_id} (catalog "{binding.catalog_name}"): {reason}, and no same-class '
+                f'("{authored_class}") catalog body with dimensions is placeable',
+            )
+        _, substitute_id, substitute_dims, substitute_blueprint = min(candidates, key=lambda item: (item[0], item[1]))
+        replacements[actor_id] = substitute_id
+        records.append(substitution_record(
+            SUBSTITUTION_CARLA_ACTOR_BODY, actor_id, binding.catalog_name, substitute_id,
+            reason=reason,
+            actorClass=authored_class,
+            renderedBlueprintId=substitute_blueprint,
+            lengthDeltaM=substitute_dims["l"] - authored_dims["l"],
+            widthDeltaM=substitute_dims["w"] - authored_dims["w"],
+            heightDeltaM=substitute_dims["h"] - authored_dims["h"],
+        ))
+    return (
+        substitute_actor_catalog_bindings(plan, replacements, abort),
+        tuple(records),
+    )
 
 
 def _run_process(
@@ -443,16 +506,25 @@ def _annotations_to_path(plan: ExecutionPlan, readbacks: list[Mapping[str, Mappi
     return destination
 
 
-def _appearance_capability(plan: ExecutionPlan, abort: Callable[[], None] | None = None) -> dict[str, list[str]]:
-    """Report which authored appearance state reaches pixels, and which does not.
+def _visual_cue(key: str) -> bool:
+    """`cue.*` keys are OpenSCENARIO `UserDefinedAnimation` requests; all but
+    `audio.*` (no picture) ask for something to be seen."""
+    return key.startswith("cue.") and not key.startswith("cue.audio.")
 
-    `cue.*` keys are OpenSCENARIO `UserDefinedAnimation` requests (`pose.*`
-    articulation, `audio.horn`). The plan carries them faithfully, CARLA cannot
-    render them, and this makes that visible in the run's own outputs instead of
-    leaving the omission silent.
+
+def _appearance_capability(
+    plan: ExecutionPlan,
+    abort: Callable[[], None] | None = None,
+    rendered_keys: set[str] | None = None,
+) -> dict[str, list[str]]:
+    """Report which authored appearance state reached pixels, and which did not.
+
+    `rendered_keys` is what the replay actually applied (the sampler's frames,
+    which for a baked render timeline differ from the xosc plan). Visual cues
+    never reach this point (they fail the job); audio cues have no picture and
+    are listed as not rendered.
     """
-    rendered: set[str] = set()
-    unrendered: set[str] = set()
+    authored: set[str] = set()
     despawned: set[str] = set()
     for frame in plan.frames:
         if abort:
@@ -460,22 +532,40 @@ def _appearance_capability(plan: ExecutionPlan, abort: Callable[[], None] | None
         for actor_id, state in frame.actors.items():
             if state.lifecycle == LIFECYCLE_ABSENT:
                 despawned.add(actor_id)
-            for key in state.appearance:
-                (unrendered if key.startswith("cue.") else rendered).add(key)
+            authored.update(state.appearance)
+    applied = authored if rendered_keys is None else set(rendered_keys)
     return {
-        "rendered": sorted(rendered),
-        "unrenderedCues": sorted(unrendered),
+        "rendered": sorted(key for key in applied if not key.startswith("cue.")),
+        "unrenderedCues": sorted(key for key in authored if key.startswith("cue.")),
         "despawnedActors": sorted(despawned),
     }
+
+
+def _preflight_appearance(plan: ExecutionPlan) -> None:
+    """Refuse authored appearance CARLA cannot render."""
+    visual_cues = sorted({
+        f"{actor_id}:{key}"
+        for frame in plan.frames
+        for actor_id, state in frame.actors.items()
+        for key in state.appearance
+        if _visual_cue(key)
+    })
+    if visual_cues:
+        # CARLA 0.10 has no named-animation library to pose a walker's arm or
+        # a paddle; rendering without the pose would show a different scene.
+        raise CarlaRenderError(
+            "carla_appearance_cue_unsupported",
+            "CARLA cannot render authored UserDefinedAnimation poses: " + ", ".join(visual_cues[:12]),
+        )
 
 
 def _preflight_execution_semantics(lease: Lease, plan: ExecutionPlan) -> dict[str, str]:
     """Reject semantics the selected execution mode cannot honestly execute.
 
-    Returns the actors to drop before spawn (with the recorded reason):
-    authored knockdown poses cannot execute under native physics without a
-    post-spawn teleport repair, so the posed actor is dropped and reported in
-    the manifest instead of failing the whole render.
+    Physics validation used to drop actors it could not execute (knockdown
+    poses, appearance cues, reverse non-vehicles, moving static objects) and
+    still succeed; an actor missing from the output is never acceptable, so
+    each of those now fails the job, naming the actors.
     """
     if lease.render_spec.execution_mode != "native-physics":
         return {}
@@ -485,11 +575,10 @@ def _preflight_execution_semantics(lease: Lease, plan: ExecutionPlan) -> dict[st
         for actor_id, state in frame.actors.items()
         if state.downed
     })
-    execution_drops = {
-        actor_id: "native physics cannot execute authored knockdown poses without post-spawn teleport repair"
+    unsupported = {
+        actor_id: "authored knockdown poses need a post-spawn teleport native physics cannot make"
         for actor_id in downed_actors
     }
-    appearance = _appearance_capability(plan)
     cue_actors = sorted({
         actor_id
         for frame in plan.frames
@@ -497,60 +586,44 @@ def _preflight_execution_semantics(lease: Lease, plan: ExecutionPlan) -> dict[st
         if any(key.startswith("cue.") for key in state.appearance)
     })
     for actor_id in cue_actors:
-        execution_drops.setdefault(
-            actor_id,
-            "native physics dropped actor with unsupported appearance cue",
-        )
+        unsupported.setdefault(actor_id, "appearance cues are not executable under native physics")
     reverse_non_vehicles = sorted({
         actor_id
         for frame in plan.frames
         for actor_id, state in frame.actors.items()
-        if actor_id not in execution_drops
-        and state.speed_mps < -1e-6
-        and plan.actors[actor_id].kind not in {"vehicle", "car", "truck", "bus", "van", "motorcycle", "bicycle", "scooter"}
+        if state.speed_mps < -1e-6
+        and plan.actors[actor_id].kind not in ROAD_USER_VEHICLE_KINDS
     })
     for actor_id in reverse_non_vehicles:
-        execution_drops.setdefault(
-            actor_id,
-            "native physics dropped non-vehicle actor with signed reverse motion",
-        )
+        unsupported.setdefault(actor_id, "a non-vehicle cannot move in reverse under native physics")
     unsupported_moving = sorted({
         actor_id
         for frame in plan.frames
         for actor_id, state in frame.actors.items()
-        if actor_id not in execution_drops
-        and abs(state.speed_mps) > 1e-6
+        if abs(state.speed_mps) > 1e-6
         and plan.actors[actor_id].kind in {"animal", "static", "static_object"}
     })
     for actor_id in unsupported_moving:
-        execution_drops.setdefault(
-            actor_id,
-            "native physics dropped moving non-actuated actor",
+        unsupported.setdefault(actor_id, "a moving non-actuated actor cannot be driven by native physics")
+    if unsupported:
+        raise CarlaRenderError(
+            "carla_physics_validation_unsupported",
+            "native physics cannot execute these actors, and dropping them would change the output: "
+            + "; ".join(f"{actor_id}: {reason}" for actor_id, reason in sorted(unsupported.items())),
         )
-    dropped_mounts = sorted({
-        sensor.actor_id for sensor in lease.render_spec.sensors
-        if sensor.actor_id in execution_drops
-    })
-    if dropped_mounts:
-        raise ContractError(
-            "native sensors cannot attach to actors dropped from execution: "
-            + ", ".join(dropped_mounts)
-        )
-    vehicle_kinds = {"vehicle", "car", "truck", "bus", "van", "motorcycle", "bicycle", "scooter"}
     invalid_vehicle_appearance = sorted({
         actor_id
         for frame in plan.frames
         for actor_id, state in frame.actors.items()
-        if actor_id not in execution_drops
-        and any(key.startswith(("light.", "door.")) for key in state.appearance)
-        and plan.actors[actor_id].kind not in vehicle_kinds
+        if any(key.startswith(("light.", "door.")) for key in state.appearance)
+        and plan.actors[actor_id].kind not in ROAD_USER_VEHICLE_KINDS
     })
     if invalid_vehicle_appearance:
         raise ContractError(
             "native physics vehicle appearance actions target non-vehicle actors: "
             + ", ".join(invalid_vehicle_appearance)
         )
-    despawned = set(appearance["despawnedActors"])
+    despawned = set(_appearance_capability(plan)["despawnedActors"])
     invalid_mounts = sorted({
         sensor.actor_id for sensor in lease.render_spec.sensors
         if sensor.actor_id in despawned
@@ -560,7 +633,7 @@ def _preflight_execution_semantics(lease: Lease, plan: ExecutionPlan) -> dict[st
             "native sensors cannot remain frame-closed when their attached actor is deleted: "
             + ", ".join(invalid_mounts)
         )
-    return execution_drops
+    return {}
 
 
 def _optional_backend_call(backend: RenderBackend, name: str, *args: object, abort: Callable[[], None]) -> Any:
@@ -598,8 +671,9 @@ def _manifest_to_path(
     destination: Path,
     max_bytes: int,
     abort: Callable[[], None],
-    carla_vehicle_fallbacks: tuple[Mapping[str, object], ...],
+    substitutions: tuple[Mapping[str, object], ...],
     extras: Mapping[str, object] | None = None,
+    rendered_appearance: set[str] | None = None,
 ) -> Path:
     value = {
         **dict(extras or {}),
@@ -626,7 +700,7 @@ def _manifest_to_path(
         "xoscValidation": dict(validation),
         "workerAttestation": dict(attestation),
         "parity": dict(parity),
-        "carlaVehicleFallbacks": [dict(item) for item in carla_vehicle_fallbacks],
+        "substitutions": [dict(item) for item in substitutions],
         "parityEvidence": dict(parity_evidence),
         "artifacts": [dict(item) for item in artifacts],
         "sensorFrames": sensor_records,
@@ -641,7 +715,7 @@ def _manifest_to_path(
             "execution": lease.render_spec.execution_mode,
             "sensors": sorted({sensor.modality for sensor in lease.render_spec.sensors}),
             "fixedTimestepS": plan.fixed_timestep_s,
-            "appearance": _appearance_capability(plan, abort),
+            "appearance": _appearance_capability(plan, abort, rendered_appearance),
         },
     }
     with destination.open("wb") as target:
@@ -717,39 +791,24 @@ def _environment_values_match(
     return True
 
 
-def _is_baked_default_daylight(requested: Mapping[str, float]) -> bool:
-    return (
-        all(float(requested[field]) == 0.0 for field in (
-            "cloudiness", "precipitation", "precipitation_deposits",
-            "wind_intensity", "fog_density", "fog_distance", "wetness",
-        ))
-        and float(requested["sun_altitude_angle"]) >= 0.0
-    )
-
-
 def _environment_evidence_is_accepted(environment: object, requested: object) -> bool:
+    """The runtime showed exactly the requested environment.
+
+    Either CARLA applied the weather and read it back, or the cooked map bakes
+    exactly this environment (per-map registry). A cooked map's baked lighting
+    is never accepted in place of a different request.
+    """
     if not isinstance(environment, Mapping):
         return False
     expected = {field: float(getattr(requested, field)) for field in _ENVIRONMENT_FIELDS}
-    if environment.get("schema") != "simforge.environment-evidence/v1":
-        return False
-    if not _environment_values_match(environment.get("requested"), expected):
-        return False
-    if environment.get("available") is True and environment.get("exact") is True:
-        return (
-            set(environment) == {"schema", "available", "exact", "requested", "observed"}
-            and _environment_values_match(environment.get("observed"), expected)
-        )
     return (
-        set(environment) == {
-            "schema", "available", "exact", "requested", "observed", "mode", "reason",
-        }
+        environment.get("schema") == "simforge.environment-evidence/v1"
+        and set(environment) == {"schema", "available", "exact", "requested", "observed", "mode"}
         and environment.get("available") is True
-        and environment.get("exact") is False
-        and environment.get("observed") is None
-        and environment.get("mode") == "cooked-baked-default"
-        and environment.get("reason") == "custom-map-baked-default-daylight"
-        and _is_baked_default_daylight(expected)
+        and environment.get("exact") is True
+        and environment.get("mode") in {"runtime-weather", "cooked-baked"}
+        and _environment_values_match(environment.get("requested"), expected)
+        and _environment_values_match(environment.get("observed"), expected)
     )
 
 def _runtime_semantic_failures(
@@ -786,10 +845,10 @@ def _map_binding(runtime_evidence: Mapping[str, object], lease: Lease) -> tuple[
         or map_evidence.get("schema") != "simforge.carla-map-evidence/v1"
         or map_evidence.get("available") is not True
         or map_evidence.get("packageXodrSha256") != lease.execution_package.xodr.sha256
-        or map_evidence.get("binding") not in {"exact", "approximate"}
-        or map_evidence.get("identityMode") not in {
-            "xodr-byte-exact", "approved-cooked-digest", "generated-opendrive", "approximate",
-        }
+        or map_evidence.get("binding") != "exact"
+        or map_evidence.get("exact") is not True
+        or map_evidence.get("source") != "cooked-custom-map"
+        or map_evidence.get("identityMode") not in {"xodr-byte-exact", "approved-cooked-digest"}
     ):
         return None, ["map-binding"]
     return str(map_evidence["binding"]), []
@@ -838,8 +897,6 @@ def _replay_parity_evidence(
     verified_kinds = sorted(produced_kinds | predicted_kinds)
     missing_kinds = sorted(expected_kinds - set(verified_kinds))
     divergences: list[dict[str, object]] = []
-    if binding == "approximate":
-        divergences.append({"code": "map-binding:approximate", "classification": "approximate-map"})
     staged = spawn_placement.get("stagedActorIds", ()) if isinstance(spawn_placement, Mapping) else ()
     for actor_id in staged:
         divergences.append({"code": f"spawn-placement:staged:{actor_id}", "classification": "informational"})
@@ -1430,20 +1487,99 @@ def _artifact(
 def _approximations(execution_mode: str, runtime_evidence: Mapping[str, object]) -> list[dict[str, str]]:
     """What this render shows that is known not to be exact, stated plainly."""
     items: list[dict[str, str]] = []
-    map_evidence = runtime_evidence.get("map")
-    if isinstance(map_evidence, Mapping) and map_evidence.get("binding") == "approximate":
-        items.append({"id": "map-binding", "detail": "the CARLA world is not bound to the package XODR digest (approximate map)"})
     if execution_mode != EXECUTION_MODE_TRACE_REPLAY:
         items.append({"id": "physics-validation", "detail": "CARLA physics drove the vehicles; poses diverge from the scenario trace by design"})
         return items
     items.extend([
         {"id": "suspension", "detail": "no suspension dynamics; body attitude is the timeline's road and acceleration pitch/roll"},
         {"id": "wheel-spin", "detail": "wheels of kinematic vehicles do not spin or steer"},
-        {"id": "walker-gait", "detail": "walker gait is CARLA's speed-driven locomotion blend, not a replayed skeleton"},
+        {"id": "walker-gait", "detail": "walker gait is CARLA's speed-driven locomotion blend, not a replayed skeleton; the render fails if a walking walker's legs do not move (walkerAnimation evidence)"},
         {"id": "radar-doppler", "detail": "radar velocity comes from CARLA's velocity of a kinematic body; use the timeline speed for Doppler truth"},
         {"id": "collisions", "detail": "contacts are the trace's events; CARLA reports no physical impulses"},
     ])
     return items
+
+
+def _compiled_substitutions(
+    execution_manifest: Mapping[str, Any],
+    policy: RenderPolicy,
+) -> tuple[dict[str, object], ...]:
+    """Body substitutions the compiler already baked into the package."""
+    compiled = execution_manifest.get("carlaVehicleFallbacks")
+    if compiled is None:
+        return ()
+    if not isinstance(compiled, list) or any(not isinstance(item, Mapping) for item in compiled):
+        raise ContractError("execution manifest carlaVehicleFallbacks must be an array of objects")
+    if compiled and not policy.allows(SUBSTITUTION_CARLA_ACTOR_BODY):
+        raise CarlaRenderError(
+            "carla_blueprint_unavailable",
+            "the execution package substitutes actor bodies at compile time ("
+            + ", ".join(str(item.get("actorId")) for item in compiled)
+            + f") and the render intent does not allow {SUBSTITUTION_CARLA_ACTOR_BODY}",
+        )
+    records = []
+    for item in compiled:
+        actor_id, authored, fallback = item.get("actorId"), item.get("authoredCatalogId"), item.get("fallbackCatalogId")
+        if not all(isinstance(value, str) and value for value in (actor_id, authored, fallback)):
+            raise ContractError(
+                "execution manifest carlaVehicleFallbacks entries need actorId, authoredCatalogId and fallbackCatalogId"
+            )
+        records.append(substitution_record(
+            SUBSTITUTION_CARLA_ACTOR_BODY, str(actor_id), str(authored), str(fallback),
+            reason="compile-time substitution in the execution package",
+        ))
+    return tuple(records)
+
+
+def _probe_blueprints(
+    plan: ExecutionPlan,
+    catalog: Mapping[str, Mapping[str, object]],
+    policy: RenderPolicy,
+) -> set[str]:
+    """Blueprints whose placeability decides this render's bodies."""
+    probe: set[str] = set()
+    classes: set[str] = set()
+    for binding in plan.actors.values():
+        entry = catalog.get(binding.catalog_name)
+        if not isinstance(entry, Mapping):
+            continue
+        blueprint = entry.get("blueprintId")
+        if isinstance(blueprint, str):
+            probe.add(blueprint)
+        actor_class = entry.get("actorClass")
+        if _native_prefixes(binding.kind) is not None and isinstance(actor_class, str):
+            classes.add(actor_class)
+    if policy.allows(SUBSTITUTION_CARLA_ACTOR_BODY):
+        # A substitute must be proven placeable too.
+        for entry in catalog.values():
+            blueprint = entry.get("blueprintId")
+            if (
+                entry.get("actorClass") in classes and isinstance(blueprint, str)
+                and blueprint.startswith(("vehicle.", "bike.", "walker."))
+            ):
+                probe.add(blueprint)
+    return probe
+
+
+def _verify_timeline_appearance(plan: ExecutionPlan, rendered: set[str]) -> None:
+    """A baked render timeline must render every appearance state the xosc authors."""
+    authored = {
+        key
+        for frame in plan.frames
+        for state in frame.actors.values()
+        for key in state.appearance
+        if not key.startswith("cue.")
+    }
+    if {"light.indicatorLeft", "light.indicatorRight"} <= rendered:
+        # Hazards render through both indicators; the timeline sampler checks
+        # every tick that they show the authored warningLights state.
+        authored.discard("light.warningLights")
+    missing = sorted(authored - rendered)
+    if missing:
+        raise CarlaRenderError(
+            "carla_timeline_appearance_incomplete",
+            "the render timeline does not render authored appearance state: " + ", ".join(missing),
+        )
 
 
 def _replay_geometry(backend: RenderBackend, plan: ExecutionPlan) -> dict[str, Any]:
@@ -1453,12 +1589,27 @@ def _replay_geometry(backend: RenderBackend, plan: ExecutionPlan) -> dict[str, A
     base-origin body with no calibration.
     """
     classes = getattr(backend, "actor_classes", None)
+    resolved = dict(classes) if isinstance(classes, Mapping) and classes else {actor_id: "vehicle" for actor_id in plan.actors}
+    # Every plan actor is expected, spawned or not: a body CARLA failed to
+    # show is a lifecycle mismatch, never an actor nobody grades.
+    for actor_id, binding in plan.actors.items():
+        resolved.setdefault(actor_id, _plan_motion_class(binding.kind))
+    bottoms = getattr(backend, "bottom_offsets", None)
+    z_offset = getattr(backend, "z_offset_m", None)
     return {
-        "classes": dict(classes) if isinstance(classes, Mapping) and classes else {actor_id: "vehicle" for actor_id in plan.actors},
-        "bottoms": dict(getattr(backend, "bottom_offsets", {}) or {}),
-        "zOffsetM": float(getattr(backend, "z_offset_m", 0.0) or 0.0),
+        "classes": resolved,
+        "bottoms": dict(bottoms) if isinstance(bottoms, Mapping) else {},
+        "zOffsetM": float(z_offset) if isinstance(z_offset, (int, float)) else 0.0,
         "dropped": set(),
     }
+
+
+def _plan_motion_class(kind: str) -> str:
+    if kind in ROAD_USER_VEHICLE_KINDS:
+        return "vehicle"
+    if kind == "pedestrian":
+        return "walker"
+    return "prop"
 
 
 def _observed_render_pose(value: Mapping[str, Any]) -> RenderPose | None:
@@ -1484,6 +1635,7 @@ def execute_lease(
     deadline_monotonic: Deadline | None = None,
     runtime_asset_overrides: Mapping[str, Mapping[str, str]] | None = None,
     render_timeline: bytes | None = None,
+    policy: RenderPolicy = RenderPolicy(),
 ) -> dict[str, object]:
     emit = progress or (lambda _event, _payload: None)
     def deadline_value() -> float | None:
@@ -1569,7 +1721,8 @@ def execute_lease(
             frozenset(execution_manifest["materializedTraffic"]["overlapActorIds"]),
         )
     check_abort("compile_xosc")
-    execution_drops = _preflight_execution_semantics(lease, plan)
+    _preflight_appearance(plan)
+    _preflight_execution_semantics(lease, plan)
     actor_ids = set(plan.actors)
     unknown_mounts = sorted({
         sensor.actor_id for sensor in lease.render_spec.sensors
@@ -1593,24 +1746,11 @@ def execute_lease(
             raise ContractError(f"runtime asset override conflicts with catalog entry {catalog_id}")
         catalog[catalog_id] = dict(binding)
     check_abort("index_asset_catalog")
-    plan, runtime_vehicle_fallbacks = _apply_actor_fallbacks(
-        plan,
-        catalog,
-        lambda: check_abort("index_asset_catalog"),
+    compiled_substitutions = _compiled_substitutions(execution_manifest, policy)
+    authored_plan = plan
+    plan, substitutions = _resolve_actor_bodies(
+        authored_plan, catalog, policy, lambda: check_abort("index_asset_catalog"),
     )
-    compiled_vehicle_fallbacks = execution_manifest.get("carlaVehicleFallbacks", [])
-    if not isinstance(compiled_vehicle_fallbacks, list) or any(
-        not isinstance(item, Mapping) for item in compiled_vehicle_fallbacks
-    ):
-        raise ContractError("execution manifest carlaVehicleFallbacks must be an array of objects")
-    carla_vehicle_fallbacks = (
-        *(dict(item) for item in compiled_vehicle_fallbacks),
-        *runtime_vehicle_fallbacks,
-    )
-    if runtime_vehicle_fallbacks:
-        emit("actor_fallbacks_applied", {
-            "carlaVehicleFallbacks": [dict(item) for item in runtime_vehicle_fallbacks],
-        })
     _preflight_asset_semantics(plan, catalog)
     emit("plan_compiled", {
         "planSha256": plan.sha256,
@@ -1647,6 +1787,7 @@ def execute_lease(
     signal_readbacks: list[Mapping[str, str]] = []
     collision_readbacks: list[list[Mapping[str, object]]] = []
     sampled_frames: dict[int, PlanFrame] = {}
+    rendered_appearance: set[str] = set()
     capture_schedule = _capture_schedule(plan, lease.render_spec.fps, lambda: check_abort("schedule_capture"), execution_mode) if lease.job_mode == "full_render" else {}
     expected_capture_count = len(capture_schedule)
     _enforce_render_budgets(lease, plan, expected_capture_count)
@@ -1686,56 +1827,25 @@ def execute_lease(
             backend.configure_environment(lease.render_spec.environment)
             check_abort("configure_environment")
             # The blueprint registry is a superset of what the cook shipped, so
-            # availability is only knowable once a world is loaded. Re-resolve
-            # any road user whose body this runtime cannot place onto the
-            # nearest same-class body it can, rather than losing the actor at
-            # spawn with no explanation.
-            required_blueprints = {
-                str(entry.get("blueprintId"))
-                for binding in plan.actors.values()
-                for entry in (catalog.get(binding.catalog_name) or {},)
-                if isinstance(entry.get("blueprintId"), str)
-            }
+            # availability is only knowable once a world is loaded. Bodies are
+            # resolved again, from the authored plan, against what this runtime
+            # was observed to place.
             spawnable = _optional_backend_call(
                 backend,
                 "spawnable_blueprints",
-                required_blueprints,
+                _probe_blueprints(authored_plan, catalog, policy),
                 abort=lambda: backend_fence("verify_blueprints"),
             )
             if spawnable is not None:
-                missing = sorted(required_blueprints - set(spawnable))
-                if missing:
-                    emit("blueprints_unavailable", {"blueprintIds": missing})
-                    plan, availability_fallbacks = _apply_actor_fallbacks(
-                        plan,
-                        catalog,
-                        lambda: backend_fence("verify_blueprints"),
-                        spawnable=frozenset(spawnable),
-                    )
-                    if availability_fallbacks:
-                        carla_vehicle_fallbacks = (
-                            *carla_vehicle_fallbacks,
-                            *availability_fallbacks,
-                        )
-                        emit("actor_bodies_substituted", {
-                            "count": len(availability_fallbacks),
-                            "substitutions": [
-                                {
-                                    "actorId": item["actorId"],
-                                    "authored": item["authoredCatalogId"],
-                                    "substitute": item["fallbackCatalogId"],
-                                    "class": item["vehicleClass"],
-                                }
-                                for item in availability_fallbacks
-                            ],
-                        })
+                plan, substitutions = _resolve_actor_bodies(
+                    authored_plan, catalog, policy,
+                    lambda: backend_fence("verify_blueprints"),
+                    spawnable=frozenset(spawnable),
+                )
                 check_abort("verify_blueprints")
-            if execution_drops:
-                # Knockdown-posed actors are dropped from execution before any
-                # CARLA body exists; spawn records them in the placement report
-                # so the manifest carries an explicit per-actor diagnostic.
-                backend.execution_drops = dict(execution_drops)  # type: ignore[attr-defined]
-                emit("execution_actors_dropped", {"actorIds": sorted(execution_drops)})
+            substitutions = (*compiled_substitutions, *substitutions)
+            for record in substitutions:
+                emit("substitution", record)
             backend.spawn(plan.actors, plan.frames[0], catalog, abort=lambda: backend_fence("spawn_actors"))
             check_abort("spawn_actors")
             spawn_placement = _optional_backend_call(
@@ -1846,6 +1956,9 @@ def execute_lease(
                             ],
                         }, separators=(",", ":")))
                     readback_times.append(frame.t)
+                    for state in frame.actors.values():
+                        if state.lifecycle != LIFECYCLE_ABSENT:
+                            rendered_appearance.update(state.appearance)
                 else:
                     collisions = _optional_backend_call(
                         backend,
@@ -1964,6 +2077,7 @@ def execute_lease(
                         "container": "mp4",
                         "format": "mp4-h264",
                         "encoder": video_encoder,
+                        "encoderArgs": list(presentation_video_codec_args()),
                         "width": int(sensor.config["width"]),
                         "height": int(sensor.config["height"]),
                         "frameCount": expected_capture_count,
@@ -1987,6 +2101,14 @@ def execute_lease(
                     remaining_bytes,
                     lambda: check_abort("encode_sensor_visualization", index, len(visualization_sensors)),
                 )
+                # The encoder no longer truncates at a size cap, so a
+                # visualization is either whole or the job fails.
+                if viz_body.stat().st_size > remaining_bytes:
+                    raise ContractError(f"sensor visualization {sensor.artifact_name} exceeds its output budget")
+                _verify_video_frames(
+                    viz_body, f"sensor visualization {sensor.artifact_name}", lease.render_spec.fps,
+                    expected_capture_count, check_abort, absolute_deadline,
+                )
                 upload_kind = f"sensorVideo:{sensor.artifact_name}"
                 add_artifact(make_artifact(
                     upload_kind,
@@ -2002,6 +2124,8 @@ def execute_lease(
                         "container": "mp4",
                         "format": "mp4-h264",
                         "representation": "visualization",
+                        "encoderArgs": list(SENSOR_VISUALIZATION_CODEC_ARGS),
+                        **visualization_scales(sensor),
                         "frameCount": expected_capture_count,
                         "fps": lease.render_spec.fps,
                         "durationS": plan.frames[-1].t,
@@ -2015,7 +2139,10 @@ def execute_lease(
             check_abort("package_sensor_data", 0, len(data_sensors))
             sensor_dir = output_dir / sensor.artifact_name
             if not sensor_dir.is_dir():
-                continue
+                raise CarlaRenderError(
+                    "carla_sensor_capture_missing",
+                    f"sensor {sensor.artifact_name} captured no data directory",
+                )
             data_body = _archive_sensor_data(
                 sensor_dir,
                 Path(directory) / f"sensor-data-{sensor.artifact_name}.zip",
@@ -2034,6 +2161,15 @@ def execute_lease(
                     "modality": sensor.modality,
                     "outputName": sensor.role,
                     "fps": lease.render_spec.fps,
+                    **({
+                        "sweep": {
+                            "policy": "latest-full-revolution",
+                            "ticksPerRevolution": lidar_ticks_per_revolution(
+                                float(sensor.config["rotationFrequencyHz"]), plan.fixed_timestep_s,
+                            ),
+                            "motionCompensation": "none",
+                        },
+                    } if sensor.modality in {"lidar", "semantic-lidar"} else {}),
                 },
             ))
         if "annotations" in lease.render_spec.outputs:
@@ -2042,6 +2178,8 @@ def execute_lease(
         parity = accumulator.report()
         replay_report = replay_gate.report() if replay else None
         comparator_passed = True
+        if replay and render_timeline is not None:
+            _verify_timeline_appearance(authored_plan, rendered_appearance)
         if replay_report is not None and comparator_records is not None:
             import simforge_oss_timeline
             comparator = simforge_oss_timeline.compare_observed(
@@ -2111,7 +2249,7 @@ def execute_lease(
                 Path(directory) / "manifest.json",
                 min(artifact_temp_limit, MAX_ARTIFACT_BYTES, MAX_OUTPUT_BYTES - output_bytes),
                 lambda: check_abort("serialize_manifest"),
-                carla_vehicle_fallbacks,
+                substitutions,
                 {
                     "execution": {
                         "mode": execution_mode,
@@ -2122,6 +2260,7 @@ def execute_lease(
                     "timeline": dict(sampler.evidence()),
                     "approximations": _approximations(execution_mode, runtime_evidence),
                 },
+                rendered_appearance if replay else None,
             )
             add_artifact(make_artifact("manifest", manifest_body, "application/json", lease.artifact_uploads.get("manifest")))
     return {
@@ -2134,7 +2273,7 @@ def execute_lease(
         "attestation": attestation,
         "parity": parity_value,
         "parityEvidence": parity_evidence,
-        "carlaVehicleFallbacks": [dict(item) for item in carla_vehicle_fallbacks],
+        "substitutions": [dict(item) for item in substitutions],
         "artifacts": artifacts,
     }
 

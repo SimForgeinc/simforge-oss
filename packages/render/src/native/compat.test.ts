@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { CONTROL_FEATURES_V1, CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS } from '../worker-control.js';
+import { CONTROL_FEATURES_V1, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS } from '../worker-control.js';
 import { gatedSceneSourceEvidence } from './engine.js';
 import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema } from './evidence.js';
 
@@ -11,7 +11,7 @@ import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema } from './eviden
  */
 const BASELINE_MANIFEST_KEYS = ['schema', 'intentSha256', 'executionPackageControlSha256', 'sourceXoscSha256', 'loweringSha256', 'actorAssetsSha256', 'frameCount', 'textureProfile', 'look', 'videos'];
 const BASELINE_DIAGNOSTICS_KEYS = ['schema', 'intentSha256', 'executionPackageControlSha256', 'sourceXoscSha256', 'loweringSha256', 'actorAssetsSha256', 'frameCount', 'textureProfile', 'fixedTimestepSeconds', 'traceSha256', 'videoCount', 'videos', 'service', 'frames', 'timings'];
-const GATED_KEYS = ['sceneSource', 'timelineSha256', 'parity', 'capture'];
+const GATED_KEYS = ['sceneSource', 'timelineSha256', 'parity', 'capture', 'encoder'];
 /** `timings` keys the rc.72 plane accepts; `stages` rides `native-evidence.stage-timings`. */
 const BASELINE_TIMINGS_KEYS = ['wallMs', 'serverMs'];
 const GATED_TIMINGS_KEYS = ['stages'];
@@ -28,6 +28,11 @@ it('every diagnostics timings key is either baseline or gated behind a control f
   const unknown = Object.keys(timings.shape).filter((key) => !BASELINE_TIMINGS_KEYS.includes(key) && !GATED_TIMINGS_KEYS.includes(key));
   expect(unknown).toEqual([]);
   expect(CONTROL_FEATURES_V1).toContain(CONTROL_FEATURE_NATIVE_STAGE_TIMINGS);
+});
+
+it('gates the encoder record behind its own control feature', () => {
+  expect(CONTROL_FEATURES_V1).toContain(CONTROL_FEATURE_NATIVE_ENCODER);
+  expect(NativeRenderManifestSchema.shape.encoder.safeParse(undefined).success).toBe(true);
 });
 
 it('omits scene-source evidence for a control plane that did not list the feature', () => {
