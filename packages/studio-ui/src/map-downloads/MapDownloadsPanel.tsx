@@ -395,6 +395,7 @@ export function MapDownloadsPanel({
             <CacheSection
               cache={browserCache}
               missingBytes={missingBytes}
+              sizing={sizing}
               verdict={verdict}
               locked={jobBusy}
               onChanged={refreshCache}
@@ -643,9 +644,10 @@ function Sparkline({ samples }: { samples: readonly number[] }) {
   );
 }
 
-function CacheSection({ cache, missingBytes, verdict, locked, onChanged }: {
+function CacheSection({ cache, missingBytes, sizing, verdict, locked, onChanged }: {
   cache: Extract<MapAssetCacheStatus, { backend: "browser" }> | null;
   missingBytes: number;
+  sizing: boolean;
   verdict: ReturnType<typeof assessMapDownloadCapacity> | null;
   locked: boolean;
   onChanged: () => void;
@@ -693,7 +695,7 @@ function CacheSection({ cache, missingBytes, verdict, locked, onChanged }: {
         </div>
         <div {...stylex.props(styles.legendItem)}>
           <dt {...stylex.props(typography.eyebrow)}><span {...stylex.props(styles.swatch, styles.swatchIncoming)} />To download</dt>
-          <dd {...stylex.props(typography.bodySm, typography.numeric, styles.legendValue)}>{formatDownloadBytes(missingBytes)}</dd>
+          <dd {...stylex.props(typography.bodySm, typography.numeric, styles.legendValue)}>{sizing ? "Sizing…" : formatDownloadBytes(missingBytes)}</dd>
         </div>
         <div {...stylex.props(styles.legendItem)}>
           <dt {...stylex.props(typography.eyebrow)}>Cache ceiling</dt>
@@ -931,7 +933,7 @@ function ActionBar({ job, starting, sizing, selectedCount, missingBytes, selecti
               data-testid="map-downloads-start"
             >
               <Download aria-hidden="true" />
-              {starting ? "Starting…" : missingBytes === 0 && selectionBytes > 0 ? "Downloaded" : `Download${missingBytes > 0 ? ` ${formatDownloadBytes(missingBytes)}` : ""}`}
+              {starting ? "Starting…" : sizing ? "Download" : missingBytes === 0 && selectionBytes > 0 ? "Downloaded" : `Download${missingBytes > 0 ? ` ${formatDownloadBytes(missingBytes)}` : ""}`}
             </Button>
           </>
         )}
