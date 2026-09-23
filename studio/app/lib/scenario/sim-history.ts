@@ -202,10 +202,10 @@ export async function listDocumentVersions(context: AppContext, documentId: stri
   );
   if (!draft) return null;
   const versions = await queryRows<VersionRow>(
-    `SELECT rv.id, rv.revision_number, rv.label, rv.created_for, rv.created_at::text AS created_at,
+    `SELECT rv.id, rv.revision_number, rv.label, rv.created_for, to_char(rv.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
             rv.created_by_user_id, u.name AS created_by_name, rv.source_draft_version, rv.content_sha256,
-            rv.map_version_id, mv.label AS map_label, mv.created_at::text AS map_created_at,
-            p.sim_key AS active_sim_key, p.set_at::text AS active_set_at, p.set_by_user_id AS active_set_by,
+            rv.map_version_id, mv.label AS map_label, to_char(mv.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS map_created_at,
+            p.sim_key AS active_sim_key, to_char(p.set_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS active_set_at, p.set_by_user_id AS active_set_by,
             pu.name AS active_set_by_name
        FROM simforge.revisions rv
        LEFT JOIN public.ba_user u ON u.id = rv.created_by_user_id
@@ -218,7 +218,7 @@ export async function listDocumentVersions(context: AppContext, documentId: stri
     { workspace_id: context.workspaceId, document_id: documentId },
   );
   const history = versions.length === 0 ? [] : await queryRows<HistoryRow>(
-    `SELECT rs.revision_id, rs.sim_key, rs.engine_sem_ver, rs.reason, rs.created_at::text AS created_at,
+    `SELECT rs.revision_id, rs.sim_key, rs.engine_sem_ver, rs.reason, to_char(rs.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
             rs.created_by_user_id, u.name AS created_by_name, rs.previous_sim_key, rs.motion_diff,
             r.trace_sha256, r.timeline_sha256, r.map_closure_digest, r.resolved_input_digest, r.engine_build, r.producer
        FROM simforge.revision_simulations rs
@@ -474,7 +474,7 @@ export async function draftMapPinStatus(context: AppContext, documentId: string)
     return { pinned: null, newer: null, newerUnavailable: null, pinnedDescriptor: null };
   }
   const pinnedRow = await queryOne<{ id: string; label: string; created_at: string; retired: boolean }>(
-    `SELECT id, label, created_at::text AS created_at, retired_at IS NOT NULL AS retired
+    `SELECT id, label, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at, retired_at IS NOT NULL AS retired
        FROM simforge.map_versions WHERE id = :map_version_id`,
     { map_version_id: document.mapVersionId },
   );
@@ -487,7 +487,7 @@ export async function draftMapPinStatus(context: AppContext, documentId: string)
     id: string; label: string; created_at: string; xodr_sha256: string;
     geometry_sha256: string | null; pinned_xodr_sha256: string; pinned_geometry_sha256: string | null;
   }>(
-    `SELECT mv.id, mv.label, mv.created_at::text AS created_at, mv.xodr_sha256,
+    `SELECT mv.id, mv.label, to_char(mv.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at, mv.xodr_sha256,
             mv.descriptor->>'xodrGeometrySha256' AS geometry_sha256,
             pinned.xodr_sha256 AS pinned_xodr_sha256,
             pinned.descriptor->>'xodrGeometrySha256' AS pinned_geometry_sha256

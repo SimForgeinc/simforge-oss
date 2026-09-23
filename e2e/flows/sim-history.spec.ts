@@ -79,19 +79,22 @@ test("engine change: keep the old motion, use the new one, roll back, compare", 
   await expect(compare.getByTestId("scenario-compare-stage")).toBeVisible({ timeout: 120_000 });
   await expect(compare.getByTestId("scenario-compare-diff")).toContainText(/changed/);
   await shot(page, "02-banner-compare");
-  await page.keyboard.press("Escape");
+  await compare.getByRole("button", { name: "Close" }).click();
   await expect(compare).toBeHidden();
 
   // 3. Keep the 0.9.0 motion as a version.
   await banner.getByTestId("engine-change-keep").click();
-  await expect(banner).toContainText(/Saved Version \d+ with the Engine 0\.9\.0 motion/, { timeout: 120_000 });
+  await expect(banner).toContainText(/Version \d+ keeps the Engine 0\.9\.0 motion/, { timeout: 120_000 });
+  const keptNumber = /Version (\d+) keeps/.exec((await banner.textContent()) ?? "")![1]!;
   await shot(page, "03-kept-old-motion");
 
   // 4. The Versions panel: the kept version renders the old engine's result.
   await page.getByTestId("scenario-versions-button").click();
   const panel = page.getByTestId("scenario-versions-panel");
   await expect(panel).toBeVisible();
-  const kept = panel.getByTestId("scenario-version").filter({ hasText: "Kept previous motion" }).first();
+  // A version already cut from this draft (a render, say) keeps the old motion itself; otherwise a
+  // new "Kept previous motion" version is made. Either way it is the version the banner named.
+  const kept = panel.locator(`[data-testid="scenario-version"][data-revision-number="${keptNumber}"]`);
   await expect(kept).toBeVisible({ timeout: 60_000 });
   const oldSim = kept.locator('[data-testid="scenario-version-simulation"][data-engine="0.9.0"]');
   const newSim = kept.locator('[data-testid="scenario-version-simulation"][data-engine="0.10.0"]');
@@ -126,7 +129,7 @@ test("engine change: keep the old motion, use the new one, roll back, compare", 
   await shot(page, "07-compare-dual-playback");
 
   // The banner does not come back: the draft moved on with the current engine.
-  await page.keyboard.press("Escape");
+  await compare.getByRole("button", { name: "Close" }).click();
   await page.reload({ waitUntil: "commit" });
   await expect(page.getByTestId("scenario-versions-button")).toBeVisible({ timeout: 10 * 60_000 });
   await page.waitForTimeout(15_000);

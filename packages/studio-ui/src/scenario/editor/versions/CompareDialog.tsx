@@ -177,7 +177,7 @@ export function CompareDialog({
                   {playing ? <Pause /> : <Play />}
                 </IconButton>
                 <input
-                  {...stylex.props(styles.compareScrubber)}
+                  {...stylex.props(styles.compareScrubber, art.scrubber)}
                   aria-label="Clip time"
                   max={comparison.playback.frames.length - 1}
                   min={0}
