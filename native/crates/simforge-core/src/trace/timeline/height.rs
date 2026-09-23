@@ -8,6 +8,12 @@
 //! off-network bound. It is evaluated once, when a timeline is built; no
 //! renderer samples height on its own.
 //!
+//! One addition the exporter (which sees single points, not tracks) does not
+//! have: a timeline passes [`HeightQuery::continuity_z`], so where two lanes
+//! tie (crossing junction roads) a body keeps the surface it was on at the
+//! neighbouring tick instead of failing. It only answers queries that would
+//! otherwise be refused, so no previously built timeline changes.
+//!
 //! Kind `xodr-elevation/v1` covers the reference-line elevation profile only.
 //! Superelevation and `<laneHeight>` are reserved for `xodr-elevation/v2`
 //! (the topology carries no reference-line lateral offsets yet); a new kind
@@ -222,6 +228,12 @@ pub struct HeightQuery<'a> {
     pub preferred_road: Option<i64>,
     /// Label for errors (actor id).
     pub label: Option<&'a str>,
+    /// Elevation the same probe resolved to on the neighbouring tick of this
+    /// body. Consulted only when two lanes tie (an ambiguity that would
+    /// otherwise be refused): the surface nearest it wins, the same "a body
+    /// does not change deck between ticks" rule as the engine's contact.
+    /// Never changes an answer that resolves without it.
+    pub continuity_z: Option<f64>,
 }
 
 impl HeightField {
@@ -757,18 +769,49 @@ impl XodrHeightField {
                 }),
             };
         };
-        if let Some(conflicting) = tier.iter().find(|c| {
-            !std::ptr::eq(**c, *best)
-                && (c.d - best.d).abs() <= AMBIGUOUS_DISTANCE_EPSILON_M
-                && (c.elevation - best.elevation).abs() > DISTINCT_SURFACE_EPSILON_M
-                && !((c.elevation - best.elevation).abs() <= CONTINUOUS_SURFACE_MAX_GAP_M
-                    && self.roads_continuous(best.road_id, c.road_id))
-        }) {
-            return Err(HeightError::Ambiguous {
-                label,
-                best: best.rsl.to_owned(),
-                other: conflicting.rsl.to_owned(),
+        let conflicting: Vec<&Candidate<'_>> = tier
+            .iter()
+            .copied()
+            .filter(|c| {
+                !std::ptr::eq(*c, *best)
+                    && (c.d - best.d).abs() <= AMBIGUOUS_DISTANCE_EPSILON_M
+                    && (c.elevation - best.elevation).abs() > DISTINCT_SURFACE_EPSILON_M
+                    && !((c.elevation - best.elevation).abs() <= CONTINUOUS_SURFACE_MAX_GAP_M
+                        && self.roads_continuous(best.road_id, c.road_id))
+            })
+            .collect();
+        if let Some(first) = conflicting.first() {
+            let Some(z_ref) = query.continuity_z.filter(|z| z.is_finite()) else {
+                return Err(HeightError::Ambiguous {
+                    label,
+                    best: best.rsl.to_owned(),
+                    other: first.rsl.to_owned(),
+                });
+            };
+            // Tied surfaces: the one nearest the neighbouring tick's
+            // elevation, unless two are equally near (still ambiguous).
+            let mut tied: Vec<&Candidate<'_>> =
+                std::iter::once(*best).chain(conflicting.iter().copied()).collect();
+            tied.sort_by(|a, b| {
+                (a.elevation - z_ref)
+                    .abs()
+                    .total_cmp(&(b.elevation - z_ref).abs())
+                    .then_with(|| cmp_locale(a.rsl, b.rsl))
             });
+            let (pick, runner_up) = (tied[0], tied[1]);
+            if (runner_up.elevation - z_ref).abs() - (pick.elevation - z_ref).abs()
+                <= DISTINCT_SURFACE_EPSILON_M
+            {
+                return Err(HeightError::Ambiguous {
+                    label,
+                    best: pick.rsl.to_owned(),
+                    other: runner_up.rsl.to_owned(),
+                });
+            }
+            if !pick.elevation.is_finite() {
+                return Err(HeightError::NonFiniteSurface(pick.rsl.to_owned()));
+            }
+            return Ok(pick.elevation);
         }
         if !best.elevation.is_finite() {
             return Err(HeightError::NonFiniteSurface(best.rsl.to_owned()));

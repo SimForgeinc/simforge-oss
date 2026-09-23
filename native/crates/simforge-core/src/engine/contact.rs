@@ -237,6 +237,7 @@ pub fn solve_contact(
                         HeightQuery {
                             preferred_road: road_hint,
                             label: Some(label),
+                            continuity_z: None,
                         },
                     )
                     .ok()
