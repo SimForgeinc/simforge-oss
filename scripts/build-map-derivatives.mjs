@@ -9,6 +9,7 @@ import {
 import { inspectPinnedToolchain, pinnedToolEnvironment } from './map-derivative-toolchain.mjs';
 import { buildStaticColliderArtifact, serializeStaticColliderArtifact } from './static-map-colliders-lib.mjs';
 import { buildTextureTiers, TEXTURE_VARIANTS } from '@simforge-oss/map-pipeline/texture-tiers';
+import { buildBrowserPacks } from '@simforge-oss/map-pipeline/browser-packs';
 
 function readGlbJsonChunk(file) {
   const descriptor = fs.openSync(file, 'r');
@@ -34,7 +35,7 @@ const mode = arg('mode', 'dry-run');
 const variant = arg('variant', 'all');
 if (!mapId || !/^[a-z0-9-]+$/.test(mapId)) throw new Error('Pass a safe map id with --map <id>');
 if (!['dry-run', 'build'].includes(mode)) throw new Error('--mode must be dry-run or build');
-if (!['all', 'geometry-only', 'roads-only', 'roads-only-v2', 'ktx2', 'static-colliders', 'texture-tiers', ...TEXTURE_VARIANTS].includes(variant)) throw new Error(`Unknown derivative variant: ${variant}`);
+if (!['all', 'geometry-only', 'roads-only', 'roads-only-v2', 'ktx2', 'static-colliders', 'texture-tiers', 'browser-packs', ...TEXTURE_VARIANTS].includes(variant)) throw new Error(`Unknown derivative variant: ${variant}`);
 
 const repository = path.resolve(import.meta.dirname, '..');
 const sourceRoot = path.resolve(arg('source-root', path.join(repository, 'dev-assets', mapId)));
@@ -43,6 +44,14 @@ if (variant === 'texture-tiers' || TEXTURE_VARIANTS.includes(variant)) {
   const options = { sourceRoot, outputRoot, variants: variant === 'texture-tiers' ? TEXTURE_VARIANTS : [variant],
     concurrency: Number(arg('jobs', '2')), ...(arg('ktx-bin') ? { ktxBin: arg('ktx-bin') } : {}) };
   console.log(JSON.stringify(mode === 'dry-run' ? options : await buildTextureTiers(options), null, 2));
+  process.exit(0);
+}
+if (variant === 'browser-packs') {
+  // Per-tier browser packs over whatever texture tiers the map already has
+  // (build them first with --variant texture-tiers).
+  const outputRoot = path.resolve(arg('output-root', sourceRoot));
+  const options = { sourceRoot, outputRoot };
+  console.log(JSON.stringify(mode === 'dry-run' ? options : await buildBrowserPacks(options), null, 2));
   process.exit(0);
 }
 const mapRoot = path.join(sourceRoot, '3d');
@@ -335,8 +344,10 @@ if (variant === 'ktx2' || variant === 'all') {
 }
 if (variant === 'all') {
   await buildTextureTiers({ sourceRoot });
+  await buildBrowserPacks({ sourceRoot });
   const generated = JSON.parse(fs.readFileSync(variantManifestFile)).variants;
   for (const id of TEXTURE_VARIANTS) variants[id] = generated[id];
+  for (const [id, reference] of Object.entries(generated)) if (id.startsWith('browser-pack:')) variants[id] = reference;
 }
 const variantManifest = { schemaVersion: 1, sourceManifestSha256: sha256(manifestBytes), variants };
 atomicWrite(variantManifestFile, `${JSON.stringify(variantManifest, null, 2)}\n`);
