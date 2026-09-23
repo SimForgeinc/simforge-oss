@@ -85,8 +85,12 @@ pub struct SceneSpec {
     pub taa_samples: Option<u32>,
     /// Render one directional cascade set for the whole RGB rig instead of
     /// one per camera (`render_core::shared_shadows`). Cascades are fitted
-    /// to the union of the rig's frusta, so every view stays covered.
-    #[serde(default)]
+    /// to the union of the rig's frusta, so every view stays covered; the
+    /// atlas grows to 2560 so texel density matches a per-view fit.
+    /// Default on: on the Belmont 8-camera rig it halves GPU time per
+    /// render (624 -> 325 ms on an RTX 3080) at 55 dB mean / 52 dB min PSNR
+    /// against per-view cascades (docs/engineering/native-render-gpu-profile.md).
+    #[serde(default = "default_true")]
     pub shared_shadows: bool,
     /// `auto` (default: hardware rays when the device has them), `gpu`,
     /// `cpu` or `verify` (hardware rays re-checked against the CPU every
