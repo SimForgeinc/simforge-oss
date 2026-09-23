@@ -254,6 +254,52 @@ export function renderSeed(content: Record<string, unknown>, scenarioSha256: str
   return Number.parseInt(digest.slice(0, 8), 16);
 }
 
+/** A submit-time refusal the route reports as `render_intent_invalid` with its reason. */
+function renderIntentRefusal(code: string, message: string): Error & { detail: string } {
+  return Object.assign(new Error(code), { detail: message });
+}
+
+/**
+ * CARLA renders any window of the frozen clip by trace replay, seeking to its
+ * start exactly as the native engine does (`simforge-oss-carla-exec`
+ * `resolve_render_window`). What it cannot render exactly is refused here,
+ * at submit, with the reason, never discovered by the worker at run time and
+ * never widened to the full clip.
+ */
+export function assertCarlaRenderClip(spec: RenderSpecV3, clipSeconds: number): void {
+  const { startSeconds, endSeconds } = spec.clip;
+  const window = endSeconds - startSeconds;
+  if (window < 0.02) {
+    throw renderIntentRefusal(
+      "carla_render_clip_too_short",
+      `CARLA renders on a 0.02 s tick; the ${startSeconds}-${endSeconds} s clip is shorter than one tick.`,
+    );
+  }
+  // Physics validation integrates CARLA physics from the authored start and
+  // grades every authored contact, so it renders only the whole clip; the
+  // (default) trace replay renders any window of it.
+  if (
+    spec.capabilityIntent.required.includes("actor.native_controls")
+    && (startSeconds > 0 || endSeconds < clipSeconds)
+  ) {
+    throw renderIntentRefusal(
+      "carla_render_clip_physics_validation_partial",
+      `CARLA physics validation (actor.native_controls) renders the whole ${clipSeconds} s clip, not ${startSeconds}-${endSeconds} s.`,
+    );
+  }
+  // CARLA captures every sensor at the video rate, else the first camera's.
+  const camera = spec.sources.find((source) => source.modality !== "lidar" && source.modality !== "radar");
+  const fps = spec.video?.fps ?? (camera && "fps" in camera.attributes ? camera.attributes.fps : undefined);
+  if (fps === undefined) return;
+  const frames = window * fps;
+  if (Math.abs(frames - Math.round(frames)) > 1e-6) {
+    throw renderIntentRefusal(
+      "carla_render_clip_frame_count_fractional",
+      `CARLA renders a whole number of frames: ${window} s at ${fps} fps is ${Number(frames.toFixed(3))} frames.`,
+    );
+  }
+}
+
 function buildIntent(
   input: SubmitScenarioRenderIntent,
   lineage: ImmutableLineageRow,
@@ -296,6 +342,7 @@ function buildIntent(
   ) {
     throw new Error("carla_render_video_format_invalid");
   }
+  if (input.engine === "carla") assertCarlaRenderClip(input.renderSpec, clipSeconds);
   const intentId = scenarioId("usri");
   return ScenarioRenderIntentSchema.parse({
     schema: RENDER_INTENT_V1_SCHEMA,
