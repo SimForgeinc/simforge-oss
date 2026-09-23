@@ -104,6 +104,7 @@ export class NativeServiceClient {
   #buffer = Buffer.alloc(0);
   #sequence = 0;
   #shmPath = '';
+  #shm: Promise<fs.FileHandle> | undefined;
   /** Additive ops the service advertised in `hello.capabilities`. */
   #capabilities = new Set<string>();
   /** Set once the connection is unusable; every later `rpc` rejects with it. */
@@ -221,15 +222,13 @@ export class NativeServiceClient {
     if (!Number.isSafeInteger(frame.offset) || !Number.isSafeInteger(frame.len) || frame.len < 0) {
       throw new Error('native service returned an invalid shared-memory frame range');
     }
-    const handle = await fs.open(this.#shmPath, 'r');
-    try {
-      const bytes = Buffer.allocUnsafe(frame.len);
-      const { bytesRead } = await handle.read(bytes, 0, frame.len, frame.offset + RECORD_HEADER_BYTES);
-      if (bytesRead !== frame.len) throw new Error(`short shared-memory read: ${bytesRead}/${frame.len}`);
-      return bytes;
-    } finally {
-      await handle.close();
-    }
+    // One handle for the session: a bundle reads a dozen payloads per tick.
+    this.#shm ??= fs.open(this.#shmPath, 'r');
+    const handle = await this.#shm;
+    const bytes = Buffer.allocUnsafe(frame.len);
+    const { bytesRead } = await handle.read(bytes, 0, frame.len, frame.offset + RECORD_HEADER_BYTES);
+    if (bytesRead !== frame.len) throw new Error(`short shared-memory read: ${bytesRead}/${frame.len}`);
+    return bytes;
   }
 
   /**
@@ -261,6 +260,9 @@ export class NativeServiceClient {
 
   #fail(error: Error): void {
     if (!this.#failure) this.#failure = error;
+    const shm = this.#shm;
+    this.#shm = undefined;
+    void shm?.then((handle) => handle.close()).catch(() => undefined);
     for (const pending of this.#pending.values()) pending.reject(error);
     this.#pending.clear();
     this.#socket.destroy();
