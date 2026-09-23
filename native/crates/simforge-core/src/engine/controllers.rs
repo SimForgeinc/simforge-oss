@@ -10,7 +10,11 @@ use crate::types::{ActorKind, ControlIndication, Dims, GapMode};
 use super::actor::{
     ActorIndex, ActorRuntime, DriverBehaviorProfile, LongitudinalKind, RoadControlRuntimeState,
 };
-use super::dynamics::transition_value;
+use super::dynamics::{
+    shape_derivative, shape_second_derivative, shape_value, transition_value, SpeedProfile,
+    SpeedProfileStep,
+};
+use crate::types::{DynamicsConstraint, DynamicsShape};
 use super::signals::{phase_forbids_entry, AuthorityKind, ControlSlot, SignalBook};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -231,6 +235,12 @@ pub fn longitudinal_accel(
     let Some(cmd) = &a.long_cmd else {
         return converge(a, cruise_speed(a, lane_speed_limit_mps), &lim);
     };
+    if cmd.kind == LongitudinalKind::Speed && cmd.prescribed {
+        // Exact profile acceleration; the caller decides whether a safety cap
+        // overrules it (then the command drops to physical tracking).
+        let step = prescribed_speed_step(a, t, dt).expect("prescribed speed command");
+        return (step.speed_mps - a.speed_mps) / dt;
+    }
     if cmd.kind == LongitudinalKind::Speed {
         let v_next = transition_value(
             &cmd.dynamics,
@@ -417,26 +427,74 @@ pub struct LateralStep {
     pub complete: bool,
 }
 
-/// Lateral offset for this tick on the minimum-jerk profile.
+/// The prescribed speed profile's next tick for an actor whose longitudinal
+/// command is a prescribed `speed`, else `None`.
+pub fn prescribed_speed_step(a: &ActorRuntime, t: f64, dt: f64) -> Option<SpeedProfileStep> {
+    let cmd = a.long_cmd.as_ref()?;
+    if cmd.kind != LongitudinalKind::Speed || !cmd.prescribed {
+        return None;
+    }
+    let profile = SpeedProfile {
+        dynamics: &cmd.dynamics,
+        v0: cmd.v0,
+        target: cmd.target,
+        duration_s: cmd.duration,
+    };
+    Some(profile.step(t - cmd.fired_at, dt, cmd.progress_m))
+}
+
+/// Normalised progress of a lateral command at the end of this tick:
+/// elapsed time over duration, or travelled distance over the authored
+/// distance for a `distance` constraint.
+fn lateral_progress(cmd: &super::actor::LateralCommand, t: f64, dt: f64, route_s_next: f64) -> f64 {
+    if cmd.dynamics.constraint == DynamicsConstraint::Distance && cmd.dynamics.shape != DynamicsShape::Step {
+        (route_s_next - cmd.origin_s) / cmd.dynamics.value.max(1e-9)
+    } else if cmd.duration <= 1e-9 {
+        1.0
+    } else {
+        (t + dt - cmd.fired_at) / cmd.duration
+    }
+}
+
+/// Lateral reference of a command at normalised progress `p`, following the
+/// authored `DynamicsShape` (ASAM OpenSCENARIO XML LaneChange/LaneOffset
+/// dynamics). Rates are per second: `p` advances at `dp_dt`.
+pub fn lateral_sample_at(cmd: &super::actor::LateralCommand, p: f64, dp_dt: f64) -> LateralSample {
+    let span = cmd.to - cmd.from;
+    if cmd.dynamics.shape == DynamicsShape::Step {
+        return LateralSample { offset: if p > 1e-12 { cmd.to } else { cmd.from }, rate: 0.0, accel: 0.0 };
+    }
+    let q = clamp(p, 0.0, 1.0);
+    let inside = p > 0.0 && p < 1.0;
+    LateralSample {
+        offset: cmd.from + span * shape_value(cmd.dynamics.shape, q),
+        rate: if inside { span * shape_derivative(cmd.dynamics.shape, q) * dp_dt } else { 0.0 },
+        accel: if inside { span * shape_second_derivative(cmd.dynamics.shape, q) * dp_dt * dp_dt } else { 0.0 },
+    }
+}
+
+/// `dp/dt` of a lateral command for an actor moving at `speed_mps`.
+pub fn lateral_progress_rate(cmd: &super::actor::LateralCommand, speed_mps: f64) -> f64 {
+    if cmd.dynamics.constraint == DynamicsConstraint::Distance && cmd.dynamics.shape != DynamicsShape::Step {
+        speed_mps / cmd.dynamics.value.max(1e-9)
+    } else {
+        1.0 / cmd.duration.max(1e-9)
+    }
+}
+
+/// Lateral offset for this tick on the authored transition shape.
 pub fn lateral_step(a: &ActorRuntime, t: f64, dt: f64) -> LateralStep {
-    let lim = limits_for(a);
     let (offset, rate, accel, complete) = match &a.lat_cmd {
         Some(cmd) => {
-            let elapsed = t + dt - cmd.fired_at;
-            let s = minimum_jerk_sample(cmd.from, cmd.to, elapsed, cmd.duration);
-            (s.offset, s.rate, s.accel, elapsed >= cmd.duration - 1e-9)
+            let p = lateral_progress(cmd, t, dt, a.route_s + a.speed_mps * dt);
+            let s = lateral_sample_at(cmd, p, lateral_progress_rate(cmd, a.speed_mps));
+            (s.offset, s.rate, s.accel, p >= 1.0 - 1e-9 || cmd.dynamics.shape == DynamicsShape::Step)
         }
         // No owner: hold the completed lane-relative offset. A new command
         // owns any subsequent recentering explicitly.
         None => (a.lateral_rest_offset_m, 0.0, 0.0, false),
     };
-    // Inactive when the duration was analytically bounded; floating-point rails.
-    LateralStep {
-        offset,
-        rate: clamp(rate, -lim.lateral_rate_max, lim.lateral_rate_max),
-        accel: clamp(accel, -lim.lateral_accel_max, lim.lateral_accel_max),
-        complete,
-    }
+    LateralStep { offset, rate, accel, complete }
 }
 
 /// Full Frenet reference on the minimum-jerk quintic.

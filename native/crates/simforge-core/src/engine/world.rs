@@ -947,6 +947,7 @@ impl Simulation {
             position: pose_point,
             heading_rad: spawn_heading,
             present: spec.present_at_start,
+            pending_present: None,
             retired: false,
             long_cmd: None,
             lat_cmd: None,
@@ -1493,6 +1494,7 @@ impl Simulation {
                 self.observe_perception(t);
             }
             if t >= 0.0 {
+                self.evaluate_longitudinal_completions(t);
                 self.evaluate_window_ends(t);
                 self.evaluate_triggers(t);
                 self.evaluate_until(t);
