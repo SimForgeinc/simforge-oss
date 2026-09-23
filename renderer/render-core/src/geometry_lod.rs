@@ -184,6 +184,14 @@ fn bounds_aabb(bounds: &ManifestBounds) -> (bevy::camera::primitives::Aabb, bevy
     )
 }
 
+/// Asset path of an impostor's `StandardMaterial`. `#Material{n}` alone is
+/// the glTF-level `GltfMaterial`; bevy_pbr labels the converted
+/// `StandardMaterial` as `Material{n}/std`. Loading the former as a
+/// `StandardMaterial` handle never resolves, so the material stays unbound.
+fn impostor_material_path(lod_path: &str, material: u32) -> String {
+    format!("{lod_path}#{}/std", bevy::gltf::GltfAssetLabel::Material { index: material as usize, is_scale_inverted: false })
+}
+
 /// Spawn the level entities for every master primitive the manifest covers
 /// and their ID clones. `id_clones` maps a master primitive entity to its
 /// ID-pass clone and ID material. Returns (masters, level entities).
@@ -253,7 +261,7 @@ pub(crate) fn spawn_levels(
         if let (Some(impostor), 0) = (&entry.impostor, *primitive) {
             chain.push((
                 asset_server.load(format!("{}#Mesh{}/Primitive0", lods.lod_path, impostor.lod_mesh)),
-                asset_server.load(format!("{}#Material{}", lods.lod_path, impostor.material)),
+                asset_server.load(impostor_material_path(&lods.lod_path, impostor.material)),
                 impostor.geometric_error_m,
                 None,
                 impostor.casts_shadow && !no_shadow,
@@ -309,6 +317,11 @@ pub(crate) fn apply_ranges(world: &mut World, f_px: f32, pixel_error_px: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn impostor_material_loads_the_standard_material_sub_asset() {
+        assert_eq!(impostor_material_path("m/lod.gltf", 3), "m/lod.gltf#Material3/std");
+    }
 
     #[test]
     fn labels_parse_and_ranges_tile_the_distance_axis() {
