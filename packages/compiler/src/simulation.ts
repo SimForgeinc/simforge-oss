@@ -62,6 +62,7 @@ import {
   previewExecutionTrafficProvider,
   type AmbientTrafficProviderId,
 } from '@simforge-oss/playback/traffic';
+import { upgradeScenarioDocument } from '@simforge-oss/scenario';
 
 import {
   executionSourceInputDigest,
@@ -275,6 +276,16 @@ export function executionTrafficProvider(content: {
   );
 }
 
+/**
+ * Stored content keeps the `scenarioVersion` it was written with. The
+ * authoritative simulation reads the upgraded (current-version) document, so
+ * an absent field means what the current code says it means. (Request
+ * identity, `sumoStepIdentity`, keys on the stored content as it is.)
+ */
+function currentDocument(content: unknown): Record<string, unknown> {
+  return upgradeScenarioDocument(content).document;
+}
+
 function ambientModeFor(provider: AmbientTrafficProviderId): AmbientExecutionMode {
   return provider === 'native' ? 'native' : provider === 'sumo' ? 'sumo' : 'disabled';
 }
@@ -451,10 +462,10 @@ export function simulateAuthoritative(request: {
   readonly trafficStep?: ExternalTrafficStep;
 }): AuthoritativeSimulation {
   const started = performance.now();
-  const content = request.canonicalContent as { extensions?: Record<string, unknown>; mapSignalPlans?: unknown[]; simulation?: unknown };
+  const content = currentDocument(request.canonicalContent) as { extensions?: Record<string, unknown>; mapSignalPlans?: unknown[]; simulation?: unknown };
   const provider = executionTrafficProvider(content);
   const resolved = resolveExecutionInput(
-    request.canonicalContent,
+    content,
     request.closure.bundle,
     ambientModeFor(provider),
     request.catalogEntries,

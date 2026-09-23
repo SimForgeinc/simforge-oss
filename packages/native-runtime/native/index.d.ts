@@ -241,9 +241,17 @@ export declare class Site {
 export type JsSite = Site
 
 export declare class Trace {
-  /** Parse plain or gzip current-format trace JSON; older formats are rejected. */
+  /**
+   * Parse plain or gzip trace JSON of any released format; older formats
+   * are upgraded in memory (see `upgradeJson`), unknown ones rejected.
+   */
   static parse(data: Uint8Array): Trace
   digest(): string
+  /**
+   * `simforge.trace-upgrade/v1` JSON when the stored trace was an older
+   * format upgraded in memory; `null` for a current-format trace.
+   */
+  upgradeJson(): string | null
   toJson(): string
   sceneStateJson(): string
   metricsJson(): string

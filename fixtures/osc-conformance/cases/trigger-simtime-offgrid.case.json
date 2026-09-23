@@ -1,0 +1,74 @@
+{
+  "id": "trigger-simtime-offgrid",
+  "feature": "SimulationTimeCondition greaterOrEqual between ticks",
+  "osc": [
+    "SimulationTimeCondition",
+    "conditionEdge.none"
+  ],
+  "description": "Speed change triggered at SimulationTime >= 1.01 s (between 20 ms ticks).",
+  "clipSeconds": 6,
+  "actors": [
+    {
+      "id": "ego",
+      "lane": -2,
+      "s": 50,
+      "speedMps": 20
+    }
+  ],
+  "interactions": [
+    {
+      "id": "change",
+      "actorId": "ego",
+      "verb": "speed",
+      "target": {
+        "mode": "absolute",
+        "value": 10
+      },
+      "dynamics": {
+        "shape": "cubic",
+        "constraint": "time",
+        "value": 3
+      },
+      "trigger": {
+        "kind": "at",
+        "t": 1.01
+      }
+    }
+  ],
+  "oracle": {
+    "clauses": [
+      "SimulationTimeCondition (class reference)",
+      "7.6.1 Triggers and condition groups (OR of groups, AND within)",
+      "7.6.2 Condition edges"
+    ],
+    "derivation": "Conditions are evaluated at discrete ticks t_k = 0.02k. First t_k >= 1.01 is 1.02; speed 20->10 cubic over 3 s from 1.02.",
+    "actors": {
+      "ego": {
+        "x0": 50,
+        "y0": -5.25,
+        "v0": 20,
+        "longitudinal": [
+          {
+            "t0": 1.02,
+            "to": 10,
+            "shape": "cubic",
+            "durationS": 3
+          }
+        ]
+      }
+    },
+    "events": {
+      "change": {
+        "start": 1.02
+      }
+    },
+    "decisions": [
+      "D-01",
+      "D-10"
+    ]
+  },
+  "expect": {
+    "ours": "conforms",
+    "esmini": "agrees"
+  }
+}

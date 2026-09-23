@@ -6,8 +6,8 @@ import { getS3ObjectBytes } from "@/app/lib/s3/s3-get-object";
 import { putS3Object } from "@/app/lib/s3/s3-put-object";
 import {
   RENDER_INTENT_V1_SCHEMA,
+  readScenarioDocument,
   resolveCaptureManifest,
-  ScenarioTemplateV2Schema,
 } from "@simforge-oss/scenario";
 import { BROWSER_RECORDING_ADAPTER_VERSION } from "@simforge-oss/studio-ui/lib/scenario/recording-contracts";
 import {
@@ -226,9 +226,7 @@ async function browserClaimPayload(source: BrowserRenderSource) {
     );
   }
 
-  const template = ScenarioTemplateV2Schema.parse(
-    parseJsonObject(source.revision_content),
-  );
+  const template = readScenarioDocument(parseJsonObject(source.revision_content));
   const renderSpec = parseJsonObject(source.render_spec);
   const playbackRecord = playback as {
     instance?: unknown;

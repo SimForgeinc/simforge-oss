@@ -99,12 +99,14 @@ function succeeded(traceSha256 = "t".repeat(64), draftVersion = 1) {
   };
 }
 
-function host(initial: ScenarioDocumentDto) {
+function host(initial: ScenarioDocumentDto, pinnedMap: unknown = null) {
   const resolveSimulation = vi.fn(async (document: { draftVersion: number }) => succeeded("t".repeat(64), document.draftVersion));
   const verifySimulation = vi.fn(async () => ({ outcome: "verified", authoritativeTraceSha256: "t".repeat(64) }));
+  // The exact descriptor of a pinned version the catalog no longer lists (null: the host has none).
+  const getMapPinStatus = vi.fn(async () => ({ pinned: null, newer: null, newerUnavailable: null, pinnedMap }));
   const services = {
     artifacts: { listMaps: async () => [MAP] },
-    projects: { getDocument: async () => initial, resolveSimulation, verifySimulation },
+    projects: { getDocument: async () => initial, resolveSimulation, verifySimulation, getMapPinStatus },
   };
   // The hook touches only these services; the rest of the host surface is unused.
   return { services: services as unknown as StudioHostServices, resolveSimulation, verifySimulation };
@@ -210,6 +212,18 @@ describe("scenario session trace residency", () => {
     expect(rendered.result.current.message).toContain(MAP.mapVersionId);
     expect(rendered.result.current.bundle).toBeNull();
     expect(worker.prepare).not.toHaveBeenCalled();
+  });
+
+  it("opens a draft pinned to a superseded publication on exactly that version", async () => {
+    const pinned = { ...MAP, id: "older-publication", versionId: "older-publication", mapVersionId: "older-publication" };
+    const { services } = host({
+      ...documentAt(1), mapVersionId: "older-publication",
+      mapSourceMapId: MAP.sourceMapId, mapXodrSha256: MAP.artifacts!.xodrSha256,
+    }, pinned);
+    worker.prepare.mockImplementation(async () => fakeBundle("pinned"));
+    const rendered = renderSession(services);
+    await waitFor(() => expect(rendered.result.current.map?.mapVersionId).toBe("older-publication"));
+    expect(rendered.result.current.failed).toBe(false);
   });
 
   it("refuses drift before producing a driveable preview", async () => {

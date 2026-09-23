@@ -250,15 +250,102 @@ export type ScenarioSimulationResultDto = {
   createdAt: string;
 };
 
-/**
- * Where the authoritative simulation for a document version (or revision)
- * stands. `resimulated` marks a revision whose result was produced after it
- * was committed, under the current engine semantics.
- */
+/** Where the authoritative simulation for a document version (or revision) stands. */
 export type ScenarioSimulationStatusDto =
-  | { state: "succeeded"; requestKey: string; result: ScenarioSimulationResultDto; resimulated?: boolean }
+  | { state: "succeeded"; requestKey: string; result: ScenarioSimulationResultDto }
   | { state: "queued" | "running"; requestKey: string }
   | { state: "failed"; requestKey: string; failureCode: string; message: string | null };
+
+/**
+ * Where a render's motion comes from (`RenderIntentV1.motionSource`):
+ * `original` is the revision's active simulation (its original result, under
+ * whatever engine produced it), `resimulated` an explicitly chosen
+ * re-simulation, `original-xosc` the labelled legacy OpenSCENARIO replay for
+ * revisions that have no stored trace.
+ */
+export type ScenarioMotionSource = "original" | "resimulated" | "original-xosc";
+
+/** Why a revision's active simulation is the one it is. */
+export type ScenarioActiveSimulationReason = "commit" | "backfill-commit" | "backfill-resimulated" | "user";
+
+/**
+ * Motion difference between two stored traces of one scenario: presence and
+ * world pose at matching ticks, within the render parity tolerance.
+ */
+export type ScenarioMotionDiffDto = {
+  schema: "simforge.motion-diff/v1";
+  identical: boolean;
+  tolerance: { positionM: number; headingDeg: number };
+  comparedTicks: number;
+  /** Ticks present in only one of the two traces (different clip or step). */
+  unmatchedTicks: number;
+  maxPositionDeltaM: number;
+  maxHeadingDeltaDeg: number;
+  worst: { actorId: string; t: number } | null;
+  firstDivergenceS: number | null;
+  actorsChanged: string[];
+  actorsOnlyInBase: string[];
+  actorsOnlyInCandidate: string[];
+  base: { traceSha256: string; engineSemVer: string };
+  candidate: { traceSha256: string; engineSemVer: string };
+};
+
+/** One stored simulation result bound to a revision. */
+export type ScenarioRevisionSimulationEntryDto = {
+  simKey: string;
+  engineSemVer: string;
+  traceSha256: string;
+  /** `commit`: simulated when the revision was committed; `lazy`: re-simulated later. */
+  origin: "commit" | "lazy";
+  createdAt: string;
+  active: boolean;
+};
+
+/**
+ * Which motion a revision's renders replay. Renders replay `active` by
+ * default, under any engine version; nothing re-simulates implicitly.
+ * `active` is null when the revision has no stored result (committed before
+ * worker simulation): its original motion survives only as the legacy
+ * OpenSCENARIO export (`legacyXoscAvailable`), and the user chooses between
+ * that and an explicit re-simulation.
+ */
+export type ScenarioRevisionMotionDto = {
+  revisionId: string;
+  currentEngineSemVer: string;
+  active: null | {
+    simKey: string;
+    engineSemVer: string;
+    traceSha256: string;
+    reason: ScenarioActiveSimulationReason;
+    /** True when the active result is the one simulated at commit (the original motion). */
+    original: boolean;
+    setAt: string;
+  };
+  results: ScenarioRevisionSimulationEntryDto[];
+  legacyXoscAvailable: boolean;
+};
+
+/** An explicit re-simulation under the current engine, with its motion diff against the active result. */
+export type ScenarioRevisionResimulationDto = {
+  status: ScenarioSimulationStatusDto;
+  motion: ScenarioRevisionMotionDto;
+  /** Null until the re-simulation succeeded, or when the revision has no active result to compare. */
+  motionDiff: ScenarioMotionDiffDto | null;
+};
+
+/**
+ * One map version by id, whether or not it is the newest publication of its
+ * source: what an import needs to bind a scenario to the EXACT version it was
+ * authored on. `pinnable` is false for a retired version or one whose
+ * published closure is gone (a scenario can't be pinned to it).
+ */
+export type ScenarioMapVersionIdentityDto = {
+  mapVersionId: string;
+  sourceMapId: string | null;
+  xodrSha256: string;
+  retiredAt: string | null;
+  pinnable: boolean;
+};
 
 /** The editor's comparison of its local preview against the authoritative trace. */
 export type ScenarioSimulationVerificationDto = {
@@ -325,6 +412,154 @@ export type ScenarioRevisionDto = {
     artifactId: string | null;
   };
   createdAt: string;
+};
+
+// ── Simulation history (Versions panel) ──────────────────────────────────────
+
+/**
+ * `simforge.simulation-diff/v1`: two authoritative simulations of one scenario compared tick by tick
+ * over the whole clip (`diffSimulationTraces`, packages/openscenario trace-diff), with the
+ * strict-trajectory-v1 comparator's verdict. `summary` is the chip text ("Motion identical" or
+ * "max 1.2 m · 2 actors · 1 event changed").
+ */
+export type SimulationMotionDiffDto = {
+  format: "simforge.simulation-diff/v1";
+  baseSimKey: string;
+  candidateSimKey: string;
+  identical: boolean;
+  summary: string;
+  maxPositionErrorM: number;
+  maxHeadingErrorDeg: number;
+  worst: { actorId: string; tS: number; positionErrorM: number } | null;
+  actors: { compared: number; changedCount: number; changed: string[]; added: string[]; removed: string[] };
+  eventsChanged: number;
+  collisionsChanged: number;
+  signalsChanged: number;
+  durationS: { base: number; candidate: number };
+  strict: {
+    profile: "strict-trajectory-v1";
+    verdict: "pass" | "fail" | "not-run";
+    reportHash: string | null;
+    errorFindings: number;
+    reason: string | null;
+  };
+};
+
+/** Why a simulation is in a revision's history. */
+export type RevisionSimulationReason = "commit" | "engine_upgrade" | "resimulate" | "import" | "backfill";
+/** Why a revision (a user-visible Version) exists. */
+/** `map_move`: the draft as it was before it moved to another map version (kept for revert). */
+export type ScenarioVersionCreatedFor = "render" | "save" | "engine_upgrade" | "import" | "map_move";
+
+export type ScenarioVersionActorDto = { id: string; name: string | null } | null;
+
+/** One simulation in a version's history. Users see its engine; the digests sit behind Details. */
+export type ScenarioVersionSimulationDto = {
+  simKey: string;
+  engineSemVer: string;
+  reason: RevisionSimulationReason;
+  createdAt: string;
+  createdBy: ScenarioVersionActorDto;
+  active: boolean;
+  previousSimKey: string | null;
+  /** Against `previousSimKey`; null when there is none, or for a backfilled row not compared yet. */
+  motionDiff: SimulationMotionDiffDto | null;
+  details: {
+    traceSha256: string;
+    timelineSha256: string | null;
+    mapClosureDigest: string;
+    resolvedInputDigest: string;
+    engineBuild: Record<string, unknown>;
+    producer: string;
+  };
+};
+
+/** One immutable revision, shown to users as "Version N". */
+export type ScenarioVersionDto = {
+  revisionId: string;
+  revisionNumber: number;
+  label: string | null;
+  createdFor: ScenarioVersionCreatedFor;
+  createdAt: string;
+  createdBy: ScenarioVersionActorDto;
+  sourceDraftVersion: number;
+  contentSha256: string;
+  /** "Map name · date": the map version the revision is pinned to. */
+  map: { mapVersionId: string; name: string; publishedAt: string } | null;
+  /** The result its renders replay (`revision_active_simulation`); null when it has none. */
+  active: { simKey: string; setAt: string; setBy: ScenarioVersionActorDto } | null;
+  /** Newest first. */
+  simulations: ScenarioVersionSimulationDto[];
+  /** True when the draft currently holds exactly this version's content on the same map. */
+  matchesDraft: boolean;
+};
+
+export type ScenarioVersionsDto = {
+  documentId: string;
+  draftVersion: number;
+  /** The engine this host simulates with now. */
+  currentEngineSemVer: string;
+  draft: { lastSimKey: string | null; lastSimEngineSemVer: string | null; lastSimDraftVersion: number | null };
+  /** Newest first. */
+  versions: ScenarioVersionDto[];
+};
+
+/**
+ * The draft's authoritative result changed under an unchanged draft: the engine (or the simulation
+ * pipeline) moved. `previous` is what the author last saw (`drafts.last_sim_key`); keeping it
+ * freezes the draft into a version bound to that result.
+ */
+export type ScenarioEngineChangeDto = {
+  previous: { simKey: string; engineSemVer: string };
+  current: { simKey: string; engineSemVer: string };
+  motionDiff: SimulationMotionDiffDto;
+};
+
+/** Both simulations side by side (frames in the `DualTracePlaybackData` shape: base = canonical). */
+export type SimulationComparisonDto = {
+  base: { simKey: string; engineSemVer: string };
+  candidate: { simKey: string; engineSemVer: string };
+  diff: SimulationMotionDiffDto;
+  playback: {
+    sampleHz: number;
+    durationS: number;
+    frames: Array<{
+      t: number;
+      actors: Record<string, {
+        canonical: { x: number; y: number; z: number; headingRad: number; present: boolean } | null;
+        external: { x: number; y: number; z: number; headingRad: number; present: boolean } | null;
+        positionErrorM: number | null;
+      }>;
+    }>;
+  };
+};
+
+/** The draft's map pin and whether a newer publication of the same map exists. */
+export type ScenarioMapPinStatusDto = {
+  pinned: { mapVersionId: string; name: string; publishedAt: string; retired: boolean } | null;
+  /** A newer publication the author may explicitly move to (never automatic). */
+  newer: { mapVersionId: string; name: string; publishedAt: string } | null;
+  /** Why moving is not offered even though a newer publication exists (e.g. the road geometry differs). */
+  newerUnavailable: { code: string; message: string } | null;
+};
+
+/**
+ * The transition view: the plan for moving the draft to another map version, the planned content
+ * simulated there (null when the move is blocked), and that motion compared with what it shows now.
+ */
+export type ScenarioMapRepinPreviewDto = {
+  target: { mapVersionId: string; name: string; publishedAt: string };
+  plan: ScenarioMapTransitionPlanDto;
+  status: ScenarioSimulationStatusDto | null;
+  /** Against the draft's current result; null until the target simulation succeeds. */
+  motionDiff: SimulationMotionDiffDto | null;
+};
+
+/** The draft moved to another map version; the state before the move is saved as a version. */
+export type ScenarioMapMoveResultDto = {
+  document: ScenarioDocumentDto;
+  before: { revisionId: string; revisionNumber: number };
+  plan: ScenarioMapTransitionPlanDto;
 };
 
 export type CreateScenarioRevisionResultDto = {
@@ -502,7 +737,15 @@ export type ScenarioRenderJobDto = {
    * timeline, once derived) every renderer samples. Absent on jobs submitted
    * before worker-authoritative simulation.
    */
-  simulation?: { simKey: string; traceSha256: string; timelineSha256: string | null } | null;
+  simulation?: {
+    simKey: string;
+    traceSha256: string;
+    timelineSha256: string | null;
+    /** The engine semantics the replayed motion was simulated under. */
+    engineSemVer?: string | null;
+  } | null;
+  /** Which motion the render replayed; null on jobs submitted before this was recorded. */
+  motionSource?: ScenarioMotionSource | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -594,8 +837,9 @@ export type ScenarioOperationalJobBase = {
  *     identified by a release-manifest digest (`simforge.editor-assets-release/v1`);
  *     it is not produced from a revision, so its insert omits the column
  *     entirely rather than leaving it to be filled in later. `dataset_export`
- *     is scoped to a dataset and `openscenario_import` runs *before* any
- *     revision exists, for the same structural reason.
+ *     is scoped to a dataset, for the same structural reason (historical
+ *     `openscenario_import` rows, from the retired OpenSCENARIO import, also
+ *     predate any revision).
  *
  * Not discriminated any deeper. `type` (the view's alias for
  * `postprocess_kind`) does decide whether a postprocess job has a revision,
@@ -630,6 +874,10 @@ export type ScenarioRenderIntentSubmission = {
   renderProfile?: "render" | "ml";
   nativeVramBudgetBytes?: number;
   idempotencyKey: string;
+  /** Absent means `original`: the revision's active simulation, never an implicit re-simulation. */
+  motionSource?: ScenarioMotionSource;
+  /** With `motionSource: "resimulated"`: which of the revision's results to render. */
+  simKey?: string;
   [key: string]: unknown;
 };
 
@@ -820,6 +1068,13 @@ export type ScenarioRenderJobDetailDto = {
   startedAt: string | null;
   completedAt: string | null;
   cancelRequestedAt: string | null;
+  /**
+   * Where the rendered motion came from. `source` is null on jobs submitted
+   * before it was recorded (those re-simulated under the engine current at
+   * submission); `engineSemVer` is the engine that simulated the replayed
+   * trace, null for the legacy OpenSCENARIO replay.
+   */
+  motion?: { source: ScenarioMotionSource | null; engineSemVer: string | null; simKey: string | null; traceSha256: string | null } | null;
   attempts: ScenarioRenderAttemptDto[];
   events: ScenarioJobEventDto[];
   artifacts: ScenarioRenderArtifactDto[];
@@ -851,3 +1106,66 @@ export type IndexedArtifact = ScenarioRenderArtifactDto & { renderJobId: string 
 
 /** Either shape. Components that only display metadata accept both. */
 export type DisplayArtifact = PresignedArtifact | ArtifactMetadata | IndexedArtifact;
+
+// ── Map version transition ───────────────────────────────────────────────────
+//
+// "Move to new map version": the plan the transition view draws before the draft moves
+// (studio/app/lib/scenario/map-transition.ts). Every coordinate is xodr-local metres,
+// `x` east and `y` north; a heading is radians CCW from +x (the scene heading).
+
+export type ScenarioMapTransitionPoseDto = {
+  x: number;
+  y: number;
+  headingRad: number;
+  /** Ground height of the placement: authored before, from the new map's ground after. Null when not map-bound. */
+  elevationM: number | null;
+};
+
+export type ScenarioMapTransitionPlacementStatus = "kept" | "moved" | "flagged" | "unplaced";
+
+export type ScenarioMapTransitionPlacementDto = {
+  roleId: string;
+  label: string;
+  /** The actor class (`car`, `pedestrian`, ...). */
+  kind: string;
+  /** The role the scenario measures. */
+  isSubject: boolean;
+  /** Compiled start pose on the current map version. */
+  before: ScenarioMapTransitionPoseDto | null;
+  /** Start pose on the new map version; null when it has none there. */
+  after: ScenarioMapTransitionPoseDto | null;
+  displacementM: number | null;
+  /** Largest distance between the old and new route over its first metres; null without a route on both sides. */
+  routeDeviationM: number | null;
+  status: ScenarioMapTransitionPlacementStatus;
+  /** Why it moved, was flagged or could not be placed, in the user's words; null when kept. */
+  reason: string | null;
+};
+
+export type ScenarioMapTransitionRoadChange = "none" | "elevation" | "geometry" | "added" | "removed";
+
+export type ScenarioMapTransitionRoadDto = {
+  roadId: string;
+  change: ScenarioMapTransitionRoadChange;
+  /** Lane centrelines on the current version (empty for an added road). */
+  before: Array<Array<[number, number]>>;
+  /** Lane centrelines on the new version (empty for a removed road). */
+  after: Array<Array<[number, number]>>;
+};
+
+export type ScenarioMapTransitionPlanDto = {
+  /** `same`: byte-identical OpenDRIVE or equal `xodrGeometrySha256`; placements carry over as they are. */
+  geometry: "same" | "changed";
+  source: { mapVersionId: string; name: string; publishedAt: string };
+  target: { mapVersionId: string; name: string; publishedAt: string };
+  /** The draft content to save on the target version; null when blocked. */
+  content: ScenarioTemplateV2 | null;
+  placements: ScenarioMapTransitionPlacementDto[];
+  /** Roads near the scenario (the placements' extent plus a margin), for drawing; nearest first. */
+  roads: ScenarioMapTransitionRoadDto[];
+  /** More roads were near the scenario than are listed. */
+  roadsTruncated: boolean;
+  /** The thresholds the statuses were judged by, metres. */
+  tolerances: { keptM: number; movedM: number; laneSearchM: number; routeMatchM: number; siteMatchM: number };
+  blocking: { code: string; message: string } | null;
+};

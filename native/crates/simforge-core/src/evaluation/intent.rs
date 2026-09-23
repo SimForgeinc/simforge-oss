@@ -2137,6 +2137,7 @@ mod tests {
                 perception: None,
             },
             semantic_ledger: ledger,
+            upgrade: None,
         }
     }
 

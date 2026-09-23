@@ -1,0 +1,283 @@
+{
+ "scenarioVersion": 2,
+ "meta": {
+  "name": "Late-revealed double-parked delivery truck",
+  "description": "A stopped delivery truck occupies the ego lane while a kerbside vehicle visually masks it during the approach, forcing a late but survivable response without contact.",
+  "createdAt": "2026-08-01T00:00:00.000Z",
+  "modifiedAt": "2026-08-01T00:00:00.000Z",
+  "appVersion": "uniscenarios/0.0.1",
+  "archetype": "C11.parking",
+  "tags": [
+   "double-parking",
+   "delivery-vehicle",
+   "late-detection",
+   "roadside-occlusion",
+   "hard-braking"
+  ],
+  "author": "agent/edge-parking",
+  "negativeControl": false
+ },
+ "params": {
+  "declarations": [
+   {
+    "id": "egoSpeedKph",
+    "type": "continuous",
+    "description": "ego approach speed in the flowing-traffic band",
+    "unit": "kph",
+    "tier": 1,
+    "range": [
+     54,
+     60
+    ],
+    "default": 57,
+    "distribution": "uniform"
+   },
+   {
+    "id": "obstacleDistanceM",
+    "type": "continuous",
+    "description": "initial longitudinal distance from ego to the stopped delivery truck",
+    "unit": "m",
+    "tier": 1,
+    "range": [
+     46,
+     52
+    ],
+    "default": 49,
+    "distribution": "uniform"
+   },
+   {
+    "id": "occluderDistanceM",
+    "type": "continuous",
+    "description": "initial longitudinal distance from ego to the roadside occluding vehicle",
+    "unit": "m",
+    "tier": 1,
+    "range": [
+     34,
+     40
+    ],
+    "default": 37,
+    "distribution": "uniform"
+   }
+  ],
+  "constraints": []
+ },
+ "environment": {
+  "weather": "clear",
+  "timeOfDay": "afternoon"
+ },
+ "anchor": {
+  "id": "double-parked-delivery-obstruction",
+  "corridor": {
+   "throughLanesSameDir": {
+    "value": [
+     1,
+     1
+    ],
+    "essentiality": "preferred",
+    "weight": 2
+   },
+   "speedLimitKph": {
+    "value": [
+     50,
+     70
+    ],
+    "essentiality": "preferred",
+    "weight": 3
+   },
+   "runwayUpstreamM": {
+    "value": [
+     60,
+     null
+    ],
+    "essentiality": "preferred",
+    "weight": 1
+   },
+   "runwayDownstreamM": {
+    "value": [
+     220,
+     null
+    ],
+    "essentiality": "preferred",
+    "weight": 3
+   },
+   "curvatureDegPer10m": {
+    "value": [
+     0,
+     8
+    ],
+    "essentiality": "preferred",
+    "weight": 2
+   }
+  },
+  "features": [
+   {
+    "id": "approach-occlusion",
+    "kind": "occlusion_zone",
+    "atM": {
+     "value": [
+      30,
+      42
+     ],
+     "essentiality": "preferred",
+     "weight": 3
+    },
+    "lateralDistanceM": {
+     "value": [
+      0,
+      5
+     ],
+     "essentiality": "preferred",
+     "weight": 2
+    },
+    "sameRoad": {
+     "value": true,
+     "essentiality": "preferred",
+     "weight": 2
+    },
+    "side": {
+     "value": "either",
+     "essentiality": "preferred",
+     "weight": 2
+    },
+    "label": "roadside visual occlusion near the parking obstruction",
+    "essentiality": "preferred",
+    "weight": 3
+   }
+  ],
+  "policy": {
+   "allowMirror": true,
+   "maxSitesPerMap": 8,
+   "diversity": "moderate",
+   "minScore": 0.2
+  }
+ },
+ "roles": [
+  {
+   "id": "ego",
+   "kind": "on_reference",
+   "label": "vehicle under test",
+   "actor": {
+    "class": "car",
+    "catalogId": "vehicle.sedan"
+   },
+   "essentiality": "required",
+   "pose": {
+    "laneOffset": 0,
+    "s": 0,
+    "tFrac": 0,
+    "headingOffsetRad": 0
+   },
+   "initialSpeedKph": "param.egoSpeedKph"
+  },
+  {
+   "id": "deliveryTruck",
+   "kind": "relative_to",
+   "label": "double-parked delivery truck blocking the reference lane",
+   "actor": {
+    "class": "truck",
+    "catalogId": "vehicle.box_truck",
+    "static": true
+   },
+   "essentiality": "required",
+   "ref": "ego",
+   "dsM": "param.obstacleDistanceM",
+   "dLane": 0,
+   "tFrac": 0,
+   "headingOffsetRad": 0,
+   "initialSpeedKph": 0
+  }
+ ],
+ "props": [
+  {
+   "id": "kerbside-parked-van",
+   "catalogId": "vehicle.van",
+   "label": "kerbside vehicle masking the stopped delivery truck until late",
+   "essentiality": "required",
+   "pose": {
+    "laneOffset": 0,
+    "s": "param.occluderDistanceM",
+    "tFrac": -1,
+    "headingOffsetRad": 0
+   },
+   "headingOffsetRad": 0,
+   "scale": 1.2
+  }
+ ],
+ "choreography": {
+  "clipSeconds": 8,
+  "warmupSeconds": 0.1,
+  "interactions": [
+   {
+    "id": "ego-delayed-reaction",
+    "label": "retain a delayed response to the concealed obstruction",
+    "actor": "ego",
+    "verb": "set",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "key": "rules.reactionTimeS",
+     "value": 1.4
+    }
+   },
+   {
+    "id": "ego-maintains-approach",
+    "label": "approach the double-parked vehicle at flowing speed",
+    "actor": "ego",
+    "verb": "speed",
+    "trigger": {
+     "kind": "at",
+     "t": 0
+    },
+    "target": {
+     "mode": "absolute",
+     "valueKph": "param.egoSpeedKph"
+    },
+    "dynamics": {
+     "shape": "step",
+     "constraint": "time",
+     "value": 0.2
+    }
+   }
+  ]
+ },
+ "invariants": [
+  {
+   "id": "late-obstruction-ttc",
+   "kind": "ttc",
+   "essentiality": "preferred",
+   "label": "the ego reaches a critical but survivable time gap to the blocked lane",
+   "of": "ego",
+   "to": "deliveryTruck",
+   "range": [
+    1,
+    3
+   ],
+   "mode": "min"
+  },
+  {
+   "id": "positive-clearance",
+   "kind": "gap",
+   "essentiality": "preferred",
+   "label": "the ego avoids contact with the stopped delivery truck",
+   "of": "ego",
+   "to": "deliveryTruck",
+   "unit": "distance",
+   "range": [
+    0.2,
+    8
+   ]
+  },
+  {
+   "id": "firm-but-survivable-braking",
+   "kind": "decel_budget",
+   "essentiality": "preferred",
+   "label": "the response requires firm braking without exceeding the survivable road-tire envelope",
+   "of": "ego",
+   "maxMps2": 7
+  }
+ ],
+ "variants": [],
+ "metricSubject": "ego"
+}

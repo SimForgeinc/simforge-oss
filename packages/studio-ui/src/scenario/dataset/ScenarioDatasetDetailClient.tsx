@@ -45,7 +45,6 @@ import {
 } from "../list/scenarioViewState";
 import { useScenarioDocumentActions } from "../list/useScenarioDocumentActions";
 import { useScenarioDocumentList } from "../list/useScenarioDocumentList";
-import { useScenarioOpenScenarioImport } from "../list/useScenarioOpenScenarioImport";
 import { useScenarioTagManager } from "../list/useScenarioTagManager";
 import { isDatasetEditable } from "../rail/DatasetStrip";
 import { textLayout, typography } from "../../stylex/recipes.stylex";
@@ -321,17 +320,6 @@ export function ScenarioDatasetDetailClient({
     [actions, onDriveVariation],
   );
 
-  const openScenarioImport = useScenarioOpenScenarioImport({
-    datasetId,
-    maps,
-    onImported: (document) => {
-      const summary = documentSummaryFromDocument(document);
-      list.spliceDocument(summary);
-      rememberScenarioSelection(datasetId, document.id);
-      onEditDocument(summary);
-    },
-  });
-
   const selectDocument = useCallback(
     (document: ScenarioDocumentSummaryDto) => {
       rememberScenarioSelection(datasetId, document.id);
@@ -341,8 +329,7 @@ export function ScenarioDatasetDetailClient({
   );
 
   const combinedError = error ?? list.error ?? tagManager.tagError;
-  const addBusy =
-    actions.creatingDocument || actions.importingDocument || openScenarioImport.busy;
+  const addBusy = actions.creatingDocument || actions.importingDocument;
   const addScenarioMenu = (
     <DropdownMenuContent align="start" xstyle={menu.width210}>
       <DropdownMenuItem
@@ -356,12 +343,6 @@ export function ScenarioDatasetDetailClient({
         onSelect={() => actions.importInputRef.current?.click()}
       >
         Import Scenario JSON
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        disabled={openScenarioImport.busy}
-        onSelect={openScenarioImport.openDialog}
-      >
-        Open OpenSCENARIO as reference
       </DropdownMenuItem>
     </DropdownMenuContent>
   );
@@ -511,6 +492,20 @@ export function ScenarioDatasetDetailClient({
               >
                 Refresh
               </Button>
+              {actions.importTransfer ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  data-testid="import-transfer-confirm"
+                  onClick={() => {
+                    setError(null);
+                    actions.confirmImportTransfer();
+                  }}
+                >
+                  Transfer onto {actions.importTransfer.target.label} ({actions.importTransfer.target.mapVersionId})
+                </Button>
+              ) : null}
             </div>
           ) : null}
           {notice ? (
@@ -664,7 +659,6 @@ export function ScenarioDatasetDetailClient({
         onOpenChange={actions.setMapPickerOpen}
         onSelectMap={(map) => void actions.createDocumentOnMap(map)}
       />
-      {openScenarioImport.dialog}
       <ScenarioTransferOverlay
         document={transferDocument}
         onClose={() => setTransferDocument(null)}

@@ -79,3 +79,4 @@ export function cellSeed(templateId: string, paramsVersion: string, siteId: stri
   return cellSeedWith(engine().module, templateId, paramsVersion, siteId, drawIndex);
 }
 export * from './simulation.js';
+export { SIMFORGE_OSS_RELEASE } from './release.js';

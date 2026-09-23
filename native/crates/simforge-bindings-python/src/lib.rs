@@ -1569,6 +1569,11 @@ impl PyTrace {
     fn digest(&self) -> PyResult<String> {
         self.inner.digest().py()
     }
+    /// `simforge.trace-upgrade/v1` JSON when the stored trace was an older
+    /// format upgraded in memory; `None` for a current-format trace.
+    fn upgrade_json(&self) -> PyResult<Option<String>> {
+        self.inner.upgrade_json().py()
+    }
     fn to_json(&self) -> PyResult<String> {
         self.inner.to_json().py()
     }

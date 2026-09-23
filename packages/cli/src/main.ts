@@ -63,7 +63,6 @@ import { trafficSumo } from './commands/traffic.js';
 import { sitesMatch } from './commands/sites.js';
 import { templateNew, templateValidate } from './commands/template.js';
 import { variationFork, variationTransfer } from './commands/variation.js';
-import { importOpenScenario } from './commands/import.js';
 import { validate } from './commands/validate.js';
 import { renderHash, renderRun } from './commands/render.js';
 import { scenarioCommand } from './commands/scenario.js';
@@ -87,7 +86,7 @@ const COMMANDS = [
   { name: 'maps build', summary: 'build a map master + web tier from a RoadRunner/Unreal GLB export into a work directory (no publish)' },
   { name: 'maps ingest', summary: 'build a map master + web tier from a RoadRunner/Unreal GLB export and publish it, or publish a prebuilt master directory' },
   { name: 'maps promote', summary: 'copy one immutable version between registries' },
-  { name: 'maps prune', summary: 'delete immutable versions from a registry (--keep-latest/--whole-map, --gc, --apply)' },
+  { name: 'maps prune', summary: 'delete immutable versions from a registry (--keep-latest/--whole-map, --gc --refs <file|url>, --apply)' },
   { name: 'locations find', summary: 'structured location query: --map --type --facts --near …' },
   { name: 'locations get', summary: 'one location by handle or id, optionally --describe' },
   { name: 'locations resolve', summary: 'free text → ranked handles' },
@@ -106,7 +105,6 @@ const COMMANDS = [
   { name: 'export', summary: 'concrete instance → native XML 1.4, explicit XML 1.3 esmini compatibility, or DSL 2.2' },
   { name: 'catalog create', summary: 'reserve exactly 100 deterministic scenario identities per selected installed map' },
   { name: 'catalog verify', summary: 'reject catalog identity, cardinality, provenance, or evidence gaps' },
-  { name: 'import', summary: 'OpenSCENARIO XML 1.4 → v2 template draft, with a lossy-feature report' },
   { name: 'catalog batch', summary: 'resumable catalog materialization + simulation with an attempt ledger' },
   { name: 'batch', summary: 'sites × draws matrix: instantiate → simulate → evaluate' },
   { name: 'scenario list', summary: 'list scenario documents on the running local host (all datasets or --dataset <id>)' },
@@ -478,7 +476,7 @@ async function dispatch(argv: readonly string[]): Promise<number> {
       if (sub === 'prune') {
         const args = parseArgs(argv.slice(2), {
           booleans: [...GLOBAL_BOOLEANS, 'keep-latest', 'whole-map', 'gc', 'apply'],
-          values: ['registry'],
+          values: ['registry', 'refs', 'refs-max-age-minutes'],
         });
         return registryMapsPrune({
           reference: positional(args, 0, 'name[@version]'),
@@ -486,6 +484,8 @@ async function dispatch(argv: readonly string[]): Promise<number> {
           keepLatest: boolFlag(args, 'keep-latest'),
           wholeMap: boolFlag(args, 'whole-map'),
           gc: boolFlag(args, 'gc'),
+          refs: listFlag(args, 'refs'),
+          refsMaxAgeMinutes: optionalNumber(args, 'refs-max-age-minutes'),
           apply: boolFlag(args, 'apply'),
           pretty: boolFlag(args, 'pretty'),
         });
@@ -581,19 +581,6 @@ async function dispatch(argv: readonly string[]): Promise<number> {
         file: positional(args, 0, 'file'),
         mapId: optionalString(args, 'map'),
         siteId: optionalString(args, 'site'),
-        pretty: boolFlag(args, 'pretty'),
-      });
-    }
-
-    case 'import': {
-      const args = parseArgs(argv.slice(1), {
-        booleans: GLOBAL_BOOLEANS,
-        values: ['out', 'map'],
-      });
-      return importOpenScenario({
-        file: positional(args, 0, 'file.xosc'),
-        out: optionalString(args, 'out'),
-        mapId: optionalString(args, 'map'),
         pretty: boolFlag(args, 'pretty'),
       });
     }

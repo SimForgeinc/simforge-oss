@@ -2,7 +2,7 @@ import type { AppContext } from "@/app/lib/db/app-context";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import { queryRows, withTransaction } from "@/app/lib/db/data-api";
 import {
-  ScenarioTemplateV2Schema,
+  readScenarioDocument,
   type ScenarioTemplateV2,
 } from "@simforge-oss/scenario";
 import {
@@ -459,13 +459,14 @@ export async function createBrowserRecording(
   );
   const revision = revisions[0];
   if (!revision) return null;
-  const parsedTemplate = ScenarioTemplateV2Schema.safeParse(
-    parseJsonObject(revision.canonical_content),
-  );
-  if (!parsedTemplate.success) {
-    throw new Error("browser_recording_revision_invalid");
+  let template: ScenarioTemplateV2;
+  try {
+    // Immutable revision content, read through the upgrader chain.
+    template = readScenarioDocument(parseJsonObject(revision.canonical_content));
+  } catch (error) {
+    throw new Error("browser_recording_revision_invalid", { cause: error });
   }
-  if (!recordingInputMatchesFrozenRevision(parsedInput, revision, parsedTemplate.data)) {
+  if (!recordingInputMatchesFrozenRevision(parsedInput, revision, template)) {
     return null;
   }
   const requestPayload: BrowserRecordingRequestPayload = {

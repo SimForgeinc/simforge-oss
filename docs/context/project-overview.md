@@ -23,8 +23,9 @@ compatibility in both directions. Its portable deterministic core includes:
 - **Rendering** (`packages/render`, `renderer/`): one render-job contract with
   web and native adapters; the Rust/Bevy SimForge Renderer provides sensor and
   cinematic profiles and the 18-sensor suite.
-- **Interchange** (`packages/openscenario`): ASAM OpenSCENARIO import/export,
-  esmini conformance execution, and trace comparison.
+- **Interchange** (`packages/openscenario`): ASAM OpenSCENARIO export,
+  esmini conformance execution, and trace comparison. OpenSCENARIO import is
+  not supported.
 - **Training and evaluation** (`packages/training-env`,
   `packages/evaluation`): Gymnasium-semantics execution, causal ground truth,
   frozen policy evaluation, and scenario-faithfulness examination.

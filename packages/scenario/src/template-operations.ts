@@ -52,7 +52,9 @@ export type TemplateOp =
   | { type: 'removeVariant'; id: string }
   | { type: 'setMetricSubject'; roleId: string | null }
   | { type: 'setClip'; clipSeconds?: number; warmupSeconds?: number }
-  | { type: 'setTemplateExtension'; key: string; value?: unknown };
+  | { type: 'setTemplateExtension'; key: string; value?: unknown }
+  /** Replace the whole template (restoring a saved version): one undoable edit. */
+  | { type: 'replaceTemplate'; template: ScenarioTemplateV2 };
 
 export function describeTemplateOp(op: TemplateOp): string {
   switch (op.type) {
@@ -87,6 +89,7 @@ export function describeTemplateOp(op: TemplateOp): string {
     case 'setMetricSubject': return 'Set metric subject';
     case 'setClip': return 'Edit scenario duration';
     case 'setTemplateExtension': return 'Edit extension';
+    case 'replaceTemplate': return 'Restore version';
   }
 }
 
@@ -273,5 +276,12 @@ export function applyTemplateOp(draft: ScenarioTemplateV2, op: TemplateOp): void
         draft.extensions[op.key] = op.value;
       }
       return;
+    case 'replaceTemplate': {
+      const target = draft as unknown as Record<string, unknown>;
+      const next = structuredClone(op.template) as unknown as Record<string, unknown>;
+      for (const key of Object.keys(target)) if (!(key in next)) delete target[key];
+      for (const [key, value] of Object.entries(next)) target[key] = value;
+      return;
+    }
   }
 }

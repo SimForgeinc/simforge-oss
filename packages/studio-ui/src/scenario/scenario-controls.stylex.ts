@@ -122,8 +122,6 @@ export const list = stylex.create({
     paddingBlock: 0,
     color: colors.critical,
   },
-  /** `w-full gap-2` on the `.xosc` file chooser. */
-  fileChooser: { width: "100%", gap: space.s2 },
 });
 
 /** The row-level icon buttons in `ScenarioDocumentRow`. */

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { GalleryCatalogResolutionError } from "@/app/lib/asset-gallery/store";
 import {
   CreateScenarioRevisionSchema,
   type CreateScenarioRevisionResultDto,
@@ -50,6 +51,9 @@ export async function POST(request: Request, route: Context) {
   try {
     result = await createScenarioRevision(auth.context, documentId, parsed.data);
   } catch (error) {
+    if (error instanceof GalleryCatalogResolutionError) {
+      return NextResponse.json({ error: error.code, message: error.message, missing: error.missing }, { status: 422 });
+    }
     if (!(error instanceof ScenarioMapResolutionError) && !(error instanceof SimulationClosureUnavailableError)) throw error;
     return NextResponse.json({ error: error.code, message: error.message }, { status: 409 });
   }

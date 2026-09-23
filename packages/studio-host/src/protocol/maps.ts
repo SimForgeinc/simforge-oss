@@ -5,6 +5,7 @@ import type {
   ScenarioMapCoverageDto,
   ScenarioMapDescriptorDto,
   ScenarioMapFootprintDto,
+  ScenarioMapVersionIdentityDto,
   ScenarioRenderArtifactDto,
 } from "../contracts";
 import { endpoint } from "./endpoint";
@@ -115,6 +116,12 @@ export const mapsProtocol = {
     method: "GET",
     path: "/api/simforge/maps",
     response: object({ maps: array(ScenarioMapDescriptorSchema) }),
+  }),
+  /** One map version by id (newest or not; 404 when it does not exist here). */
+  versionIdentity: endpoint<{ mapVersionId: string }, void, void, ScenarioMapVersionIdentityDto>({
+    method: "GET",
+    path: ({ mapVersionId }) => `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/identity`,
+    response: passthrough<ScenarioMapVersionIdentityDto>(),
   }),
   footprints: endpoint<void, void, void, ScenarioMapCoverageDto>({
     method: "GET",

@@ -79,7 +79,9 @@ export const ScenarioRenderJobSchema = object<ScenarioRenderJobDto>({
     simKey: string(),
     traceSha256: string(),
     timelineSha256: nullable(string()),
+    engineSemVer: optional(nullable(string())),
   }))),
+  motionSource: optional(nullable(oneOf(["original", "resimulated", "original-xosc"] as const))),
   createdAt: string(),
   updatedAt: string(),
 });
@@ -236,6 +238,12 @@ export const ScenarioRenderJobDetailSchema = object<ScenarioRenderJobDetailDto>(
   startedAt: nullable(string()),
   completedAt: nullable(string()),
   cancelRequestedAt: nullable(string()),
+  motion: optional(nullable(object({
+    source: nullable(oneOf(["original", "resimulated", "original-xosc"] as const)),
+    engineSemVer: nullable(string()),
+    simKey: nullable(string()),
+    traceSha256: nullable(string()),
+  }))),
   attempts: array(ScenarioRenderAttemptSchema),
   events: array(ScenarioJobEventSchema),
   artifacts: array(ScenarioRenderArtifactSchema),

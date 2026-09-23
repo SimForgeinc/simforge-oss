@@ -49,6 +49,7 @@ export function EditorHeader({
   documentSaveStatus,
   playback,
   playerMode = false,
+  versionsControl,
 }: {
   document?: EditorDocument | null;
   getDebugInformation?: () => string;
@@ -67,6 +68,8 @@ export function EditorHeader({
    * step aside; exit, save and verification status stay.
    */
   playerMode?: boolean;
+  /** The Versions panel's toolbar button (saved versions and their simulation history). */
+  versionsControl?: React.ReactNode;
 }) {
   useRouteHeader({ title: "Editor" });
   useSetTopBarActionsAlignment("start");
@@ -135,6 +138,7 @@ export function EditorHeader({
           inert={playerMode || undefined}
         >
           <EditorTutorialGuide experience={experience ?? "advanced"} />
+          {versionsControl}
           <ScenarioReadinessButton issues={readinessIssues} />
           {/* Weather and traffic moved to the left rail: they are things you add
               to the scenario, like actors, and they now share that panel's tile

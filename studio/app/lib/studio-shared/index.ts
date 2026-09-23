@@ -91,9 +91,8 @@ export {
   environmentPresetToCarlaWeather,
 } from "./carla-weather";
 export type { CarlaWeather } from "./carla-weather";
-// Self-check on documents WE emit. Not to be confused with `./xosc/parser`,
-// which is the hardened reader for inbound third-party files — see the header
-// of `allowlist-self-check.ts` for why the two must not be conflated.
+// Self-check on documents WE emit (an assertion about our writer, not a
+// reader for third-party files; SimForge does not import OpenSCENARIO).
 export {
   SCENARIO_RUNNER_1_0_ACTION_ALLOWLIST,
   SCENARIO_RUNNER_1_0_CONDITION_ALLOWLIST,
@@ -1241,29 +1240,7 @@ export type {
   XodrPhaseGrouping,
   XodrSignalPlacement,
 } from "./xodr-signal-controllers";
-// OpenSCENARIO importer (.xosc -> native job_spec) + post-sim checks/parity.
-export {
-  parseXoscToActors,
-  XoscImportError,
-  xoscToJobSpec,
-  xoscActorsToJobSpecActors,
-  computeEffectiveMotion,
-  diffEffectiveMotion,
-} from "./xosc/index";
-export type {
-  XoscImportedActor,
-  XoscImportedScenario,
-  XoscMapPoint,
-  XoscTimedWaypoint,
-  XoscJobSpec,
-  XoscJobSpecActor,
-  XoscToJobSpecOptions,
-  EffectiveMotion,
-  EffectiveMotionActorInput,
-  EffectiveMotionDiff,
-  EffectivePoint,
-  EffectiveTimedPoint,
-} from "./xosc/index";
+// Post-sim checks/parity.
 export {
   buildPostSimChecklist,
   summarizeChecks,
@@ -1271,8 +1248,6 @@ export {
   tracksFromCarlaTimeline,
   runKinematicChecks,
   DEFAULT_KINEMATIC_THRESHOLDS,
-  runOscRoundTripChecks,
-  OSC_SUPPORTED_PLACEMENT_MODES,
   // The barrel-level `compareRuns` is the M3.3 parity harness below; the
   // post-sim checklist's track-level comparator keeps an aliased name.
   compareRuns as comparePostSimRuns,
@@ -1286,8 +1261,6 @@ export type {
   ScenarioCheckReport,
   ScenarioCheckStatus,
   KinematicThresholds,
-  OscCheckSourceActor,
-  OscRoundTripOptions,
   PostSimChecklistInput,
   ParityResult,
   ActorParity,

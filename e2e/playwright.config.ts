@@ -91,6 +91,17 @@ export default defineConfig({
       testMatch: ["flows/maps*.spec.ts", "flows/core-studio*.spec.ts"],
     },
     { name: "models", testMatch: ["flows/models*.spec.ts"] },
+    /** Simulation history against a seeded, running host (flows/sim-history.spec.ts explains the seed). */
+    {
+      name: "sim-history",
+      testMatch: ["flows/sim-history*.spec.ts"],
+      use: {
+        viewport: { width: 1600, height: 900 },
+        launchOptions: {
+          args: ["--use-gl=angle", "--use-angle=vulkan", "--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan", "--ignore-gpu-blocklist", "--enable-gpu-rasterization"],
+        },
+      },
+    },
     {
       name: "interop",
       testMatch: [

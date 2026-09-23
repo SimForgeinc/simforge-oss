@@ -50,6 +50,7 @@ type ReadPin = ScenarioMapPin & { equivalentLegacyPins: readonly string[] };
 export async function readScenarioMapPin(
   tx: Pick<Transaction, "queryOne">,
   mapVersionId: string,
+  options: { includeRetired?: boolean } = {},
 ): Promise<ReadPin | null> {
   const row = await tx.queryOne<PinRow>(
     `WITH current_pin AS (
@@ -57,7 +58,7 @@ export async function readScenarioMapPin(
          FROM simforge.map_versions mv
          JOIN simforge.browser_asset_sets bs ON bs.id = mv.browser_asset_set_id
            AND bs.map_version_id = mv.id AND bs.asset_set_state = 'available'
-        WHERE mv.id = :map_version_id AND mv.retired_at IS NULL
+        WHERE mv.id = :map_version_id AND (:include_retired OR mv.retired_at IS NULL)
         LIMIT 1
      )
      SELECT p.id, p.simulation_closure_sha256, p.asset_catalog_version_id,
@@ -66,7 +67,7 @@ export async function readScenarioMapPin(
          WHERE other.map_version_id = p.id
            AND ${simulationClosureOf("other.id")} = p.simulation_closure_sha256) AS equivalent_browser_closures
        FROM current_pin p`,
-    { map_version_id: mapVersionId },
+    { map_version_id: mapVersionId, include_retired: options.includeRetired === true },
   );
   if (!row?.simulation_closure_sha256 || !row.asset_catalog_version_id) return null;
   const legacy = typeof row.equivalent_browser_closures === "string"
@@ -111,6 +112,7 @@ export async function requireScenarioMapPin(
 export async function verifyScenarioMapPin(
   tx: Pick<Transaction, "queryOne">,
   pinned: { mapVersionId: string | null; mapClosureSha256?: string | null; assetCatalogVersionId?: string | null },
+  options: { includeRetired?: boolean } = {},
 ): Promise<ScenarioMapPin> {
   if (!pinned.mapVersionId) {
     throw new ScenarioMapResolutionError(
@@ -119,7 +121,7 @@ export async function verifyScenarioMapPin(
       null,
     );
   }
-  const current = await readScenarioMapPin(tx, pinned.mapVersionId);
+  const current = await readScenarioMapPin(tx, pinned.mapVersionId, options);
   if (!current) {
     throw new ScenarioMapResolutionError(
       "scenario_map_version_unavailable",
@@ -148,4 +150,24 @@ export async function verifyScenarioMapPin(
     );
   }
   return { mapVersionId: current.mapVersionId, mapClosureSha256: current.mapClosureSha256, assetCatalogVersionId: current.assetCatalogVersionId };
+}
+
+/**
+ * The map version a DRAFT simulates on: exactly its pin, like a revision. A superseded version (a
+ * newer publication of the same map exists) and a retired one still simulate, so opening an old
+ * draft never re-resolves it to other roads; the pin's closure and catalog must still match, and
+ * moving to a newer publication is the author's explicit, diffed re-pin.
+ */
+export async function verifyDraftSimulationPin(
+  tx: Pick<Transaction, "queryOne">,
+  pinned: { mapVersionId: string | null; mapClosureSha256?: string | null; assetCatalogVersionId?: string | null },
+): Promise<ScenarioMapPin> {
+  if (!pinned.mapVersionId) {
+    throw new ScenarioMapResolutionError(
+      "scenario_map_absent",
+      "This scenario is not pinned to a map version; choose a map in the editor to simulate it.",
+      null,
+    );
+  }
+  return verifyScenarioMapPin(tx, pinned, { includeRetired: true });
 }

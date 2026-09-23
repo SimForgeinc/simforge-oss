@@ -15,11 +15,21 @@ import {
   type ScenarioRatingAggregateDto,
   type ScenarioRevisionDto,
   type ScenarioRevisionEvidenceDto,
+  type ScenarioRevisionMotionDto,
+  type ScenarioRevisionResimulationDto,
   type ScenarioSimulationPreviewDto,
   type ScenarioSimulationResultDto,
   type ScenarioSimulationStatusDto,
   type ScenarioSimulationVerificationDto,
   type ScenarioTagDto,
+  type ScenarioEngineChangeDto,
+  type ScenarioMapDescriptorDto,
+  type ScenarioMapPinStatusDto,
+  type ScenarioMapRepinPreviewDto,
+  type ScenarioMapMoveResultDto,
+  type ScenarioVersionsDto,
+  type SimulationComparisonDto,
+  type SimulationMotionDiffDto,
 } from "../contracts";
 import { endpoint } from "./endpoint";
 import {
@@ -395,6 +405,22 @@ export type CreateRevisionRequest = {
 };
 
 export type ResolveSimulationRequest = { expectedVersion?: number; waitMs?: number };
+/**
+ * The draft's authoritative simulation. `engineChange` is set when the draft is unchanged but its
+ * result moved (an engine upgrade) and the motion differs: the editor offers to keep the old motion.
+ */
+export type SaveVersionRequest = { expectedVersion: number; label?: string | null };
+export type KeepPreviousMotionRequest = { expectedVersion: number; previousSimKey: string; currentSimKey: string };
+export type AcceptDraftSimulationRequest = { expectedVersion: number; simKey: string };
+export type ResimulateVersionRequest = { waitMs?: number };
+export type SetActiveSimulationRequest = { simKey: string };
+export type RestoreVersionRequest = { expectedVersion: number };
+export type MapRepinPreviewRequest = { targetMapVersionId: string; waitMs?: number };
+export type MapMoveRequest = { expectedVersion: number; targetMapVersionId: string };
+export type VersionContentDto = { revisionId: string; contentSha256: string; mapVersionId: string | null; content: ScenarioTemplateV2 };
+export type ResimulateVersionResultDto = { status: ScenarioSimulationStatusDto; motionDiff: SimulationMotionDiffDto | null };
+export type MapPinStatusResponse = ScenarioMapPinStatusDto & { pinnedDescriptor: ScenarioMapDescriptorDto | null };
+export type DraftSimulationStatusDto = ScenarioSimulationStatusDto & { draftVersion: number; engineChange?: ScenarioEngineChangeDto | null };
 export type SimulationVerificationOutcomeDto = { outcome: "verified" | "mismatch"; authoritativeTraceSha256: string };
 /** The native evaluation of one authoritative trace (`TraceEvaluation` from `@simforge-oss/engine`). */
 export type SimulationEvaluationDto = { simKey: string; traceSha256: string; evaluation: Record<string, unknown> & { verdict: "accept" | "reject" } };
@@ -554,10 +580,81 @@ export const documentsProtocol = {
    * the host (memoized by content, joined when in flight, executed inline or
    * on a CPU runner). The client sends only the draft version it shows.
    */
-  resolveSimulation: endpoint<{ documentId: string }, void, ResolveSimulationRequest, ScenarioSimulationStatusDto & { draftVersion: number }>({
+  resolveSimulation: endpoint<{ documentId: string }, void, ResolveSimulationRequest, DraftSimulationStatusDto>({
     method: "POST",
     path: (params) => `${document(params)}/simulation`,
-    response: passthrough<ScenarioSimulationStatusDto & { draftVersion: number }>(),
+    response: passthrough<DraftSimulationStatusDto>(),
+  }),
+  // ── Versions (simulation history) ──────────────────────────────────────────
+  /** Every version of the document with its simulations, newest first. */
+  listVersions: endpoint<{ documentId: string }, void, void, ScenarioVersionsDto>({
+    method: "GET",
+    path: (params) => `${document(params)}/versions`,
+    response: passthrough<ScenarioVersionsDto>(),
+  }),
+  /** "Save version": freeze the draft (simulated under the current engine) as a named version. */
+  saveVersion: endpoint<{ documentId: string }, void, SaveVersionRequest, CreateScenarioRevisionResultDto>({
+    method: "POST",
+    path: (params) => `${document(params)}/versions`,
+    response: CreateScenarioRevisionResultSchema,
+  }),
+  /** "Keep the old motion as a version" after an engine change. */
+  keepPreviousMotion: endpoint<{ documentId: string }, void, KeepPreviousMotionRequest, CreateScenarioRevisionResultDto>({
+    method: "POST",
+    path: (params) => `${document(params)}/versions/keep-previous-motion`,
+    response: CreateScenarioRevisionResultSchema,
+  }),
+  /** "Use the new motion": the draft now shows the current engine's result (dismisses the banner). */
+  acceptDraftSimulation: endpoint<{ documentId: string }, void, AcceptDraftSimulationRequest, { ok: true }>({
+    method: "POST",
+    path: (params) => `${document(params)}/simulation/accept`,
+    response: passthrough<{ ok: true }>(),
+  }),
+  resimulateVersion: endpoint<{ documentId: string; revisionId: string }, void, ResimulateVersionRequest, ResimulateVersionResultDto>({
+    method: "POST",
+    path: ({ documentId, revisionId }) => `${document({ documentId })}/versions/${encodeURIComponent(revisionId)}/resimulate`,
+    response: passthrough<ResimulateVersionResultDto>(),
+  }),
+  /** "Use this simulation": move the version's active simulation (what its renders replay). */
+  setVersionActiveSimulation: endpoint<{ documentId: string; revisionId: string }, void, SetActiveSimulationRequest, { ok: true }>({
+    method: "PUT",
+    path: ({ documentId, revisionId }) => `${document({ documentId })}/versions/${encodeURIComponent(revisionId)}/active-simulation`,
+    response: passthrough<{ ok: true }>(),
+  }),
+  getVersionContent: endpoint<{ documentId: string; revisionId: string }, void, void, VersionContentDto>({
+    method: "GET",
+    path: ({ documentId, revisionId }) => `${document({ documentId })}/versions/${encodeURIComponent(revisionId)}/content`,
+    response: passthrough<VersionContentDto>(),
+  }),
+  /** Restore a version onto the draft on the server (used when it also moves the draft's map pin). */
+  restoreVersion: endpoint<{ documentId: string; revisionId: string }, void, RestoreVersionRequest, ScenarioDocumentDto>({
+    method: "POST",
+    path: ({ documentId, revisionId }) => `${document({ documentId })}/versions/${encodeURIComponent(revisionId)}/restore`,
+    response: passthrough<ScenarioDocumentDto>(),
+  }),
+  /** Both simulations side by side with their motion diff. */
+  compareSimulations: endpoint<void, { base: string; candidate: string }, void, SimulationComparisonDto>({
+    method: "GET",
+    path: `${SIMULATIONS}/compare`,
+    response: passthrough<SimulationComparisonDto>(),
+  }),
+  /** The draft's map pin, its descriptor, and any newer publication it may explicitly move to. */
+  getMapPinStatus: endpoint<{ documentId: string }, void, void, MapPinStatusResponse>({
+    method: "GET",
+    path: (params) => `${document(params)}/map-pin`,
+    response: passthrough<MapPinStatusResponse>(),
+  }),
+  /** Move the draft to another map version; the state before the move is saved as a version first. */
+  moveToMapVersion: endpoint<{ documentId: string }, void, MapMoveRequest, ScenarioMapMoveResultDto>({
+    method: "POST",
+    path: (params) => `${document(params)}/map-pin/move`,
+    response: passthrough<ScenarioMapMoveResultDto>(),
+  }),
+  /** Simulate the draft on another map version and diff it against what the draft shows now. */
+  previewMapRepin: endpoint<{ documentId: string }, void, MapRepinPreviewRequest, ScenarioMapRepinPreviewDto>({
+    method: "POST",
+    path: (params) => `${document(params)}/map-pin/preview`,
+    response: passthrough<ScenarioMapRepinPreviewDto>(),
   }),
   /** One immutable authoritative result by `simKey`. */
   getSimulation: endpoint<{ simKey: string }, void, void, ScenarioSimulationResultDto>({
@@ -577,10 +674,24 @@ export const documentsProtocol = {
     path: ({ simKey }) => `${SIMULATIONS}/${encodeURIComponent(simKey)}/evaluation`,
     response: passthrough<SimulationEvaluationDto>(),
   }),
-  /** The authoritative simulation a revision renders and is evaluated against (lazily re-simulated if needed). */
-  resolveRevisionSimulation: endpoint<{ revisionId: string }, void, { waitMs?: number }, ScenarioSimulationStatusDto>({
+  /**
+   * Which motion a revision's renders replay: its active (original) result
+   * under whatever engine produced it, the other stored results and whether
+   * the legacy OpenSCENARIO replay exists. Never simulates.
+   */
+  getRevisionMotion: endpoint<{ revisionId: string }, void, void, ScenarioRevisionMotionDto>({
+    method: "GET",
+    path: ({ revisionId }) => `/api/simforge/revisions/${encodeURIComponent(revisionId)}/simulation`,
+    response: passthrough<ScenarioRevisionMotionDto>(),
+  }),
+  /**
+   * Explicitly re-simulate a revision under the current engine. Adds a result
+   * to the revision (it does not change which one renders by default) and
+   * reports the motion diff against the active result.
+   */
+  resimulateRevision: endpoint<{ revisionId: string }, void, { action: "resimulate"; waitMs?: number }, ScenarioRevisionResimulationDto>({
     method: "POST",
     path: ({ revisionId }) => `/api/simforge/revisions/${encodeURIComponent(revisionId)}/simulation`,
-    response: passthrough<ScenarioSimulationStatusDto>(),
+    response: passthrough<ScenarioRevisionResimulationDto>(),
   }),
 } as const;

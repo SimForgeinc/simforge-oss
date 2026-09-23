@@ -40,6 +40,7 @@ pub mod studio_refinements;
 pub mod sites;
 pub mod situation;
 pub mod template;
+pub mod template_upgrade;
 #[cfg(test)]
 mod test_support;
 
@@ -72,3 +73,4 @@ pub use situation::{
     VerifiedStaticGeometryBinding,
 };
 pub use template::{parse_template, ScenarioTemplate, SCENARIO_TEMPLATE_VERSION};
+pub use template_upgrade::{upgrade_template_document, TemplateUpgradeStep, TEMPLATE_UPGRADE_STEPS};
