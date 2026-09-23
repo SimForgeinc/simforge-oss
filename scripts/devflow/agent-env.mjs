@@ -10,18 +10,19 @@
 //
 // Options for create: --base <ref>  --prod-build  --no-start  --no-wait  --reset-db
 import { spawn } from "node:child_process";
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statfsSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, symlinkSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statfsSync, statSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, join, relative, resolve } from "node:path";
 import { loadLayout, repoRoot } from "./lib/layout.mjs";
 import { allStates, allocatePorts, ensureServe, readState, removeServe, removeState, tailnetHost, writeState } from "./lib/envs.mjs";
-import { CACHE_ROOT, runLogged, seconds, sh, trySh, withNodePath } from "./lib/util.mjs";
+import { CACHE_ROOT, matchesAny, runLogged, seconds, sh, trySh, withNodePath } from "./lib/util.mjs";
 
 const USAGE = `Usage:
   agent:env <name> [--base <ref>] [--prod-build] [--no-start] [--no-wait] [--reset-db]
   agent:env --destroy <name> [--force] [--delete-branch]
   agent:env --list            (alias: agent:envs)
-  agent:env --gc [--dry-run] [--older-than <days>]`;
+  agent:env --gc [--dry-run] [--older-than <days>]
+  agent:env --from-branch <branch> [--base <ref>]   (what dev:worktree:init now runs)`;
 
 function parseArgs(argv) {
   const a = { name: null, mode: "create", base: null, prod: false, start: true, wait: true, resetDb: false, force: false, deleteBranch: false, dryRun: false, olderThan: 3 };
@@ -39,6 +40,10 @@ function parseArgs(argv) {
     else if (v === "--delete-branch") a.deleteBranch = true;
     else if (v === "--dry-run") a.dryRun = true;
     else if (v === "--older-than") a.olderThan = Number(argv[++i]);
+    // Compatibility with the old `dev:worktree:init <branch> [--base b] [--dir d] [--skip-env-pull]`.
+    else if (v === "--from-branch") a.fromBranch = true;
+    else if (v === "--dir") i += 1;
+    else if (v === "--skip-env-pull") {}
     else if (v === "-h" || v === "--help") {
       console.log(USAGE);
       process.exit(0);
@@ -47,6 +52,10 @@ function parseArgs(argv) {
       console.error(`agent:env: unknown argument ${v}\n${USAGE}`);
       process.exit(2);
     }
+  }
+  if (a.fromBranch && a.name) {
+    a.branch = a.name;
+    a.name = a.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 41);
   }
   if (a.name && !/^[a-z0-9][a-z0-9-]{0,40}$/.test(a.name)) {
     console.error("agent:env: name must be lowercase letters, digits and dashes (max 41)");
@@ -136,8 +145,12 @@ async function stopServer(state) {
 
 async function destroy(state, { force, deleteBranch }) {
   if (existsSync(state.worktree) && !force) {
-    const dirty = trySh("git", ["status", "--porcelain", "--untracked-files=normal"], { cwd: state.worktree });
-    if (dirty) {
+    // Files the dev server itself writes (next-env.d.ts, synced assets) are not work.
+    const dirty = (trySh("git", ["status", "--porcelain", "--untracked-files=normal"], { cwd: state.worktree }) ?? "")
+      .split("\n")
+      .map((l) => l.slice(3).trim())
+      .filter((f) => f && !matchesAny(f, cfg?.ignoreDirty ?? []));
+    if (dirty.length) {
       say(`  refusing to destroy ${state.name}: ${state.worktree} has uncommitted changes (commit them, or pass --force)`);
       return false;
     }
@@ -270,7 +283,7 @@ const step = async (label, fn) => {
 
 const worktreesDir = resolve(primary, cfg.worktreesDir ?? "../worktrees");
 const worktree = existing?.worktree ?? join(worktreesDir, `${cfg.worktreePrefix ?? `${layout.name}-`}${args.name}`);
-const branch = existing?.branch ?? `${cfg.branchPrefix ?? "agent/"}${args.name}`;
+const branch = existing?.branch ?? args.branch ?? `${cfg.branchPrefix ?? "agent/"}${args.name}`;
 const state = existing ?? { repo: layout.name, name: args.name, worktree, branch, createdAt: new Date().toISOString() };
 const logDir = join(worktree, ".devflow");
 say(`agent:env ${args.name} · ${layout.name} · ${existing ? "refresh" : "create"} · ${worktree}`);
@@ -350,6 +363,14 @@ const ctx = {
   databaseUrl: null,
 };
 mkdirSync(ctx.stateDir, { recursive: true });
+// Content-addressed state (published map artifacts) is shared by every env of
+// this layout instead of copied per env; the database stays per env.
+for (const sub of cfg.sharedState ?? []) {
+  const shared = join(CACHE_ROOT, "state", layout.name, "_shared", sub);
+  mkdirSync(shared, { recursive: true });
+  const link = join(ctx.stateDir, sub);
+  if (!existsSync(link)) symlinkSync(shared, link);
+}
 
 // 4. database (template clone)
 if (cfg.database) {

@@ -131,6 +131,10 @@ export default {
     start: { cwd: "studio", run: ["pnpm", "dev"] },
     prodBuild: { cwd: "studio", run: ["pnpm", "build"] },
     prodStart: { cwd: "studio", run: ["pnpm", "exec", "next", "start", "-p", "{port}"] },
+    // Published map artifacts are content-addressed: one copy for all envs.
+    sharedState: ["artifacts"],
+    // Written by the dev server; `--destroy` does not count them as uncommitted work.
+    ignoreDirty: ["studio/next-env.d.ts", "studio/AGENTS.md", "studio/CLAUDE.md", "studio/public/app-switcher/**"],
     // Rebuildable outputs `agent:env --gc` may delete from idle envs.
     rebuildable: ["native/target", "renderer/target", "studio/.next", ".turbo", "test-results", "playwright-report"],
   },
