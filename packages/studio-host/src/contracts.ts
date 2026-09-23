@@ -327,6 +327,20 @@ export type ScenarioRevisionResimulationDto = {
   motionDiff: ScenarioMotionDiffDto | null;
 };
 
+/**
+ * One map version by id, whether or not it is the newest publication of its
+ * source: what an import needs to bind a scenario to the EXACT version it was
+ * authored on. `pinnable` is false for a retired version or one whose
+ * published closure is gone (a scenario can't be pinned to it).
+ */
+export type ScenarioMapVersionIdentityDto = {
+  mapVersionId: string;
+  sourceMapId: string | null;
+  xodrSha256: string;
+  retiredAt: string | null;
+  pinnable: boolean;
+};
+
 /** The editor's comparison of its local preview against the authoritative trace. */
 export type ScenarioSimulationVerificationDto = {
   documentId?: string | null;

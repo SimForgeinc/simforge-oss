@@ -27,6 +27,7 @@ import type {
   ScenarioSimulationResultDto,
   ScenarioSimulationStatusDto,
   ScenarioRevisionMotionDto,
+  ScenarioMapVersionIdentityDto,
   ScenarioRevisionResimulationDto,
   ScenarioSimulationVerificationDto,
   ScenarioTagDto,
@@ -200,6 +201,8 @@ export interface StudioProjectService {
 export interface StudioArtifactService {
   /** The usable map catalog. Refresh after installation or an authorization change. */
   listMaps(signal?: AbortSignal, options?: { fresh?: boolean }): Promise<StudioMapEntry[]>;
+  /** One map version by id, including superseded publications; null when it does not exist here. */
+  getMapVersionIdentity(mapVersionId: string, signal?: AbortSignal): Promise<ScenarioMapVersionIdentityDto | null>;
   /**
    * WGS84 footprints of the installed maps, for drawing scenario coverage on
    * a 2D basemap. Immutable per map version, so it shares the map catalog's
