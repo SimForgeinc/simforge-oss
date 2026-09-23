@@ -69,6 +69,7 @@ export async function POST(request: Request) {
             timelineSha256: replay.timeline.timelineSha256,
             timelineSizeBytes: replay.timeline.sizeBytes,
             engineSemVer: replay.result.engineSemVer,
+            timelineContactOrigin: replay.timeline.contactOrigin,
           }
         : null,
       replay.motionSource,

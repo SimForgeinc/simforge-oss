@@ -120,7 +120,7 @@
       "id": "actor-appearance-closure",
       "role": "165 glTF actor-appearance models plus their catalog, staged by packages/render/scripts/fetch-actor-closure.mjs into every package so native renders resolve actors offline.",
       "license": "Mixed; determined per member from the pinned catalog. CC BY 4.0 is now the dominant term: 64 of the 165 entries are CARLA content.",
-      "origin": "Not published. The closure was generated locally by scripts/actor-assets/complete-closure.mjs and is staged with `--from`; https://da3tufozhdsvl.cloudfront.net/actor-assets/closures/70dde8bb17ac3595d3e6c307dce8bf42f2d8fbcfb13bddd781f5cfe4daef18b4.json does not exist until a maintainer uploads it.",
+      "origin": "Not published. The closure was generated locally by scripts/actor-assets/complete-closure.mjs and is staged with `--from`; https://da3tufozhdsvl.cloudfront.net/actor-assets/closures/4f298a9fd7c8bbf8d19cc10f0a57ec4e5a9f955540c160e7985e335a8fad706f.json does not exist until a maintainer uploads it.",
       "targets": [
         "windows-x64",
         "linux-x64",
@@ -128,15 +128,15 @@
         "macos-x64"
       ],
       "provenance": {
-        "closureDigest": "70dde8bb17ac3595d3e6c307dce8bf42f2d8fbcfb13bddd781f5cfe4daef18b4",
-        "closureBytes": 22969,
-        "catalogDigest": "7955d6ec4bee61d2739293ebd421e264b88c5bd3b891cdf432d5a21338cf6e98",
+        "closureDigest": "4f298a9fd7c8bbf8d19cc10f0a57ec4e5a9f955540c160e7985e335a8fad706f",
+        "closureBytes": 22971,
+        "catalogDigest": "f1cb1d56a7a5e87c5180caf6431c443c9111fb502732d7c82fa28c64cb127e8e",
         "catalogEntries": 165,
         "members": 168,
         "distinctBlobs": 162,
-        "distinctBlobBytes": 1351545934,
+        "distinctBlobBytes": 1379960048,
         "note": "The closure document itself records only digests and sizes; the per-model attribution lives in its catalog-models.json member, which is what these counts were read from. `models` counts catalog entries and `blobs`/`bytes` count the distinct members a class contributes, since several ids can share one GLB (vehicle.van, vehicle.shuttle_bus and vehicle.delivery_van are all the Sprinter). Both are emitted by the generator's report, not counted by hand.",
-        "supersedes": "6136ecbd9a486948f26b9e05f17c871f9b96a5c512db4be230e4b30cda82d192, which carried no CARLA vehicles at all: 34 procedural, 55 Meshy and one CARLA pedestrian.",
+        "supersedes": "70dde8bb17ac3595d3e6c307dce8bf42f2d8fbcfb13bddd781f5cfe4daef18b4, identical except vehicle.bicycle and vehicle.motorcycle (now ridden: CARLA rider, odometer-phased clip, catalog rider contract) and their catalog-models.json entries; that closure superseded 6136ecbd9a486948f26b9e05f17c871f9b96a5c512db4be230e4b30cda82d192, which carried no CARLA vehicles at all.",
         "classes": [
           {
             "source": "carla-0.10.0-ue5",
@@ -199,7 +199,7 @@
           "status": "unsatisfied",
           "evidence": "The closure was generated locally by scripts/actor-assets/complete-closure.mjs and verified by rendering; nothing was uploaded. There are no write credentials for the CloudFront distribution in this environment (aws sts get-caller-identity reports no locatable credentials), so publishing could not be attempted and was not faked.",
           "remediation": [
-            "Upload closures/70dde8bb17ac3595d3e6c307dce8bf42f2d8fbcfb13bddd781f5cfe4daef18b4.json to <origin>/actor-assets/closures/ and every blob to <origin>/blobs/sha256/<first two hex>/<full sha256>, from a generated root (1,288.9 MiB over 162 objects).",
+            "Upload closures/4f298a9fd7c8bbf8d19cc10f0a57ec4e5a9f955540c160e7985e335a8fad706f.json to <origin>/actor-assets/closures/ and every blob to <origin>/blobs/sha256/<first two hex>/<full sha256>, from a generated root (1,316.0 MiB over 162 objects).",
             "Invalidate nothing: the paths are content-addressed and immutable.",
             "Verify with `node packages/render/scripts/fetch-actor-closure.mjs --out <tmp>` with no --from: it re-downloads and re-hashes every member against the pinned document.",
             "Until then, packaged installs must stage the closure locally: `node packages/render/scripts/fetch-actor-closure.mjs --out <root>/share/actor-assets --from <generated root>`."

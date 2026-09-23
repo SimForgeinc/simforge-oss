@@ -2,7 +2,7 @@
   "sceneId": "yale-05-timeline",
   "mapId": "yale-street",
   "profile": "sensor",
-  "description": "Cyclist occlusion conflict (edge case 05) on yale-street: car, truck, wrong-way cyclist and pedestrian replayed from the render timeline through scen-play --authored-height. Gates: pass hashes, a non-vacuous instance-ID pass, and observed actor transforms within the Bevy parity profile of the timeline sampler.",
+  "description": "Cyclist occlusion conflict (edge case 05) on yale-street: car, truck, wrong-way cyclist and pedestrian replayed from the render timeline through scen-play --authored-height. Gates: pass hashes, a non-vacuous instance-ID pass, and observed actor transforms within the Bevy parity profile of the timeline sampler. Two-wheelers are drawn without their rider (--allow-riderless-two-wheelers, recorded as actor-model-substitution): scen-play draws rigid parts and cannot pose the skinned rider, so this golden keeps guarding the bike geometry; the ridden look is covered by native-render-service.",
   "binary": "renderer/target/release/scen-play",
   "corpusRootEnv": "SIMFORGE_CORPUS_YALE",
   "corpusFiles": [
@@ -23,6 +23,12 @@
     "360",
     "--warmup",
     "20",
+    "--vehicle-models",
+    "{repo}/catalog/vehicles-carla",
+    "--pedestrian-models",
+    "{repo}/catalog/pedestrians-carla",
+    "--allow-pedestrian-substitution",
+    "--allow-riderless-two-wheelers",
     "--out-dir",
     "{out}"
   ],

@@ -2053,6 +2053,549 @@
       "textures": [],
       "size_bytes": 1163920,
       "sha256": "8c07c8fcee87fb3b0acf622cc790f92cfcd848d5b72269d757fe6b2d27d494a2"
+    },
+    "vehicle_bicycle_bh_crossbike_rider": {
+      "file": "models/vehicle_bicycle_bh_crossbike_rider.glb",
+      "family": "bicycle",
+      "display": "BH Crossbike with rider",
+      "carla_blueprint": "vehicle.bh.crossbike",
+      "tintable": true,
+      "dims_lwh_m": [
+        1.49,
+        0.86,
+        1.09
+      ],
+      "bbox": {
+        "min": [
+          -0.743,
+          0.001,
+          -0.43
+        ],
+        "max": [
+          0.744,
+          1.095,
+          0.429
+        ]
+      },
+      "nodes": [
+        "body",
+        "handlebar",
+        "left_pedal_geo",
+        "pedals_geo",
+        "rider_mesh",
+        "right_pedal_geo",
+        "wheel_f",
+        "wheel_r"
+      ],
+      "materials": [
+        "cross_bike_metal",
+        "cross_bike_seat",
+        "body_paint",
+        "cross_bike_wheels",
+        "rider_shoes",
+        "rider_top",
+        "rider_bottom",
+        "afro_f02_skin",
+        "eye_dark",
+        "afro_f02_eyebrows",
+        "afro_f02_hair"
+      ],
+      "riderlessBase": "models/vehicle_bicycle_bh_crossbike.glb",
+      "rider": {
+        "pedestrian": "walker.pedestrian.0017",
+        "sourceMesh": "SK_AfroF02_A_G2",
+        "carlaBlueprint": "BP_CrossBike",
+        "helmet": null,
+        "slots": [
+          "rider_bottom",
+          "rider_shoes",
+          "rider_top"
+        ],
+        "variants": 9,
+        "clip": "ride",
+        "clipDurationS": 1.0,
+        "metersPerCycle": 3.359223,
+        "cycle": "crank revolution",
+        "wheelTurnsPerCycle": 2,
+        "pose": {
+          "torsoLeanDeg": 35.14,
+          "seatSlideM": 0.0,
+          "hipDropM": 0.0,
+          "maxLegReach": 0.7337,
+          "armReach": {
+            "L": 0.9,
+            "R": 0.8853
+          }
+        }
+      },
+      "size_bytes": 17184888,
+      "sha256": "3b09706b439d3a8697db51edb67737e04f2f14d925cfd96882e6aa6b3fa5fbf0"
+    },
+    "vehicle_bicycle_gazelle_omafiets_rider": {
+      "file": "models/vehicle_bicycle_gazelle_omafiets_rider.glb",
+      "family": "bicycle",
+      "display": "Gazelle Omafiets with rider",
+      "carla_blueprint": "vehicle.gazelle.omafiets",
+      "tintable": true,
+      "dims_lwh_m": [
+        1.83,
+        0.33,
+        1.22
+      ],
+      "bbox": {
+        "min": [
+          -0.933,
+          0.017,
+          -0.158
+        ],
+        "max": [
+          0.902,
+          1.236,
+          0.171
+        ]
+      },
+      "nodes": [
+        "body",
+        "handlebar",
+        "left_pedal_geo",
+        "pedals_geo",
+        "rider_mesh",
+        "right_pedal_geo",
+        "wheel_f",
+        "wheel_r"
+      ],
+      "materials": [
+        "aluminium",
+        "white",
+        "black",
+        "body_paint",
+        "plasti_cb_lack",
+        "eye_blue",
+        "afro_f02_eyebrows",
+        "rider_bottom",
+        "rider_top",
+        "euro_m02_skin",
+        "amer_m01_hair",
+        "rider_shoes"
+      ],
+      "riderlessBase": "models/vehicle_bicycle_gazelle_omafiets.glb",
+      "rider": {
+        "pedestrian": "walker.pedestrian.0047",
+        "sourceMesh": "SK_EuroM02_A_G2",
+        "carlaBlueprint": "BP_LeisureBike",
+        "helmet": null,
+        "slots": [
+          "rider_bottom",
+          "rider_shoes",
+          "rider_top"
+        ],
+        "variants": 9,
+        "clip": "ride",
+        "clipDurationS": 1.0,
+        "metersPerCycle": 4.687472,
+        "cycle": "crank revolution",
+        "wheelTurnsPerCycle": 2,
+        "pose": {
+          "torsoLeanDeg": 6.33,
+          "seatSlideM": 0.0,
+          "hipDropM": 0.0,
+          "maxLegReach": 0.9506,
+          "armReach": {
+            "L": 0.8743,
+            "R": 0.9
+          }
+        }
+      },
+      "size_bytes": 13482180,
+      "sha256": "332c526bb5d8dd8f3b99f1fedce1ddc8d3f14a5401003216e68187a527ae365f"
+    },
+    "vehicle_bicycle_diamondback_century_rider": {
+      "file": "models/vehicle_bicycle_diamondback_century_rider.glb",
+      "family": "bicycle",
+      "display": "Diamondback Century with rider",
+      "carla_blueprint": "vehicle.diamondback.century",
+      "tintable": true,
+      "dims_lwh_m": [
+        1.64,
+        0.37,
+        1.07
+      ],
+      "bbox": {
+        "min": [
+          -0.821,
+          0.013,
+          -0.186
+        ],
+        "max": [
+          0.821,
+          1.08,
+          0.186
+        ]
+      },
+      "nodes": [
+        "body",
+        "handlebar",
+        "left_pedal_geo",
+        "pedals_geo",
+        "rider_mesh",
+        "right_pedal_geo",
+        "wheel_f",
+        "wheel_r"
+      ],
+      "materials": [
+        "body_paint",
+        "road_bike_wheels",
+        "eye_brown",
+        "asia_m02_skin_g2",
+        "asia_m02_hair",
+        "afro_f03_eyebrow",
+        "rider_bottom",
+        "rider_shoes",
+        "rider_top"
+      ],
+      "riderlessBase": "models/vehicle_bicycle_diamondback_century.glb",
+      "rider": {
+        "pedestrian": "walker.pedestrian.0038",
+        "sourceMesh": "SK_AsiaM02_A_G2",
+        "carlaBlueprint": "BP_RoadBike",
+        "helmet": null,
+        "slots": [
+          "rider_bottom",
+          "rider_shoes",
+          "rider_top"
+        ],
+        "variants": 9,
+        "clip": "ride",
+        "clipDurationS": 1.0,
+        "metersPerCycle": 4.394549,
+        "cycle": "crank revolution",
+        "wheelTurnsPerCycle": 2,
+        "pose": {
+          "torsoLeanDeg": 59.3,
+          "seatSlideM": 0.17,
+          "hipDropM": 0.0,
+          "maxLegReach": 0.9652,
+          "armReach": {
+            "L": 0.8621,
+            "R": 0.9
+          }
+        }
+      },
+      "size_bytes": 18462500,
+      "sha256": "9a7b948abec3c97909b5aacdf9a2412e1a918613dc5dcddbccc5c97a0e05071d"
+    },
+    "vehicle_motorcycle_harley_rider": {
+      "file": "models/vehicle_motorcycle_harley_rider.glb",
+      "family": "motorcycle",
+      "display": "Harley-Davidson Low Rider with rider",
+      "carla_blueprint": "vehicle.harley-davidson.low_rider",
+      "tintable": true,
+      "dims_lwh_m": [
+        2.36,
+        0.76,
+        1.43
+      ],
+      "bbox": {
+        "min": [
+          -1.187,
+          0.022,
+          -0.38
+        ],
+        "max": [
+          1.169,
+          1.451,
+          0.384
+        ]
+      },
+      "nodes": [
+        "body",
+        "handlebar",
+        "rider_helmet",
+        "rider_mesh",
+        "wheel_f",
+        "wheel_r"
+      ],
+      "materials": [
+        "harley_wheels",
+        "harley_body",
+        "license_plate",
+        "glass",
+        "harley_lamp_support",
+        "harley_front_lamp",
+        "body_paint",
+        "eye_brown",
+        "afro_m02_head",
+        "rider_shoes",
+        "rider_bottom",
+        "afro_m02_body",
+        "afro_m02_nails",
+        "afro_m02_shirt",
+        "rider_top",
+        "rider_helmet",
+        "rider_helmet_liner"
+      ],
+      "riderlessBase": "models/vehicle_motorcycle_harley.glb",
+      "rider": {
+        "pedestrian": "walker.pedestrian.0027",
+        "sourceMesh": "SK_AfroM02_A_G2",
+        "carlaBlueprint": "BP_Harley",
+        "helmet": "open",
+        "slots": [
+          "rider_bottom",
+          "rider_helmet",
+          "rider_shoes",
+          "rider_top"
+        ],
+        "variants": 9,
+        "clip": "ride",
+        "clipDurationS": 1.0,
+        "metersPerCycle": 2.401076,
+        "cycle": "wheel revolution",
+        "wheelTurnsPerCycle": 1,
+        "pose": {
+          "torsoLeanDeg": 2.32,
+          "seatSlideM": 0.0,
+          "hipDropM": 0.0,
+          "maxLegReach": 0.5733,
+          "armReach": {
+            "L": 0.8556,
+            "R": 0.88
+          }
+        }
+      },
+      "size_bytes": 25274444,
+      "sha256": "7ad95dfac3db2f749af1f425860d1ea1e81ca78a85c9d448dae9eb8ec6707a88"
+    },
+    "vehicle_motorcycle_kawasaki_ninja_rider": {
+      "file": "models/vehicle_motorcycle_kawasaki_ninja_rider.glb",
+      "family": "motorcycle",
+      "display": "Kawasaki Ninja with rider",
+      "carla_blueprint": "vehicle.kawasaki.ninja",
+      "tintable": false,
+      "dims_lwh_m": [
+        2.03,
+        0.8,
+        1.15
+      ],
+      "bbox": {
+        "min": [
+          -1.036,
+          0.013,
+          -0.401
+        ],
+        "max": [
+          0.997,
+          1.158,
+          0.402
+        ]
+      },
+      "nodes": [
+        "body",
+        "handlebar",
+        "rider_helmet",
+        "rider_mesh",
+        "wheel_f",
+        "wheel_r"
+      ],
+      "materials": [
+        "kawasaki_ninja_wheels",
+        "kawasaki_ninja_metal",
+        "license_plate",
+        "body_livery",
+        "kawasaki_ninja_plastic",
+        "rider_bottom",
+        "rider_shoes",
+        "asia_f01_head",
+        "eye_dark",
+        "rider_top",
+        "asia_f01_body",
+        "asia_f01_nails",
+        "rider_helmet",
+        "rider_helmet_visor",
+        "rider_helmet_liner"
+      ],
+      "riderlessBase": "models/vehicle_motorcycle_kawasaki_ninja.glb",
+      "rider": {
+        "pedestrian": "walker.pedestrian.0032",
+        "sourceMesh": "SK_AsiaF01_G2",
+        "carlaBlueprint": "BP_KawasakiNinja",
+        "helmet": "full",
+        "slots": [
+          "rider_bottom",
+          "rider_helmet",
+          "rider_shoes",
+          "rider_top"
+        ],
+        "variants": 9,
+        "clip": "ride",
+        "clipDurationS": 1.0,
+        "metersPerCycle": 1.999496,
+        "cycle": "wheel revolution",
+        "wheelTurnsPerCycle": 1,
+        "pose": {
+          "torsoLeanDeg": 58.01,
+          "seatSlideM": 0.0,
+          "hipDropM": 0.0,
+          "maxLegReach": 0.4355,
+          "armReach": {
+            "L": 0.8599,
+            "R": 0.88
+          }
+        }
+      },
+      "size_bytes": 19338460,
+      "sha256": "98709965e67e2c96fe8680d885ae7cf94e6a504f35c081f5db51e5bc10d5b15d"
+    },
+    "vehicle_motorcycle_yamaha_yzf_rider": {
+      "file": "models/vehicle_motorcycle_yamaha_yzf_rider.glb",
+      "family": "motorcycle",
+      "display": "Yamaha YZF with rider",
+      "carla_blueprint": "vehicle.yamaha.yzf",
+      "tintable": true,
+      "dims_lwh_m": [
+        2.21,
+        0.87,
+        1.25
+      ],
+      "bbox": {
+        "min": [
+          -1.109,
+          0.024,
+          -0.434
+        ],
+        "max": [
+          1.1,
+          1.275,
+          0.434
+        ]
+      },
+      "nodes": [
+        "body",
+        "handlebar",
+        "rider_helmet",
+        "rider_mesh",
+        "wheel_f",
+        "wheel_r"
+      ],
+      "materials": [
+        "body_paint",
+        "yamaha_details",
+        "yamaha_glass_emissive",
+        "license_plate",
+        "rider_bottom",
+        "rider_top",
+        "euro_f02_g2_skin",
+        "eye_blue",
+        "rider_helmet",
+        "rider_helmet_visor",
+        "rider_helmet_liner"
+      ],
+      "riderlessBase": "models/vehicle_motorcycle_yamaha_yzf.glb",
+      "rider": {
+        "pedestrian": "walker.pedestrian.0043",
+        "sourceMesh": "SK_EuroF02_B_G2",
+        "carlaBlueprint": "BP_Yamaha",
+        "helmet": "full",
+        "slots": [
+          "rider_bottom",
+          "rider_helmet",
+          "rider_top"
+        ],
+        "variants": 9,
+        "clip": "ride",
+        "clipDurationS": 1.0,
+        "metersPerCycle": 2.239661,
+        "cycle": "wheel revolution",
+        "wheelTurnsPerCycle": 1,
+        "pose": {
+          "torsoLeanDeg": 83.96,
+          "seatSlideM": 0.0,
+          "hipDropM": 0.0,
+          "maxLegReach": 0.608,
+          "armReach": {
+            "L": 0.88,
+            "R": 0.8775
+          }
+        }
+      },
+      "size_bytes": 12666840,
+      "sha256": "5bdf66486e8b1e080b03125ce1358a14d9efdecce17617b2c1aaf2e8ab2f4eb2"
+    },
+    "vehicle_scooter_vespa_rider": {
+      "file": "models/vehicle_scooter_vespa_rider.glb",
+      "family": "motorcycle",
+      "display": "Vespa ZX 125 with rider",
+      "carla_blueprint": "vehicle.vespa.zx125",
+      "tintable": false,
+      "dims_lwh_m": [
+        1.81,
+        0.86,
+        1.32
+      ],
+      "bbox": {
+        "min": [
+          -0.892,
+          0.003,
+          -0.428
+        ],
+        "max": [
+          0.913,
+          1.326,
+          0.428
+        ]
+      },
+      "nodes": [
+        "body",
+        "handlebar",
+        "rider_helmet",
+        "rider_mesh",
+        "wheel_f",
+        "wheel_r"
+      ],
+      "materials": [
+        "vespa_metal",
+        "vespa_lights_02",
+        "body_livery",
+        "vespa_lights_01",
+        "vespa_seat",
+        "vespa_wheels",
+        "euro_f01_skin",
+        "eye_blue",
+        "rider_top",
+        "rider_shoes",
+        "rider_helmet",
+        "rider_helmet_liner"
+      ],
+      "riderlessBase": "models/vehicle_scooter_vespa.glb",
+      "rider": {
+        "pedestrian": "walker.pedestrian.0039",
+        "sourceMesh": "SK_EuroF01_A_G2",
+        "carlaBlueprint": "BP_Vespa",
+        "helmet": "open",
+        "slots": [
+          "rider_helmet",
+          "rider_shoes",
+          "rider_top"
+        ],
+        "variants": 9,
+        "clip": "ride",
+        "clipDurationS": 1.0,
+        "metersPerCycle": 1.369596,
+        "cycle": "wheel revolution",
+        "wheelTurnsPerCycle": 1,
+        "pose": {
+          "torsoLeanDeg": 30.18,
+          "seatSlideM": 0.0,
+          "hipDropM": 0.0,
+          "maxLegReach": 0.7034,
+          "armReach": {
+            "L": 0.865,
+            "R": 0.88
+          }
+        }
+      },
+      "size_bytes": 17691368,
+      "sha256": "ac90c57e834f80cad6248388b4a84aaf615ff6f4c03e0f2cf9d3a567ba255291"
     }
   }
 }

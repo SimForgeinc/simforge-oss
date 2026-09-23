@@ -42,6 +42,14 @@ export type CanonicalRenderSpecInput = {
   fidelity: "review" | "dataset";
   /** Render-time environment override; the draft's authored environment when absent. */
   environment?: Environment;
+  /**
+   * Per-camera capture the requester explicitly chose, overriding what the
+   * template authored for each sensor (`simforge.render-defaults`). Absent,
+   * `video`'s size and rate are that explicit choice (the Studio wizard's
+   * resolution picker). `{}` means nothing was chosen: every camera keeps its
+   * authored capture, and only an unauthored camera takes `video`'s size.
+   */
+  captureOverride?: Partial<{ width: number; height: number; fps: number }>;
 };
 
 export const RENDER_MODALITY_ORDER: readonly RenderModality[] = [
@@ -120,15 +128,18 @@ export function defaultModalities(sensor: ActorSensor): readonly RenderModality[
 }
 
 /**
- * Capture attributes per source: an explicit video format wins for image sensors; otherwise the
- * capture configuration the template authored for that sensor (`simforge.render-defaults`);
- * otherwise the renderer's own defaults.
+ * Capture attributes per source: an explicitly requested capture (`captureOverride`, else
+ * `video`) wins for image sensors; otherwise the capture configuration the template authored for
+ * that sensor (`simforge.render-defaults`); otherwise the requested video format; otherwise the
+ * documented product defaults (1280x720 at 24 fps, a 64-beam 1.2 Mpt/s 10 Hz lidar, a
+ * 1,500 pt/s radar), applied only where nothing above names a value.
  */
 export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): RenderSpecV3 {
   const sensorByKey = new Map(
     authoredRenderSensors(input.content).map((option) => [sensorKey(option.actorId, option.sensor.id), option.sensor]),
   );
   const defaults = templateRenderDefaults(input.content);
+  const override = input.captureOverride ?? input.video;
   const sources = input.selections.flatMap((selection) => {
     const sensor = sensorByKey.get(sensorKey(selection.actorId, selection.sensorId));
     if (!sensor) throw new Error(`Unknown authored sensor ${selection.actorId}/${selection.sensorId}.`);
@@ -157,9 +168,9 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
             ...common,
             modality,
             attributes: {
-              width: input.video?.width ?? capture?.width ?? 1280,
-              height: input.video?.height ?? capture?.height ?? 720,
-              fps: input.video?.fps ?? capture?.fps ?? 24,
+              width: override?.width ?? capture?.width ?? input.video?.width ?? 1280,
+              height: override?.height ?? capture?.height ?? input.video?.height ?? 720,
+              fps: override?.fps ?? capture?.fps ?? input.video?.fps ?? 24,
               horizontalFovDeg: sensor.camera.horizontalFovDeg,
               nearM: sensor.camera.nearM,
               farM: sensor.camera.farM,

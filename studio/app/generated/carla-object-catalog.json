@@ -3279,31 +3279,31 @@
     },
     {
       "catalogId": "vehicle.bicycle",
-      "blueprintId": "vehicle.diamondback.century",
-      "carlaObjectId": "carla.vehicle_diamondback_century",
+      "blueprintId": "vehicle.gazelle.omafiets",
+      "carlaObjectId": "carla.vehicle_gazelle_omafiets",
       "authoredDims": {
         "l": 1.75,
         "w": 0.5,
         "h": 1.71
       },
       "carlaDims": {
-        "l": 1.656,
-        "w": 0.582,
-        "h": 1.62
+        "l": 1.843,
+        "w": 0.659,
+        "h": 1.776
       },
       "dimensionDelta": {
-        "l": -0.094,
-        "w": 0.082,
-        "h": -0.09
+        "l": 0.093,
+        "w": 0.159,
+        "h": 0.066
       },
-      "worstRelativeError": 0.164,
+      "worstRelativeError": 0.318,
       "gatedAxes": [
         "l",
         "w",
         "h"
       ],
-      "gatedRelativeError": 0.164,
-      "dimensionalAgreement": "exact",
+      "gatedRelativeError": 0.318,
+      "dimensionalAgreement": "close",
       "fidelity": "native-blueprint"
     },
     {
@@ -3598,31 +3598,31 @@
     },
     {
       "catalogId": "vehicle.motorcycle",
-      "blueprintId": "vehicle.kawasaki.ninja",
-      "carlaObjectId": "carla.vehicle_kawasaki_ninja",
+      "blueprintId": "vehicle.harley.lowrider",
+      "carlaObjectId": "carla.vehicle_harley_lowrider",
       "authoredDims": {
         "l": 2.1,
         "w": 0.75,
         "h": 1.23
       },
       "carlaDims": {
-        "l": 2.044,
-        "w": 0.797,
-        "h": 1.523
+        "l": 2.35,
+        "w": 0.766,
+        "h": 1.649
       },
       "dimensionDelta": {
-        "l": -0.056,
-        "w": 0.047,
-        "h": 0.293
+        "l": 0.25,
+        "w": 0.016,
+        "h": 0.419
       },
-      "worstRelativeError": 0.238,
+      "worstRelativeError": 0.341,
       "gatedAxes": [
         "l",
         "w",
         "h"
       ],
-      "gatedRelativeError": 0.238,
-      "dimensionalAgreement": "exact",
+      "gatedRelativeError": 0.341,
+      "dimensionalAgreement": "close",
       "fidelity": "native-blueprint"
     },
     {

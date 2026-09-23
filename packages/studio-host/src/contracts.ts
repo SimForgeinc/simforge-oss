@@ -256,6 +256,9 @@ export type ScenarioSimulationStatusDto =
   | { state: "queued" | "running"; requestKey: string }
   | { state: "failed"; requestKey: string; failureCode: string; message: string | null };
 
+/** Where a render timeline's body heights came from (`render-timeline.md` §4). */
+export type ScenarioTimelineContactOrigin = 'trace' | 'derived-at-timeline-build' | 'legacy-xodr-elevation';
+
 /**
  * Where a render's motion comes from (`RenderIntentV1.motionSource`):
  * `original` is the revision's active simulation (its original result, under
@@ -666,6 +669,20 @@ export type ScenarioMapDescriptorDto = {
    * semantics and simulation closure it was built for. Absent from older servers.
    */
   ambientTurnVerdicts?: { engineSemVer: string; closureDigest: string; sha256: string } | null;
+  /**
+   * The ground derivative (`derived/ground/ground-mesh.bin`, engine 0.11
+   * contact), when this version carries it: the member digest, and the
+   * ingest validation the map descriptor must show (`status: 'flagged'` with
+   * `flags` `xodr-disagrees` / `surface-holes`; `warnings` are display text).
+   * `status: 'unreported'` when the publish recorded no validation. Absent
+   * from versions published before the derivative existed.
+   */
+  ground?: {
+    sha256: string;
+    status: 'ok' | 'flagged' | 'no-xodr' | 'unreported';
+    flags: string[];
+    warnings: string[];
+  } | null;
   topologyArtifactUrl: string;
   /** Presigned gzipped derived topology; null when the map version has no available artifact. */
   derivedTopologyUrl: string | null;
@@ -746,6 +763,12 @@ export type ScenarioRenderJobDto = {
   } | null;
   /** Which motion the render replayed; null on jobs submitted before this was recorded. */
   motionSource?: ScenarioMotionSource | null;
+  /**
+   * Where the replayed render timeline's heights came from. `legacy-xodr-elevation`
+   * (a map version published before its ground derivative) is a labelled
+   * substitution: the render panel shows "Height: legacy OpenDRIVE elevation".
+   */
+  timelineContactOrigin?: ScenarioTimelineContactOrigin | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -1034,6 +1057,24 @@ export type ScenarioPresignedArtifactDto = ScenarioRenderArtifactDto & {
   expiresInSeconds: number;
 };
 
+/** An engine warning a render attempt reported. Render-affecting conditions fail the job instead. */
+export type ScenarioRenderWarningDto = {
+  code: string;
+  message: string;
+};
+
+/**
+ * A substitution the render intent explicitly allowed (`allowSubstitutions`)
+ * and the engine made, e.g. a CARLA actor rendered with another body.
+ */
+export type ScenarioRenderSubstitutionDto = {
+  kind: string;
+  subject: string;
+  requested: string;
+  rendered: string;
+  allowedBy: string;
+};
+
 export type ScenarioRenderJobDetailDto = {
   id: string;
   revisionId: string;
@@ -1053,7 +1094,12 @@ export type ScenarioRenderJobDetailDto = {
   attemptCount: number;
   maxAttempts: number;
   failureCode: string | null;
+  /** The failure message, when the code names what is missing (`render.native_*`, `render.carla_*`, `render.render_*`). */
   failureDetail: string | null;
+  /** Warnings the current attempt's engine reported, oldest first. */
+  warnings?: ScenarioRenderWarningDto[];
+  /** Substitutions the intent allowed and the engine made in the succeeded attempt. */
+  substitutions?: ScenarioRenderSubstitutionDto[];
   billingMode: string;
   estimatedCostCents: number;
   renderSpecSha256: string;
@@ -1074,7 +1120,14 @@ export type ScenarioRenderJobDetailDto = {
    * submission); `engineSemVer` is the engine that simulated the replayed
    * trace, null for the legacy OpenSCENARIO replay.
    */
-  motion?: { source: ScenarioMotionSource | null; engineSemVer: string | null; simKey: string | null; traceSha256: string | null } | null;
+  motion?: {
+    source: ScenarioMotionSource | null;
+    engineSemVer: string | null;
+    simKey: string | null;
+    traceSha256: string | null;
+    /** Where the replayed timeline's body heights came from; null on jobs before it was recorded. */
+    heightSource?: ScenarioTimelineContactOrigin | null;
+  } | null;
   attempts: ScenarioRenderAttemptDto[];
   events: ScenarioJobEventDto[];
   artifacts: ScenarioRenderArtifactDto[];

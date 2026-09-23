@@ -25,7 +25,7 @@ BRIDGE_CAPABILITIES: dict[str, Capability] = {
     "actor.speed": Capability("exact", "exact", "Absolute speed is in the documented ScenarioRunner subset."),
     "vehicle.lights": Capability("exact", "approximate", "Public VehicleLightState supports lamps; blueprint support must be probed."),
     "vehicle.siren": Capability("approximate", "unsupported", "No portable siren bit exists; require an allowlisted blueprint attribute/component."),
-    "pedestrian.trajectory": Capability("exact", "approximate", "Pose is exact; animation/gait is render-only and separately reported."),
+    "pedestrian.trajectory": Capability("exact", "approximate", "Pose is exact; a walking walker whose gait does not animate fails the render (walkerAnimation evidence)."),
     "static.object": Capability("exact", "approximate", "Requires an exact allowlisted blueprint or asset binding."),
     "traffic_signal.state": Capability("exact", "unsupported", "Freeze and control actors resolved by exact OpenDRIVE signal ID."),
     "traffic_signal.flashing": Capability("approximate", "unsupported", "CARLA has no flashing enum; bridge schedules on/off edges."),

@@ -17,6 +17,7 @@
 //!
 //! Contract: `docs/engineering/render-timeline.md`.
 
+pub mod contact_gate;
 pub mod height;
 pub mod parity;
 pub mod sampler;
@@ -25,8 +26,9 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::engine::contact::{fit, solve_contact, ContactGeometry, ContactState};
 use crate::hash::content_hash_of;
-use crate::math::{atan, clamp, quantize, Vec2};
+use crate::math::{atan, clamp, quantize};
 use crate::physics::MotionDirection;
 use crate::types::{ActorKind, ControlIndication, Dims, SetValue, TimeOfDay};
 
@@ -34,7 +36,7 @@ use super::scene_state::{
     actor_class_of, catalog_id_for, weather_from, ActorClass, RenderProfile, Weather,
 };
 pub use super::{actor_origin, ActorOrigin};
-use super::{SimEvent, SimTrace, TraceError};
+use super::{ContactFrame, SimEvent, SimTrace, TraceError};
 
 pub use height::{HeightError, HeightField, HeightQuery, HeightSource};
 pub use sampler::{pose, LightStates, SampleError, TimelinePose};
@@ -44,7 +46,7 @@ pub const RENDER_TIMELINE_VERSION: &str = "simforge.render-timeline.v1";
 /// Version of the derivation *and* sampling rules. Any change to how a
 /// channel is derived (heights, attitude, lights) or sampled bumps it, which
 /// changes every timeline key.
-pub const SAMPLER_VERSION: &str = "simforge.timeline-sampler/1";
+pub const SAMPLER_VERSION: &str = "simforge.timeline-sampler/2";
 /// Schema tag of the key preimage.
 pub const TIMELINE_KEY_SCHEMA: &str = "simforge.render-timeline-key/v1";
 /// The one fixed step. Traces at any other dt are rejected.
@@ -74,7 +76,15 @@ pub mod body {
     pub const WHEELBASE_OF_LENGTH: f64 = 0.6;
     pub const MIN_WHEELBASE_M: f64 = 0.5;
     pub const TRACK_OF_WIDTH: f64 = 0.85;
+    /// Odometer radius of `wheelSpinRad` for every wheeled class:
+    /// `odometerM = wheelSpinRad * WHEEL_RADIUS_M`.
     pub const WHEEL_RADIUS_M: f64 = 0.35;
+    /// Two-wheeler lean: `-atan(v * yawRate / g) * min(1, v / LEAN_FULL_MPS)`,
+    /// clamped, low-passed with `LEAN_TAU_S`.
+    pub const LEAN_MAX_RAD: f64 = 0.60;
+    pub const LEAN_TAU_S: f64 = 0.25;
+    pub const LEAN_FULL_MPS: f64 = 1.0;
+    pub const G_MPS2: f64 = 9.81;
     pub const MAX_STEER_RAD: f64 = 0.7;
     /// Brake light on at this deceleration, held while stopped.
     pub const BRAKE_ON_MPS2: f64 = 1.0;
@@ -104,6 +114,10 @@ pub enum TimelineError {
     },
     #[error("height for prop {prop_id}: {error}")]
     PropHeight { prop_id: String, error: HeightError },
+    #[error("trace was grounded on {trace} but the timeline ground is {ground}")]
+    GroundMismatch { trace: String, ground: String },
+    #[error("trace was grounded on {0} but the timeline was given a synthetic height source")]
+    GroundedTraceNeedsGround(String),
     #[error("timeline version {0:?} is not {RENDER_TIMELINE_VERSION}")]
     UnsupportedVersion(String),
     #[error("timeline sampler {found:?} is not {SAMPLER_VERSION}")]
@@ -262,9 +276,37 @@ pub struct TimelineTrack {
     /// Front-wheel steer, vehicles only.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wheel_steer_rad: Option<Vec<f64>>,
-    /// Integrated wheel rotation since spawn (unwrapped), vehicles only.
+    /// Integrated wheel rotation since spawn (unwrapped), every wheeled
+    /// class (four-wheelers and two-wheelers): `odometerM = wheelSpinRad *
+    /// 0.35`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wheel_spin_rad: Option<Vec<f64>>,
+    /// Four-wheelers: per wheel `[FL, FR, RL, RR]`, the contact elevation
+    /// minus the body plane (suspension travel a rigged model applies to its
+    /// wheel nodes).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wheel_drop_m: Option<Vec<[f64; 4]>>,
+}
+
+/// Where the timeline's contact (z, road pitch/roll) came from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ContactOrigin {
+    /// Copied from the trace's contact channels (engine 0.11.0+).
+    Trace,
+    /// The trace carries no contact (recorded before engine 0.11.0): the
+    /// engine's contact solver was run over the trace poses on the same
+    /// ground surface when the timeline was built.
+    DerivedAtTimelineBuild,
+    /// A synthetic `flat/v1` or `plane/v1` surface (tests).
+    Synthetic,
+    /// A map version published before its ground derivative existed: the
+    /// retired OpenDRIVE elevation resolver (`xodr-elevation/v1`) probed at
+    /// the wheels. Explicit and labelled so renders surface it; it differs
+    /// from the rendered mesh by up to a metre on some maps
+    /// (docs/engineering/ground-height.md). Never used when the map has a
+    /// ground derivative.
+    LegacyXodrElevation,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -437,6 +479,11 @@ pub struct RenderTimeline {
     pub identity: TimelineIdentity,
     pub trace: CanonicalTraceIdentity,
     pub height_source: HeightSource,
+    /// How z and road attitude were obtained. Always present from sampler/2;
+    /// absent on stored sampler/1 documents (which used `xodr-elevation/v1`),
+    /// kept absent so their bytes and digests are unchanged when inspected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contact_origin: Option<ContactOrigin>,
     pub map_id: String,
     /// Always `xodr-local` (OpenSCENARIO world frame).
     pub frame: String,
@@ -678,6 +725,99 @@ fn tick_at_or_after(t: &[f64], event_t: f64) -> u32 {
     i.min(t.len().saturating_sub(1)) as u32
 }
 
+/// Per-tick ground contact of one actor (zeros at absent ticks).
+///
+/// - `Trace`: the engine's own contact channels.
+/// - `DerivedAtTimelineBuild`: the trace predates engine contact; the
+///   engine's contact solver runs over the trace poses on the same surface,
+///   with the same geometry and deck rule. Explicit in `contactOrigin`.
+/// - `Synthetic`: the flat/plane test surfaces, probed at the same wheel
+///   positions and fitted the same way.
+fn actor_contact(
+    height: &HeightField,
+    origin: ContactOrigin,
+    geometry: ContactGeometry,
+    id: &str,
+    src: &super::ActorTrack,
+    n: usize,
+) -> Result<Vec<ContactFrame>, TimelineError> {
+    let mut out = vec![ContactFrame::default(); n];
+    match (origin, height) {
+        (ContactOrigin::Trace, _) => {
+            let contact = src.contact.as_ref().ok_or_else(|| {
+                TimelineError::Malformed(format!("actor {id} has no contact channels"))
+            })?;
+            for (i, frame) in out.iter_mut().enumerate() {
+                if src.present[i] == 1 {
+                    *frame = ContactFrame {
+                        z: contact.z[i],
+                        pitch_rad: contact.pitch_rad[i],
+                        roll_rad: contact.roll_rad[i],
+                        wheel_drop_m: contact.wheel_drop_m[i],
+                    };
+                }
+            }
+        }
+        (ContactOrigin::DerivedAtTimelineBuild, HeightField::Ground { ground, .. }) => {
+            let mut state = ContactState::default();
+            for (i, frame) in out.iter_mut().enumerate() {
+                if src.present[i] != 1 {
+                    state = ContactState::default();
+                    continue;
+                }
+                state = solve_contact(
+                    ground,
+                    geometry,
+                    src.x[i],
+                    src.y[i],
+                    src.heading_rad[i],
+                    &state,
+                    lane_road(&src.lane_rsl[i]),
+                    id,
+                )
+                .map_err(|e| TimelineError::Height {
+                    actor_id: id.to_owned(),
+                    tick: i,
+                    error: HeightError::Ground(e.to_string()),
+                })?;
+                *frame = state.frame;
+            }
+        }
+        (ContactOrigin::Synthetic | ContactOrigin::LegacyXodrElevation, _) => {
+            for (i, frame) in out.iter_mut().enumerate() {
+                if src.present[i] != 1 {
+                    continue;
+                }
+                let probes = geometry.probes(src.x[i], src.y[i], src.heading_rad[i]);
+                let mut z = [0.0; 4];
+                for (k, (px, py)) in probes.iter().enumerate() {
+                    z[k] = height
+                        .elevation(
+                            *px,
+                            *py,
+                            HeightQuery {
+                                preferred_road: lane_road(&src.lane_rsl[i]),
+                                label: Some(id),
+                            },
+                        )
+                        .map_err(|error| TimelineError::Height {
+                            actor_id: id.to_owned(),
+                            tick: i,
+                            error,
+                        })?;
+                }
+                *frame = fit(geometry, &z);
+            }
+        }
+        (ContactOrigin::DerivedAtTimelineBuild, _) => {
+            return Err(TimelineError::Malformed(
+                "derived contact requires a ground surface".to_owned(),
+            ))
+        }
+    }
+    Ok(out)
+}
+
 /// Build the render timeline for `trace` against `height`. The trace must
 /// be a validated trace (read in the current format, or upgraded in memory
 /// from an older one) at [`TIMELINE_DT_S`]. Its identity is
@@ -697,14 +837,30 @@ pub fn build_render_timeline(
         });
     }
     let source = height.source().clone();
-    if let Some(xodr) = &source.xodr_sha256 {
-        if !header.engine_graph_digest.is_empty() && &header.engine_graph_digest != xodr {
-            return Err(TimelineError::MapMismatch {
-                trace: header.engine_graph_digest.clone(),
-                source_digest: xodr.clone(),
-            });
+    let contact_origin = match height {
+        HeightField::Xodr { .. } => {
+            if let Some(digest) = &header.ground_digest {
+                return Err(TimelineError::GroundedTraceNeedsGround(digest.clone()));
+            }
+            ContactOrigin::LegacyXodrElevation
         }
-    }
+        HeightField::Ground { ground, .. } => match &header.ground_digest {
+            Some(digest) if digest != ground.digest() => {
+                return Err(TimelineError::GroundMismatch {
+                    trace: digest.clone(),
+                    ground: ground.digest().to_owned(),
+                })
+            }
+            Some(_) => ContactOrigin::Trace,
+            None => ContactOrigin::DerivedAtTimelineBuild,
+        },
+        HeightField::Flat { .. } | HeightField::Plane { .. } => {
+            if let Some(digest) = &header.ground_digest {
+                return Err(TimelineError::GroundedTraceNeedsGround(digest.clone()));
+            }
+            ContactOrigin::Synthetic
+        }
+    };
     let identity = CanonicalTraceIdentity::of(trace)?;
     let key = timeline_key(&identity.trace_sha256, &source.digest, catalog_digest);
 
@@ -788,9 +944,12 @@ pub fn build_render_timeline(
         let is_vehicle = four_wheeled(kind);
         let is_two_wheeler = two_wheeled(kind);
         let dims = meta.dims;
+        let class_wheelbase = crate::physics::actor_physics_profile(kind).map(|p| p.wheelbase_m);
+        let geometry = ContactGeometry::for_actor(kind, &dims, class_wheelbase);
+        // Steering geometry keeps the sampler/1 definition.
         let wheelbase = (dims.l * body::WHEELBASE_OF_LENGTH).max(body::MIN_WHEELBASE_M);
-        let track_w = dims.w * body::TRACK_OF_WIDTH;
         let present: Vec<u8> = src.present.clone();
+        let contact = actor_contact(height, contact_origin, geometry, id, src, n)?;
 
         let mut tr = TimelineTrack {
             present: present.clone(),
@@ -806,12 +965,14 @@ pub fn build_render_timeline(
             pitch_rad: vec![0.0; n],
             roll_rad: vec![0.0; n],
             wheel_steer_rad: is_vehicle.then(|| vec![0.0; n]),
-            wheel_spin_rad: is_vehicle.then(|| vec![0.0; n]),
+            wheel_spin_rad: (is_vehicle || is_two_wheeler).then(|| vec![0.0; n]),
+            wheel_drop_m: is_vehicle.then(|| vec![[0.0; 4]; n]),
         };
         let mut body_pitch = 0.0;
         let mut body_roll = 0.0;
         let mut spin = 0.0;
         let alpha = dt / (body::TAU_S + dt);
+        let lean_alpha = dt / (body::LEAN_TAU_S + dt);
         let steer_channel = src.physics.as_ref().map(|p| &p.steer_rad);
         for i in 0..n {
             if present[i] != 1 {
@@ -828,44 +989,7 @@ pub fn build_render_timeline(
                 raw_speed * src.motion_direction[i].sign()
             };
             let speed = quantize(signed, precision::SPEED);
-            let query = HeightQuery {
-                preferred_road: lane_road(&src.lane_rsl[i]),
-                label: Some(id),
-            };
-            let z = height
-                .elevation(x, y, query)
-                .map_err(|error| TimelineError::Height {
-                    actor_id: id.clone(),
-                    tick: i,
-                    error,
-                })?;
-            let probe = |px: f64, py: f64| height.elevation(px, py, query).ok();
-            let fwd = Vec2::from_heading(heading);
-            let left = fwd.perp_left();
-            // Road attitude over the footprint (OpenSCENARIO signs).
-            let (road_pitch, road_roll) = if is_vehicle || is_two_wheeler {
-                let half = wheelbase / 2.0;
-                let front = probe(x + fwd.x * half, y + fwd.y * half);
-                let rear = probe(x - fwd.x * half, y - fwd.y * half);
-                let pitch = match (front, rear) {
-                    (Some(zf), Some(zr)) => atan((zr - zf) / wheelbase),
-                    _ => 0.0,
-                };
-                let roll = if is_vehicle {
-                    let half_t = track_w / 2.0;
-                    let zl = probe(x + left.x * half_t, y + left.y * half_t);
-                    let zr = probe(x - left.x * half_t, y - left.y * half_t);
-                    match (zl, zr) {
-                        (Some(zl), Some(zr)) if track_w > 0.0 => atan((zl - zr) / track_w),
-                        _ => 0.0,
-                    }
-                } else {
-                    0.0
-                };
-                (pitch, roll)
-            } else {
-                (0.0, 0.0)
-            };
+            let ground = &contact[i];
             // Body attitude and wheels from the trace's own kinematics.
             let (a_long, yaw_rate) = if fresh {
                 body_pitch = 0.0;
@@ -889,6 +1013,9 @@ pub fn build_render_timeline(
             } else {
                 0.0
             };
+            if !fresh && (is_vehicle || is_two_wheeler) {
+                spin += speed * dt / body::WHEEL_RADIUS_M;
+            }
             if is_vehicle && !fresh {
                 let target_pitch = clamp(-body::K_PITCH * a_long, -body::MAX_RAD, body::MAX_RAD);
                 let target_roll = clamp(
@@ -898,28 +1025,50 @@ pub fn build_render_timeline(
                 );
                 body_pitch += alpha * (target_pitch - body_pitch);
                 body_roll += alpha * (target_roll - body_roll);
-                spin += speed * dt / body::WHEEL_RADIUS_M;
             }
-            let rp = quantize(road_pitch, precision::ANGLE);
-            let rr = quantize(road_roll, precision::ANGLE);
+            if is_two_wheeler && !fresh {
+                // Lean into the turn: a left turn (yaw rate > 0) puts the
+                // left side down, which is negative roll.
+                let v = speed.abs();
+                let target = clamp(
+                    -atan(v * yaw_rate / body::G_MPS2) * (v / body::LEAN_FULL_MPS).min(1.0),
+                    -body::LEAN_MAX_RAD,
+                    body::LEAN_MAX_RAD,
+                );
+                body_roll += lean_alpha * (target - body_roll);
+            }
+            let rp = quantize(ground.pitch_rad, precision::ANGLE);
+            let rr = quantize(ground.roll_rad, precision::ANGLE);
             let bp = quantize(body_pitch, precision::ANGLE);
             let br = quantize(body_roll, precision::ANGLE);
             tr.x[i] = x;
             tr.y[i] = y;
-            tr.z[i] = quantize(z, precision::HEIGHT);
+            tr.z[i] = quantize(ground.z, precision::HEIGHT);
             tr.heading_rad[i] = heading;
             tr.speed_mps[i] = speed;
             tr.road_pitch_rad[i] = rp;
             tr.road_roll_rad[i] = rr;
             tr.body_pitch_rad[i] = bp;
             tr.body_roll_rad[i] = br;
-            tr.pitch_rad[i] = quantize(rp + bp, precision::ANGLE);
-            tr.roll_rad[i] = quantize(rr + br, precision::ANGLE);
+            // What renderers apply to the actor transform. A four-wheeler's
+            // body attitude goes on its `body` node only (wheels stay on the
+            // ground); a two-wheeler has no sprung body separate from its
+            // wheels, so its lean rolls the whole machine about the contact
+            // line.
+            tr.pitch_rad[i] = rp;
+            tr.roll_rad[i] = if is_two_wheeler {
+                quantize(rr + br, precision::ANGLE)
+            } else {
+                rr
+            };
             if let Some(ws) = &mut tr.wheel_steer_rad {
                 ws[i] = quantize(steer, precision::ANGLE);
             }
             if let Some(sp) = &mut tr.wheel_spin_rad {
                 sp[i] = quantize(spin, precision::ANGLE);
+            }
+            if let Some(drop) = &mut tr.wheel_drop_m {
+                drop[i] = ground.wheel_drop_m.map(|d| quantize(d, precision::HEIGHT));
             }
         }
 
@@ -1088,6 +1237,7 @@ pub fn build_render_timeline(
         },
         trace: identity,
         height_source: source,
+        contact_origin: Some(contact_origin),
         map_id: header.map_id.clone(),
         frame: "xodr-local".to_owned(),
         dt_s: TIMELINE_DT_S,

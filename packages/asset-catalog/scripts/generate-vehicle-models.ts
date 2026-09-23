@@ -39,8 +39,8 @@ const ASSIGNMENTS: ReadonlyArray<readonly [string, string, string?]> = [
   ['vehicle.kia.carnival', 'vehicle_minivan_bmw_gran_tourer'],
   ['vehicle.box_truck', 'vehicle_truck_carlacola'],
   ['vehicle.bus', 'vehicle_bus_mitsubishi_fusorosa', 'CARLA has one bus; its authored livery is its identity, so it is not tintable'],
-  ['vehicle.motorcycle', 'vehicle_motorcycle_harley'],
-  ['vehicle.bicycle', 'vehicle_bicycle_gazelle_omafiets', 'upright city bike: the closest silhouette to the catalog box, and scales ~1'],
+  ['vehicle.motorcycle', 'vehicle_motorcycle_harley_rider', 'ridden: CARLA BP_Harley rider, helmeted'],
+  ['vehicle.bicycle', 'vehicle_bicycle_gazelle_omafiets_rider', 'upright city bike: the closest silhouette to the catalog box, and scales ~1; ridden: CARLA BP_LeisureBike rider'],
   ['vehicle.ambulance', 'vehicle_ambulance_ford'],
   ['vehicle.fire_engine', 'vehicle_firetruck_actros'],
   ['vehicle.honda_civic', 'vehicle_sedan_dodge_charger'],
@@ -65,6 +65,28 @@ interface ManifestVehicle {
   readonly tintable: boolean;
   readonly nodes: readonly string[];
   readonly materials: readonly string[];
+  /** Ridden two-wheelers (tools/riders): the rider is part of the model. */
+  readonly rider?: {
+    readonly clip: string;
+    readonly clipDurationS: number;
+    readonly metersPerCycle: number;
+    readonly slots: readonly string[];
+  };
+}
+
+const attribution = JSON.parse(readFileSync(resolve(packRoot, 'ATTRIBUTION.json'), 'utf8')) as {
+  readonly assets: Readonly<Record<string, { readonly attribution: string }>>;
+};
+
+/** A ridden GLB's `asset.extras.rider` (palettes are authored in the GLB, not copied by hand). */
+function riderExtras(bytes: Buffer): { readonly palettes: readonly (Record<string, readonly number[]> | null)[] } {
+  const length = bytes.readUInt32LE(12);
+  const json = JSON.parse(bytes.subarray(20, 20 + length).toString('utf8')) as {
+    readonly asset: { readonly extras?: { readonly rider?: { readonly palettes: readonly (Record<string, readonly number[]> | null)[] } } };
+  };
+  const rider = json.asset.extras?.rider;
+  if (!rider) throw new Error('ridden model GLB lacks asset.extras.rider');
+  return rider;
 }
 
 const manifest = JSON.parse(readFileSync(resolve(packRoot, 'manifest.json'), 'utf8')) as {
@@ -102,18 +124,37 @@ for (const [catalogId, key, reason] of ASSIGNMENTS) {
   if (!vehicle) throw new Error(`${catalogId}: ${key} is not in the pack manifest`);
   const bytes = readFileSync(resolve(packRoot, vehicle.file));
   const contentHash = createHash('sha256').update(bytes).digest('hex');
-  const nodes = articulation(vehicle.nodes);
+  // A ridden model's clip poses its wheels, crank and rider together, so the
+  // renderer's own wheel/handlebar articulation would fight it.
+  const rider = vehicle.rider
+    ? { ...vehicle.rider, palettes: riderExtras(bytes).palettes }
+    : undefined;
+  const nodes = rider ? [] : articulation(vehicle.nodes);
   const paint = vehicle.tintable && vehicle.materials.includes('body_paint');
+  const glbPath = `catalog/vehicles-carla/${vehicle.file}`;
   nativeEntries[catalogId] = {
     model: {
-      glbPath: `catalog/vehicles-carla/${vehicle.file}`,
-      attribution: `"${vehicle.display}" vehicle model © CARLA Simulator contributors (carla.org), licensed CC BY 4.0; converted to glTF for SimForge.`,
+      glbPath,
+      attribution: rider
+        ? attribution.assets[key]?.attribution
+        : `"${vehicle.display}" vehicle model © CARLA Simulator contributors (carla.org), licensed CC BY 4.0; converted to glTF for SimForge.`,
       source: 'carla-0.10.0-ue5',
     },
     tintable: Boolean(paint),
     scaleToDims: true,
+    ...(rider ? {
+      animations: { [rider.clip]: { glbPath, clip: rider.clip } },
+      rider: {
+        clip: rider.clip,
+        clipDurationS: rider.clipDurationS,
+        metersPerCycle: rider.metersPerCycle,
+        slots: rider.slots,
+        palettes: rider.palettes,
+      },
+    } : {}),
     ...(reason ? { note: reason } : {}),
   };
+  if (rider && !attribution.assets[key]) throw new Error(`${key}: no ATTRIBUTION.json entry`);
   blocks.push([
     `  /** ${vehicle.display}${reason ? ` — ${reason}` : ''} */`,
     `  '${catalogId}': {`,
@@ -122,9 +163,23 @@ for (const [catalogId, key, reason] of ASSIGNMENTS) {
     `    contentHash: '${contentHash}',`,
     ...(nodes.length > 0 ? ['    nodes: {', ...nodes, '    },'] : []),
     ...(paint ? ["    paint: 'body_paint',"] : []),
+    ...(rider ? [
+      '    animated: true,',
+      '    rider: {',
+      `      clip: '${rider.clip}',`,
+      `      clipDurationS: ${rider.clipDurationS},`,
+      `      metersPerCycle: ${rider.metersPerCycle},`,
+      `      slots: [${rider.slots.map((slot) => `'${slot}'`).join(', ')}],`,
+      '      palettes: [',
+      ...rider.palettes.map((palette) => palette === null
+        ? '        null,'
+        : `        { ${Object.entries(palette).map(([slot, rgb]) => `${slot}: [${rgb.join(', ')}]`).join(', ')} },`),
+      '      ],',
+      '    },',
+    ] : []),
     '  },',
   ].join('\n'));
-  report.push(`${catalogId} -> ${key} (${(bytes.byteLength / 1e6).toFixed(1)} MB${paint ? ', tintable' : ', livery'}${nodes.length > 0 ? '' : ', static'})`);
+  report.push(`${catalogId} -> ${key} (${(bytes.byteLength / 1e6).toFixed(1)} MB${paint ? ', tintable' : ', livery'}${rider ? ', ridden' : nodes.length > 0 ? '' : ', static'})`);
 }
 
 const source = `import type { ExternalModelBinding } from './types';

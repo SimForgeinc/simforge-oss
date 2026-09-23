@@ -1,3 +1,4 @@
+import { simulationMemberSqlPredicate } from "@simforge-oss/compiler";
 import { ScenarioMapResolutionError } from "@simforge-oss/studio-host";
 import type { Transaction } from "@/app/lib/db/data-api";
 
@@ -9,7 +10,8 @@ import type { Transaction } from "@/app/lib/db/data-api";
  * never re-resolves to a newer publication (`docs/engineering/document-pinning.md`).
  *
  * The pin covers what a simulation reads (OpenDRIVE, topology, derived index,
- * locations, signals, static colliders), not the whole browser closure: a
+ * locations, signals, static colliders, the ground surface when the version
+ * has one), not the whole browser closure: a
  * republication that only adds derived members (a SUMO network, an ambient
  * turn-verdict table, new texture tiers) must not strand every pinned draft.
  */
@@ -21,7 +23,8 @@ export type ScenarioMapPin = {
 
 /**
  * `simforge.map-pin-closure/v1`: sha256 over `"<relative path> <sha256>\n"`
- * lines, in byte order of path, for the simulation members of an asset set.
+ * lines, in byte order of path, for the simulation members of an asset set
+ * (`SIMULATION_MAP_MEMBERS`, @simforge-oss/compiler).
  * `:set` names the asset set.
  */
 export const SIMULATION_CLOSURE_SHA256_SQL = `(
@@ -29,9 +32,7 @@ export const SIMULATION_CLOSURE_SHA256_SQL = `(
     FROM simforge.browser_asset_members pin_m
     JOIN simforge.browser_asset_blobs pin_b ON pin_b.id = pin_m.blob_id
    WHERE pin_m.asset_set_id = %SET%
-     AND (pin_m.relative_path IN ('map.xodr', 'topology-index.json.gz', 'signals.geojson.gz',
-                                  'derived/topology-derived.json.gz', 'derived/locations.json.gz')
-          OR pin_m.relative_path LIKE '3d/variants/static-colliders%')
+     AND ${simulationMemberSqlPredicate("pin_m.relative_path")}
 )`;
 
 const simulationClosureOf = (setColumn: string) => SIMULATION_CLOSURE_SHA256_SQL.replace("%SET%", setColumn);

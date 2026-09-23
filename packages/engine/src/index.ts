@@ -126,7 +126,7 @@ export { DEFAULT_DARK_DWELL_S, DEFAULT_DARK_FALLBACK, SIGNAL_SNAPSHOT_TICK_HZ } 
 export type { ControlBindingRepair, SignalPhase, SignalSnapshot, SignalState, StopLineAuthority, StopLineBinding } from './signals.js';
 
 /* ------------------------------------------------------------------- trace */
-export { traceToSceneFrame, TRACE_FORMAT_VERSION, TRACE_PRECISION } from './trace/trace.js';
+export { traceToSceneFrame, READABLE_TRACE_VERSIONS, TRACE_FORMAT_VERSION, TRACE_PRECISION } from './trace/trace.js';
 export type {
   ActorTrack,
   ActorPhysicsTrack,

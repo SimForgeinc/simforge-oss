@@ -93,8 +93,11 @@ pub type Result<T, E = CoreError> = std::result::Result<T, E>;
 /// binds, speed/gap interactions complete so `after end` chains fire, a
 /// `when` trigger's `byLatest` is no longer a clip window, euclidean distance
 /// triggers use true footprint separation, `exist` and standstill take effect
-/// from the tick after their cause.
-pub const ENGINE_SEM_VER: &str = "0.10.0";
+/// from the tick after their cause; 0.11.0 grounds every body on the map's
+/// ground surface each tick (docs/engineering/ground-height.md): trace v5
+/// carries z, road pitch and roll and per-wheel drop from rigid wheel
+/// contact, and a body with no surface under it is an engine error.
+pub const ENGINE_SEM_VER: &str = "0.11.0";
 
 /// Former name of [`ENGINE_SEM_VER`]; always the same value. Prefer the new
 /// name in new code.

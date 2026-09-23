@@ -75,6 +75,14 @@ export function assertEngineSupportsIntent(
   const modalities = new Set(declaration.modalities);
   for (const source of spec.sources) {
     if (!modalities.has(source.modality)) reasons.push(`unsupported modality ${source.modality}`);
+    // Every camera is rendered at its own size and rate, not only the video's.
+    if (source.modality !== 'lidar' && source.modality !== 'radar') {
+      const { width, height, fps } = source.attributes;
+      if (width > declaration.limits.maxWidth || height > declaration.limits.maxHeight) {
+        reasons.push(`source ${source.outputName} dimensions ${width}x${height} exceed engine limits`);
+      }
+      if (fps > declaration.limits.maxFramesPerSecond) reasons.push(`source ${source.outputName} frame rate ${fps} exceeds engine limit`);
+    }
   }
   if (spec.video) {
     if (spec.video.width > declaration.limits.maxWidth || spec.video.height > declaration.limits.maxHeight) {

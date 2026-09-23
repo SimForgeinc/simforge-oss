@@ -39,6 +39,7 @@ jobs:
         run: pnpm meshy:smoke:live
       - run: pnpm verify:naming
       - run: pnpm verify:origins
+      - run: pnpm verify:no-silent-fallbacks
       - run: pnpm typecheck
       - name: scenarioVersion bump rule (packages/scenario/src/upgrade/chain.ts)
         # A non-additive document schema change or a changed absent-field

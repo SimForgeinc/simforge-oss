@@ -183,7 +183,7 @@ pub fn decode_bundle(payload: &[u8]) -> Result<Bundle> {
     for i in 0..n {
         let b = &entries_region[i * BUNDLE_ENTRY_BYTES..][..BUNDLE_ENTRY_BYTES];
         let cstr = |s: &[u8]| {
-            let end = s.iter().position(|&c| c == 0).unwrap_or(s.len());
+            let end = s.iter().position(|&c| c == 0).unwrap_or(s.len()); // fallback-ok: NUL-terminated field that fills its buffer
             String::from_utf8_lossy(&s[..end]).into_owned()
         };
         entries.push(BundleEntry {
@@ -415,7 +415,7 @@ pub fn read_record_header(map: &[u8], offset: usize) -> Result<RecordHeader> {
         bail!("bad record magic at {offset}: {magic:#x}");
     }
     let cstr = |s: &[u8]| {
-        let end = s.iter().position(|&c| c == 0).unwrap_or(s.len());
+        let end = s.iter().position(|&c| c == 0).unwrap_or(s.len()); // fallback-ok: NUL-terminated field that fills its buffer
         String::from_utf8_lossy(&s[..end]).into_owned()
     };
     Ok(RecordHeader {

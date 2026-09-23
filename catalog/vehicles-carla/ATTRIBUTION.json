@@ -347,6 +347,90 @@
       "license": "CC-BY-4.0",
       "attribution": "\"Gazelle Omafiets\" vehicle model \u00a9 CARLA Simulator contributors (carla.org), licensed CC BY 4.0; converted to glTF for SimForge.",
       "modifications": "UE->glTF conversion (CUE4Parse), rigid-node re-rig by bone, blueprint door/glass/emissive merge, mesh decimation (meshoptimizer), PBR re-wire (baseColor/normal/ORM), texture downscale + normal-map green-channel flip, neutral body_paint slot for tinting."
+    },
+    "vehicle_bicycle_bh_crossbike_rider": {
+      "title": "BH Crossbike with rider",
+      "source_packages": [
+        "Content/Carla/Static (CARLA UE5 0.10.0 cooked content): SK_CrossBike",
+        "Content/Carla/Static/Pedestrian (CARLA UE5 0.10.0 cooked content): SK_AfroF02_A_G2 (via SimForge walker.pedestrian.0017, catalog/pedestrians-carla)",
+        "Content/Carla/Animations/Base (CARLA UE5 0.10.0 cooked content): AS_Pedestrian_BikeHands, AB_Biker (graph re-evaluated offline)",
+        "Content/Carla/Blueprints/Vehicles/2Wheeled (CARLA UE5 0.10.0 cooked content): BP_CrossBike (rider mount, Seat/Handler/Pedal bones)"
+      ],
+      "license": "CC-BY-4.0",
+      "attribution": "\"BH Crossbike\" vehicle model \u00a9 CARLA Simulator contributors (carla.org), licensed CC BY 4.0; converted to glTF for SimForge. Rider: \"CARLA pedestrian 0017\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge. Riding pose after CARLA AB_Biker / AS_Pedestrian_BikeHands, CC BY 4.0.",
+      "modifications": "UE->glTF conversion (CUE4Parse), rigid-node re-rig by bone, blueprint door/glass/emissive merge, mesh decimation (meshoptimizer), PBR re-wire (baseColor/normal/ORM), texture downscale + normal-map green-channel flip, neutral body_paint slot for tinting. Rider: CARLA walker conversion attached per the CARLA blueprint, posed by an offline re-evaluation of AB_Biker (seat/handlebar/pedal IK) and baked into a looping `ride` clip; clothing materials renamed to rider_* palette slots; unreferenced textures pruned."
+    },
+    "vehicle_bicycle_gazelle_omafiets_rider": {
+      "title": "Gazelle Omafiets with rider",
+      "source_packages": [
+        "Content/Carla/Static (CARLA UE5 0.10.0 cooked content): SK_LeisureBike",
+        "Content/Carla/Static/Pedestrian (CARLA UE5 0.10.0 cooked content): SK_EuroM02_A_G2 (via SimForge walker.pedestrian.0047, catalog/pedestrians-carla)",
+        "Content/Carla/Animations/Base (CARLA UE5 0.10.0 cooked content): AS_Pedestrian_BikeHands, AB_Biker (graph re-evaluated offline)",
+        "Content/Carla/Blueprints/Vehicles/2Wheeled (CARLA UE5 0.10.0 cooked content): BP_LeisureBike (rider mount, Seat/Handler/Pedal bones)"
+      ],
+      "license": "CC-BY-4.0",
+      "attribution": "\"Gazelle Omafiets\" vehicle model \u00a9 CARLA Simulator contributors (carla.org), licensed CC BY 4.0; converted to glTF for SimForge. Rider: \"CARLA pedestrian 0047\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge. Riding pose after CARLA AB_Biker / AS_Pedestrian_BikeHands, CC BY 4.0.",
+      "modifications": "UE->glTF conversion (CUE4Parse), rigid-node re-rig by bone, blueprint door/glass/emissive merge, mesh decimation (meshoptimizer), PBR re-wire (baseColor/normal/ORM), texture downscale + normal-map green-channel flip, neutral body_paint slot for tinting. Rider: CARLA walker conversion attached per the CARLA blueprint, posed by an offline re-evaluation of AB_Biker (seat/handlebar/pedal IK) and baked into a looping `ride` clip; clothing materials renamed to rider_* palette slots; unreferenced textures pruned."
+    },
+    "vehicle_bicycle_diamondback_century_rider": {
+      "title": "Diamondback Century with rider",
+      "source_packages": [
+        "Content/Carla/Static (CARLA UE5 0.10.0 cooked content): SK_RoadBike",
+        "Content/Carla/Static/Pedestrian (CARLA UE5 0.10.0 cooked content): SK_AsiaM02_A_G2 (via SimForge walker.pedestrian.0038, catalog/pedestrians-carla)",
+        "Content/Carla/Animations/Base (CARLA UE5 0.10.0 cooked content): AS_Pedestrian_BikeHands, AB_Biker (graph re-evaluated offline)",
+        "Content/Carla/Blueprints/Vehicles/2Wheeled (CARLA UE5 0.10.0 cooked content): BP_RoadBike (rider mount, Seat/Handler/Pedal bones)"
+      ],
+      "license": "CC-BY-4.0",
+      "attribution": "\"Diamondback Century\" vehicle model \u00a9 CARLA Simulator contributors (carla.org), licensed CC BY 4.0; converted to glTF for SimForge. Rider: \"CARLA pedestrian 0038\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge. Riding pose after CARLA AB_Biker / AS_Pedestrian_BikeHands, CC BY 4.0.",
+      "modifications": "UE->glTF conversion (CUE4Parse), rigid-node re-rig by bone, blueprint door/glass/emissive merge, mesh decimation (meshoptimizer), PBR re-wire (baseColor/normal/ORM), texture downscale + normal-map green-channel flip, neutral body_paint slot for tinting. Rider: CARLA walker conversion attached per the CARLA blueprint, posed by an offline re-evaluation of AB_Biker (seat/handlebar/pedal IK) and baked into a looping `ride` clip; clothing materials renamed to rider_* palette slots; unreferenced textures pruned."
+    },
+    "vehicle_motorcycle_harley_rider": {
+      "title": "Harley-Davidson Low Rider with rider",
+      "source_packages": [
+        "Content/Carla/Static (CARLA UE5 0.10.0 cooked content): SK_Harley",
+        "Content/Carla/Static/Pedestrian (CARLA UE5 0.10.0 cooked content): SK_AfroM02_A_G2 (via SimForge walker.pedestrian.0027, catalog/pedestrians-carla)",
+        "Content/Carla/Animations/Base (CARLA UE5 0.10.0 cooked content): AS_Pedestrian_BikeHands, AB_Biker (graph re-evaluated offline)",
+        "Content/Carla/Blueprints/Vehicles/2Wheeled (CARLA UE5 0.10.0 cooked content): BP_Harley (rider mount, Seat/Handler/Pedal bones)"
+      ],
+      "license": "CC-BY-4.0",
+      "attribution": "\"Harley-Davidson Low Rider\" vehicle model \u00a9 CARLA Simulator contributors (carla.org), licensed CC BY 4.0; converted to glTF for SimForge. Rider: \"CARLA pedestrian 0027\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge. Riding pose after CARLA AB_Biker / AS_Pedestrian_BikeHands, CC BY 4.0. Helmet: SimForge procedural geometry, CC BY 4.0.",
+      "modifications": "UE->glTF conversion (CUE4Parse), rigid-node re-rig by bone, blueprint door/glass/emissive merge, mesh decimation (meshoptimizer), PBR re-wire (baseColor/normal/ORM), texture downscale + normal-map green-channel flip, neutral body_paint slot for tinting. Rider: CARLA walker conversion attached per the CARLA blueprint, posed by an offline re-evaluation of AB_Biker (seat/handlebar/pedal IK) and baked into a looping `ride` clip; clothing materials renamed to rider_* palette slots; unreferenced textures pruned; hair primitives removed under a SimForge procedural helmet."
+    },
+    "vehicle_motorcycle_kawasaki_ninja_rider": {
+      "title": "Kawasaki Ninja with rider",
+      "source_packages": [
+        "Content/Carla/Static (CARLA UE5 0.10.0 cooked content): SK_KawasakiNinja",
+        "Content/Carla/Static/Pedestrian (CARLA UE5 0.10.0 cooked content): SK_AsiaF01_G2 (via SimForge walker.pedestrian.0032, catalog/pedestrians-carla)",
+        "Content/Carla/Animations/Base (CARLA UE5 0.10.0 cooked content): AS_Pedestrian_BikeHands, AB_Biker (graph re-evaluated offline)",
+        "Content/Carla/Blueprints/Vehicles/2Wheeled (CARLA UE5 0.10.0 cooked content): BP_KawasakiNinja (rider mount, Seat/Handler/Pedal bones)"
+      ],
+      "license": "CC-BY-4.0",
+      "attribution": "\"Kawasaki Ninja\" vehicle model \u00a9 CARLA Simulator contributors (carla.org), licensed CC BY 4.0; converted to glTF for SimForge. Rider: \"CARLA pedestrian 0032\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge. Riding pose after CARLA AB_Biker / AS_Pedestrian_BikeHands, CC BY 4.0. Helmet: SimForge procedural geometry, CC BY 4.0.",
+      "modifications": "UE->glTF conversion (CUE4Parse), rigid-node re-rig by bone, blueprint door/glass/emissive merge, mesh decimation (meshoptimizer), PBR re-wire (baseColor/normal/ORM), texture downscale + normal-map green-channel flip, neutral body_paint slot for tinting. Rider: CARLA walker conversion attached per the CARLA blueprint, posed by an offline re-evaluation of AB_Biker (seat/handlebar/pedal IK) and baked into a looping `ride` clip; clothing materials renamed to rider_* palette slots; unreferenced textures pruned; hair primitives removed under a SimForge procedural helmet."
+    },
+    "vehicle_motorcycle_yamaha_yzf_rider": {
+      "title": "Yamaha YZF with rider",
+      "source_packages": [
+        "Content/Carla/Static (CARLA UE5 0.10.0 cooked content): SK_Yamaha",
+        "Content/Carla/Static/Pedestrian (CARLA UE5 0.10.0 cooked content): SK_EuroF02_B_G2 (via SimForge walker.pedestrian.0043, catalog/pedestrians-carla)",
+        "Content/Carla/Animations/Base (CARLA UE5 0.10.0 cooked content): AS_Pedestrian_BikeHands, AB_Biker (graph re-evaluated offline)",
+        "Content/Carla/Blueprints/Vehicles/2Wheeled (CARLA UE5 0.10.0 cooked content): BP_Yamaha (rider mount, Seat/Handler/Pedal bones)"
+      ],
+      "license": "CC-BY-4.0",
+      "attribution": "\"Yamaha YZF\" vehicle model \u00a9 CARLA Simulator contributors (carla.org), licensed CC BY 4.0; converted to glTF for SimForge. Rider: \"CARLA pedestrian 0043\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge. Riding pose after CARLA AB_Biker / AS_Pedestrian_BikeHands, CC BY 4.0. Helmet: SimForge procedural geometry, CC BY 4.0.",
+      "modifications": "UE->glTF conversion (CUE4Parse), rigid-node re-rig by bone, blueprint door/glass/emissive merge, mesh decimation (meshoptimizer), PBR re-wire (baseColor/normal/ORM), texture downscale + normal-map green-channel flip, neutral body_paint slot for tinting. Rider: CARLA walker conversion attached per the CARLA blueprint, posed by an offline re-evaluation of AB_Biker (seat/handlebar/pedal IK) and baked into a looping `ride` clip; clothing materials renamed to rider_* palette slots; unreferenced textures pruned; hair primitives removed under a SimForge procedural helmet."
+    },
+    "vehicle_scooter_vespa_rider": {
+      "title": "Vespa ZX 125 with rider",
+      "source_packages": [
+        "Content/Carla/Static (CARLA UE5 0.10.0 cooked content): SK_Vespa",
+        "Content/Carla/Static/Pedestrian (CARLA UE5 0.10.0 cooked content): SK_EuroF01_A_G2 (via SimForge walker.pedestrian.0039, catalog/pedestrians-carla)",
+        "Content/Carla/Animations/Base (CARLA UE5 0.10.0 cooked content): AS_Pedestrian_BikeHands, AB_Biker (graph re-evaluated offline)",
+        "Content/Carla/Blueprints/Vehicles/2Wheeled (CARLA UE5 0.10.0 cooked content): BP_Vespa (rider mount, Seat/Handler/Pedal bones)"
+      ],
+      "license": "CC-BY-4.0",
+      "attribution": "\"Vespa ZX 125\" vehicle model \u00a9 CARLA Simulator contributors (carla.org), licensed CC BY 4.0; converted to glTF for SimForge. Rider: \"CARLA pedestrian 0039\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge. Riding pose after CARLA AB_Biker / AS_Pedestrian_BikeHands, CC BY 4.0. Helmet: SimForge procedural geometry, CC BY 4.0.",
+      "modifications": "UE->glTF conversion (CUE4Parse), rigid-node re-rig by bone, blueprint door/glass/emissive merge, mesh decimation (meshoptimizer), PBR re-wire (baseColor/normal/ORM), texture downscale + normal-map green-channel flip, neutral body_paint slot for tinting. Rider: CARLA walker conversion attached per the CARLA blueprint, posed by an offline re-evaluation of AB_Biker (seat/handlebar/pedal IK) and baked into a looping `ride` clip; clothing materials renamed to rider_* palette slots; unreferenced textures pruned; hair primitives removed under a SimForge procedural helmet."
     }
   }
 }

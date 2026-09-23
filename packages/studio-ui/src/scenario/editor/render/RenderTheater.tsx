@@ -24,7 +24,7 @@ import {
   renderStateVisual,
   shortDigest,
 } from "./render-view-model";
-import { renderMotionLabel } from "./render-motion-model";
+import { renderHeightLabel, renderMotionLabel } from "./render-motion-model";
 import type { ScenarioRenderJobDetailDto } from "@simforge-oss/studio-host";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderTheater.stylex";
@@ -236,6 +236,20 @@ export function RenderTheater({
             {detail?.failureDetail ? ` — ${detail.failureDetail}` : ""}
           </p>
         ) : null}
+        {detail && ((detail.substitutions?.length ?? 0) > 0 || (detail.warnings?.length ?? 0) > 0) ? (
+          <ul aria-label="Render result notes" data-testid="render-result-notes" {...stylex.props(styles.resultNotes)}>
+            {(detail.substitutions ?? []).map((item, index) => (
+              <li {...stylex.props(styles.resultNote)} key={`substitution-${index}-${item.kind}-${item.subject}`}>
+                Substituted, as the render request allowed ({item.allowedBy}): {item.subject} rendered {item.rendered} instead of {item.requested}
+              </li>
+            ))}
+            {(detail.warnings ?? []).map((item, index) => (
+              <li {...stylex.props(styles.resultNote)} key={`warning-${index}-${item.code}`}>
+                {humanizeCode(item.code)}: {item.message}
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {error ? (
           <p {...stylex.props(styles.xsDanger)} role="alert">
             {error}
@@ -422,6 +436,9 @@ export function RenderTheater({
                       }
                     />
                     <ConfigRow label="Motion" value={renderMotionLabel(detail.motion)} />
+                    {renderHeightLabel(detail.motion?.heightSource) ? (
+                      <ConfigRow label="Height" value={renderHeightLabel(detail.motion?.heightSource)!} />
+                    ) : null}
                     <ConfigRow label="Revision" value={detail.revisionId} mono />
                     <ConfigRow label="Execution package" value={detail.executionPackageId} mono />
                     <ConfigRow

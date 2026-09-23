@@ -1,11 +1,17 @@
 /**
- * LEGACY FALLBACK: OpenSCENARIO → native scene states.
+ * LEGACY: OpenSCENARIO → native scene states. NOT a render path.
  *
  * The render contract is the render timeline (`timeline-lowering.ts`,
  * `docs/engineering/render-timeline.md`): renderers replay the authoritative
- * trace through the shared sampler. This xosc lowering re-derives poses from
- * a derived export and survives only for execution packages produced before
- * the timeline existed (no `render.timeline` input). Do not extend it.
+ * trace through the shared sampler, and the native engine refuses a job
+ * without one (`native_render_timeline_missing`). This xosc lowering
+ * re-derives poses from a derived export (yaw only, no dims or colour, coarse
+ * environment) and survives only for offline tools that screen xosc motion.
+ * Do not extend it, and never route a render through it.
+ *
+ * This module also owns the kind vocabularies the timeline lowering shares
+ * (`nativeActorClass`, `nativeActorCatalogId`): both are total over the
+ * engine's actor kinds and refuse anything else (`native_actor_kind_unmapped`).
  */
 
 import { createHash } from 'node:crypto';
@@ -16,6 +22,8 @@ import {
   type OpenScenarioPlanActor,
   type OpenScenarioPlanSample,
 } from '@simforge-oss/openscenario';
+import { SCENE_ACTOR_CLASS_OF_KIND } from '@simforge-oss/scenario';
+import { RenderInputError } from '../render-input-error.js';
 import { unionFrameMicros, type FixedSchedule } from '../schedule.js';
 
 export interface NativeActorState {
@@ -32,6 +40,12 @@ export interface NativeActorState {
     readonly rotation: readonly [number, number, number, number];
   };
   readonly velocity: readonly [number, number, number];
+  /** Unwrapped wheel rotation (timeline `wheelSpinRad`); every wheeled actor on the timeline path. */
+  readonly wheelSpinRad?: number;
+  /** Four-wheelers: sprung-body attitude, applied to the model's `body` node only. */
+  readonly bodyAttitude?: { readonly pitchRad: number; readonly rollRad: number };
+  /** Four-wheelers: per-wheel drop `[FL, FR, RL, RR]`, metres, applied to the `wheel_*` nodes. */
+  readonly wheelDropM?: readonly [number, number, number, number];
 }
 
 export interface NativeSceneState {
@@ -56,6 +70,12 @@ export interface NativeSceneState {
  */
 export interface NativeActorAppearance {
   readonly actorId: string;
+  /**
+   * Engine actor kind (`car`, `pedestrian`, …) the appearance was derived
+   * for. Required for an unauthored appearance, whose catalog id must be the
+   * kind's documented default; a lowering always sets it.
+   */
+  readonly kind?: string;
   readonly catalogId: string;
   readonly authored: boolean;
 }
@@ -128,17 +148,50 @@ function sampleAt(actor: OpenScenarioPlanActor, time: number): OpenScenarioPlanS
   };
 }
 
-/** The native service's actor class vocabulary for a trace actor kind. */
-export function nativeActorClass(kind: string): string {
-  return actorClass(kind);
+/**
+ * Engine actor kind → the native service's actor class (primitive body, semantic
+ * and instance class: `renderer/service` `actor_dims`, `SemanticClass::
+ * from_actor_class`). Total over the engine kinds (`ACTOR_KINDS`) plus the
+ * OpenSCENARIO vehicle categories the legacy lowering reads; every entry is
+ * explicit and an unknown kind is refused, never labelled `prop`.
+ */
+export const NATIVE_ACTOR_CLASSES: Readonly<Record<string, string>> = Object.freeze({
+  // Engine kinds: the one shared table (@simforge-oss/scenario).
+  ...SCENE_ACTOR_CLASS_OF_KIND,
+  // OpenSCENARIO categories (legacy lowering only).
+  obstacle: 'prop', suv: 'suv', pickup: 'pickup',
+});
+
+/**
+ * Engine actor kind → catalog id when the scenario authored none. The same
+ * table as `@simforge-oss/playback` `defaultCatalogIdForActorKind` (a test
+ * pins them equal) and the native ambient generator. `obstacle` is the
+ * OpenSCENARIO spelling of `static_object`.
+ */
+export const NATIVE_KIND_DEFAULT_CATALOG_IDS: Readonly<Record<string, string>> = Object.freeze({
+  vehicle: 'vehicle.sedan', car: 'vehicle.sedan', truck: 'vehicle.box_truck', bus: 'vehicle.bus',
+  van: 'vehicle.van', motorcycle: 'vehicle.motorcycle', bicycle: 'vehicle.bicycle',
+  pedestrian: 'pedestrian.adult', scooter: 'vehicle.bicycle', sidewalk_robot: 'sidewalk_robot.delivery_rover',
+  drone: 'drone.camera_quadcopter', animal: 'animal.dog', static_object: 'hazard.cardboard_box',
+  obstacle: 'hazard.cardboard_box',
+});
+
+function unmappedKind(kind: string, subject: string, table: string): RenderInputError {
+  return new RenderInputError('native_actor_kind_unmapped', `${subject} has actor kind "${kind}", which the native ${table} table does not map`, { kind });
 }
 
-function actorClass(kind: string): string {
-  const classes: Record<string, string> = {
-    car: 'car', truck: 'truck', bus: 'bus', motorcycle: 'motorcycle', bicycle: 'cyclist',
-    pedestrian: 'pedestrian', obstacle: 'prop', van: 'van', suv: 'suv', pickup: 'pickup',
-  };
-  return classes[kind] ?? 'prop';
+/** The native service's actor class for an engine actor kind; refuses an unknown kind. */
+export function nativeActorClass(kind: string, subject = 'an actor'): string {
+  const mapped = Object.hasOwn(NATIVE_ACTOR_CLASSES, kind) ? NATIVE_ACTOR_CLASSES[kind] : undefined;
+  if (mapped === undefined) throw unmappedKind(kind, subject, 'actor class');
+  return mapped;
+}
+
+/** The documented catalog default for an actor kind; refuses an unknown kind. */
+export function nativeKindDefaultCatalogId(kind: string, subject = 'an actor'): string {
+  const mapped = Object.hasOwn(NATIVE_KIND_DEFAULT_CATALOG_IDS, kind) ? NATIVE_KIND_DEFAULT_CATALOG_IDS[kind] : undefined;
+  if (mapped === undefined) throw unmappedKind(kind, subject, 'catalog default');
+  return mapped;
 }
 
 function authoredCatalogId(tags: readonly string[]): string | undefined {
@@ -148,16 +201,13 @@ function authoredCatalogId(tags: readonly string[]): string | undefined {
 
 /**
  * The catalog id the native scene state carries for an actor: the authored
- * `catalog:<id>` tag verbatim, else the semantic class default.
+ * `catalog:<id>` tag verbatim, else the kind's documented default. An
+ * unknown kind is refused (`native_actor_kind_unmapped`), never a sedan.
  */
-export function nativeActorCatalogId(kind: string, tags: readonly string[]): string {
+export function nativeActorCatalogId(kind: string, tags: readonly string[], subject = 'an actor'): string {
   const authored = authoredCatalogId(tags);
   if (authored !== undefined) return authored;
-  const defaults: Record<string, string> = {
-    pedestrian: 'pedestrian.adult', bicycle: 'vehicle.bicycle', bus: 'vehicle.bus',
-    truck: 'vehicle.box_truck', motorcycle: 'vehicle.motorcycle', obstacle: 'construction.traffic_cone',
-  };
-  return defaults[kind] ?? 'vehicle.sedan';
+  return nativeKindDefaultCatalogId(kind, subject);
 }
 
 function environment(plan: OpenScenarioExecutionPlan): { preset: 'clear' | 'rain' | 'fog' | 'night'; hour: number } {
@@ -202,8 +252,10 @@ export function lowerOpenScenarioToNative(
       actors.push({
         id: actor.id,
         kind,
-        catalogId: nativeActorCatalogId(actor.kind, metadata?.tags ?? actor.tags),
-        actorClass: actorClass(actor.kind),
+        catalogId: nativeActorCatalogId(actor.kind, metadata?.tags ?? actor.tags, `actor ${actor.id}`),
+        actorClass: nativeActorClass(actor.kind, `actor ${actor.id}`),
+        // The OpenSCENARIO BoundingBox dimensions (the service requires dims).
+        dims: { l: q(actor.dims.l), w: q(actor.dims.w), h: q(actor.dims.h) },
         transform: {
           position: [q(sample.x), q(sample.z), q(-sample.y)],
           rotation: [0, q(Math.sin(yaw / 2)), 0, q(Math.cos(yaw / 2))],
@@ -225,7 +277,8 @@ export function lowerOpenScenarioToNative(
       const tags = plan.actorMetadata[actor.id]?.tags ?? actor.tags;
       return {
         actorId: actor.id,
-        catalogId: nativeActorCatalogId(actor.kind, tags),
+        kind: actor.kind,
+        catalogId: nativeActorCatalogId(actor.kind, tags, `actor ${actor.id}`),
         authored: authoredCatalogId(tags) !== undefined,
       };
     });

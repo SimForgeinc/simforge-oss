@@ -21,11 +21,11 @@
         }
       },
       "dims": {
-        "h": 3.3,
-        "l": 8.5,
-        "w": 2.5
+        "h": 2.7,
+        "l": 5.9,
+        "w": 2.3
       },
-      "id": "truck",
+      "id": "van",
       "initial": {
         "laneRef": {
           "rsl": "51:0:-1",
@@ -39,11 +39,11 @@
         },
         "speedMps": 6
       },
-      "kind": "truck",
+      "kind": "van",
       "presentAtStart": true,
       "static": false,
       "tags": [
-        "class:truck"
+        "class:van"
       ]
     }
   ],
@@ -70,7 +70,7 @@
   "props": [],
   "roadControls": [],
   "schemaVersion": 1,
-  "seed": "golden:rfs-uturn-truck",
+  "seed": "golden:rfs-uturn-van",
   "signalPrograms": [],
   "surfacePatches": [],
   "warmupSeconds": 0

@@ -23,7 +23,7 @@ export const RENDER_TIMELINE_INPUT_ID = 'render.timeline';
 /** Width of one sampled pose in `poseArray` / `posesArray`. */
 export const POSE_ARRAY_LEN = 20;
 /** Width of one actor record in `sceneFramesArray`. */
-export const SCENE_FRAME_RECORD_LEN = 12;
+export const SCENE_FRAME_RECORD_LEN = 19;
 
 export type RenderTimelineHandle = ReturnType<NativeWasm['RenderTimeline']['fromBytes']>;
 
@@ -69,13 +69,24 @@ export interface BuildRenderTimelineInput {
   /** v1: `null` (everything is derived from the trace). */
   readonly catalogDigest?: string | null;
   /**
+   * The map's ground surface, `derived/ground/ground-mesh.bin` (engine 0.11):
+   * the timeline's height source (`ground-contact/v1`). Every map version
+   * published with it must pass it. Without it (versions published before the
+   * ground derivative) the timeline is built on the retired OpenDRIVE
+   * resolver and says so: `contactOrigin: 'legacy-xodr-elevation'`.
+   */
+  readonly ground?: Uint8Array | null;
+  /**
    * The identity recorded next to a STORED trace (`sim_results.trace_sha256`),
    * after the caller verified the stored bytes. A current-format trace must
    * recompute to it; a trace upgraded in memory from an older format adopts
    * it (its writer's digest can't be recomputed after a format change).
    */
-  readonly recordedTraceSha256?: string;
+  readonly recordedTraceSha256?: string | null;
 }
+
+/** Where a timeline's z and road attitude came from. */
+export type TimelineContactOrigin = 'trace' | 'derived-at-timeline-build' | 'legacy-xodr-elevation' | 'synthetic';
 
 export interface BuiltRenderTimeline {
   readonly timelineKey: string;
@@ -84,6 +95,8 @@ export interface BuiltRenderTimeline {
   readonly heightFieldDigest: string;
   readonly catalogDigest: string | null;
   readonly samplerVersion: string;
+  /** Renders surface anything but `trace` / `derived-at-timeline-build` as a warning. */
+  readonly contactOrigin: TimelineContactOrigin;
   /** `canonicalJson(timeline)`; `sha256(bytes) === timelineSha256`. */
   readonly bytes: Uint8Array;
 }
@@ -96,6 +109,7 @@ function built(timeline: RenderTimelineHandle): BuiltRenderTimeline {
     heightFieldDigest: timeline.heightFieldDigest,
     catalogDigest: timeline.catalogDigest ?? null,
     samplerVersion: timeline.samplerVersion,
+    contactOrigin: timeline.contactOrigin as TimelineContactOrigin,
     bytes: new TextEncoder().encode(timeline.toCanonicalJson()),
   };
 }
@@ -106,10 +120,15 @@ function built(timeline: RenderTimelineHandle): BuiltRenderTimeline {
  */
 export async function buildRenderTimeline(input: BuildRenderTimelineInput): Promise<BuiltRenderTimeline> {
   const wasm = await timelineRuntime();
-  const timeline = wasm.RenderTimeline.build(
-    bytesOf(input.trace), bytesOf(input.xodr), bytesOf(input.topology), input.catalogDigest ?? undefined,
-    input.recordedTraceSha256,
-  );
+  // `null` and absent mean the same thing to the binding (not pinned / not
+  // recorded): normalized, not defaulted.
+  const catalogDigest = input.catalogDigest === null ? undefined : input.catalogDigest;
+  const recorded = input.recordedTraceSha256 === null ? undefined : input.recordedTraceSha256;
+  const timeline = input.ground
+    ? wasm.RenderTimeline.buildOnGround(
+      bytesOf(input.trace), input.ground, bytesOf(input.xodr), bytesOf(input.topology), catalogDigest, recorded,
+    )
+    : wasm.RenderTimeline.build(bytesOf(input.trace), bytesOf(input.xodr), bytesOf(input.topology), catalogDigest, recorded);
   try {
     return built(timeline);
   } finally {
@@ -235,4 +254,25 @@ export function compareObserved(
 ): ParityReport {
   const spec = typeof profile === 'string' ? profile : JSON.stringify(profile);
   return JSON.parse(timeline.compareObservedJson(observedJsonl, spec)) as ParityReport;
+}
+
+/** `simforge.render-contact-gate/v1`: every wheel of every body on the rendered ground. */
+export interface ContactGateReport {
+  readonly schema: 'simforge.render-contact-gate/v1';
+  readonly groundSha256: string;
+  readonly toleranceM: number;
+  readonly pass: boolean;
+  readonly checked: number;
+  readonly maxAbsGapM: number;
+  readonly unsupported: number;
+  readonly failureCount: number;
+  readonly failures: readonly { actorId: string; tick: number; contact: string; x: number; y: number; gapM: number }[];
+}
+
+/** Default render contact tolerance, metres. */
+export const CONTACT_GATE_TOLERANCE_M = 0.03;
+
+/** Check an opened timeline against the map's ground mesh (`derived/ground/ground-mesh.bin`). */
+export function checkTimelineContact(timeline: RenderTimelineHandle, groundMesh: Uint8Array, toleranceM = CONTACT_GATE_TOLERANCE_M): ContactGateReport {
+  return JSON.parse(timeline.contactGateJson(groundMesh, toleranceM)) as ContactGateReport;
 }

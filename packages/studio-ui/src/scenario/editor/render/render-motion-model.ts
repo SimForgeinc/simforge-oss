@@ -34,6 +34,22 @@ export function renderMotionLabel(motion: {
   }
 }
 
+/**
+ * Where a render's body heights came from, in words, or null when there is
+ * nothing to flag. A map version published before its ground derivative
+ * renders on the retired OpenDRIVE elevation: a labelled substitution.
+ */
+export function renderHeightLabel(heightSource: string | null | undefined): string | null {
+  switch (heightSource) {
+    case "legacy-xodr-elevation":
+      return "Legacy OpenDRIVE elevation (this map version has no ground surface)";
+    case "derived-at-timeline-build":
+      return "Rendered ground surface (grounded when the timeline was built)";
+    default:
+      return null;
+  }
+}
+
 export type RevisionMotionPlan =
   | { kind: "replay-original"; engineSemVer: string; engineIsCurrent: boolean; resimulateLabel: string | null }
   | { kind: "replay-active"; engineSemVer: string; engineIsCurrent: boolean; resimulateLabel: string | null; note: string }

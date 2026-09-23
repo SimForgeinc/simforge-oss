@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { FIXED_SCHEDULE_V1_SCHEMA, type FixedSchedule } from '../schedule.js';
 import { compareObserved, openRenderTimeline, pose, timelineRuntime } from '../timeline/index.js';
 import { lowerRenderTimelineToNative } from './timeline-lowering.js';
+import { nativeActorClass } from './lowering.js';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 const TRACE = join(REPO, 'examples/edge-cases/03-red-light-ambulance-preemption/scenario.trace.json.gz');
@@ -70,6 +71,45 @@ describe('render timeline → native scene states', () => {
       expect(kinds.slice(despawn + 1).every((kind) => kind === null)).toBe(true);
       expect(pose(timeline, 'ambulance', lowering.frameTimes[despawn]!).present).toBe(false);
       expect(pose(timeline, 'ambulance', lowering.frameTimes[despawn - 1]!).present).toBe(true);
+    } finally {
+      timeline.free();
+    }
+  });
+
+  it('the Rust timeline and the lowering agree on every actor class (one shared table)', async () => {
+    const wasm = await timelineRuntime();
+    for (const example of ['03-red-light-ambulance-preemption', '05-cyclist-occlusion-conflict']) {
+      const built = wasm.RenderTimeline.buildFlat(readFileSync(join(REPO, `examples/edge-cases/${example}/scenario.trace.json.gz`)), 0, undefined);
+      try {
+        for (const actor of JSON.parse(built.actorsJson()) as { kind: string; actorClass: string }[]) {
+          expect(actor.actorClass, `${example} ${actor.kind}`).toBe(nativeActorClass(actor.kind));
+        }
+      } finally {
+        built.free();
+      }
+    }
+  });
+
+  it('carries sampler/2 wheel spin, body attitude and wheel drop on vehicle records', async () => {
+    const timeline = await planeTimeline();
+    try {
+      const withAttitude = lowerRenderTimelineToNative(timeline, [schedule(25, 10)], { attitude: true });
+      const yawOnly = lowerRenderTimelineToNative(timeline, [schedule(25, 10)]);
+      const ambulance = (lowering: typeof yawOnly, tick: number) =>
+        lowering.states[tick]!.actors.find((actor) => actor.id === 'ambulance')!;
+      const tick = 100;
+      const t = withAttitude.frameTimes[tick]!;
+      const p = pose(timeline, 'ambulance', t);
+      const record = ambulance(withAttitude, tick);
+      expect(record.wheelSpinRad).toBeCloseTo(p.wheelSpinRad!, 5);
+      expect(record.bodyAttitude!.pitchRad).toBeCloseTo(p.bodyPitchRad, 5);
+      expect(record.bodyAttitude!.rollRad).toBeCloseTo(p.bodyRollRad, 5);
+      expect(record.wheelDropM).toHaveLength(4);
+      // Yaw-only frames carry no attitude of any kind, but keep the odometer.
+      const plain = ambulance(yawOnly, tick);
+      expect(plain.bodyAttitude).toBeUndefined();
+      expect(plain.wheelDropM).toBeUndefined();
+      expect(plain.wheelSpinRad).toBeCloseTo(p.wheelSpinRad!, 5);
     } finally {
       timeline.free();
     }
