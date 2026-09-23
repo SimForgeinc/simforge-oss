@@ -168,6 +168,24 @@ export const NativeRunDiagnosticsSchema = NativeRunLineageSchema.extend({
     rigRevision: z.number().int().nonnegative(),
     generation: z.number().int().nonnegative(),
   })),
+  /**
+   * Per rendered tick, the exposure each RGB camera metered (the dash-cam
+   * camera model): EV100, the adjustment over the incident exposure, and the
+   * aperture/shutter/ISO/gain the camera's program realises it with. Gated
+   * by `native-evidence.render-config`.
+   */
+  exposure: z.array(z.strictObject({
+    tick: z.number().int().nonnegative(),
+    cameras: z.record(z.string(), z.strictObject({
+      ev100: z.number().finite(),
+      adjustEv: z.number().finite(),
+      meteredLog2Luminance: z.number().finite(),
+      fNumber: z.number().finite().positive(),
+      shutterS: z.number().finite().positive(),
+      iso: z.number().finite().positive(),
+      gainDb: z.number().finite(),
+    })),
+  })).optional(),
   timings: z.strictObject({
     wallMs: z.number().finite().nonnegative(),
     serverMs: z.number().finite().nonnegative(),

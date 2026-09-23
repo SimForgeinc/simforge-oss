@@ -482,6 +482,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const clientStages = new StageSamples();
       const counters: Record<string, number> = {};
       const tickRecords: string[] = [];
+      // Per tick, the exposure each RGB camera metered (dash-cam camera model).
+      const exposures: { tick: number; cameras: Record<string, never> }[] = [];
       await fs.mkdir(context.workspace, { recursive: true });
       const intent = parseRenderIntent(context.intent);
       const sources = intent.renderSpec.sources;
@@ -923,7 +925,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           clientMark = clientStage('read', clientMark);
           await drainInFlight();
           clientMark = clientStage('pipelineWait', clientMark);
-          const detail: Record<string, unknown> = { tick, serverMs: response.server_ms ?? null, server: response.stages ?? null, client: tickClient, crc32: digests };
+          // The exposure each RGB camera metered for this frame (dash-cam camera
+          // model): EV100, adjustment, aperture/shutter/ISO/gain.
+          const exposure = (response as { exposure?: unknown }).exposure ?? null; // fallback-ok: a look without the camera model reports no exposure
+          if (exposure) exposures.push({ tick, cameras: exposure as Record<string, never> });
+          const detail: Record<string, unknown> = { tick, serverMs: response.server_ms ?? null, server: response.stages ?? null, client: tickClient, crc32: digests, exposure };
           tickDetails.push(detail);
           const consumed = consumeTick(tick, items, tickClient);
           // Surfaced by the next drain; never an unhandled rejection meanwhile.
@@ -1118,6 +1124,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         videos: videoRecords.map(({ actorId, sensorId, frameCount, sha256 }) => ({ actorId, sensorId, frameCount, sha256 })),
         service: { protocol: session.protocol, binary },
         frames: frameIdentities,
+        ...(features.has(CONTROL_FEATURE_NATIVE_RENDER_CONFIG) && exposures.length > 0 ? { exposure: exposures } : {}),
         ...(parity && features.has(CONTROL_FEATURE_NATIVE_PARITY) ? { parity: {
           schema: parity.schema, pass: parity.pass, comparedPoses: parity.comparedPoses,
           maxPositionErrorM: parity.maxPositionErrorM, maxHeadingErrorDeg: parity.maxHeadingErrorDeg,
