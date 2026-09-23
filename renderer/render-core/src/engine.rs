@@ -1718,11 +1718,10 @@ fn in_rider_subtree(world: &World, entity: Entity, model_root: Entity) -> bool {
     let mut current = Some(entity);
     while let Some(node) = current {
         if let Some(extras) = world.get::<bevy::gltf::GltfExtras>(node) {
-            let tagged = serde_json::from_str::<serde_json::Value>(&extras.value)
-                .ok()
+            // fallback-ok: bevy_gltf stores extras as validated JSON (a RawValue), so the parse cannot fail; extras without a semanticClass string are simply not a rider tag
+            let tagged = serde_json::from_str::<serde_json::Value>(&extras.value).ok()
                 .and_then(|value| value.get("semanticClass").and_then(|v| v.as_str()).map(|c| c == "rider"))
-                // fallback-ok: extras without a semanticClass string are simply not a rider tag
-                .unwrap_or(false);
+                .unwrap_or(false); // fallback-ok: see above
             if tagged {
                 return true;
             }

@@ -1210,8 +1210,8 @@ fn build_model_recipe(
     // explicitly allowed riderless two-wheelers, and then leaves it out.
     let is_rider = |node: &GltfNode| {
         node.extras.as_ref().is_some_and(|extras| {
-            serde_json::from_str::<serde_json::Value>(&extras.value)
-                .ok()
+            // fallback-ok: bevy_gltf stores extras as validated JSON (a RawValue), so the parse cannot fail; no semanticClass string means not a rider
+            serde_json::from_str::<serde_json::Value>(&extras.value).ok()
                 .and_then(|value| value.get("semanticClass").and_then(|v| v.as_str()).map(|c| c == "rider"))
                 == Some(true)
         })
