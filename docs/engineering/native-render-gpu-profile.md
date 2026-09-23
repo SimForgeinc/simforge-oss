@@ -45,7 +45,45 @@ The service reports the resolved config in its ready record and `hello`, and pla
 - Output encoding (`output.*`) is a consumer knob, not part of a preset's identity.
 - `geometryLod: auto` (default) draws the map's `derived/geometry-lod` derivative when the closure carries one. `off` renders full detail. Lidar and radar always trace full detail.
 
-The preset values are provisional until the perceptual sweep (FLIP/SSIM against the reference) picks the cheapest configuration at about 0.90–0.95 (showcase) and about 0.80 (training).
+### Preset values: the perceptual sweep
+
+Each candidate below renders the same three ticks (Belmont chase shot, ticks 201–203) in one process (`simforge-render job --sweep`). It is scored against `RenderConfig::reference()`: TAA×8, a 4096 per-view atlas with 4 cascades out to 400 m, SSAO ultra, 32 contact-shadow steps, SSR 32/8, and full geometry. The similarity scores are mean 1−FLIP and SSIM over all dumped frames.
+
+Timings come from the same session, so they include PNG dumps and are only indicative. They cover two measured ticks on the RTX 3080. The ms/tick column is the 8-camera rig's service time.
+
+The 8×1280×720 rig (the showcase scale):
+
+| Config | 1−FLIP | SSIM | GPU ms/frame | ms/tick |
+|---|---|---|---|---|
+| reference | 1.000 | 1.000 | 164 | 1971 |
+| S4: TAA×4, SSR 16/6 | 0.991 | 0.996 | 98 | 965 |
+| S2: TAA×2, SSAO high | 0.985 | 0.986 | 96 | 574 |
+| rc.74 showcase (SMAA ultra, 4096×4 shared, SSAO ultra, LOD 1 px) | 0.974 | 0.962 | 92 | 384 |
+| **showcase** (S5: rc.74 showcase + SSAO high, LOD 2 px) | 0.968 | 0.943 | 76 | 304 |
+| rc.74 training (SMAA high, 2048×3 250 m, SSAO medium, SSR 6/3, LOD 2 px) | 0.958 | 0.935 | 72 | 304 |
+| **training** (T3: FXAA, 1024×2 150 m, SSAO low, contact 4, SSR 4/2, LOD 8 px) | 0.924 | 0.836 | 49 | 279 |
+
+At 512×384, training's own resolution, each knob was also varied on its own from the reference:
+
+| Config | 1−FLIP | SSIM |
+|---|---|---|
+| AA: TAA×2 / FXAA / SMAA high | 0.984 / 0.970 / 0.969 | 0.982 / 0.960 / 0.949 |
+| Shadows shared 4096 / 2048 / 1024 (4 cascades) | 0.998 / 0.997 / 0.995 | 1.000 / 0.999 / 0.996 |
+| Cascades 2 / 1 | 0.990 / 0.977 | 0.997 / 0.941 |
+| SSAO medium / low | 0.984 / 0.983 | 0.996 / 0.995 |
+| SSR 6/3 / 4/2 | 0.999 / 0.999 | 1.000 / 1.000 |
+| LOD 2 / 4 / 8 px | 0.953 / 0.927 / 0.944 | 0.870 / 0.789 / 0.846 |
+| **training** (T3) | 0.927 | 0.829 |
+| showcase | 0.970 | 0.953 |
+
+Findings:
+- Geometry LOD costs the most quality at low resolution. The non-monotonic 4 px point is foliage-card swaps landing on this shot's trees.
+- On this dry scene SSR is nearly free in quality.
+- The rest of the showcase-to-reference gap is anti-aliasing.
+
+Showcase is the cheapest candidate in the 0.90–0.95 SSIM band. Training keeps every effect at its cheapest level and lands at about 0.83 SSIM against its own-resolution reference, the nearest measured point to the 0.80 target.
+
+A dump-free timing pass on the render-video agent's rig replaces these GPU numbers when it runs.
 
 ## Where a frame went (rc.73)
 

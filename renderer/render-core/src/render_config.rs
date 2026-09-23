@@ -295,7 +295,7 @@ impl RenderConfig {
             preset,
             aa: AaConfig { mode: AntiAlias::SmaaUltra, taa_samples: 4 },
             shadows: ShadowConfig { map_size: 4096, cascades: 4, max_distance_m: 400.0, shared: true },
-            ssao: SsaoConfig { enabled: true, quality: SsaoQuality::Ultra, contact_shadows: true, contact_shadow_steps: 16 },
+            ssao: SsaoConfig { enabled: true, quality: SsaoQuality::High, contact_shadows: true, contact_shadow_steps: 16 },
             ssr: SsrConfig { enabled: true, linear_steps: 10, bisection_steps: 5 },
             bloom: BloomConfig { intensity: look.bloom_intensity },
             dof: DofConfig {
@@ -317,7 +317,7 @@ impl RenderConfig {
                 distortion: look.lens_distortion,
                 chromatic_aberration: look.chromatic_aberration,
             },
-            lod: LodConfig { enabled: true, pixel_error_px: 1.0 },
+            lod: LodConfig { enabled: true, pixel_error_px: 2.0 },
             textures: TextureConfig { tier: TextureTier::UastcFull },
             lidar: LidarConfig { backend: LidarBackend::Auto },
             // Output encoding is the consumer's choice, not part of a
@@ -329,16 +329,20 @@ impl RenderConfig {
             encode: EncodeConfig { finish_threads: 0 },
             clock: ClockConfig { mode: ClockMode::Pinned },
         };
+        // Values from the perceptual sweep against `reference()` on the Belmont
+        // 8-camera rig, RTX 3080 (docs/engineering/native-render-gpu-profile.md,
+        // "Render configuration"): showcase is the cheapest configuration at
+        // about 0.94 SSIM / 0.97 1-FLIP at 1280x720; training keeps every
+        // effect at its cheapest level, about 0.83 SSIM / 0.93 1-FLIP against
+        // its own 512x384 reference.
         match preset {
             Preset::Showcase => base,
-            // Every effect stays; only its cost goes down. Values are the
-            // result of the 3080 sweep (docs/engineering/native-render-config.md).
             Preset::Training => Self {
-                aa: AaConfig { mode: AntiAlias::SmaaHigh, taa_samples: 4 },
-                shadows: ShadowConfig { map_size: 2048, cascades: 3, max_distance_m: 250.0, shared: true },
-                ssao: SsaoConfig { enabled: true, quality: SsaoQuality::Medium, contact_shadows: true, contact_shadow_steps: 8 },
-                ssr: SsrConfig { enabled: true, linear_steps: 6, bisection_steps: 3 },
-                lod: LodConfig { enabled: true, pixel_error_px: 2.0 },
+                aa: AaConfig { mode: AntiAlias::Fxaa, taa_samples: 4 },
+                shadows: ShadowConfig { map_size: 1024, cascades: 2, max_distance_m: 150.0, shared: true },
+                ssao: SsaoConfig { enabled: true, quality: SsaoQuality::Low, contact_shadows: true, contact_shadow_steps: 4 },
+                ssr: SsrConfig { enabled: true, linear_steps: 4, bisection_steps: 2 },
+                lod: LodConfig { enabled: true, pixel_error_px: 8.0 },
                 ..base
             },
         }
