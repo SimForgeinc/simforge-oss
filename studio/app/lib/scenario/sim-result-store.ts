@@ -80,8 +80,10 @@ import {
  * Bump when the TypeScript half of the pipeline changes what a request resolves to.
  * 3: documents with no authored actors resolve to the blank world instead of
  * failing `unsupported_portable_semantics`, so their memoized failures re-resolve.
+ * 4: portable documents (transferred variations, templates) execute at their pinned site exactly
+ * as the editor previews them instead of failing `unsupported_portable_semantics`.
  */
-export const SIMULATION_PIPELINE_REVISION = 3;
+export const SIMULATION_PIPELINE_REVISION = 4;
 const REQUEST_CONTRACT = "simforge.sim-request/v1";
 const RESOLUTION_MEDIA_TYPE = SIMULATION_RESOLUTION_MEDIA_TYPE;
 const MATERIALIZED_TRAFFIC_MEDIA_TYPE = "application/vnd.uniscenarios.materialized-traffic+json";
@@ -661,7 +663,7 @@ async function executeInline(
         ? error.message.split(":")[0]!.slice(0, 100)
         : "simulation_failed";
     // Scenario errors (infeasible, invalid) fail the request; infrastructure errors requeue it.
-    const scenarioError = /^(template_invalid|materialization_infeasible|semantic_loss|unsupported_portable_semantics|map_bound_|runtime_asset_identity|actor_catalog|sumo_network_unavailable)/.test(code);
+    const scenarioError = /^(template_invalid|materialization_infeasible|semantic_loss|unsupported_portable_semantics|portable_site_unresolved|map_bound_|runtime_asset_identity|actor_catalog|sumo_network_unavailable)/.test(code);
     console.warn(`[simulation] inline execution of ${identity.requestKey} failed (${scenarioError ? "scenario" : "retryable"}): ${error instanceof Error ? error.message : String(error)}`);
     await failSimulationRequest({
       workspaceId: subject.workspaceId,
