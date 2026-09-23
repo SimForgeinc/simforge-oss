@@ -34,7 +34,7 @@ export interface ParkedCarsSettings {
    *
    * While this is empty the generator is a preview: cars are drawn, but nothing
    * else in the world knows about them. Baking writes the resolved cars here,
-   * which is what makes them real — `withParkedCarActors` turns them into
+   * which is what makes them real — native `studioConcreteInput` turns them into
    * simulated actors on both the browser and compiler sides, so they collide,
    * and they reach the `.xosc` as stationary `ScenarioObject`s.
    *

@@ -36,6 +36,7 @@ pub mod materialize;
 pub mod params;
 pub mod perception;
 pub mod signal_plan;
+pub mod studio_refinements;
 pub mod sites;
 pub mod situation;
 pub mod template;

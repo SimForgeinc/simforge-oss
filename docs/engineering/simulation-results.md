@@ -26,6 +26,25 @@ run the same pipeline over the same map members: the editor's own
 on real documents, the editor's WASM trace and the host's N-API trace are
 byte-identical.
 
+## Studio refinements are engine semantics
+
+What the engine executes for a document includes the Studio refinements. They
+are native (`simforge_compiler::studio_refinements`, exposed as
+`EngineRuntime.studioConcreteInput` and `EngineRuntime.executionRefinements`),
+so the editor's WASM worker, the host, the compiler and the CLI run one
+implementation:
+- `studioConcreteInput(input, document)`: `studio.presentation.bodyColor`
+  paint tags on role actors, then the baked parked cars of
+  `studio.ambientTraffic.parkedCars.v1` as static cars.
+- `executionRefinements(input)`: a yaw-rate cap on high-speed best-effort world
+  routes, and cruise restoration when a bounded speed action releases.
+
+A change to them is covered by `ENGINE_SEM_VER` like any engine change. The
+move from TypeScript kept every digest. `studio-refinements.golden.test.ts`
+cross-checks the native code against a frozen copy of the TypeScript (inputs
+and traces), and `studio-refinements.richmond.test.ts` locks the Richmond
+paint, parked-car and ambient digests recorded before the move.
+
 ## Storage
 
 | Table | Role |

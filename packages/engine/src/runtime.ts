@@ -270,6 +270,33 @@ export class EngineRuntime {
   }
 
   /**
+   * The document's Studio content applied to a materialised input: every
+   * `role:<id>` actor carries exactly the paint tag its role's
+   * `studio.presentation.bodyColor` implies, then the baked parked cars of
+   * `studio.ambientTraffic.parkedCars.v1` are appended as static cars. One
+   * native implementation for the editor, the host and the compiler.
+   */
+  studioConcreteInput(input: ScenarioSource, template: unknown): ScenarioInput {
+    const refine = this.module.studioConcreteInput;
+    if (!refine) throw new Error('studio_refinements_unavailable: this engine runtime predates native studio refinements');
+    const scenario = this.scenario(input);
+    return guard(() => refine.call(this.module, scenario, JSON.stringify(template)));
+  }
+
+  /**
+   * The refinements every executor applies to the input it runs: high-speed
+   * authored world routes get a yaw-rate cap a passenger car can hold, and a
+   * bounded speed action that releases before the clip ends restores the
+   * actor's cruise speed.
+   */
+  executionRefinements(input: ScenarioSource): ScenarioInput {
+    const refine = this.module.executionRefinements;
+    if (!refine) throw new Error('studio_refinements_unavailable: this engine runtime predates native studio refinements');
+    const scenario = this.scenario(input);
+    return guard(() => refine.call(this.module, scenario));
+  }
+
+  /**
    * The ambient turn-feasibility verdicts this runtime holds for `graph`
    * (`simforge.ambient-turn-verdicts/v1` JSON), or `null` on runtimes that
    * predate them. Probing turns dominates the first ambient generation on a
