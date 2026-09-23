@@ -17,7 +17,7 @@
 //   `VERIFY PASS|FAIL passed=N failed=N skipped=N time=Ns [failing=a,b] report=<path>`.
 // Exit code 0 on PASS, 1 on FAIL, 2 on usage errors.
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { loadLayout, repoRoot } from "./lib/layout.mjs";
 import { changedFiles, resolveBase } from "./lib/git.mjs";
 import { affectedCrates, workspaceCrates } from "./lib/cargo.mjs";
@@ -222,7 +222,8 @@ async function runCommandStep(name, step) {
       if (argv.includes("{changed}")) {
         const files = changed === null ? [] : changedMatching(step.changedFilter ?? step.when);
         if (changed !== null && !files.length) continue;
-        argv = argv.flatMap((a) => (a === "{changed}" ? files : [a]));
+        // Paths relative to the step's cwd (it is `oss/` when composed into the monorepo).
+        argv = argv.flatMap((a) => (a === "{changed}" ? files.map((f) => relative(cwd, join(root, f))) : [a]));
       }
       const [bin, ...rest] = argv;
       const res = await runLogged(bin, rest, {
