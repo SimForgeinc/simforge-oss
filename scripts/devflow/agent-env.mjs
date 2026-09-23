@@ -519,7 +519,7 @@ say(`  local     ${ctx.localUrl}`);
 for (const [k, v] of Object.entries(urls)) if (v !== state.httpsUrl && v !== ctx.localUrl) say(`  ${k.padEnd(9)} ${v}`);
 if (cfg.login) {
   const login = cfg.login(ctx);
-  say(`  login     ${login.email} / ${login.password}`);
+  say(`  login     ${login.hint ?? `${login.email} / ${login.password}`}`);
 }
 say(`  tree      ${worktree}  (branch ${branch})`);
 if (ctx.databaseUrl) say(`  database  ${state.database}  (DATABASE_URL in ${(cfg.envFiles ?? [".env.local"])[0]})`);

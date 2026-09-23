@@ -158,6 +158,11 @@ export default {
       ...(ctx.httpsUrl ? { NEXT_PUBLIC_BASE_URL: ctx.httpsUrl, SIMFORGE_ALLOWED_DEV_ORIGINS: `localhost,127.0.0.1,${ctx.tailnetHost}` } : {}),
     }),
     setup: mapsFarm,
+    // OSS Studio authorizes browsers only through a loopback bootstrap (its
+    // security model); the tailnet URL is for the hosted build (SimCloud envs).
+    login: (ctx) => ({
+      hint: `loopback bootstrap: SIMFORGE_CLOUD_ROOT=${ctx.stateDir} node packages/cli/bin/simforge.js host open`,
+    }),
     urls: (ctx) => ({ studio: ctx.httpsUrl ?? ctx.localUrl }),
     start: { cwd: "studio", run: ["pnpm", "dev"] },
     prodBuild: { cwd: "studio", run: ["pnpm", "build"] },
