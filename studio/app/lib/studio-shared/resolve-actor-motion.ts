@@ -277,9 +277,8 @@ export function resolveActorMotion(actor: ScenarioEditorActorDraft): ResolvedAct
 
   // 2. An authored untimed polyline. The worker's driven polyline is
   //    [spawn, ...path_placement, destination_point] — `route_geometry
-  //    ._path_points_for_actor`, mirrored in `xosc/effective-motion.ts` — so the
-  //    corridor has to be built the same way or the two disagree about where the
-  //    car starts.
+  //    ._path_points_for_actor` — so the corridor has to be built the same way
+  //    or the two disagree about where the car starts.
   if (pathPlacement.length > 0) {
     const spawn = placement?.point ?? null;
     const destination = pointOf(actor.destination_point);

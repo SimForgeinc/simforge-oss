@@ -588,8 +588,9 @@ export type ScenarioOperationalJobBase = {
  *     identified by a release-manifest digest (`simforge.editor-assets-release/v1`);
  *     it is not produced from a revision, so its insert omits the column
  *     entirely rather than leaving it to be filled in later. `dataset_export`
- *     is scoped to a dataset and `openscenario_import` runs *before* any
- *     revision exists, for the same structural reason.
+ *     is scoped to a dataset, for the same structural reason (historical
+ *     `openscenario_import` rows, from the retired OpenSCENARIO import, also
+ *     predate any revision).
  *
  * Not discriminated any deeper. `type` (the view's alias for
  * `postprocess_kind`) does decide whether a postprocess job has a revision,

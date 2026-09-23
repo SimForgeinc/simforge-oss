@@ -41,7 +41,7 @@ describe("EditorTutorialGuide", () => {
     expect(within(dialog).getByRole("heading", { name: "Run the simulation" })).toBeTruthy();
     expect(within(dialog).getByRole("heading", { name: "Imports" })).toBeTruthy();
     expect(within(dialog).getByText("Scenario JSON")).toBeTruthy();
-    expect(within(dialog).getByText("OpenSCENARIO file")).toBeTruthy();
+    expect(within(dialog).queryByText("OpenSCENARIO file")).toBeNull();
     expect(within(dialog).getByText(/Environment and Traffic settings/i)).toBeTruthy();
     expect(within(dialog).getByText(/metric subject plus reasoning trace/i)).toBeTruthy();
 

@@ -47,7 +47,6 @@ export function formatReport(report: ConformanceReport): string {
       }
       for (const reason of result[side].reasons) lines.push(`- ${side}: ${reason}`);
     }
-    if (result.ours.importDiagnostics?.length) lines.push(`- import diagnostics: ${result.ours.importDiagnostics.join(', ')}`);
     for (const reason of result.roundTrip.reasons) lines.push(`- round trip: ${reason}`);
     for (const diagnostic of result.esmini.diagnostics) lines.push(`- esmini log: \`${diagnostic}\``);
   }

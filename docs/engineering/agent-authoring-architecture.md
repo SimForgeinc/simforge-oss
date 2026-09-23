@@ -144,7 +144,6 @@ simforge simulate         <instance|template+site> [--trace out.trace.json]
 simforge validate         <instance> [--tier 2]         # includes sim-backed checks
 simforge evaluate         <trace>    [--filters critical|negative-control]
 simforge evidence verify  <instance> <trace.json.gz>    # shared-input-hash proof
-simforge import           <file.xosc> [--map --out]     # OpenSCENARIO 1.4 → v2 draft
 simforge export           <instance> --format xosc-1.4|xosc-1.3-esmini|osc-2.2 --out f
 simforge render run       <render-intent> --engine browser|carla --inputs m --out dir/
 simforge render hash      <render-intent>               # canonical SHA-256 identity
