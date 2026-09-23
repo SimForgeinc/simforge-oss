@@ -12,6 +12,8 @@ dist
 /tools/meshy/REPORT.md
 # Versioned local map derivatives are reproducible and may be many gigabytes.
 **/3d/variants/
+# The golden-trace corpus commits the public map's static-collider derivative.
+!fixtures/golden-traces/maps/*/3d/variants/
 *.local
 .DS_Store
 /.env.e2e.local

@@ -19,6 +19,12 @@
 //!
 //! String escaping is the same in both worlds (`"`, `\`, controls < 0x20), so
 //! `serde_json`'s string writer is reused unchanged.
+//!
+//! This is rule `simforge.canonical-json/v1`, the single canonical JSON of the
+//! project. The TypeScript side is `@simforge-oss/scenario/canonical-json` (the
+//! engine's `canonicalJson` re-exports it). Both implementations never round;
+//! quantization is an explicit step before hashing. Both run the shared vectors
+//! in `fixtures/canonical-json/vectors.json` (`tests/canonical_json_vectors.rs`).
 
 use std::cmp::Ordering;
 use std::fmt::Write as _;

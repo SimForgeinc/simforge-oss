@@ -45,6 +45,10 @@ use crate::math::{js_round, local_from_scene, SceneXZ, Vec2};
 use crate::rng::Seed;
 
 /// Input schema version accepted by this crate.
+/// The only simulation step SimForge executes, seconds (the document's
+/// `simulation.dtS`). Input validation rejects any other `dt`.
+pub const SIMULATION_DT_S: f64 = 0.02;
+
 pub const SCHEMA_VERSION: u32 = 1;
 
 /// An `id` used to reference actors, interactions, signals and occluders.
@@ -3943,7 +3947,29 @@ fn parse_document(p: &mut Parser, v: &Value) -> Option<SimScenarioInput> {
     let map_id = p.or(m, "mapId", || "unknown".to_owned(), |p, v| p.text(v));
     let clip_seconds = p.num_or(m, "clipSeconds", Num::POSITIVE, 20.0);
     let warmup_seconds = p.num_or(m, "warmupSeconds", Num::NON_NEG, 5.0);
-    let dt = p.num_or(m, "dt", Num::POSITIVE.max(0.2), 0.02);
+    // SimForge executes exactly one step: 20 ms. Any other value is rejected
+    // rather than run, so a trace's time base is never a producer's choice.
+    let dt = p.or(
+        m,
+        "dt",
+        || SIMULATION_DT_S,
+        |p, v| match v {
+            Value::Number(n) if n.as_f64() == Some(SIMULATION_DT_S) => Some(SIMULATION_DT_S),
+            other => {
+                p.issue(
+                    "invalid_literal",
+                    format!(
+                        "Invalid literal value, expected {SIMULATION_DT_S} (the only simulation step), received {}",
+                        match other {
+                            Value::Number(n) => n.to_string(),
+                            other => type_name(other).to_owned(),
+                        }
+                    ),
+                );
+                None
+            }
+        },
+    );
     let seed = p.or(m, "seed", || Seed::Number(0.0), parse_seed);
     let physics = p.opt(m, "physics", parse_physics);
     let operational_conditions = p.or(
@@ -4337,6 +4363,22 @@ mod tests {
                 "behavior": { "route": { "kind": "lanePath", "lanes": ["1:0:-1"] } }
             }]
         })
+    }
+
+    #[test]
+    fn dt_other_than_20ms_is_rejected() {
+        for dt in [0.05, 0.01, 0.2, 0.020001] {
+            let mut value = minimal();
+            value["dt"] = serde_json::json!(dt);
+            let error = parse_scenario_input_value(&value).expect_err("only 0.02 is accepted");
+            assert!(format!("{error:?}").contains("dt"), "{error:?}");
+        }
+        let mut value = minimal();
+        value["dt"] = serde_json::json!(0.02);
+        assert_eq!(
+            parse_scenario_input_value(&value).unwrap().dt,
+            SIMULATION_DT_S
+        );
     }
 
     #[test]

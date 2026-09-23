@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AMBIENT_TRAFFIC_EXTENSION_KEY, validateAmbientTrafficProfileExtension } from "@simforge-oss/engine";
 import { ScenarioTemplateV2Schema, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import {
   DISABLED_AMBIENT_PROVENANCE,
@@ -103,10 +104,6 @@ export const ScenarioMaterializedTrafficReferenceSchema = z.strictObject({
   mapVersionId: z.string().trim().min(1),
 });
 export type ScenarioMaterializedTrafficReference = z.infer<typeof ScenarioMaterializedTrafficReferenceSchema>;
-export const ReserveScenarioMaterializedTrafficSchema = ScenarioMaterializedTrafficReferenceSchema.omit({ artifactId: true }).extend({
-  expectedVersion: z.number().int().positive(),
-});
-export const CompleteScenarioMaterializedTrafficSchema = ScenarioMaterializedTrafficReferenceSchema;
 
 export const ScenarioAuthoringQualitySchema = z.enum(SCENARIO_AUTHORING_QUALITY_IDS);
 
@@ -115,7 +112,19 @@ const CanonicalScenarioContentSchema = z
   .custom<ScenarioTemplateV2>((value) => ScenarioTemplateV2Schema.safeParse(value).success, {
     message: "Invalid Scenario v2 document.",
   })
-  .transform((value) => ScenarioTemplateV2Schema.parse(value));
+  .transform((value) => ScenarioTemplateV2Schema.parse(value))
+  // A malformed ambient profile is a validation error at the write boundary,
+  // never a silent fallback to City traffic at simulation time.
+  .superRefine((value, ctx) => {
+    const ambient = validateAmbientTrafficProfileExtension(value.extensions);
+    if (ambient.kind === "invalid") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["extensions", AMBIENT_TRAFFIC_EXTENSION_KEY],
+        message: `Invalid ambient traffic profile: ${ambient.issues.join("; ")}`,
+      });
+    }
+  });
 
 /**
  * A document's description lives at `content.meta.description` and nowhere else.
@@ -147,14 +156,6 @@ export const UpdateScenarioDocumentSchema = z.object({
   authoringQualityId: ScenarioAuthoringQualitySchema.optional(),
 });
 
-export const ReserveScenarioSimulationPreviewSchema = z.strictObject({
-  expectedVersion: z.number().int().positive(),
-  sha256: AmbientDigestSchema,
-  sizeBytes: z.number().int().positive().max(512 * 1024 * 1024),
-});
-export const CompleteScenarioSimulationPreviewSchema = ReserveScenarioSimulationPreviewSchema.extend({
-  artifactId: z.string().trim().min(1),
-});
 
 export const CreateScenarioDatasetSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -262,18 +263,18 @@ export const CreateScenarioDatasetItemSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
+/**
+ * A revision commit carries only the draft version being frozen. The traffic
+ * evidence and ambient provenance come from the authoritative simulation; the
+ * `ambient`/`materializedTraffic` fields older clients still send are accepted
+ * and ignored.
+ */
 export const CreateScenarioRevisionSchema = z.object({
   expectedVersion: z.number().int().positive(),
   idempotencyKey: z.string().trim().min(1).max(200).optional(),
-  ambient: ScenarioAmbientProvenanceSchema.default(DISABLED_AMBIENT_PROVENANCE),
-  materializedTraffic: ScenarioMaterializedTrafficReferenceSchema.optional(),
-}).superRefine((value, context) => {
-  if (!value.materializedTraffic) {
-    context.addIssue({ code: "custom", path: ["materializedTraffic"], message: "Complete materialized traffic evidence is required." });
-  } else if (value.materializedTraffic.sha256 !== value.ambient.resultSha256) {
-    context.addIssue({ code: "custom", path: ["materializedTraffic", "sha256"], message: "Materialized traffic must match the ambient result digest." });
-  }
-});
+  ambient: z.unknown().optional(),
+  materializedTraffic: z.unknown().optional(),
+}).transform(({ expectedVersion, idempotencyKey }) => ({ expectedVersion, idempotencyKey }));
 
 export const CreateValidationRunSchema = z.object({
   revisionId: z.string().trim().min(1),
@@ -603,22 +604,9 @@ export type ProtocolRequestConformance = [
   Assert<Accepts<protocol.SetDocumentTagsRequest, typeof SetScenarioDocumentTagsSchema>>,
   Assert<Accepts<protocol.UpsertDocumentRatingRequest, typeof UpsertScenarioDocumentRatingSchema>>,
   Assert<Accepts<protocol.ListRatingAggregatesRequest, typeof ScenarioRatingBatchSchema>>,
-  /**
-   * `ambient` is asserted through `ScenarioAmbientProvenance` (this file's
-   * parsed type) rather than the shared DTO: for `mode: "disabled"` the route
-   * accepts only `configSha256 === EMPTY_AMBIENT_CONFIG_SHA256`, while
-   * `ScenarioAmbientProvenanceDto` types the digest as `string` because the
-   * constant lives in `@simforge-oss/studio-ui`, which `studio-host` cannot
-   * import. Narrowing the DTO is a `studio-ui` change, tracked as a finding.
-   */
-  Assert<Accepts<
-    Omit<protocol.CreateRevisionRequest, "ambient"> & { ambient: ScenarioAmbientProvenance },
-    typeof CreateScenarioRevisionSchema
-  >>,
-  Assert<Accepts<protocol.ReserveSimulationPreviewRequest, typeof ReserveScenarioSimulationPreviewSchema>>,
-  Assert<Accepts<protocol.CompleteSimulationPreviewRequest, typeof CompleteScenarioSimulationPreviewSchema>>,
-  Assert<Accepts<protocol.ReserveMaterializedTrafficRequest, typeof ReserveScenarioMaterializedTrafficSchema>>,
-  Assert<Accepts<protocol.CompleteMaterializedTrafficRequest, typeof CompleteScenarioMaterializedTrafficSchema>>,
+  Assert<Accepts<protocol.CreateRevisionRequest, typeof CreateScenarioRevisionSchema>>,
+  Assert<Accepts<protocol.ResolveSimulationRequest, typeof ResolveScenarioSimulationSchema>>,
+  Assert<Accepts<protocol.ScenarioSimulationVerificationDto, typeof VerifyScenarioSimulationSchema>>,
   Assert<Accepts<protocol.PrepareExportRequest, typeof CreateExportSchema>>,
   Assert<Accepts<protocol.CreateValidationRunRequest, typeof CreateValidationRunSchema>>,
 ];
@@ -656,3 +644,76 @@ export const MAP_GRAPH_SIDECARS = [
 export function requiresDigestAttestation(relativePath: string): boolean {
   return (MAP_GRAPH_SIDECARS as readonly string[]).includes(relativePath);
 }
+
+// ── Authoritative simulation ────────────────────────────────────────────────
+
+const SimulationDigestSchema = z.string().regex(/^[a-f0-9]{64}$/);
+
+/** Resolve (memoized, joined or executed) the authoritative simulation of a document's current draft. */
+export const ResolveScenarioSimulationSchema = z.strictObject({
+  expectedVersion: z.number().int().positive().optional(),
+  /** How long to wait on an execution another caller or a CPU runner holds. */
+  waitMs: z.number().int().min(0).max(25_000).default(0),
+});
+
+export const VerifyScenarioSimulationSchema = z.strictObject({
+  documentId: z.string().trim().min(1).max(200).nullable().optional(),
+  localTraceSha256: SimulationDigestSchema,
+  localRuntime: z.record(z.string(), z.union([z.string().max(500), z.number(), z.boolean()])).default({}),
+});
+
+const SimulationObjectSchema = z.strictObject({
+  sha256: SimulationDigestSchema,
+  sizeBytes: z.number().int().positive().max(1024 * 1024 * 1024),
+});
+
+export const SimulationCompletionSchema = z.strictObject({
+  simKey: SimulationDigestSchema,
+  traceSha256: SimulationDigestSchema,
+  authoredTraceSha256: SimulationDigestSchema,
+  engineSemVer: z.string().trim().min(1).max(64),
+  solverVer: z.string().trim().min(1).max(64),
+  traceSchema: z.string().trim().min(1).max(64),
+  resolvedInputDigest: SimulationDigestSchema,
+  mapClosureDigest: SimulationDigestSchema,
+  trafficStepKey: SimulationDigestSchema.nullable(),
+  trafficProvider: z.enum(["off", "native", "sumo"]),
+  engineBuild: z.record(z.string(), z.unknown()),
+  trace: SimulationObjectSchema,
+  resolution: SimulationObjectSchema,
+  traffic: SimulationObjectSchema.extend({
+    sourceInputDigest: SimulationDigestSchema,
+    ambient: z.record(z.string(), z.unknown()),
+  }).nullable(),
+  timeline: z.strictObject({
+    timelineKey: SimulationDigestSchema,
+    timelineSha256: SimulationDigestSchema,
+    sizeBytes: z.number().int().positive().max(1024 * 1024 * 1024),
+  }).nullable().default(null),
+  metrics: z.record(z.string(), z.number()),
+});
+
+export const ClaimSimulationJobSchema = z.strictObject({
+  workerId: z.string().trim().min(1).max(200),
+  leaseSeconds: z.number().int().min(30).max(1_800).default(300),
+});
+
+const SimulationJobFenceSchema = z.strictObject({
+  workspaceId: z.string().trim().min(1).max(200),
+  fenceToken: z.string().min(32).max(512),
+});
+
+export const ReserveSimulationJobSchema = SimulationJobFenceSchema.extend({
+  completion: SimulationCompletionSchema,
+});
+
+export const CompleteSimulationJobSchema = SimulationJobFenceSchema.extend({
+  workerId: z.string().trim().min(1).max(200),
+  completion: SimulationCompletionSchema,
+});
+
+export const FailSimulationJobSchema = SimulationJobFenceSchema.extend({
+  code: z.string().trim().min(1).max(100),
+  message: z.string().max(2_000).default(""),
+  retryable: z.boolean().default(false),
+});

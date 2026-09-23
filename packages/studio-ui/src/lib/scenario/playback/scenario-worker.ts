@@ -2,6 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { persistAmbientTurnVerdicts, restoreAmbientTurnVerdicts } from './ambient-turn-cache';
 import { exportOpenScenarioXml14 } from '@simforge-oss/openscenario';
 import { AsamExportError } from '@simforge-oss/openscenario';
 import {
@@ -21,6 +22,7 @@ import {
   contentHash,
   pruneDanglingAfterInteractions,
   parseSimScenarioInput,
+  SIMULATION_DT_S,
   type AmbientTrafficProfile,
   type AmbientTrafficProvenance,
   type AmbientTrafficResult,
@@ -45,6 +47,7 @@ import {
   planLiveRefill,
   runCanonicalPreview,
   runtimeDigest,
+  scenarioInstanceEnvelope,
   selectPlayableSite,
   withBoundedSpeedCruiseRestoration,
   withEditablePhysicsDefault,
@@ -165,7 +168,7 @@ export interface AmbientRobustnessSummary {
 
 export type ScenarioWorkerResponse =
   | { id: number; revision: string; ok: true; kind: 'prepare-progress'; phase: 'map-assets' | 'map-collisions' | 'simulation' }
-  | { id: number; revision: string; ok: true; kind: 'prepare'; runtimeKey: string; cache: 'cold' | 'warm'; timing?: { totalMs: number; compileCache: 'hit' | 'miss' }; instance: unknown; trace: SimTrace; siteId: string; ambientTraffic: AmbientTrafficProvenance; openScenario?: OpenScenarioSnapshot; mapCollisions: StaticColliderDiagnostics }
+  | { id: number; revision: string; ok: true; kind: 'prepare'; runtimeKey: string; cache: 'cold' | 'warm'; timing?: { totalMs: number; compileCache: 'hit' | 'miss' }; instance: unknown; trace: SimTrace; /** Engine digest of `trace` when it is the complete clip run (the local preview's identity, compared with the authoritative result). */ traceSha256?: string; siteId: string; ambientTraffic: AmbientTrafficProvenance; openScenario?: OpenScenarioSnapshot; mapCollisions: StaticColliderDiagnostics }
   | { id: number; revision: string; ok: true; kind: 'robustness'; report: AmbientRobustnessSummary }
   | { id: number; revision: string; ok: true; kind: 'ready' | 'progress' | 'complete'; trace: SimTrace; recordedUntil: number }
   | { id: number; revision: string; ok: true; kind: 'engine'; engine: ScenarioWorkerEngineIdentity }
@@ -350,6 +353,7 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
       cache,
       instance: ambientInstance(manifest, result.input, ambient.provenance, result.issues),
       trace: result.trace,
+      ...(result.traceSha256 ? { traceSha256: result.traceSha256 } : {}),
       siteId: 'ambient-world',
       ambientTraffic: ambient.provenance,
       mapCollisions,
@@ -396,6 +400,7 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
       cache,
       instance,
       trace: result.trace,
+      ...(result.traceSha256 ? { traceSha256: result.traceSha256 } : {}),
       siteId: String(replayKey?.['siteId'] ?? 'verified-base'),
       ambientTraffic: ambient.provenance,
       mapCollisions,
@@ -428,6 +433,7 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
       cache,
       instance,
       trace: result.trace,
+      ...(result.traceSha256 ? { traceSha256: result.traceSha256 } : {}),
       siteId: product.manifest.replayKey.siteId,
       ambientTraffic: ambient.provenance,
       mapCollisions,
@@ -470,6 +476,7 @@ async function prepareUncached(request: ScenarioWorkerRequest): Promise<Scenario
     cache,
     instance,
     trace: result.trace,
+    ...(result.traceSha256 ? { traceSha256: result.traceSha256 } : {}),
     siteId: site.siteId,
     ambientTraffic: ambient.provenance,
     mapCollisions,
@@ -483,7 +490,7 @@ function createEmptyAmbientInput(mapId: string): SimScenarioInput {
     mapId,
     clipSeconds: 20,
     warmupSeconds: 0,
-    dt: 0.05,
+    dt: SIMULATION_DT_S,
     seed: `ambient-world:${mapId}`,
     actors: [{
       id: 'ambient-world-seed',
@@ -539,6 +546,10 @@ async function getMapRuntime(engine: EngineRuntime, map: ScenarioWorkerMap, requ
     });
     const graph = bundle.graph;
     const controls = bundle.controlPlan();
+    // Turn verdicts from an earlier session on this closure make the first
+    // ambient generation as fast as a warm one (see ambient-turn-cache.ts).
+    closureDigestByGraph.set(graph, mapGraph.closureDigest);
+    await restoreAmbientTurnVerdicts(engine, mapGraph.closureDigest);
     const identity: MapRuntimeIdentity = {
       mapId: map.sourceMapId,
       assetDigest,
@@ -634,17 +645,29 @@ function postFailure(id: number, revision: string, reason: unknown): void {
   } satisfies ScenarioWorkerResponse);
 }
 
+const previewTraceDigests = new WeakMap<SimResult, string>();
+
 function simulateForRequest(
   engine: EngineRuntime,
   input: SimScenarioInput,
   graph: LaneGraph,
   operation: ScenarioWorkerRequest['operation'],
   request: ScenarioWorkerRequest,
-): SimResult {
+): SimResult & { traceSha256?: string } {
   postPrepareProgress(request, 'simulation');
   input = withStableHighSpeedWorldRoutes(input);
   input = withBoundedSpeedCruiseRestoration(input);
-  if (operation !== 'materialize') return runCanonicalPreview(engine, input, graph);
+  if (operation !== 'materialize') {
+    const result = runCanonicalPreview(engine, input, graph);
+    // The local preview's identity: the same native digest the authority
+    // computes for its trace, so the editor can show "Verified" on equality.
+    let traceSha256 = previewTraceDigests.get(result);
+    if (!traceSha256) {
+      traceSha256 = engine.traceDigest(result.trace);
+      previewTraceDigests.set(result, traceSha256);
+    }
+    return Object.assign(Object.create(Object.getPrototypeOf(result)), result, { traceSha256 }) as SimResult & { traceSha256?: string };
+  }
   const session = engine.simulation(input, { graph });
   // Authoring needs the warmed t=0 world, not a speculative 20-second trace.
   // The same concrete world is handed to the live run when Play is pressed.
@@ -672,6 +695,9 @@ function postPrepareProgress(
 }
 
 /** Generate the requested background population natively; the population is a pure function of map graph, profile and base input. */
+/** Closure digest of each map runtime's graph, for the turn-verdict cache. */
+const closureDigestByGraph = new WeakMap<LaneGraph, string>();
+
 function applyRequestedAmbientPopulation(
   engine: EngineRuntime,
   base: SimScenarioInput,
@@ -679,6 +705,8 @@ function applyRequestedAmbientPopulation(
   request: ScenarioWorkerRequest,
 ): AmbientTrafficResult {
   const generated = engine.materializeAmbientTraffic(base, graph, request.ambientTraffic);
+  const closureDigest = closureDigestByGraph.get(graph);
+  if (closureDigest) void persistAmbientTurnVerdicts(engine, graph, closureDigest);
   return { input: JSON.parse(generated.scenario.toJson()) as SimScenarioInput, provenance: generated.provenance };
 }
 
@@ -871,43 +899,5 @@ function ambientInstance(
   provenance: AmbientTrafficProvenance,
   engineIssues: ReadonlyArray<SimResult['issues'][number]> = [],
 ): unknown {
-  // The blank-world path may remove its schema-only seed actor after ambient
-  // population has been materialized. Always derive identity from the exact
-  // input returned to playback rather than trusting an earlier intermediate
-  // hash; otherwise the editor rejects its own freshly prepared scenario.
-  const generatedInputHash = contentHash(input);
-  const normalizedProvenance = provenance.generatedInputHash === generatedInputHash
-    ? provenance
-    : { ...provenance, generatedInputHash };
-  const authored = new Map((baseManifest['actors'] as Array<Record<string, unknown>>).map((actor) => [actor['id'], actor]));
-  const actors = input.actors.map((actor) => authored.get(actor.id) ?? {
-    id: actor.id,
-    actorKind: actor.kind,
-    roleKind: 'ambient',
-    origin: 'ambient',
-    timelineVisible: false,
-    editable: false,
-    laneRsl: actor.initial.laneRef?.rsl ?? null,
-    spawnS: actor.initial.laneRef?.s ?? 0,
-    initialSpeedMps: actor.initial.speedMps,
-    bindingStatus: 'generated',
-  });
-  const issues = [...(Array.isArray(baseManifest['issues']) ? baseManifest['issues'] : []), ...engineIssues]
-    .filter((entry, index, all) => all.findIndex((candidate) =>
-      candidate?.code === entry?.code && candidate?.path === entry?.path && candidate?.reason === entry?.reason) === index);
-  return {
-    kind: 'scenario-instance',
-    version: 1,
-    manifest: {
-      ...baseManifest,
-      inputHash: generatedInputHash,
-      instanceId: `${String(baseManifest['instanceId'])}@ambient:${provenance.profileHash.slice(0, 12)}`,
-      actors,
-      issues,
-      ambientTraffic: normalizedProvenance,
-      ambientBaseInputHash: provenance.baseInputHash,
-    },
-    input,
-    ambientTraffic: normalizedProvenance,
-  };
+  return scenarioInstanceEnvelope(baseManifest, input, provenance, engineIssues);
 }

@@ -1,13 +1,12 @@
 "use client";
 
 import { useStudioHost } from "../../../host";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import type { ScenarioDocumentDto } from "@simforge-oss/studio-host";
 import { getBrowserRecordingRevisionInputClient } from "../../../lib/scenario/recording-client";
-import { savedSimulationRevisionEvidence } from "../../../lib/scenario/editor/saved-simulation-evidence";
 import { RenderWorkspace } from "./RenderWorkspace";
 import { useOptionalScenarioSession } from "../../scene/ScenarioSessionContext";
-import { SaveStatus } from "../SaveStatus";
+import { SimulationStatus } from "../SimulationStatus";
 
 /**
  * The one entry point into the render workspace, for every route that opens it.
@@ -18,10 +17,9 @@ import { SaveStatus } from "../SaveStatus";
  * actually needs to be immutable, because that is what the worker executes and what the author
  * later reverts to.
  *
- * This used to gate the whole pane behind a "Freeze revision for recording" button. That existed
- * because freezing needs deterministic traffic evidence (`prepareRevisionEvidence`) which only a
- * live browser session can produce — a real precondition, but one that belongs to submitting a
- * render, not to looking at the ones that already exist.
+ * The snapshot needs nothing from the browser: the host simulates the saved draft itself (inline,
+ * or on a CPU runner) and binds that authoritative simulation to the revision. The client sends
+ * only the draft version it is freezing.
  *
  * It takes the whole `document`, not four fields off it. Every render decision — which sensors are
  * offered, the clip length, the authored capture format, which draft version is frozen, which
@@ -50,54 +48,15 @@ export function DocumentRenderWorkspace({
   const studioHost = useStudioHost();
   const scenarioSession = useOptionalScenarioSession();
   const liveSession = scenarioSession?.document?.id === document.id ? scenarioSession : null;
-  const [savedEvidence, setSavedEvidence] = useState<{
-    documentId: string;
-    draftVersion: number;
-    status: "saving" | "saved" | null;
-    error: string | null;
-  } | null>(null);
-  useEffect(() => {
-    if (initialRevisionId || liveSession) return;
-    const abort = new AbortController();
-    const identity = { documentId: document.id, draftVersion: document.draftVersion };
-    setSavedEvidence(null);
-    void studioHost.projects.getSimulationPreview(document.id, abort.signal).then((preview) => {
-      if (abort.signal.aborted) return;
-      const saved = preview?.draftVersion === document.draftVersion;
-      setSavedEvidence({
-        ...identity,
-        status: saved ? "saved" : null,
-        error: saved ? null : "No saved simulation for this version. Retry to prepare it in the background.",
-      });
-    }).catch((reason: unknown) => {
-      if (!abort.signal.aborted) setSavedEvidence({ ...identity, status: null, error: String(reason) });
-    });
-    return () => abort.abort();
-  }, [document.id, document.draftVersion, initialRevisionId, liveSession, studioHost]);
-  const retryEvidenceSave = async () => {
-    const identity = { documentId: document.id, draftVersion: document.draftVersion };
-    setSavedEvidence({ ...identity, status: "saving", error: null });
-    try {
-      await savedSimulationRevisionEvidence(studioHost, document);
-      setSavedEvidence({ ...identity, status: "saved", error: null });
-    } catch (reason) {
-      setSavedEvidence({ ...identity, status: null, error: String(reason) });
-    }
-  };
-  const currentEvidence = savedEvidence?.documentId === document.id
-    && savedEvidence.draftVersion === document.draftVersion ? savedEvidence : null;
-
   /**
    * Freeze the open draft into an immutable snapshot and return its id.
    *
    * Idempotent per draft version. The document's latest snapshot is checked first: when it was
    * frozen from the draft version the author is looking at, it is the execution package already
-   * and is reused without touching any session. Only a changed or never-frozen draft needs
-   * deterministic traffic evidence: the live session produces it when the editor holds this very
-   * draft; otherwise — the pane opened from the dataset list, where the editor session is gone —
-   * the same evidence comes from the simulation the editor saved for this draft version.
-   * `studioHost.projects.ensureRevision` then reuses any other snapshot of the same draft version,
-   * so two renders of an unedited scenario share one snapshot instead of minting a duplicate.
+   * and is reused. Otherwise `studioHost.projects.ensureRevision` waits on the host's
+   * authoritative simulation of this draft (memoized by content, so an unedited scenario resolves
+   * at once) and freezes the revision from it; it reuses any other snapshot of the same draft
+   * version, so two renders of an unedited scenario share one snapshot and one simulation.
    */
   const ensureSnapshot = useCallback(
     async (signal?: AbortSignal) => {
@@ -110,21 +69,14 @@ export function DocumentRenderWorkspace({
           return latestRevision.id;
         }
       }
-      const evidence = scenarioSession?.document?.id === document.id
-        ? await scenarioSession.prepareRevisionEvidence(document.id)
-        : await savedSimulationRevisionEvidence(studioHost, document, signal);
-      if (scenarioSession?.document?.id !== document.id && !signal?.aborted) {
-        setSavedEvidence({ documentId: document.id, draftVersion: document.draftVersion, status: "saved", error: null });
-      }
       const result = await studioHost.projects.ensureRevision({
         documentId: document.id,
         expectedDraftVersion: document.draftVersion,
-        evidence,
         signal,
       });
       return result.revisionId;
     },
-    [document, scenarioSession, studioHost],
+    [document, studioHost],
   );
 
   /**
@@ -151,12 +103,10 @@ export function DocumentRenderWorkspace({
 
   return (
     <>
-      {!initialRevisionId ? (
-        <SaveStatus
-          label="Simulation evidence"
-          status={liveSession ? liveSession.playback.savedSimulationStatus : currentEvidence?.status}
-          error={liveSession ? liveSession.playback.savedSimulationError : currentEvidence?.error}
-          onRetry={liveSession ? liveSession.playback.retrySimulationSave : () => void retryEvidenceSave()}
+      {!initialRevisionId && liveSession ? (
+        <SimulationStatus
+          verification={liveSession.playback.simulationVerification}
+          onRetry={liveSession.playback.retrySimulationVerification}
         />
       ) : null}
     <RenderWorkspace

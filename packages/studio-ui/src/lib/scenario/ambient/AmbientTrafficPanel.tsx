@@ -96,8 +96,9 @@ export function AmbientTrafficPanel({ profile, provenance, busy = false, error =
           <div>No background vehicles or traffic engine are running.</div>
         </div> : null}
         {provider === 'sumo' && sumoStatus ? <div style={sumoStatus.phase === 'fallback' ? styles.error : styles.status} data-testid="sumo-traffic-status">
-          <strong>{sumoStatus.phase === 'fallback' ? 'SUMO unavailable' : `SUMO ${sumoStatus.phase}`}</strong>
+          <strong>{sumoStatus.phase === 'fallback' ? 'SUMO preview unavailable' : `SUMO preview ${sumoStatus.phase}`}</strong>
           {sumoStatus.reason ? ` · ${sumoStatus.reason}` : null}
+          <div data-testid="sumo-traffic-authority">Live preview only. Renders and evaluation use the traffic simulated on the server.</div>
           {sumoStatus.phase !== 'fallback' ? <>
             <div>{sumoStatus.actorCount}/{sumoStatus.requestedActorCount ?? sumoStatus.actorCount} active · {sumoStatus.nearbyRouteStarts ?? 0} local route starts · {formatBytes(sumoStatus.heapBytes)} heap</div>
             {(sumoStatus.simulatedActorCount ?? sumoStatus.actorCount) > sumoStatus.actorCount ? <div>{sumoStatus.simulatedActorCount} simulated · presentation capped at {sumoStatus.actorCount}</div> : null}

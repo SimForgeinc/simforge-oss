@@ -162,6 +162,25 @@ export class SimulationHandle {
   }
 }
 
+export interface EngineVersionInfo {
+  /** Engine semantics version: the compatibility identity of every trace. */
+  readonly engineSemVer: string;
+  /** Former name of `engineSemVer`; always the same value. */
+  readonly engineVersion: string;
+  readonly abiVersion: number;
+}
+
+/** Build provenance (`engineBuild()`); never part of a key. */
+export interface EngineBuildInfo {
+  readonly engineSemVer: string;
+  readonly abiVersion: number;
+  readonly sourceRevision: string;
+  readonly rustc: string;
+  readonly profile: string;
+  readonly target: string;
+  readonly buildDigest: string;
+}
+
 export interface RunSimulationOptions extends RunOptions {
   readonly graph: LaneGraph;
 }
@@ -169,9 +188,27 @@ export interface RunSimulationOptions extends RunOptions {
 export class EngineRuntime {
   constructor(readonly module: NativeModule) {}
 
-  /** Engine semantic version and binding ABI version reported by the loaded module. */
-  version(): { readonly engineVersion: string; readonly abiVersion: number } {
-    return { engineVersion: this.module.engineVersion(), abiVersion: this.module.abiVersion() };
+  /**
+   * Engine semantics version and binding ABI version reported by the loaded
+   * module. `engineSemVer` is what caches and simulation keys use; it is
+   * bumped by hand whenever a trace byte can change (CI enforces it with the
+   * golden-trace corpus). `engineVersion` is its former name.
+   */
+  version(): EngineVersionInfo {
+    const engineSemVer = this.module.engineSemVer?.() ?? this.module.engineVersion();
+    return { engineSemVer, engineVersion: engineSemVer, abiVersion: this.module.abiVersion() };
+  }
+
+  /**
+   * Build provenance of the loaded module: source revision, toolchain,
+   * profile, target and a digest over them. Provenance ONLY; never key a
+   * cache or a compatibility decision on it (use `version().engineSemVer`).
+   */
+  build(): EngineBuildInfo {
+    const raw = this.module.engineBuild?.();
+    if (raw) return JSON.parse(raw) as EngineBuildInfo;
+    const { engineSemVer, abiVersion } = this.version();
+    return { engineSemVer, abiVersion, sourceRevision: 'unknown', rustc: 'unknown', profile: 'unknown', target: 'unknown', buildDigest: 'unknown' };
   }
 
   /** Decode a topology index (object or plain/gzip bytes) into a native lane graph. */
@@ -230,6 +267,25 @@ export class EngineRuntime {
     const optionsJson = Object.keys(options).length === 0 ? null : JSON.stringify(options);
     const [generated, provenanceJson] = guard(() => this.module.materializeAmbientTraffic(scenario, graph, JSON.stringify(profile), optionsJson));
     return { scenario: generated, provenance: JSON.parse(provenanceJson) as AmbientTrafficProvenance };
+  }
+
+  /**
+   * The ambient turn-feasibility verdicts this runtime holds for `graph`
+   * (`simforge.ambient-turn-verdicts/v1` JSON), or `null` on runtimes that
+   * predate them. Probing turns dominates the first ambient generation on a
+   * map; persist this beside the map closure, keyed by the closure digest and
+   * `engineSemVer`, and `loadAmbientTurnVerdicts` it in a later session. The
+   * generated population is identical either way.
+   */
+  ambientTurnVerdicts(graph: LaneGraph): string | null {
+    const exporter = this.module.ambientTurnVerdictsJson;
+    return exporter ? guard(() => exporter.call(this.module, graph)) : null;
+  }
+
+  /** Seed the turn-verdict memo from a persisted table; returns the verdicts loaded (0 on older runtimes). Throws on another `engineSemVer`. */
+  loadAmbientTurnVerdicts(json: string): number {
+    const loader = this.module.loadAmbientTurnVerdicts;
+    return loader ? guard(() => loader.call(this.module, json)) : 0;
   }
 
   /** Parse plain or gzip trace bytes, or re-validate an in-memory trace document. */

@@ -516,6 +516,9 @@ type RenderJobRow = {
   resource_request: string | Record<string, unknown> | null;
   worker_attestation: string | Record<string, unknown> | null;
   progress: number;
+  sim_key?: string | null;
+  trace_sha256?: string | null;
+  timeline_sha256?: string | null;
 };
 
 const RENDER_JOB_COLUMNS = `id, workspace_id, revision_id, execution_package_id,
@@ -526,7 +529,7 @@ const RENDER_JOB_COLUMNS = `id, workspace_id, revision_id, execution_package_id,
   job_state, priority, attempt_count, max_attempts, idempotency_key,
   created_at::text AS created_at, updated_at::text AS updated_at,
   started_at::text AS started_at, completed_at::text AS completed_at,
-  failure_code, failure_detail`;
+  failure_code, failure_detail, sim_key, trace_sha256, timeline_sha256`;
 
 function renderJobDto(row: RenderJobRow): ScenarioRenderJobDto {
   const telemetry = parseJsonObject(row.telemetry);
@@ -568,6 +571,9 @@ function renderJobDto(row: RenderJobRow): ScenarioRenderJobDto {
       : null,
     failureCode: row.failure_code,
     failureDetail: row.failure_detail,
+    simulation: row.sim_key && row.trace_sha256
+      ? { simKey: row.sim_key, traceSha256: row.trace_sha256, timelineSha256: row.timeline_sha256 ?? null }
+      : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

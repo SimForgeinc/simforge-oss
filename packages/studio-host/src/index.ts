@@ -18,7 +18,6 @@ export {
 } from "./origins";
 export { ScenarioNameConflict, ScenarioVersionConflict, StudioHostRequestError, STUDIO_HOST_ERROR_MESSAGES } from "./errors";
 export type {
-  MaterializedTrafficUpload,
   StudioArtifactService,
   StudioHostServices,
   StudioJobService,

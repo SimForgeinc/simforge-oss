@@ -19,6 +19,7 @@ import {
   reserveCompilerOutputs,
 } from "../compiler-control-store";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
+import { scenarioInstanceEnvelope } from "@simforge-oss/playback";
 import { canonicalJsonSha256, sha256, scenarioId } from "../core";
 import type { ScenarioCpuJobFamily, ScenarioJobFamily } from "./contracts";
 import {
@@ -113,10 +114,11 @@ type BrowserRenderSource = Candidate & {
   xosc_key: string;
   xosc_sha256: string;
   xosc_size: number;
-  preview_bucket: string;
-  preview_key: string;
-  preview_sha256: string;
-  preview_size: number;
+  /** The authoritative simulation this render replays (trace + resolution record). */
+  sim_bucket: string;
+  sim_trace_key: string;
+  sim_resolution_key: string;
+  sim_trace_sha256: string;
 };
 
 type BrowserAssetMember = {
@@ -150,17 +152,20 @@ async function browserClaimPayload(source: BrowserRenderSource) {
     throw new Error("browser_render_map_manifest_missing");
   }
 
-  const storedPreview = Buffer.from(
-    await getS3ObjectBytes(source.preview_bucket, source.preview_key),
+  // The authoritative simulation, not a browser upload: its resolution record
+  // rebuilds the exact instance the trace was simulated from.
+  const gunzipObject = async (key: string) => {
+    const stored = Buffer.from(await getS3ObjectBytes(source.sim_bucket, key));
+    return parseJsonObject((stored[0] === 0x1f && stored[1] === 0x8b ? gunzipSync(stored) : stored).toString("utf8"));
+  };
+  const resolution = await gunzipObject(source.sim_resolution_key);
+  const trace = await gunzipObject(source.sim_trace_key);
+  const input = parseJsonObject(resolution.resolvedInput as Record<string, unknown>);
+  const instance = scenarioInstanceEnvelope(
+    parseJsonObject(resolution.materialization as Record<string, unknown>),
+    input as unknown as Parameters<typeof scenarioInstanceEnvelope>[1],
+    resolution.ambientTraffic as Parameters<typeof scenarioInstanceEnvelope>[2],
   );
-  const decodedPreview =
-    storedPreview[0] === 0x1f && storedPreview[1] === 0x8b
-      ? gunzipSync(storedPreview)
-      : storedPreview;
-  const storedPlayback = parseJsonObject(decodedPreview.toString("utf8"));
-  const instance = parseJsonObject(storedPlayback.instance as Record<string, unknown>);
-  const input = parseJsonObject(instance.input as Record<string, unknown>);
-  const trace = parseJsonObject(storedPlayback.trace as Record<string, unknown>);
   const ticks = parseJsonObject(trace.ticks as Record<string, unknown>);
   const previewTimes = Array.isArray(ticks.t)
     ? ticks.t.filter((value): value is number => typeof value === "number" && Number.isFinite(value))
@@ -189,7 +194,7 @@ async function browserClaimPayload(source: BrowserRenderSource) {
     actors,
     props: Array.isArray(input.props) ? input.props : [],
     signals: [],
-    source: { instanceName: "saved scenario", traceName: "saved simulation" },
+    source: { instanceName: "authoritative scenario", traceName: "authoritative simulation" },
     startTime: previewTimes[0] ?? 0,
     endTime: previewTimes.at(-1) ?? 0,
   };
@@ -650,8 +655,8 @@ async function claimValidationOrPostprocess(input: {
                 j.render_intent::text AS render_intent, j.attempt_count,
                 xosc.storage_bucket AS xosc_bucket, xosc.storage_key AS xosc_key,
                 xosc.sha256 AS xosc_sha256, xosc.byte_length AS xosc_size,
-                preview.storage_bucket AS preview_bucket, preview.storage_key AS preview_key,
-                preview.sha256 AS preview_sha256, preview.byte_length AS preview_size
+                sim.storage_bucket AS sim_bucket, sim.trace_storage_key AS sim_trace_key,
+                sim.resolution_storage_key AS sim_resolution_key, sim.trace_sha256 AS sim_trace_sha256
            FROM simforge.render_jobs j
            JOIN simforge.revisions r
              ON r.id = j.revision_id AND r.workspace_id = j.workspace_id
@@ -666,16 +671,13 @@ async function claimValidationOrPostprocess(input: {
            JOIN simforge.artifacts xosc
              ON xosc.id = ep.xosc_artifact_id AND xosc.workspace_id = ep.workspace_id
             AND xosc.artifact_state = 'available'
-           JOIN simforge.simulation_previews simulation
-             ON simulation.document_id = r.document_id
-            AND simulation.workspace_id = r.workspace_id
-            AND simulation.source_draft_version = r.source_draft_version
-            AND simulation.source_content_sha256 = r.content_sha256
-            AND simulation.map_version_id = r.map_version_id
-           JOIN simforge.artifacts preview
-             ON preview.id = simulation.artifact_id
-            AND preview.workspace_id = simulation.workspace_id
-            AND preview.artifact_state = 'available'
+           JOIN simforge.sim_results sim
+             ON sim.workspace_id = j.workspace_id
+            AND sim.sim_key = COALESCE(j.sim_key, (
+              SELECT rs.sim_key FROM simforge.revision_simulations rs
+               WHERE rs.workspace_id = r.workspace_id AND rs.revision_id = r.id
+               ORDER BY rs.created_at DESC LIMIT 1
+            ))
           WHERE j.id = :job_id AND j.job_state = 'queued' AND j.cancel_requested_at IS NULL
             AND j.attempt_count < j.max_attempts
             AND j.job_mode = 'browser_render'

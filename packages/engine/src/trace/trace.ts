@@ -372,11 +372,20 @@ export interface ActorPhysicsBackendProvenance {
   readonly profile: ActorKind | 'fixed-static';
 }
 
+/** Who authored a body; traffic is baked into actor data, never re-run downstream. */
+export type TraceActorOrigin = 'authored' | 'native-ambient' | 'sumo';
+
 export interface TraceActorMetadata {
   readonly kind: ActorKind;
   readonly dims: Dims;
   readonly static: boolean;
   readonly tags: readonly string[];
+  /**
+   * Emitted by every current engine (tags `sumo`/`sumo:*` → `sumo`; tags
+   * `ambient`/`ambient:*` or `ambientActorIds` membership → `native-ambient`;
+   * else `authored`). Absent on older traces: derive it with the same rule.
+   */
+  readonly origin?: TraceActorOrigin;
 }
 
 export interface SimTrace {

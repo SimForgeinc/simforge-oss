@@ -96,6 +96,12 @@ export interface NativeScenarioInput {
 export interface NativeMapBundle {
   readonly mapId: string;
   readonly digest: string;
+  /**
+   * `simforge.map-closure/v1`: identity of everything a simulation reads from
+   * this map (topology with speed limits, static colliders after the
+   * road-boundary rule, signal catalog). Absent on runtimes built before 0.8.0.
+   */
+  readonly closureDigest?: string;
   readonly graph: NativeLaneGraph;
   /** `MapControlPlan` JSON derived from the bundle's signal catalog. */
   controlPlanJson(): string;
@@ -447,11 +453,20 @@ export interface NativeModule {
    * Returns the generated scenario and its `AmbientTrafficProvenance` JSON.
    */
   materializeAmbientTraffic(input: NativeScenarioInput, graph: NativeLaneGraph, profileJson: string, optionsJson?: string | null): [NativeScenarioInput, string];
+  /** `simforge.ambient-turn-verdicts/v1` table of the turn verdicts this module holds for `graph` (absent before engine 0.9.0). */
+  ambientTurnVerdictsJson?(graph: NativeLaneGraph): string;
+  /** Seed this module's turn-verdict memo from a persisted table; refuses another ENGINE_SEM_VER. */
+  loadAmbientTurnVerdicts?(json: string): number;
 
   parseMapSignalCatalog(xodr: string, geojsonJson: string): string;
   contentHash(document: string): string;
   sha256Hex(data: Uint8Array): string;
+  /** Former name of `engineSemVer()`; always the same value. */
   engineVersion(): string;
+  /** Engine semantics version (absent on runtimes built before 0.8.0; use `engineVersion()`). */
+  engineSemVer?(): string;
+  /** Build provenance JSON (absent on runtimes built before 0.8.0). Never a cache key. */
+  engineBuild?(): string;
   abiVersion(): number;
   actionFields(): string[];
 }

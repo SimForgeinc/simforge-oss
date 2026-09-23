@@ -103,7 +103,19 @@ pub fn sha256_hex(data: Uint8Array) -> String {
 
 #[napi]
 pub fn engine_version() -> String {
-    simforge_bindings_common::ENGINE_VERSION.to_owned()
+    simforge_bindings_common::ENGINE_SEM_VER.to_owned()
+}
+
+/// Engine semantics version; `engineVersion()` is its former name.
+#[napi]
+pub fn engine_sem_ver() -> String {
+    simforge_bindings_common::ENGINE_SEM_VER.to_owned()
+}
+
+/// Build provenance JSON (never a cache key).
+#[napi]
+pub fn engine_build() -> String {
+    simforge_bindings_common::engine_build_json()
 }
 
 #[napi]
@@ -458,6 +470,11 @@ impl JsMapBundle {
     pub fn digest(&self) -> String {
         self.inner.digest().to_owned()
     }
+    /// `simforge.map-closure/v1`: identity of everything a simulation reads from this map.
+    #[napi(getter)]
+    pub fn closure_digest(&self) -> String {
+        self.inner.bundle().closure_digest().to_owned()
+    }
     #[napi(getter)]
     pub fn graph(&self) -> JsLaneGraph {
         JsLaneGraph {
@@ -789,6 +806,18 @@ pub fn materialize_ambient_traffic(
     )
     .js()?;
     Ok((JsScenarioInput { inner: scenario }, provenance))
+}
+
+/// Ambient turn-feasibility verdicts held for `graph` (`simforge.ambient-turn-verdicts/v1`); persist beside the map closure.
+#[napi]
+pub fn ambient_turn_verdicts_json(graph: &JsLaneGraph) -> String {
+    rt::ambient_turn_verdicts_json(&graph.inner)
+}
+
+/// Load persisted ambient turn verdicts into this process; returns the count. Refuses another ENGINE_SEM_VER.
+#[napi]
+pub fn load_ambient_turn_verdicts(json: String) -> Result<u32> {
+    rt::load_ambient_turn_verdicts(&json).map(|n| n as u32).js()
 }
 
 /// The `t = 0` feasibility guards alone; returns the `SimIssue[]` JSON (no clip run).

@@ -140,6 +140,7 @@ export class ScenarioWorkerClient {
             ambientTraffic: message.ambientTraffic,
             mapCollisions: deepFreeze(message.mapCollisions),
             openScenario: deepFreeze(message.openScenario),
+            ...(message.traceSha256 ? { traceSha256: message.traceSha256 } : {}),
           };
           this.runtimeByInput.set(contentHash(result.instance.input), message.runtimeKey);
           resolve(result);

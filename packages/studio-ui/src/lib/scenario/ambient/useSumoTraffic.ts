@@ -48,7 +48,7 @@ import {
   signalNetworkForScenario,
   SUMO_RUNTIME_MODULE_URL,
 } from "./sumoAssets";
-import type { SumoDemandFocus } from "./sumoAssets";
+import type { SumoDemandFocus, SumoPreviewSignalBook } from "./sumoAssets";
 
 export type SumoExternalActorView = SumoAuthoredOccupancySource & {
   readonly render?: ActorView;
@@ -72,6 +72,11 @@ export interface UseSumoTrafficOptions {
   /** A fresh recorder owned by one explicit, full Play run. */
   readonly materializedTrafficCapture?: BrowserMaterializedTrafficCapture;
   readonly onMaterializedTrafficComplete?: (artifact: MaterializedTrafficArtifactEnvelope) => void;
+  /**
+   * The SimForge signal book SUMO's traffic lights follow (see
+   * `SumoPreviewSignalBook`). Absent, SUMO runs the network's own programs.
+   */
+  readonly signalBook?: SumoPreviewSignalBook;
 }
 
 export function isSumoTrafficBootstrapReady(
@@ -96,10 +101,18 @@ export function isSumoTrafficBootstrapReady(
 export function sumoTrafficBootstrapKey(
   options: Pick<
     UseSumoTrafficOptions,
-    "enabled" | "map" | "profile" | "demandFocuses"
+    "enabled" | "map" | "profile" | "demandFocuses" | "signalBook"
   >,
 ): string {
   return contentHash({
+    signalBook: options.signalBook
+      ? {
+          programs: options.signalBook.programs,
+          roadControls: options.signalBook.roadControls,
+          header: options.signalBook.trace.header,
+          signals: options.signalBook.trace.ticks.signals ?? {},
+        }
+      : null,
     enabled: options.enabled,
     mapVersionId: options.map.mapVersionId,
     sourceMapId: options.map.sourceMapId,
@@ -194,6 +207,7 @@ export function useSumoTraffic(
     const assetsAbort = new AbortController();
     const provider = new SumoWasmTrafficProvider(SUMO_RUNTIME_MODULE_URL);
     const active: SumoTrafficRun = {
+      signalBook: options.signalBook,
       provider,
       generation: 0,
       sequence: 0,
@@ -249,6 +263,7 @@ export function useSumoTraffic(
       assetsAbort.signal,
       undefined,
       options.allSignalsGreen,
+      options.signalBook,
     )
       .then(
         async ({
@@ -786,6 +801,7 @@ export function useSumoTraffic(
       accelerated,
       20,
       allSignalsGreen,
+      active.signalBook,
     );
     const payload = {
       ...active.payload,
@@ -955,6 +971,7 @@ export function isCurrentSumoGeneration(
 }
 
 interface SumoTrafficRun {
+  readonly signalBook?: SumoPreviewSignalBook;
   readonly provider: SumoWasmTrafficProvider;
   generation: number;
   sequence: number;

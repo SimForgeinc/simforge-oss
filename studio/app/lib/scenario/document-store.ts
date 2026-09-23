@@ -1,8 +1,9 @@
 import { cacheLife, cacheTag } from "next/cache";
 import type { AppContext } from "@/app/lib/db/app-context";
-import { parseTemplate, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
-import { resolveScenarioMap } from "@simforge-oss/studio-host";
-import { queryOne, queryRows, withTransaction } from "@/app/lib/db/data-api";
+import { parseTemplate, withPinnedSimulation, type ScenarioTemplateV2 } from "@simforge-oss/scenario";
+import { ScenarioMapResolutionError } from "@simforge-oss/studio-host";
+import { requireScenarioMapPin, verifyScenarioMapPin, type ScenarioMapPin } from "./map-pin";
+import { queryOne, queryRows, withTransaction, type Transaction } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 import {
   type ScenarioAmbientProvenance,
@@ -16,6 +17,12 @@ import {
   MAP_GRAPH_SIDECARS,
 } from "./contracts";
 import { canonicalContentSha256, scenarioId } from "./core";
+import {
+  linkRevisionSimulation,
+  readSimulationRecord,
+  resolveSimulation,
+} from "./sim-result-store";
+import type { ScenarioSimulationStatusDto } from "@simforge-oss/studio-host";
 import { simforgeEnv } from "@/lib/simforge-env";
 
 type DocumentRow = {
@@ -29,6 +36,8 @@ type DocumentRow = {
   map_version_id: string | null;
   map_source_map_id: string | null;
   map_xodr_sha256: string | null;
+  map_closure_sha256: string | null;
+  asset_catalog_version_id: string | null;
   dataset_id: string;
   authoring_quality_id: ScenarioDocumentDto["authoringQualityId"];
   created_at: string;
@@ -58,6 +67,7 @@ const DOCUMENT_SELECT = `
     dr.content_sha256,
     dr.canonical_content::text AS canonical_content, dr.map_version_id,
     mv.source_map_asset_id AS map_source_map_id, mv.xodr_sha256 AS map_xodr_sha256,
+    dr.map_closure_sha256, dr.asset_catalog_version_id,
     d.dataset_id, dr.authoring_quality_id,
     d.created_at::text AS created_at, d.updated_at::text AS updated_at,
     d.latest_revision_id
@@ -78,6 +88,8 @@ function documentDto(row: DocumentRow): ScenarioDocumentDto {
     mapVersionId: row.map_version_id,
     mapSourceMapId: row.map_source_map_id,
     mapXodrSha256: row.map_xodr_sha256,
+    mapClosureSha256: row.map_closure_sha256,
+    assetCatalogVersionId: row.asset_catalog_version_id,
     datasetId: row.dataset_id,
     authoringQualityId: row.authoring_quality_id,
     createdAt: row.created_at,
@@ -349,7 +361,7 @@ export async function duplicateScenarioDocument(
 
     const copyId = scenarioId("uscn");
     const derivation = input.derivation ?? "copy";
-    const content = input.content ?? source.content;
+    const content = withStoredSimulation(input.content ?? source.content, source.content);
     const title = (input.title ?? `${source.title} Copy`).slice(0, 200);
     await tx.execute(
       `INSERT INTO simforge.documents (
@@ -381,10 +393,12 @@ export async function duplicateScenarioDocument(
     await tx.execute(
       `INSERT INTO simforge.drafts (
          document_id, workspace_id, schema_version, canonical_content,
-         content_sha256, map_version_id, authoring_quality_id, updated_by_user_id
+         content_sha256, map_version_id, map_closure_sha256, asset_catalog_version_id,
+         authoring_quality_id, updated_by_user_id
        ) VALUES (
          :document_id, :workspace_id, :schema_version, CAST(:content AS jsonb),
-         :content_sha256, :map_version_id, :authoring_quality_id, :user_id
+         :content_sha256, :map_version_id, :map_closure_sha256, :asset_catalog_version_id,
+         :authoring_quality_id, :user_id
        )`,
       {
         document_id: copyId,
@@ -392,7 +406,10 @@ export async function duplicateScenarioDocument(
         schema_version: source.schemaVersion,
         content,
         content_sha256: canonicalContentSha256(content),
+        // A copy inherits the source's pin verbatim: same version, closure and catalog.
         map_version_id: source.mapVersionId,
+        map_closure_sha256: source.mapClosureSha256 ?? null,
+        asset_catalog_version_id: source.assetCatalogVersionId ?? null,
         authoring_quality_id: source.authoringQualityId,
         user_id: context.userId,
       },
@@ -618,6 +635,8 @@ export async function createCrossMapScenarioDocument(
       { target_map_version_id: input.targetMapVersionId },
     );
     if (!targetMap) return { kind: "not_found" as const };
+    const targetPin = await requireScenarioMapPin(tx, input.targetMapVersionId);
+    const childContent = withStoredSimulation(input.content);
 
     const childId = scenarioId("uscn");
     const receiptId = scenarioId("uvtr");
@@ -648,18 +667,22 @@ export async function createCrossMapScenarioDocument(
     await tx.execute(
       `INSERT INTO simforge.drafts (
          document_id, workspace_id, schema_version, canonical_content, content_sha256,
-         map_version_id, authoring_quality_id, updated_by_user_id
+         map_version_id, map_closure_sha256, asset_catalog_version_id,
+         authoring_quality_id, updated_by_user_id
        ) VALUES (
          :document_id, :workspace_id, :schema_version, CAST(:content AS jsonb), :content_sha256,
-         :target_map_version_id, :authoring_quality_id, :user_id
+         :target_map_version_id, :map_closure_sha256, :asset_catalog_version_id,
+         :authoring_quality_id, :user_id
        )`,
       {
         document_id: childId,
         workspace_id: context.workspaceId,
         schema_version: source.schemaVersion,
-        content: input.content,
-        content_sha256: canonicalContentSha256(input.content),
+        content: childContent,
+        content_sha256: canonicalContentSha256(childContent),
         target_map_version_id: input.targetMapVersionId,
+        map_closure_sha256: targetPin.mapClosureSha256,
+        asset_catalog_version_id: targetPin.assetCatalogVersionId,
         authoring_quality_id: source.authoringQualityId,
         user_id: context.userId,
       },
@@ -788,6 +811,25 @@ function withDescription(content: ScenarioTemplateV2, description: string | unde
   return { ...content, meta: { ...content.meta, description } };
 }
 
+/**
+ * The content a write stores. Every stored draft carries its pinned
+ * `simulation` block: a client that sends content without one (an older
+ * bundle, the CLI) keeps the block the draft already has, so a save never
+ * re-derives the seed from a renamed title.
+ */
+function withStoredSimulation(content: ScenarioTemplateV2, current?: ScenarioTemplateV2): ScenarioTemplateV2 {
+  if (content.simulation) return content;
+  if (current?.simulation) return { ...content, simulation: current.simulation };
+  return withPinnedSimulation(content);
+}
+
+async function mapPinFor(
+  tx: Transaction,
+  mapVersionId: string | null | undefined,
+): Promise<ScenarioMapPin | null> {
+  return mapVersionId ? requireScenarioMapPin(tx, mapVersionId) : null;
+}
+
 export async function createScenarioDocument(
   context: AppContext,
   input: {
@@ -801,9 +843,10 @@ export async function createScenarioDocument(
   },
 ) {
   const documentId = scenarioId("uscn");
-  const content = withDescription(input.content, input.description);
+  const content = withStoredSimulation(withDescription(input.content, input.description));
   const digest = canonicalContentSha256(content);
   return withTransaction(async (tx) => {
+    const pin = await mapPinFor(tx, input.mapVersionId);
     await tx.execute(
       `INSERT INTO simforge.documents (
          id, workspace_id, title, schema_version, map_version_id, dataset_id,
@@ -825,10 +868,12 @@ export async function createScenarioDocument(
     await tx.execute(
       `INSERT INTO simforge.drafts (
          document_id, workspace_id, schema_version, canonical_content,
-         content_sha256, map_version_id, authoring_quality_id, updated_by_user_id
+         content_sha256, map_version_id, map_closure_sha256, asset_catalog_version_id,
+         authoring_quality_id, updated_by_user_id
        ) VALUES (
          :document_id, :workspace_id, :schema_version, CAST(:content AS jsonb),
-         :content_sha256, :map_version_id, :authoring_quality_id, :user_id
+         :content_sha256, :map_version_id, :map_closure_sha256, :asset_catalog_version_id,
+         :authoring_quality_id, :user_id
        )`,
       {
         document_id: documentId,
@@ -837,6 +882,8 @@ export async function createScenarioDocument(
         content,
         content_sha256: digest,
         map_version_id: input.mapVersionId ?? null,
+        map_closure_sha256: pin?.mapClosureSha256 ?? null,
+        asset_catalog_version_id: pin?.assetCatalogVersionId ?? null,
         authoring_quality_id: input.authoringQualityId,
         user_id: context.userId,
       },
@@ -877,14 +924,27 @@ export async function updateScenarioDocument(
       return { kind: "conflict" as const, current };
     }
 
-    const content = withDescription(input.content ?? current.content, input.description);
+    const content = withStoredSimulation(
+      withDescription(input.content ?? current.content, input.description),
+      current.content,
+    );
     const schemaVersion = input.schemaVersion ?? current.schemaVersion;
     const mapVersionId = "mapVersionId" in input ? input.mapVersionId ?? null : current.mapVersionId;
+    // Naming a map version is the explicit re-pin: it moves the document to
+    // that version (or re-adopts the same one) and captures the version's
+    // closure digest and asset catalog as they are now. An ordinary save names
+    // none and keeps the existing pin untouched.
+    const repinned = "mapVersionId" in input && input.mapVersionId !== undefined;
+    const pin = repinned
+      ? await mapPinFor(tx, mapVersionId)
+      : { mapClosureSha256: current.mapClosureSha256 ?? null, assetCatalogVersionId: current.assetCatalogVersionId ?? null };
     const nextContentSha256 = canonicalContentSha256(content);
     const simulationInputsUnchanged =
       nextContentSha256 === current.contentSha256
       && schemaVersion === current.schemaVersion
-      && mapVersionId === current.mapVersionId;
+      && mapVersionId === current.mapVersionId
+      && (pin?.mapClosureSha256 ?? null) === (current.mapClosureSha256 ?? null)
+      && (pin?.assetCatalogVersionId ?? null) === (current.assetCatalogVersionId ?? null);
     if (simulationInputsUnchanged) {
       // Metadata/title autosaves must not invalidate deterministic simulation
       // evidence. A draft version identifies execution inputs, not a no-op
@@ -931,6 +991,8 @@ export async function updateScenarioDocument(
            canonical_content = CAST(:content AS jsonb),
            content_sha256 = :content_sha256,
            map_version_id = :map_version_id,
+           map_closure_sha256 = :map_closure_sha256,
+           asset_catalog_version_id = :asset_catalog_version_id,
            authoring_quality_id = :authoring_quality_id,
            updated_by_user_id = :user_id,
            updated_at = NOW()
@@ -942,6 +1004,8 @@ export async function updateScenarioDocument(
         content,
         content_sha256: canonicalContentSha256(content),
         map_version_id: mapVersionId,
+        map_closure_sha256: pin?.mapClosureSha256 ?? null,
+        asset_catalog_version_id: pin?.assetCatalogVersionId ?? null,
         authoring_quality_id: input.authoringQualityId ?? current.authoringQualityId,
         user_id: context.userId,
         workspace_id: context.workspaceId,
@@ -992,18 +1056,110 @@ export async function softDeleteScenarioDocument(context: AppContext, documentId
   return rows.length > 0;
 }
 
+/** How long a revision commit waits on a simulation another executor holds before answering 202. */
+const REVISION_SIMULATION_WAIT_MS = 20_000;
+
+/**
+ * The traffic evidence and ambient provenance a revision binds, derived by the
+ * authority from its own trace. Nothing the client uploads takes part.
+ */
+async function authoritativeRevisionEvidence(
+  context: AppContext,
+  subject: { content: ScenarioTemplateV2; contentSha256: string; mapVersionId: string },
+): Promise<
+  | { kind: "ready"; simKey: string; engineSemVer: string; ambient: ScenarioAmbientProvenance; traffic: ScenarioMaterializedTrafficReference }
+  | { kind: "pending"; status: ScenarioSimulationStatusDto }
+  | { kind: "failed"; status: ScenarioSimulationStatusDto | null; code: string; message: string }
+> {
+  const status = await resolveSimulation({
+    workspaceId: context.workspaceId,
+    userId: context.userId,
+    canonicalContent: subject.content,
+    contentSha256: subject.contentSha256,
+    mapVersionId: subject.mapVersionId,
+  }, { waitMs: REVISION_SIMULATION_WAIT_MS });
+  if (status.state === "failed") return { kind: "failed", status, code: status.failureCode, message: status.message ?? status.failureCode };
+  if (status.state !== "succeeded") return { kind: "pending", status };
+  const record = await readSimulationRecord(context.workspaceId, status.result.simKey);
+  const ambient = record ? parseJsonObject(record.ambient_provenance as string | Record<string, unknown> | null) : {};
+  if (!record?.traffic_artifact_id || !ambient.mode) {
+    return {
+      kind: "failed",
+      status,
+      code: "sumo_traffic_requires_worker",
+      message: "This scenario's SUMO traffic is produced by the SUMO worker step, which has not run for this simulation.",
+    };
+  }
+  const artifact = await queryOne<{ sha256: string; byte_length: number | string; source_map_asset_id: string }>(
+    `SELECT a.sha256, a.byte_length, mv.source_map_asset_id
+       FROM simforge.artifacts a JOIN simforge.map_versions mv ON mv.id = :map_version_id
+      WHERE a.id = :artifact_id AND a.workspace_id = :workspace_id AND a.artifact_state = 'available'`,
+    { artifact_id: record.traffic_artifact_id, workspace_id: context.workspaceId, map_version_id: subject.mapVersionId },
+  );
+  if (!artifact) return { kind: "failed", status, code: "simulation_traffic_missing", message: "The simulation's traffic artifact is unavailable." };
+  return {
+    kind: "ready",
+    simKey: record.sim_key,
+    engineSemVer: record.engine_sem_ver,
+    ambient: ambient as ScenarioAmbientProvenance,
+    traffic: {
+      artifactId: record.traffic_artifact_id,
+      sha256: artifact.sha256,
+      sizeBytes: Number(artifact.byte_length),
+      sourceInputDigest: record.resolved_input_digest,
+      mapAssetId: artifact.source_map_asset_id,
+      mapVersionId: subject.mapVersionId,
+    },
+  };
+}
+
+/**
+ * Freeze the draft into an immutable revision bound to its authoritative
+ * simulation. The simulation is resolved first (memoized, joined or executed
+ * inline); the client supplies only the draft version it is committing.
+ * `simulation_pending` means another executor (a CPU runner) still holds it:
+ * the caller retries the same commit.
+ */
 export async function createScenarioRevision(
   context: AppContext,
   documentId: string,
-  input: { expectedVersion: number; idempotencyKey?: string; ambient: ScenarioAmbientProvenance; materializedTraffic?: ScenarioMaterializedTrafficReference },
+  input: { expectedVersion: number; idempotencyKey?: string },
 ) {
-  const installedMaps = await listScenarioMapDescriptors(context);
+  const snapshot = await getScenarioDocument(context, documentId);
+  if (!snapshot) return { kind: "not_found" as const };
+  if (snapshot.draftVersion !== input.expectedVersion) return { kind: "conflict" as const, current: snapshot };
+  // The draft's PINNED map version, exactly as the editor simulates it; the
+  // transaction below re-verifies the pin under the row lock.
+  if (!snapshot.mapVersionId) {
+    throw new ScenarioMapResolutionError(
+      "scenario_map_absent",
+      "This scenario is not pinned to a map version; open it in the editor and choose a map before committing.",
+      null,
+    );
+  }
+  const mapVersionId = snapshot.mapVersionId;
+  const evidence = await authoritativeRevisionEvidence(context, {
+    content: snapshot.content,
+    contentSha256: snapshot.contentSha256,
+    mapVersionId,
+  });
+  if (evidence.kind === "pending") return { kind: "simulation_pending" as const, status: evidence.status };
+  if (evidence.kind === "failed") {
+    return { kind: "simulation_failed" as const, status: evidence.status, code: evidence.code, message: evidence.message };
+  }
+  const ambientInput = evidence.ambient;
+  const traffic = evidence.traffic;
   return withTransaction(async (tx) => {
-    const traffic = input.materializedTraffic;
+    // Lock the document and its draft for the whole commit: the draft read, the
+    // idempotency/draft-version checks and the revision-number allocation below
+    // happen under this lock, so two concurrent commits serialize instead of
+    // both computing the same MAX+1 (the unique key would then fail one of them
+    // with a 500).
     const draft = await tx.queryOne<DocumentRow>(
       `${DOCUMENT_SELECT}
        WHERE d.workspace_id = :workspace_id AND d.id = :document_id AND d.deleted_at IS NULL
-       LIMIT 1`,
+       LIMIT 1
+       FOR UPDATE OF d, dr`,
       { workspace_id: context.workspaceId, document_id: documentId },
     );
     if (!draft) return { kind: "not_found" as const };
@@ -1011,34 +1167,15 @@ export async function createScenarioRevision(
     if (current.draftVersion !== input.expectedVersion) {
       return { kind: "conflict" as const, current };
     }
-    // A revision freezes today's compatible publication; historical revisions
-    // remain immutable. A draft's version records the geometry it was authored on.
-    current.mapVersionId = resolveScenarioMap(current, installedMaps).mapVersionId;
-    if (traffic) {
-      const bound = await tx.queryOne<{ id: string }>(
-        `SELECT id FROM simforge.artifacts
-         WHERE id = :artifact_id AND workspace_id = :workspace_id
-           AND artifact_kind = 'materialized-traffic' AND artifact_state = 'available'
-           AND sha256 = :sha256 AND byte_length = :size_bytes
-           AND metadata->>'documentId' = :document_id
-           AND metadata->>'sourceInputDigest' = :source_input_digest
-           AND metadata->>'mapAssetId' = :map_asset_id
-           AND metadata->>'mapVersionId' = :map_version_id LIMIT 1`,
-        {
-          artifact_id: traffic.artifactId, workspace_id: context.workspaceId, sha256: traffic.sha256,
-          size_bytes: traffic.sizeBytes, document_id: documentId, source_input_digest: traffic.sourceInputDigest,
-          map_asset_id: traffic.mapAssetId, map_version_id: traffic.mapVersionId,
-        },
-      );
-      // A refusal, not a fault: the caller named traffic evidence that does not
-      // bind to this document at this map version, which is a thing a client can
-      // be told and fix. Thrown, it left the route as a bodiless 500 and the
-      // typed client reported `request_failed_500` — indistinguishable from the
-      // host being broken. Nothing has been written at this point, so returning
-      // commits an empty transaction rather than needing a rollback.
-      if (!bound || traffic.mapVersionId !== current.mapVersionId) {
-        return { kind: "traffic_binding_invalid" as const };
-      }
+    // A revision freezes the draft's PINNED map version, exactly as the editor
+    // simulated it. It never re-resolves to a newer publication; a pinned
+    // version that is retired or was republished with different content is an
+    // explicit error, and moving to another version is an explicit re-pin.
+    const mapPin = await verifyScenarioMapPin(tx, current);
+    // The simulation was resolved from a read outside this transaction; the
+    // draft under the row lock must still be exactly what was simulated.
+    if (current.contentSha256 !== snapshot.contentSha256 || mapPin.mapVersionId !== mapVersionId) {
+      return { kind: "conflict" as const, current };
     }
     if (input.idempotencyKey) {
       const existing = await tx.queryOne<RevisionRow>(
@@ -1049,7 +1186,10 @@ export async function createScenarioRevision(
           idempotency_key: input.idempotencyKey,
         },
       );
-      if (existing) return { kind: "created" as const, revision: revisionDto(existing) };
+      if (existing) {
+        await linkRevisionSimulation(tx, { workspaceId: context.workspaceId, revisionId: existing.id, simKey: evidence.simKey, engineSemVer: evidence.engineSemVer, origin: "lazy" });
+        return { kind: "created" as const, revision: revisionDto(existing) };
+      }
     }
     const existingDraftRevision = await tx.queryOne<RevisionRow>(
       revisionSelect(
@@ -1062,6 +1202,9 @@ export async function createScenarioRevision(
       },
     );
     if (existingDraftRevision) {
+      // A revision of this draft version predating its simulation binds to it
+      // now; one committed through this path already has its binding.
+      await linkRevisionSimulation(tx, { workspaceId: context.workspaceId, revisionId: existingDraftRevision.id, simKey: evidence.simKey, engineSemVer: evidence.engineSemVer, origin: "lazy" });
       if (!["failed", "cancelled"].includes(existingDraftRevision.export_state)) {
         return { kind: "created" as const, revision: revisionDto(existingDraftRevision) };
       }
@@ -1114,6 +1257,7 @@ export async function createScenarioRevision(
       `INSERT INTO simforge.revisions (
          id, workspace_id, document_id, revision_number, source_draft_version,
          schema_version, canonical_content, content_sha256, map_version_id,
+         map_closure_sha256, asset_catalog_version_id,
          compiler_version, openscenario_profile, idempotency_key, created_by_user_id,
          ambient_mode, ambient_runtime_version, ambient_sumo_version, ambient_network_sha256,
          ambient_seed, ambient_config, ambient_config_sha256, ambient_result_sha256,
@@ -1122,6 +1266,7 @@ export async function createScenarioRevision(
        ) VALUES (
          :id, :workspace_id, :document_id, :revision_number, :source_draft_version,
          :schema_version, CAST(:content AS jsonb), :content_sha256, :map_version_id,
+         :map_closure_sha256, :asset_catalog_version_id,
          :compiler_version, :openscenario_profile, :idempotency_key, :user_id,
          :ambient_mode, :ambient_runtime_version, :ambient_sumo_version, :ambient_network_sha256,
          :ambient_seed, CAST(:ambient_config AS jsonb), :ambient_config_sha256, :ambient_result_sha256,
@@ -1137,19 +1282,21 @@ export async function createScenarioRevision(
         schema_version: current.schemaVersion,
         content: current.content,
         content_sha256: canonicalContentSha256(current.content),
-        map_version_id: current.mapVersionId,
+        map_version_id: mapPin.mapVersionId,
+        map_closure_sha256: mapPin.mapClosureSha256,
+        asset_catalog_version_id: mapPin.assetCatalogVersionId,
         compiler_version: compilerVersion,
         openscenario_profile: OPENSCENARIO_NATIVE_PROFILE,
         idempotency_key: input.idempotencyKey ?? null,
         user_id: context.userId,
-        ambient_mode: input.ambient.mode,
-        ambient_runtime_version: input.ambient.mode === "native" ? input.ambient.runtimeVersion : null,
-        ambient_sumo_version: input.ambient.mode === "sumo" ? input.ambient.sumoVersion : null,
-        ambient_network_sha256: input.ambient.mode === "sumo" ? input.ambient.networkSha256 : null,
-        ambient_seed: input.ambient.mode === "disabled" ? null : String(input.ambient.seed),
-        ambient_config: input.ambient.ambientConfig,
-        ambient_config_sha256: input.ambient.configSha256,
-        ambient_result_sha256: input.ambient.resultSha256,
+        ambient_mode: ambientInput.mode,
+        ambient_runtime_version: ambientInput.mode === "native" ? ambientInput.runtimeVersion : null,
+        ambient_sumo_version: ambientInput.mode === "sumo" ? ambientInput.sumoVersion : null,
+        ambient_network_sha256: ambientInput.mode === "sumo" ? ambientInput.networkSha256 : null,
+        ambient_seed: ambientInput.mode === "disabled" ? null : String(ambientInput.seed),
+        ambient_config: ambientInput.ambientConfig,
+        ambient_config_sha256: ambientInput.configSha256,
+        ambient_result_sha256: ambientInput.resultSha256,
         materialized_traffic_artifact_id: traffic?.artifactId ?? null,
         materialized_traffic_sha256: traffic?.sha256 ?? null,
         materialized_traffic_size_bytes: traffic?.sizeBytes ?? null,
@@ -1176,20 +1323,21 @@ export async function createScenarioRevision(
         revision_id: revisionId,
         compiler_version: compilerVersion,
         idempotency_key: input.idempotencyKey ?? `revision:${revisionId}`,
-        ambient_mode: input.ambient.mode,
-        ambient_runtime_version: input.ambient.mode === "native" ? input.ambient.runtimeVersion : null,
-        ambient_sumo_version: input.ambient.mode === "sumo" ? input.ambient.sumoVersion : null,
-        ambient_network_sha256: input.ambient.mode === "sumo" ? input.ambient.networkSha256 : null,
-        ambient_seed: input.ambient.mode === "disabled" ? null : String(input.ambient.seed),
-        ambient_config: input.ambient.ambientConfig,
-        ambient_config_sha256: input.ambient.configSha256,
-        ambient_result_sha256: input.ambient.resultSha256,
+        ambient_mode: ambientInput.mode,
+        ambient_runtime_version: ambientInput.mode === "native" ? ambientInput.runtimeVersion : null,
+        ambient_sumo_version: ambientInput.mode === "sumo" ? ambientInput.sumoVersion : null,
+        ambient_network_sha256: ambientInput.mode === "sumo" ? ambientInput.networkSha256 : null,
+        ambient_seed: ambientInput.mode === "disabled" ? null : String(ambientInput.seed),
+        ambient_config: ambientInput.ambientConfig,
+        ambient_config_sha256: ambientInput.configSha256,
+        ambient_result_sha256: ambientInput.resultSha256,
         materialized_traffic_artifact_id: traffic?.artifactId ?? null,
         materialized_traffic_sha256: traffic?.sha256 ?? null,
         materialized_traffic_size_bytes: traffic?.sizeBytes ?? null,
         materialized_traffic_source_input_digest: traffic?.sourceInputDigest ?? null,
       },
     );
+    await linkRevisionSimulation(tx, { workspaceId: context.workspaceId, revisionId, simKey: evidence.simKey, engineSemVer: evidence.engineSemVer, origin: "commit" });
     await tx.execute(
       `UPDATE simforge.documents
        SET latest_revision_id = :revision_id, updated_by_user_id = :user_id, updated_at = NOW()

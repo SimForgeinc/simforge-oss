@@ -6,7 +6,6 @@ import { useStudioHost } from "../../host";
 import { useCallback, useState } from "react";
 import { Archive } from "lucide-react";
 import { DropdownMenuItem } from "../../components/ui/dropdown-menu";
-import { useOptionalScenarioSession } from "../scene/ScenarioSessionContext";
 
 /**
  * "Export OpenSCENARIO 1.4" on a list row.
@@ -21,9 +20,10 @@ import { useOptionalScenarioSession } from "../scene/ScenarioSessionContext";
  * is XSD-validated against a digest-pinned schema, and an unrepresentable document fails the export
  * rather than silently degrading. The 422 dialog therefore has nothing to ask, and is gone.
  *
- * The three steps are the pipeline, not a wrapper: `studioHost.projects.createRevision` freezes an immutable
- * revision, `studioHost.jobs.waitForExport` polls until the compiler has produced an execution package, and
- * `studioHost.artifacts.downloadArtifact` presigns the artifact per request.
+ * The three steps are the pipeline, not a wrapper: `studioHost.projects.ensureRevision` freezes an immutable
+ * revision from the host's authoritative simulation of the saved draft (no browser session or upload is
+ * involved), `studioHost.jobs.waitForExport` polls until the compiler has produced an execution package,
+ * and `studioHost.artifacts.downloadArtifact` presigns the artifact per request.
  */
 export function useScenarioOpenScenarioExport({
   documentId,
@@ -36,20 +36,19 @@ export function useScenarioOpenScenarioExport({
 }) {
   const studioHost = useStudioHost();
   const [busy, setBusy] = useState(false);
-  const scenarioSession = useOptionalScenarioSession();
 
   const exportOpenScenario = useCallback(async () => {
     setBusy(true);
     onNotice?.("Compiling OpenSCENARIO 1.4…");
     try {
-      // The revision has to be taken from the document as the server currently holds it: the summary
-      // row carries no `draftVersion`, and `studioHost.projects.createRevision` needs one.
-      const document = await studioHost.projects.getDocument(documentId);
-      if (!scenarioSession) {
-        throw new Error("Open this scenario in its dataset before exporting it.");
-      }
-      const evidence = await scenarioSession.prepareRevisionEvidence(documentId);
-      const created = await studioHost.projects.createRevision(document, evidence);
+      // The revision is taken from the document as the server currently holds it: the summary row
+      // carries no `draftVersion`, so `ensureRevision` reads it.
+      const created = await studioHost.projects.ensureRevision({
+        documentId,
+        onSimulation: (status) => {
+          if (status.state === "queued" || status.state === "running") onNotice?.("Simulating the scenario…");
+        },
+      });
       const exported = await studioHost.jobs.waitForExport(created.revisionId, created.exportId);
       if (!exported.artifactId) {
         throw new Error("The OpenSCENARIO export finished without an artifact.");
@@ -62,7 +61,7 @@ export function useScenarioOpenScenarioExport({
     } finally {
       setBusy(false);
     }
-  }, [documentId, onError, onNotice, scenarioSession, studioHost]);
+  }, [documentId, onError, onNotice, studioHost]);
 
   const menuItem = (
     <DropdownMenuItem disabled={busy} onSelect={() => void exportOpenScenario()}>

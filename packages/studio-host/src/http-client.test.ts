@@ -170,17 +170,22 @@ describe("response validation", () => {
     await expect(host(fetchMock).projects.getDocument("doc-1")).resolves.toMatchObject({ id: "doc-1", addedInV2: "kept" });
   });
 
-  it("distinguishes an absent saved simulation from access and generation failures", async () => {
+  it("resolves a draft's authoritative simulation by version and reads results by key", async () => {
+    const result = { simKey: "k".repeat(64), traceSha256: "t".repeat(64) };
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse(null))
-      .mockResolvedValueOnce(jsonResponse({ error: "authentication_required" }, 401))
-      .mockResolvedValueOnce(jsonResponse({ error: "document_not_found" }, 404))
-      .mockResolvedValueOnce(jsonResponse({ error: "simulation_preview_failed" }, 502));
+      .mockResolvedValueOnce(jsonResponse({ state: "succeeded", requestKey: "r".repeat(64), result, draftVersion: 3 }))
+      .mockResolvedValueOnce(jsonResponse(result))
+      .mockResolvedValueOnce(jsonResponse({ outcome: "verified", authoritativeTraceSha256: "t".repeat(64) }));
     const studio = host(fetchMock);
-    await expect(studio.projects.getSimulationPreview("doc-1")).resolves.toBeNull();
-    await expect(studio.projects.getSimulationPreview("doc-1")).rejects.toMatchObject({ status: 401 });
-    await expect(studio.projects.getSimulationPreview("doc-1")).rejects.toMatchObject({ status: 404 });
-    await expect(studio.projects.getSimulationPreview("doc-1")).rejects.toMatchObject({ status: 502 });
+    await expect(studio.projects.resolveSimulation({ id: "doc-1", draftVersion: 3 }, { waitMs: 500 }))
+      .resolves.toMatchObject({ state: "succeeded", result });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/simforge/documents/doc-1/simulation");
+    expect(JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body))).toEqual({ expectedVersion: 3, waitMs: 500 });
+    await expect(studio.projects.getSimulation("k".repeat(64))).resolves.toEqual(result);
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(`/api/simforge/simulations/${"k".repeat(64)}`);
+    await expect(studio.projects.verifySimulation("k".repeat(64), { documentId: "doc-1", localTraceSha256: "t".repeat(64) }))
+      .resolves.toMatchObject({ outcome: "verified" });
+    expect(fetchMock.mock.calls[2]?.[0]).toBe(`/api/simforge/simulations/${"k".repeat(64)}/verification`);
   });
 });
 
@@ -246,26 +251,46 @@ describe("revisions and exports", () => {
     expect((fetchMock.mock.calls[0]?.[1] as RequestInit).method).toBe("GET");
   });
 
-  it("refuses to create a revision without evidence", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ revisions: [] }));
-    await expect(host(fetchMock).projects.ensureRevision({ documentId: "doc-1", expectedDraftVersion: 3 }))
-      .rejects.toThrow(/explicit traffic evidence/i);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("resolves the saved draft and creates with a stable key, retrying a failed export under a new key", async () => {
+  it("waits on the host's simulation and creates with a stable key and no client evidence, retrying a failed export under a new key", async () => {
     const failed = { ...revision, export: { ...revision.export, status: "failed" as const } };
+    const succeeded = { state: "succeeded", requestKey: "r".repeat(64), draftVersion: 3, result: { simKey: "k".repeat(64) } };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ ...document, draftVersion: 3 }))
       .mockResolvedValueOnce(jsonResponse({ revisions: [failed] }))
+      .mockResolvedValueOnce(jsonResponse({ state: "queued", requestKey: "r".repeat(64), draftVersion: 3 }, 202))
+      .mockResolvedValueOnce(jsonResponse(succeeded))
       .mockResolvedValueOnce(jsonResponse({ revisionId: "revision-5", exportId: "export-5", exportStatus: "queued", revision: { ...revision, id: "revision-5" } }, 201));
-    await host(fetchMock).projects.ensureRevision({ documentId: "doc-1", evidence });
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(JSON.parse(String((fetchMock.mock.calls[2]?.[1] as RequestInit).body))).toEqual({
+    const progress: string[] = [];
+    await host(fetchMock).projects.ensureRevision({ documentId: "doc-1", onSimulation: (status) => progress.push(status.state) });
+    expect(progress).toEqual(["queued", "succeeded"]);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock.mock.calls[2]?.[0]).toBe("/api/simforge/documents/doc-1/simulation");
+    expect(JSON.parse(String((fetchMock.mock.calls[4]?.[1] as RequestInit).body))).toEqual({
       expectedVersion: 3,
       idempotencyKey: "ensure-revision:doc-1:3:retry:export-4",
-      ...evidence,
     });
+  });
+
+  it("surfaces a failed simulation instead of creating a revision", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ revisions: [] }))
+      .mockResolvedValueOnce(jsonResponse({ state: "failed", requestKey: "r".repeat(64), draftVersion: 3, failureCode: "materialization_infeasible", message: "blocked" }));
+    await expect(host(fetchMock).projects.ensureRevision({ documentId: "doc-1", expectedDraftVersion: 3 }))
+      .rejects.toMatchObject({ code: "materialization_infeasible", status: 422 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries the commit while the host reports the simulation still pending", async () => {
+    const succeeded = { state: "succeeded", requestKey: "r".repeat(64), draftVersion: 3, result: { simKey: "k".repeat(64) } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ revisions: [] }))
+      .mockResolvedValueOnce(jsonResponse(succeeded))
+      .mockResolvedValueOnce(jsonResponse({ error: "simulation_pending", retryable: true }, 409))
+      .mockResolvedValueOnce(jsonResponse(succeeded))
+      .mockResolvedValueOnce(jsonResponse({ revisionId: "revision-5", exportId: "export-5", exportStatus: "queued", revision: { ...revision, id: "revision-5" } }, 201));
+    await expect(host(fetchMock).projects.ensureRevision({ documentId: "doc-1", expectedDraftVersion: 3 }))
+      .resolves.toMatchObject({ revisionId: "revision-5" });
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
   it("waits for the exact immutable package and surfaces terminal failures", async () => {
@@ -294,28 +319,3 @@ describe("revisions and exports", () => {
   });
 });
 
-describe("reserved uploads", () => {
-  it("resolves a same-origin relative upload URL against the base it is already talking to", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse({ artifactId: "art-1", uploadRequired: true, uploadUrl: "/api/local-objects/put/art-1", headers: { "x-sig": "s" } }))
-      .mockResolvedValueOnce({ ok: true, status: 200 } as Response)
-      .mockResolvedValueOnce(jsonResponse({ ok: true }));
-    const studio = createHttpStudioHost({ fetch: fetchMock as unknown as typeof fetch, baseUrl: "http://100.72.252.40:5421/" });
-    await studio.projects.saveSimulationPreview(document, new Uint8Array([1, 2, 3]), "d".repeat(64));
-    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://100.72.252.40:5421/api/simforge/documents/doc-1/simulation-preview");
-    expect(fetchMock.mock.calls[1]?.[0]).toBe("http://100.72.252.40:5421/api/local-objects/put/art-1");
-    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "PUT", headers: { "x-sig": "s" } });
-    expect(fetchMock.mock.calls[2]?.[0]).toBe("http://100.72.252.40:5421/api/simforge/documents/doc-1/simulation-preview/complete");
-  });
-
-  it("uploads an absolute presigned URL as given and skips the PUT when the bytes already exist", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse({ artifactId: "art-2", uploadRequired: false, uploadUrl: null, headers: {} }))
-      .mockResolvedValueOnce(jsonResponse(evidence.materializedTraffic));
-    const studio = host(fetchMock);
-    const upload = { bytes: new Uint8Array(10), sha256: "b".repeat(64), sizeBytes: 10, mapAssetId: "ma_1", mapVersionId: "map-v1" };
-    await expect(studio.projects.uploadMaterializedTraffic(document, upload, "c".repeat(64))).resolves.toEqual(evidence.materializedTraffic);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body))).toMatchObject({ artifactId: "art-2" });
-  });
-});

@@ -8,7 +8,11 @@ import { hostObjectUrl } from "./object-url.js";
 
 const LEASE_SECONDS = 900;
 const HEARTBEAT_MS = 30_000;
-const POLL_MS = 1_000;
+/** Idle poll interval; `SIMFORGE_COMPILER_POLL_MS` tunes it (bounded 100 ms .. 30 s). */
+function pollMs(): number {
+  const configured = Number(simforgeEnv("COMPILER_POLL_MS") ?? 1_000);
+  return Number.isFinite(configured) ? Math.max(100, Math.min(30_000, Math.trunc(configured))) : 1_000;
+}
 const DIGEST = /^[a-f0-9]{64}$/;
 
 type JsonObject = Record<string, unknown>;
@@ -110,7 +114,7 @@ export async function runCompilerLoop(baseUrl: string | URL, token: string, sign
   while (!signal.aborted) {
     try {
       const claim = await client.claim(signal);
-      if (!claim) { await delay(POLL_MS, signal); continue; }
+      if (!claim) { await delay(pollMs(), signal); continue; }
       await runClaim(client, claim, xsdPath, signal);
     } catch (error) {
       if (signal.aborted) throw signal.reason;
@@ -119,7 +123,7 @@ export async function runCompilerLoop(baseUrl: string | URL, token: string, sign
         event: "claim.retry",
         error: error instanceof Error ? error.message : String(error),
       })}\n`);
-      await delay(POLL_MS, signal);
+      await delay(pollMs(), signal);
     }
   }
 }
@@ -177,9 +181,22 @@ function parseClaim(value: JsonObject): CompilerClaim {
       artifacts: artifacts.map((row) => { const item = object(row); return { id: string(item.id), kind: string(item.kind) as CompilerClaim["map"]["artifacts"][number]["kind"], mediaType: string(item.mediaType), sha256: digest(item.sha256), sizeBytes: number(item.sizeBytes), downloadUrl: string(item.downloadUrl) }; }),
     },
     ambient: { ...ambient, mode: string(ambient.mode), configSha256: digest(ambient.configSha256), resultSha256: digest(ambient.resultSha256), ambientConfig: object(ambient.ambientConfig), materializedTraffic: { artifactId: string(materializedTraffic.artifactId), sha256: digest(materializedTraffic.sha256), sizeBytes: number(materializedTraffic.sizeBytes), sourceInputDigest: digest(materializedTraffic.sourceInputDigest), mapAssetId: string(materializedTraffic.mapAssetId), mapVersionId: string(materializedTraffic.mapVersionId) } },
+    // The authoritative simulation the package is derived from (null for
+    // exports queued before it existed, which compile the legacy way).
+    simulation: parseSimulation(value.simulation),
   };
   if (claim.fenceToken.length < 32 || !["disabled", "native", "sumo"].includes(claim.ambient.mode)) throw new Error("compiler_claim_fence_or_ambient_invalid");
   return claim as CompilerClaim;
+}
+function parseSimulation(value: unknown): CompilerClaim["simulation"] {
+  if (value === undefined || value === null) return null;
+  const simulation = object(value); const trace = object(simulation.trace); const resolution = object(simulation.resolution);
+  return {
+    simKey: digest(simulation.simKey),
+    traceSha256: digest(simulation.traceSha256),
+    trace: { sha256: digest(trace.sha256), sizeBytes: number(trace.sizeBytes), downloadUrl: string(trace.downloadUrl) },
+    resolution: { sha256: digest(resolution.sha256), sizeBytes: number(resolution.sizeBytes), downloadUrl: string(resolution.downloadUrl) },
+  };
 }
 function fence(claim: CompilerClaim, extra: JsonObject): JsonObject { return { attemptId: claim.attemptId, fenceToken: claim.fenceToken, ...extra }; }
 function object(value: unknown): JsonObject { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("compiler API value is not an object"); return value as JsonObject; }
