@@ -58,7 +58,7 @@ const lodMesh = z.object({
     cardLike: z.boolean(),
     triangles: z.number().int().nonnegative(),
   }).strict()),
-  /** Ordered finest to coarsest; geometricErrorM is non-decreasing. */
+  /** Ordered finest to coarsest; geometricErrorM strictly increases (every level has a selection range). */
   levels: z.array(level),
   impostor: impostor.nullable(),
   shadow: z.object({ minLevel: z.number().int().nonnegative() }).strict(),
@@ -119,7 +119,7 @@ export function parseGeometryLodManifest(value: unknown): GeometryLodManifest {
     let error = 0;
     mesh.levels.forEach((entry, index) => {
       if (entry.level !== index + 1) throw new Error(`geometry-lod manifest: mesh ${mesh.mesh} levels are not numbered 1..n`);
-      if (entry.geometricErrorM < error) throw new Error(`geometry-lod manifest: mesh ${mesh.mesh} level ${entry.level} error decreases`);
+      if (index > 0 && entry.geometricErrorM <= error) throw new Error(`geometry-lod manifest: mesh ${mesh.mesh} level ${entry.level} error does not increase (an empty selection range)`);
       error = entry.geometricErrorM;
     });
     if (mesh.impostor && mesh.impostor.geometricErrorM < error) throw new Error(`geometry-lod manifest: mesh ${mesh.mesh} impostor error below its last level`);
