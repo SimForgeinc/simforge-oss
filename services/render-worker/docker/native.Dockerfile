@@ -26,6 +26,8 @@ RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends clang libasound2-dev libudev-dev libwayland-dev libx11-dev libxkbcommon-dev pkg-config \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=source /renderer ./renderer
+# render-core decodes the map's ground mesh with simforge-core (path dependency ../../native).
+COPY --from=source /native ./native
 RUN cargo build --locked --manifest-path renderer/Cargo.toml --release -p service --bin native-render-service
 
 FROM debian:bookworm-slim AS sky-build
