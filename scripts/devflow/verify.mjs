@@ -301,6 +301,16 @@ for (const c of plan.cargo) {
 }
 
 // ---------------------------------------------------------------- js (turbo)
+/** Turbo tasks already red on the base branch: reported, never gating (see the file for why each is listed). */
+function readKnown() {
+  if (!layout.turbo?.knownFailures) return {};
+  try {
+    return JSON.parse(readFileSync(join(root, layout.turbo.knownFailures), "utf8")).tasks ?? {};
+  } catch {
+    return {};
+  }
+}
+
 function latestTurboSummary(since) {
   const dir = join(root, ".turbo", "runs");
   if (!existsSync(dir)) return null;
@@ -338,17 +348,25 @@ if (want("js") && plan.js) {
       );
       await remote.close();
       const summary = latestTurboSummary(t0);
+      let ok = res.code === 0;
+      const known = new Set(Object.keys(readKnown()));
       let detail = js.scope;
       if (summary?.tasks) {
         const real = summary.tasks.filter((t) => t.command && t.command !== "<NONEXISTENT>");
-        const failed = real.filter((t) => t.execution?.exitCode);
+        const allFailed = real.filter((t) => t.execution?.exitCode);
+        const knownRed = allFailed.filter((t) => known.has(t.taskId));
+        const failed = allFailed.filter((t) => !known.has(t.taskId));
+        const healed = real.filter((t) => known.has(t.taskId) && !t.execution?.exitCode);
         const local = real.filter((t) => t.cache?.status === "HIT" && t.cache?.local).length;
         const remoteHits = real.filter((t) => t.cache?.status === "HIT" && !t.cache?.local && t.cache?.remote).length;
         detail = `${js.scope} · ${real.length} tasks: ${local} local-cached, ${remoteHits} remote-cached, ${failed.length} failed · remote ${remote.kind}`;
         if (remote.stats) detail += ` (${remote.stats.hits} hit/${remote.stats.puts} put)`;
         if (failed.length) detail += ` · failed: ${failed.map((t) => t.taskId).join(" ")}`;
+        if (knownRed.length) detail += ` · known-red (red on the base too, not gating): ${knownRed.map((t) => t.taskId).join(" ")}`;
+        if (healed.length) detail += ` · NOW PASSING, remove from ${layout.turbo.knownFailures}: ${healed.map((t) => t.taskId).join(" ")}`;
+        ok = failed.length === 0;
       }
-      record("js", res.code === 0 ? "pass" : "fail", Date.now() - t0, detail, log);
+      record("js", ok ? "pass" : "fail", Date.now() - t0, detail, log);
     });
   }
 }

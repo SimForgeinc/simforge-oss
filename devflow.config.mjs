@@ -10,6 +10,9 @@ export default {
 
   turbo: {
     tasks: ["typecheck", "test", "lint"],
+    // Tasks red on main today: reported on every run, never gating. Remove an
+    // entry once it passes (verify says so). Nightly `verify --full` keeps it honest.
+    knownFailures: "devflow.known-failures.json",
     // A change to one of these invalidates every package.
     global: ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.base.json", "turbo.json", "patches/**"],
     // Files outside any workspace package that still feed one.
@@ -33,11 +36,9 @@ export default {
       when: ["packages/studio-ui/src/**", "studio/app/**", "scripts/style/**"],
       run: ["node", "scripts/style/ratchet.mjs", "--check"],
     },
-    {
-      name: "repo-scripts",
-      when: ["scripts/release/**", "scripts/integration/**", "scripts/devflow/**"],
-      run: ["node", "--test", "scripts/release/*.test.mjs", "scripts/integration/*.test.mjs", "scripts/devflow/*.test.mjs"],
-    },
+    { name: "release-scripts", when: ["scripts/release/**"], run: ["node", "--test", "scripts/release/*.test.mjs"] },
+    { name: "integration-scripts", when: ["scripts/integration/**"], run: ["node", "--test", "scripts/integration/*.test.mjs"] },
+    { name: "devflow", when: ["scripts/devflow/**", "devflow.config.mjs", "turbo.json"], run: ["node", "--test", "scripts/devflow/*.test.mjs"] },
     {
       // CPU-only render conformance: no GPU box needed. The Bevy renderer's
       // contract parity against the viewer fixture (actor matrices + derived
