@@ -3981,6 +3981,7 @@ impl SceneApp {
         self.rig_revision += 1;
         self.sync_host_layers();
         self.refresh_lod_ranges();
+        self.sync_rgb_draw_order();
         if self.ready {
             // Post-ready registration: pump updates so extraction and
             // pipeline compilation happen before the next capture. Two
@@ -5971,6 +5972,7 @@ impl SceneApp {
     /// [`CaptureClock`]).
     pub fn set_capture_clock(&mut self, clock: CaptureClock) {
         self.capture_clock = clock;
+        self.sync_rgb_draw_order();
         // Clustered lights: Bevy's GPU clustering fills each cluster's light
         // list through atomics, so the order lights are summed in (and the
         // low bits of the result) varies run to run, and an overflowing list
@@ -6000,6 +6002,39 @@ impl SceneApp {
                     .get_resource::<crate::sky_pass::SkyClock>()
                     .map_or(0.0, |sky| sky.seconds);
                 self.set_sim_time(seconds);
+            }
+        }
+    }
+
+    /// RGB views draw in CPU order under a pinned clock.
+    ///
+    /// Which of two surfaces at exactly equal depth wins (coplanar signal
+    /// lenses, decals, overlapping cards) is decided by draw order, and two
+    /// things made that order depend on the run rather than the scene:
+    /// - with indirect drawing, GPU preprocessing compacts each batch's
+    ///   visible instances with `atomicAdd`, so instances of one mesh draw
+    ///   in the device's thread interleaving order;
+    /// - binned phases draw bins in key order, and the keys (pipeline id,
+    ///   material slot, mesh slab, mesh asset index) are allocation order,
+    ///   which follows the order assets finished loading.
+    /// A few HDR pixels flipped; the dash-cam meter then moved the exposure
+    /// by a hair and the whole frame by 1 LSB. Lavapipe runs compute and
+    /// asset loads on thread pools: unloaded it happened to repeat, under CPU
+    /// load it did not (richmond-06: 9 of 12 chase frames differed between
+    /// two runs). `NoIndirectDrawing` takes the CPU-ordered path, as the ID
+    /// pass does ([`id_pass_camera`]), and a CPU-ordered view draws its bins
+    /// in entity order (vendored bevy_render, `sort_binned_render_phase`).
+    /// The free clock keeps GPU-driven draws.
+    fn sync_rgb_draw_order(&mut self) {
+        let cpu_ordered = self.capture_clock != CaptureClock::Free;
+        let entities: Vec<Entity> = self.groups.iter().map(|g| g.rgb_entity).collect();
+        let world = self.app.world_mut();
+        for entity in entities {
+            let Ok(mut camera) = world.get_entity_mut(entity) else { continue };
+            if cpu_ordered {
+                camera.insert(bevy::render::view::NoIndirectDrawing);
+            } else {
+                camera.remove::<bevy::render::view::NoIndirectDrawing>();
             }
         }
     }
@@ -7460,6 +7495,158 @@ mod tests {
         let after_three = capture_after(&mut app, 3, 12.5);
         assert!(first != after_three, "free clock unexpectedly stable");
         std::mem::forget(app);
+    }
+
+    /// The training look with a pinned clock and one RGB camera, as the
+    /// golden jobs render (the sedan tile only makes the scene ready).
+    fn training_pinned_scene() -> SceneApp {
+        use crate::render_config::{Preset, RenderConfig};
+        let config = RenderConfig::preset(Preset::Training);
+        let lighting = Lighting::default();
+        let mut app = SceneApp::new_with_profile_config(&lighting, config.profile_config()).unwrap();
+        app.apply_render_config(&config).unwrap();
+        app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
+        app.apply_lighting(&lighting, config.profile_config()).unwrap();
+        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+        let mut spec = test_camera("cam", 320, 192);
+        spec.passes = PassSet { rgb: true, id: false, depth: false, hdr: false };
+        app.add_camera(spec);
+        app.wait_until_ready().unwrap();
+        app
+    }
+
+    /// Equal-depth ties inside one instanced draw. Many coplanar, partly
+    /// overlapping instances of one vertex-coloured mesh share a batch: with
+    /// indirect drawing the GPU preprocessing pass hands out their slots
+    /// with `atomicAdd`, so which instance wins a tie followed the device's
+    /// thread interleaving. On lavapipe that only shows under CPU load, so
+    /// this test loads every core while it captures the same pose and time
+    /// after different numbers of extra frames. A pinned RGB view must draw
+    /// in CPU order (`NoIndirectDrawing`). GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn pinned_capture_does_not_depend_on_frames_drawn_before_it_under_load() {
+        use bevy::mesh::VertexAttributeValues;
+        let mut app = training_pinned_scene();
+        {
+            let world = app.app.world_mut();
+            let mut mesh = Plane3d::default().mesh().size(1.6, 1.6).subdivisions(3).build();
+            let colors: Vec<[f32; 4]> = match mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
+                Some(VertexAttributeValues::Float32x3(positions)) => positions
+                    .iter()
+                    .map(|p| [0.5 + p[0] * 0.6, 0.5 + p[2] * 0.6, 0.5 - p[0] * 0.3, 1.0])
+                    .collect(),
+                _ => unreachable!("plane mesh has float3 positions"),
+            };
+            mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+            let mesh = world.resource_mut::<Assets<Mesh>>().add(mesh);
+            let material = world
+                .resource_mut::<Assets<StandardMaterial>>()
+                .add(StandardMaterial { perceptual_roughness: 0.3, metallic: 0.0, ..default() });
+            // 600 instances (several preprocessing workgroups) in one plane,
+            // each overlapping its neighbours at a different in-plane offset
+            // and rotation: every overlap is an equal-depth tie.
+            let mut seed = 0x9e37_79b9u32;
+            let mut next = move || {
+                seed ^= seed << 13;
+                seed ^= seed >> 17;
+                seed ^= seed << 5;
+                seed as f32 / u32::MAX as f32
+            };
+            for _ in 0..600 {
+                let (x, z, yaw) = (next() * 10.0 - 5.0, 20.0 + next() * 6.0 - 3.0, next() * std::f32::consts::TAU);
+                world.spawn((
+                    Mesh3d(mesh.clone()),
+                    MeshMaterial3d(material.clone()),
+                    Transform::from_xyz(x, 0.25, z).with_rotation(Quat::from_rotation_y(yaw)),
+                ));
+            }
+        }
+        app.set_pose("cam", &[0.0, 7.5, 20.01], &[0.0, 0.0, 20.0]).unwrap();
+        app.wait_for_capture_ready().unwrap();
+        let rgb = app.groups.iter().find(|g| g.spec.sensor_id == "cam").unwrap().rgb_entity;
+        assert!(
+            app.app.world().get::<bevy::render::view::NoIndirectDrawing>(rgb).is_some(),
+            "a pinned RGB view must draw in CPU order"
+        );
+
+        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let load: Vec<_> = (0..std::thread::available_parallelism().map_or(8, |n| n.get()))
+            .map(|_| {
+                let stop = stop.clone();
+                std::thread::spawn(move || {
+                    let mut x = 1u64;
+                    while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                        x = x.wrapping_mul(6364136223846793005).wrapping_add(1);
+                        std::hint::black_box(x);
+                    }
+                })
+            })
+            .collect();
+        let first = capture_after(&mut app, 0, 3.0);
+        let mut differing = Vec::new();
+        for extra in [3, 11, 0, 1, 7, 2] {
+            let again = capture_after(&mut app, extra, 3.0);
+            let pixels = first.chunks(4).zip(again.chunks(4)).filter(|(a, b)| a != b).count();
+            if pixels > 0 {
+                differing.push((extra, pixels));
+            }
+        }
+        stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        for thread in load {
+            thread.join().unwrap();
+        }
+        std::mem::forget(app);
+        assert!(differing.is_empty(), "(extra frames, differing pixels): {differing:?}");
+    }
+
+    /// Equal-depth ties between different meshes. The richmond-06 golden
+    /// differed between two runs under CPU load at, among others, a traffic
+    /// signal whose lit and unlit lens meshes are coplanar: binned draws were
+    /// ordered by their keys (pipeline id, material slot, mesh slab, mesh
+    /// asset index), which are allocation order, and allocation follows the
+    /// order assets finished loading. Here two coplanar quads are drawn
+    /// twice, the same entities in the same spawn order but with their
+    /// meshes and materials created in the opposite order and after a
+    /// different number of frames: a CPU-ordered view draws them in entity
+    /// order both times, so the capture must not change. GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn pinned_capture_does_not_depend_on_asset_allocation_order() {
+        let mut app = training_pinned_scene();
+        app.set_pose("cam", &[0.0, 3.0, 20.01], &[0.0, 0.0, 20.0]).unwrap();
+        let mut captures = Vec::new();
+        let mut previous: Vec<Entity> = Vec::new();
+        for (reversed, frames_between) in [(false, 0), (true, 5), (false, 3)] {
+            let colors = [Color::srgb(0.9, 0.1, 0.1), Color::srgb(0.1, 0.8, 0.2)];
+            let mut assets: Vec<Option<(Handle<Mesh>, Handle<StandardMaterial>)>> = vec![None, None];
+            let order: [usize; 2] = if reversed { [1, 0] } else { [0, 1] };
+            for index in order {
+                let world = app.app.world_mut();
+                let mesh = world.resource_mut::<Assets<Mesh>>().add(Plane3d::default().mesh().size(6.0, 6.0).build());
+                let material = world
+                    .resource_mut::<Assets<StandardMaterial>>()
+                    .add(StandardMaterial { base_color: colors[index], perceptual_roughness: 0.4, ..default() });
+                assets[index] = Some((mesh, material));
+                app.warmup(frames_between);
+            }
+            let world = app.app.world_mut();
+            for entity in previous.drain(..) {
+                world.entity_mut(entity).insert(Visibility::Hidden);
+            }
+            // Always spawned in the same order: entity order is scene order.
+            for (mesh, material) in assets.into_iter().flatten() {
+                previous.push(world.spawn((Mesh3d(mesh), MeshMaterial3d(material), Transform::from_xyz(0.0, 0.25, 20.0))).id());
+            }
+            app.wait_for_capture_ready().unwrap();
+            captures.push(capture_after(&mut app, 0, 3.0));
+        }
+        std::mem::forget(app);
+        let differing = |a: &[u8], b: &[u8]| a.chunks(4).zip(b.chunks(4)).filter(|(x, y)| x != y).count();
+        assert_eq!(differing(&captures[0], &captures[1]), 0, "mesh and material creation order changed the capture");
+        assert_eq!(differing(&captures[0], &captures[2]), 0, "frames drawn before the quads changed the capture");
     }
 
     #[test]

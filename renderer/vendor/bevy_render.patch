@@ -1,19 +1,54 @@
 --- a/src/batching/mod.rs
 +++ b/src/batching/mod.rs
-@@ -202,6 +202,10 @@
+@@ -201,8 +201,30 @@
+ {
      for phase in phases.values_mut() {
          phase.multidrawable_meshes.sort_unstable_keys();
-         phase.batchable_meshes.sort_unstable_keys();
+-        phase.batchable_meshes.sort_unstable_keys();
+-        phase.unbatchable_meshes.sort_unstable_keys();
 +        // SimForge patch: a deterministic draw order within each bin.
 +        for bin in phase.batchable_meshes.values_mut() {
 +            bin.sort_entities();
 +        }
-         phase.unbatchable_meshes.sort_unstable_keys();
++        if phase.cpu_ordered() {
++            // SimForge patch: a view that draws in CPU order (no indirect
++            // drawing) also orders its bins by their first main entity. The
++            // bin keys are allocation order (pipeline id, material bind group
++            // slot, mesh slabs, mesh asset index), which follows the order
++            // assets finished loading and pipelines were queued, so under
++            // CPU load it differed between runs, and with it which of two
++            // coplanar surfaces won their depth tie. Entities are spawned in
++            // scene order. Bins do not share draws here, so only pipeline
++            // switches get more frequent.
++            phase
++                .batchable_meshes
++                .sort_unstable_by(|_, a, _, b| a.first_entity().cmp(&b.first_entity()));
++            phase.unbatchable_meshes.sort_unstable_by(|_, a, _, b| {
++                a.entities.keys().min().cmp(&b.entities.keys().min())
++            });
++        } else {
++            phase.batchable_meshes.sort_unstable_keys();
++            phase.unbatchable_meshes.sort_unstable_keys();
++        }
          phase.non_mesh_items.sort_unstable_keys();
      }
+ }
 --- a/src/render_phase/mod.rs
 +++ b/src/render_phase/mod.rs
-@@ -1846,7 +1846,14 @@
+@@ -945,6 +945,12 @@
+ where
+     BPI: BinnedPhaseItem,
+ {
++    /// SimForge patch: true when this view draws in CPU order (no indirect
++    /// drawing, so no GPU culling compacts its instances).
++    pub(crate) fn cpu_ordered(&self) -> bool {
++        self.gpu_preprocessing_mode != GpuPreprocessingMode::Culling
++    }
++
+     /// Bins a new entity.
+     ///
+     /// The `phase_type` parameter specifies whether the entity is a
+@@ -1846,7 +1852,14 @@
      }
  
      /// Sorts all of its [`PhaseItem`]s.
@@ -28,10 +63,16 @@
          I::sort(&mut self.items);
      }
  
-@@ -2222,6 +2229,14 @@
+@@ -2222,6 +2235,20 @@
          self.entities.is_empty()
      }
  
++    /// SimForge patch: the bin's first entity (its least after
++    /// [`Self::sort_entities`]).
++    pub(crate) fn first_entity(&self) -> Option<MainEntity> {
++        self.entities.first().map(|(entity, _)| *entity)
++    }
++
 +    /// SimForge patch: order the bin's entities by entity id. Insertion and
 +    /// `swap_remove` otherwise make the draw order (which decides coplanar
 +    /// depth ties) depend on the order visibility was found and on the

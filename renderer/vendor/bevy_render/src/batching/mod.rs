@@ -201,12 +201,30 @@ where
 {
     for phase in phases.values_mut() {
         phase.multidrawable_meshes.sort_unstable_keys();
-        phase.batchable_meshes.sort_unstable_keys();
         // SimForge patch: a deterministic draw order within each bin.
         for bin in phase.batchable_meshes.values_mut() {
             bin.sort_entities();
         }
-        phase.unbatchable_meshes.sort_unstable_keys();
+        if phase.cpu_ordered() {
+            // SimForge patch: a view that draws in CPU order (no indirect
+            // drawing) also orders its bins by their first main entity. The
+            // bin keys are allocation order (pipeline id, material bind group
+            // slot, mesh slabs, mesh asset index), which follows the order
+            // assets finished loading and pipelines were queued, so under
+            // CPU load it differed between runs, and with it which of two
+            // coplanar surfaces won their depth tie. Entities are spawned in
+            // scene order. Bins do not share draws here, so only pipeline
+            // switches get more frequent.
+            phase
+                .batchable_meshes
+                .sort_unstable_by(|_, a, _, b| a.first_entity().cmp(&b.first_entity()));
+            phase.unbatchable_meshes.sort_unstable_by(|_, a, _, b| {
+                a.entities.keys().min().cmp(&b.entities.keys().min())
+            });
+        } else {
+            phase.batchable_meshes.sort_unstable_keys();
+            phase.unbatchable_meshes.sort_unstable_keys();
+        }
         phase.non_mesh_items.sort_unstable_keys();
     }
 }
