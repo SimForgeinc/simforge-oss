@@ -89,6 +89,11 @@ export async function buildBrowserVariants(options: { sourceRoot: string; output
   await rm(options.outputDir, { recursive: true, force: true });
   await mkdir(options.outputDir, { recursive: true });
   const closureEnvelope = JSON.parse(await readFile(path.join(options.sourceRoot, '3d', 'variants', 'manifest.json'), 'utf8').catch(() => '{"variants":{}}')) as { variants?: Record<string, unknown> };
+  // The builders read a tier the closure already has (its index and objects)
+  // from the output root: seed it with the closure's own variant files. They
+  // stay closure members (a publisher skips paths the closure carries).
+  const closureVariants = (await filesUnder(path.join(options.sourceRoot, '3d', 'variants'))).filter((file) => file !== 'manifest.json');
+  await materializeSourceRoot(path.join(options.sourceRoot, '3d', 'variants'), path.join(options.outputDir, '3d', 'variants'), closureVariants);
   await buildTextureTiers({
     sourceRoot: options.sourceRoot,
     outputRoot: options.outputDir,
