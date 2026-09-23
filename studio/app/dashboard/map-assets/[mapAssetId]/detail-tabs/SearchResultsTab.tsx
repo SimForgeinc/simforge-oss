@@ -41,6 +41,7 @@ import type { MapSearchResult, SearchFilterChip, SearchObjectFamily } from "@/ap
 import { SearchExamplesPanel } from "./SearchExamplesPanel";
 import { CopyJsonButton } from "./CopyJsonButton";
 import { SearchInputBox } from "./SearchInputBox";
+import { motionRecipe, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface SearchResultsTabProps {
   draftQuery: string;
@@ -316,11 +317,11 @@ function TopologyPathChain({
               </>
             ) : null}
             <div
-              {...stylex.props(styles.stepChip, stepHighlighted ? styles.stepChipOn : styles.stepChipOff)}
+              {...stylex.props([motionRecipe.colors, styles.stepChip], stepHighlighted ? styles.stepChipOn : styles.stepChipOff)}
               title={`${step.title ?? step.objectId} (${step.cumulativeM} m from subject)`}
             >
               <StepIcon {...stylex.props(styles.pathStepIcon)} aria-hidden="true" />
-              <span {...stylex.props(styles.pathStepObjectId)}>
+              <span {...stylex.props([textLayout.truncate, styles.pathStepObjectId])}>
                 {step.objectId}
               </span>
               <span {...stylex.props(styles.pathStepDistance)}>
@@ -387,7 +388,7 @@ export function HighlightToggleButton({
       aria-pressed={active}
       aria-label={label}
       title={label}
-      {...stylex.props(styles.highlightToggle, dimensions, active ? styles.highlightToggleOn : styles.highlightToggleOff)}
+      {...stylex.props([motionRecipe.colors, styles.highlightToggle], dimensions, active ? styles.highlightToggleOn : styles.highlightToggleOff)}
     >
       <Target {...stylex.props(iconSize)} aria-hidden="true" />
     </button>
@@ -523,7 +524,7 @@ export function SearchResultsTab({
                     onClick={() => setShowDebug((prev) => !prev)}
                     aria-label="Toggle search debug"
                     aria-pressed={showDebug}
-                    {...stylex.props(styles.debugToggle, showDebug && styles.debugToggleOn)}
+                    {...stylex.props([motionRecipe.colors, styles.debugToggle], showDebug && styles.debugToggleOn)}
                   >
                     <Bug {...stylex.props(styles.compactContextIcon)} />
                   </button>
@@ -572,11 +573,11 @@ export function SearchResultsTab({
 
         <div {...stylex.props(styles.resultsContent)}>
           {loading ? (
-            <p {...stylex.props(styles.loadingStatus)}>
-              <Loader2 {...stylex.props(styles.loadingIcon)} aria-hidden="true" /> Loading map data…
+            <p {...stylex.props([typography.caps, styles.loadingStatus])}>
+              <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingIcon])} aria-hidden="true" /> Loading map data…
             </p>
           ) : (
-            <div {...stylex.props(styles.resultsHeaderActions)}>
+            <div {...stylex.props([typography.caps, styles.resultsHeaderActions])}>
               <span>Results ({results.length})</span>
               <CopyJsonButton
                 payload={{ query, chips, freeText: freeText ?? [], results }}
@@ -614,7 +615,7 @@ export function SearchResultsTab({
                         {...stylex.props(styles.resultTypeIcon)}
                         aria-label={`${result.subtype} icon`}
                       />
-                      <p {...stylex.props(styles.resultTitle)}>
+                      <p {...stylex.props([textLayout.truncate, styles.resultTitle])}>
                         {result.title}
                       </p>
                       {selected ? <Check {...stylex.props(styles.selectedCheckIcon)} /> : null}
@@ -622,18 +623,18 @@ export function SearchResultsTab({
 
                     <div {...stylex.props(styles.resultMetadataGrid)}>
                       <div {...stylex.props(styles.metadataItem)}>
-                        <p {...stylex.props(styles.metadataLabel)}>Type</p>
-                        <p {...stylex.props(styles.metadataValue)}>
+                        <p {...stylex.props([textLayout.truncate, styles.metadataLabel])}>Type</p>
+                        <p {...stylex.props([textLayout.truncate, styles.metadataValue])}>
                           {formatFamilyLabel(result.objectFamily)}
                         </p>
                       </div>
                       <div {...stylex.props(styles.metadataItem)}>
-                        <p {...stylex.props(styles.metadataLabel)}>SubType</p>
-                        <p {...stylex.props(styles.metadataValue)}>{result.subtype}</p>
+                        <p {...stylex.props([textLayout.truncate, styles.metadataLabel])}>SubType</p>
+                        <p {...stylex.props([textLayout.truncate, styles.metadataValue])}>{result.subtype}</p>
                       </div>
                       <div {...stylex.props(styles.metadataItem)}>
-                        <p {...stylex.props(styles.metadataLabel)}>Confidence</p>
-                        <p {...stylex.props(styles.confidenceValue)}>
+                        <p {...stylex.props([textLayout.truncate, styles.metadataLabel])}>Confidence</p>
+                        <p {...stylex.props([textLayout.truncate, styles.confidenceValue])}>
                           {Math.round(result.candidateConfidence * 100)}%
                         </p>
                       </div>
@@ -676,7 +677,7 @@ export function SearchResultsTab({
                                   {...stylex.props(styles.relatedRefIcon)}
                                   aria-hidden="true"
                                 />
-                                <span {...stylex.props(styles.relatedRefTitle)}>
+                                <span {...stylex.props([textLayout.truncate, styles.relatedRefTitle])}>
                                   {ref.title ?? ref.objectId}
                                 </span>
                                 {ref.distance_m != null ? (
@@ -746,7 +747,7 @@ export function SearchResultsTab({
                           <span {...stylex.props(styles.debugValue)}>{formatCentroid(result.centroid)}</span>
                         </div>
                         {result.matchReasons.length > 0 ? (
-                          <div {...stylex.props(styles.matchReasons)}>
+                          <div {...stylex.props(textLayout.truncate)}>
                             match: {result.matchReasons.slice(0, 3).join(", ")}
                           </div>
                         ) : null}
@@ -758,8 +759,7 @@ export function SearchResultsTab({
                         <TooltipTrigger asChild>
                           <Button
                             variant="outline"
-                            size="icon"
-                            xstyle={styles.resultActionButton}
+                            size="iconSm"
                             onClick={(event) => {
                               event.stopPropagation();
                               onZoomToResult(result.id);
@@ -777,8 +777,7 @@ export function SearchResultsTab({
                         <TooltipTrigger asChild>
                           <Button
                             variant="outline"
-                            size="icon"
-                            xstyle={styles.resultActionButton}
+                            size="iconSm"
                             onClick={(event) => {
                               event.stopPropagation();
                               onUseInScenario(result.id);
@@ -800,7 +799,7 @@ export function SearchResultsTab({
                 <div {...stylex.props(styles.emptyResultsState)}>
                   {loading ? (
                     <p {...stylex.props(styles.emptyResultsLoading)}>
-                      <Loader2 {...stylex.props(styles.loadingIcon)} aria-hidden="true" /> Loading map data…
+                      <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingIcon])} aria-hidden="true" /> Loading map data…
                     </p>
                   ) : (
                     <>
@@ -820,7 +819,7 @@ export function SearchResultsTab({
                                   onDraftQueryChange(alt);
                                   onSubmitSearch(alt);
                                 }}
-                                {...stylex.props(styles.alternativeQueryButton)}
+                                {...stylex.props([motionRecipe.colors, styles.alternativeQueryButton])}
                               >
                                 {alt}
                               </button>

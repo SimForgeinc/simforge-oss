@@ -1,37 +1,35 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, space, text } from "../../stylex/tokens.stylex";
-
-const spin = stylex.keyframes({ from: { transform: "rotate(0deg)" }, to: { transform: "rotate(360deg)" } });
+import { colors, layout, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
-  root: { display: "flex", flexDirection: "column", gap: space.xl, minWidth: 0 },
+  root: { display: "flex", flexDirection: "column", gap: space.s4, minWidth: 0 },
   // space-y-1
   header: {
     display: "flex",
     flexDirection: "column",
-    gap: space.xs,
+    gap: space.s1,
   },
   // text-sm font-semibold text-foreground
   evaluateThisRender: {
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
   // text-xs leading-5 text-muted-foreground
   theRenderedCamerasBecomeTheC: {
     fontSize: text.sizeXs,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
   // grid gap-x-8 gap-y-2 text-xs sm:grid-cols-2
   dlGridXs: {
     display: "grid",
-    columnGap: space.xxxl,
-    rowGap: space.md,
+    columnGap: space.s8,
+    rowGap: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    gridTemplateColumns: { default: null, "@media (min-width: 640px)": "repeat(2, minmax(0, 1fr))" },
+    lineHeight: text.lineXs,
+    gridTemplateColumns: { default: null, [layout.bpSm]: "repeat(2, minmax(0, 1fr))" },
   },
   // min-w-0
   div: {
@@ -40,12 +38,12 @@ export const styles = stylex.create({
   // uppercase tracking-wide text-muted-foreground
   renderedCameras: {
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   // mt-1 font-mono text-foreground
   ddMono: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontFamily: text.fontMono,
     color: colors.text,
   },
@@ -56,22 +54,19 @@ export const styles = stylex.create({
   // uppercase tracking-wide text-muted-foreground
   renderJob: {
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   // mt-1 truncate font-mono text-foreground
   ddTruncateMono: {
-    marginTop: space.xs,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+    marginTop: space.s1,
     fontFamily: text.fontMono,
     color: colors.text,
   },
   // text-xs leading-5 text-muted-foreground
   handoffReady: {
     fontSize: text.sizeXs,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
   // flex flex-wrap items-center gap-3
@@ -79,75 +74,63 @@ export const styles = stylex.create({
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
   },
   // size-4 animate-spin
   loader2Icon: {
-    width: space.xl,
-    height: space.xl,
-    animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
-    animationIterationCount: "infinite",
+    width: space.s4,
+    height: space.s4,
   },
   // size-4
   arrowrightIcon: {
-    width: space.xl,
-    height: space.xl,
+    width: space.s4,
+    height: space.s4,
   },
   // text-xs text-muted-foreground
   handoffProgress: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   // space-y-2 border-border border-t pt-3
   handoffProvenance: {
-    borderColor: colors.border,
-    borderTopWidth: "1px",
+    borderColor: colors.hairline,
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    paddingTop: space.lg,
+    paddingTop: space.s3,
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   // text-xs font-semibold uppercase tracking-wide text-muted-foreground
   chainOfCustody: {
-    fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: "0.025em",
     color: colors.mutedForeground,
   },
   // space-y-1.5 text-xs
   olXs: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     display: "flex",
     flexDirection: "column",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // flex min-w-0 gap-3
   liFlex: {
     display: "flex",
     minWidth: 0,
-    gap: space.lg,
+    gap: space.s3,
   },
   // w-32 shrink-0 uppercase tracking-wide text-muted-foreground
   spanUppercase: {
     width: "8rem",
     flexShrink: 0,
     textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    letterSpacing: text.trackingWide,
     color: colors.mutedForeground,
   },
   // min-w-0 truncate font-mono text-foreground
   spanTruncateMono: {
     minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontFamily: text.fontMono,
     color: colors.text,
   },

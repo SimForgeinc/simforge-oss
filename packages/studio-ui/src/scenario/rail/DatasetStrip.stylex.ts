@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers, motion, space, text } from "../../stylex/tokens.stylex";
+import { colors, layers, motion, space, stroke, text } from "../../stylex/tokens.stylex";
 
 const ICON_SIZE = "2.5rem";
 const TRANSITION_PROPERTY = "opacity, background-color, transform, height, color, box-shadow";
@@ -12,11 +12,11 @@ export const styles = stylex.create({
     height: "100%",
     width: space.datasetStripWidth,
     minWidth: space.datasetStripWidth,
-    borderRightWidth: "1px",
+    borderRightWidth: stroke.hairline,
     borderRightStyle: "solid",
-    borderColor: colors.lineStrong,
-    backgroundColor: "rgb(0 0 0 / 0.22)",
-    paddingBlock: space.md,
+    borderColor: colors.hairlineStrong,
+    backgroundColor: colors.scrimLight,
+    paddingBlock: space.s2,
   },
   /** The icon column. Scrolls when the workspace has more datasets than fit, without a visible bar. */
   list: {
@@ -36,7 +36,7 @@ export const styles = stylex.create({
     position: "relative",
     display: "flex",
     justifyContent: "center",
-    paddingBlock: space.xs,
+    paddingBlock: space.s1,
   },
   /**
    * The left pill: Slack's selection indicator. Height carries the state — a dot on hover, a bar on
@@ -70,11 +70,11 @@ export const styles = stylex.create({
     fontSize: "0.8125rem",
     lineHeight: 1,
     fontWeight: text.weightBold,
-    letterSpacing: "0.04em",
+    letterSpacing: text.trackingWider,
     textTransform: "uppercase",
     // Monochrome: brightness is the only per-state signal, so hover lifts the tile and the monogram.
-    backgroundColor: { default: colors.glassRaised, ":hover": colors.chip, ":focus-visible": colors.chip },
-    color: { default: colors.textMuted, ":hover": colors.text, ":focus-visible": colors.text },
+    backgroundColor: { default: colors.fill, ":hover": colors.fillStrong, ":focus-visible": colors.fillStrong },
+    color: { default: colors.mutedForeground, ":hover": colors.text, ":focus-visible": colors.text },
     transform: { default: "scale(1)", ":hover": "scale(1.06)", ":active": "scale(0.97)" },
     outline: { default: "none", ":focus-visible": `2px solid ${colors.ring}` },
     outlineOffset: { default: null, ":focus-visible": "2px" },
@@ -83,7 +83,7 @@ export const styles = stylex.create({
     transitionTimingFunction: motion.easeStandard,
   },
   iconActive: {
-    backgroundColor: colors.glassHover,
+    backgroundColor: colors.fillStronger,
     color: colors.text,
     boxShadow: "0 0 0 1px rgb(255 255 255 / 0.55)",
   },
@@ -96,7 +96,7 @@ export const styles = stylex.create({
     inset: 0,
     display: "grid",
     placeItems: "center",
-    backgroundColor: colors.overlayScrim,
+    backgroundColor: colors.scrim,
   },
   /**
    * The menu caret in the icon's corner. Opacity-revealed rather than mounted on hover so it stays in
@@ -113,8 +113,8 @@ export const styles = stylex.create({
     height: "0.875rem",
     padding: 0,
     borderWidth: 0,
-    backgroundColor: { default: "rgb(0 0 0 / 0.72)", ":hover": "rgb(0 0 0 / 0.9)" },
-    color: { default: "rgb(255 255 255 / 0.8)", ":hover": colors.primary },
+    backgroundColor: { default: colors.scrimHeavy, ":hover": colors.scrimHeavy },
+    color: { default: colors.inkSecondary, ":hover": colors.primary },
     opacity: { default: 0, ":focus-visible": 1 },
     cursor: "pointer",
     outline: { default: "none", ":focus-visible": `2px solid ${colors.ring}` },
@@ -128,43 +128,35 @@ export const styles = stylex.create({
     height: "1px",
     width: "1.75rem",
     marginInline: "auto",
-    marginBlock: space.sm,
-    backgroundColor: colors.lineStrong,
+    marginBlock: space.s1_5,
+    backgroundColor: colors.hairlineStrong,
   },
   /** The `+` and review-queue affordances under the list, kept off the scrolling column. */
   footer: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: space.xs,
-    paddingTop: space.md,
-    borderTopWidth: "1px",
+    gap: space.s1,
+    paddingTop: space.s2,
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    borderColor: colors.line,
-    marginTop: space.md,
+    borderColor: colors.hairline,
+    marginTop: space.s2,
   },
   footerButton: {
-    width: ICON_SIZE,
-    height: ICON_SIZE,
-    backgroundColor: { default: colors.glassRaised, ":hover": colors.accent },
+    backgroundColor: { default: colors.fill, ":hover": colors.accent },
     color: { default: colors.text, ":hover": colors.accentText },
     transitionProperty: TRANSITION_PROPERTY,
     transitionDuration: motion.durFast,
     transitionTimingFunction: motion.easeStandard,
   },
-  footerLink: {
-    width: ICON_SIZE,
-    height: ICON_SIZE,
-    backgroundColor: { default: "transparent", ":hover": colors.glassRaised },
-    color: { default: colors.textSubtle, ":hover": colors.text },
-  },
-  footerIcon: { width: space.xl, height: space.xl },
+  footerIcon: { width: space.s4, height: space.s4 },
   skeleton: {
     width: ICON_SIZE,
     height: ICON_SIZE,
     marginInline: "auto",
-    marginBlock: space.xs,
-    backgroundColor: colors.glassRaised,
+    marginBlock: space.s1,
+    backgroundColor: colors.fill,
   },
   /**
    * A home section's heading: "On this computer", then the organization's name.
@@ -180,10 +172,10 @@ export const styles = stylex.create({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: space.xxs,
-    paddingInline: space.xxs,
-    paddingTop: { default: space.lg, ":first-child": space.none },
-    paddingBottom: space.xxs,
+    gap: space.s0_5,
+    paddingInline: space.s0_5,
+    paddingTop: { default: space.s3, ":first-child": 0 },
+    paddingBottom: space.s0_5,
   },
   sectionLabel: {
     display: "-webkit-box",
@@ -192,14 +184,11 @@ export const styles = stylex.create({
     overflow: "hidden",
     width: "100%",
     textAlign: "center",
-    fontFamily: text.fontMeta,
-    fontSize: "0.5625rem",
-    lineHeight: 1.2,
-    fontWeight: text.weightSemibold,
-    textTransform: "uppercase",
-    letterSpacing: "0.02em",
     overflowWrap: "anywhere",
-    color: colors.textSubtle,
+    // The strip is 3.5rem wide: the tag role's tracking would break a
+    // two-word workspace name onto three lines, so this label stays tight.
+    letterSpacing: text.trackingWide,
+    color: colors.inkMuted,
     cursor: "default",
     outline: { default: "none", ":focus-visible": `2px solid ${colors.ring}` },
     outlineOffset: { default: null, ":focus-visible": "2px" },
@@ -208,13 +197,9 @@ export const styles = stylex.create({
   sectionNote: {
     width: "100%",
     textAlign: "center",
-    fontFamily: text.fontMeta,
-    fontSize: "0.5rem",
-    lineHeight: 1.2,
-    textTransform: "uppercase",
-    letterSpacing: "0.02em",
     overflowWrap: "anywhere",
-    color: colors.textFaint,
+    letterSpacing: text.trackingWide,
+    color: colors.inkFaint,
   },
   /**
    * A cloud dataset's tile. It states presence, so it drops the pointer affordances the local tile
@@ -222,55 +207,22 @@ export const styles = stylex.create({
    */
   iconStatic: {
     cursor: "default",
-    backgroundColor: { default: colors.glass, ":hover": colors.glassRaised, ":focus-visible": colors.glassRaised },
-    color: { default: colors.textSubtle, ":hover": colors.textMuted, ":focus-visible": colors.textMuted },
+    backgroundColor: { default: colors.fillSubtle, ":hover": colors.fill, ":focus-visible": colors.fill },
+    color: { default: colors.inkMuted, ":hover": colors.mutedForeground, ":focus-visible": colors.mutedForeground },
     transform: { default: "none", ":hover": "none", ":active": "none" },
-  },
-  /** The signed-out cloud section's way in. Dashed, so it reads as an opening rather than a tile. */
-  connectButton: {
-    width: ICON_SIZE,
-    height: ICON_SIZE,
-    backgroundColor: { default: colors.glass, ":hover": colors.glassRaised },
-    color: { default: colors.textSubtle, ":hover": colors.text },
-    borderWidth: "1px",
-    borderStyle: "dashed",
-    borderColor: { default: colors.lineStrong, ":hover": colors.accent },
-    transitionProperty: TRANSITION_PROPERTY,
-    transitionDuration: motion.durFast,
-    transitionTimingFunction: motion.easeStandard,
   },
   /** The remainder marker at the foot of a capped cloud section: a count, not a tile. */
   overflowButton: {
-    width: ICON_SIZE,
-    height: ICON_SIZE,
-    backgroundColor: { default: colors.glass, ":hover": colors.glassRaised },
-    color: { default: colors.textSubtle, ":hover": colors.text },
+    backgroundColor: { default: colors.fillSubtle, ":hover": colors.fill },
+    color: { default: colors.inkMuted, ":hover": colors.text },
     fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
     fontWeight: text.weightSemibold,
-    letterSpacing: "0.02em",
-  },
-  // sr-only
-  srOnly: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: space.none,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: 0,
+    letterSpacing: text.trackingWide,
   },
   tooltipTitle: {
     fontWeight: text.weightSemibold,
   },
   tooltipMeta: {
-    fontFamily: text.fontMeta,
-    fontSize: text.sizeMicro,
-    lineHeight: text.lineMicro,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMeta,
     color: colors.mutedForeground,
   },
 });

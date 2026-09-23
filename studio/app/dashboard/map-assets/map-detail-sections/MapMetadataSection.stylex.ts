@@ -1,54 +1,35 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, motion } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-const spin = stylex.keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
+import { colors, text, space } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   sectionHeaderRow: {
     display: "flex",
     alignItems: "center",
-    gap: space.xs,
+    gap: space.s1,
   },
   sectionToggleButton: {
     display: "flex",
     flex: "1 1 0%",
     alignItems: "center",
-    gap: space.sm,
-    fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    gap: space.s1_5,
     color: { default: colors.mutedForeground, ":hover": colors.text },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
   },
   chevron: {
     width: "0.75rem",
     height: "0.75rem",
     flexShrink: 0,
-    transitionProperty: "transform",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
   },
   rotate90: {
     transform: "rotate(90deg)",
   },
   copyMetadataButton: {
     flexShrink: 0,
-    color: { default: "hsl(var(--muted-foreground) / 0.6)", ":hover": colors.mutedForeground },
-    transitionProperty: "color, background-color, border-color, text-decoration-color, fill, stroke",
-    transitionTimingFunction: motion.easeStandard,
-    transitionDuration: "150ms",
+    color: { default: colors.inkFaint, ":hover": colors.mutedForeground },
   },
   copiedCheckIcon: {
     width: "0.75rem",
     height: "0.75rem",
-    color: "#4ade80",
+    color: colors.positive,
   },
   copyIcon: {
     width: "0.75rem",
@@ -57,85 +38,77 @@ export const styles = stylex.create({
   metadataContent: {
     display: "flex",
     flexDirection: "column",
-    gap: space.lg,
-    marginTop: space.md,
+    gap: space.s3,
+    marginTop: space.s2,
   },
   emptyMetadataNotice: {
     fontSize: text.sizeXs,
-    lineHeight: 1.625,
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
   populateMetadataEmphasis: {
-    color: "hsl(var(--foreground) / 0.8)",
+    color: colors.inkSecondary,
   },
   metadataSubsectionHeading: {
-    marginBottom: space.xs,
-    fontSize: "11px",
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    marginBottom: space.s1,
     color: colors.mutedForeground,
   },
   locationValue: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: "hsl(var(--foreground) / 0.9)",
+    lineHeight: text.lineXs,
+    color: colors.ink,
   },
   metadataDefinitionList: {
     display: "grid",
     gridTemplateColumns: "auto 1fr",
-    columnGap: space.md,
-    rowGap: space.xxs,
+    columnGap: space.s2,
+    rowGap: space.s0_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.mutedForeground,
   },
   metadataLabel: {
-    color: "hsl(var(--muted-foreground) / 0.7)",
+    color: colors.inkFaint,
   },
   metadataValue: {
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
-    color: "hsl(var(--foreground) / 0.9)",
+    fontFamily: text.fontMono,
+    color: colors.ink,
   },
   metadataSecondaryValue: {
     wordBreak: "break-all",
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
-    color: "hsl(var(--foreground) / 0.9)",
+    fontFamily: text.fontMono,
+    color: colors.ink,
   },
   projLabel: {
-    color: "hsl(var(--muted-foreground) / 0.7)",
+    color: colors.inkFaint,
     flexShrink: 0,
   },
   projStringValue: {
     wordBreak: "break-all",
-    fontFamily: "var(--font-mono), ui-monospace, monospace",
-    fontSize: "10px",
-    lineHeight: 1.375,
-    color: "hsl(var(--foreground) / 0.85)",
+    fontFamily: text.fontMono,
+    fontSize: text.sizeMicro,
+    lineHeight: text.lineSnug,
+    color: colors.ink,
   },
   metadataTimestamp: {
-    fontSize: "10px",
-    color: "hsl(var(--muted-foreground) / 0.6)",
+    fontSize: text.sizeMicro,
+    color: colors.inkFaint,
   },
   populateMetadataContainer: {
-    paddingTop: space.xs,
+    paddingTop: space.s1,
   },
   populateMetadataButton: {
     width: "100%",
   },
   populateMetadataSpinner: {
-    marginRight: space.sm,
+    marginRight: space.s1_5,
     width: "0.875rem",
     height: "0.875rem",
-    animationName: spin,
-    animationDuration: "1s",
-    animationTimingFunction: "linear",
-    animationIterationCount: "infinite",
   },
   populateMetadataError: {
-    marginTop: space.sm,
+    marginTop: space.s1_5,
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.danger,
   },
 });

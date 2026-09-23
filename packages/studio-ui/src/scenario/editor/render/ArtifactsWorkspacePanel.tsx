@@ -13,6 +13,7 @@ import { VideoPreviewModal } from "./VideoPreviewModal";
 import { artifactDisplayName } from "./render-view-model";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ArtifactsWorkspacePanel.stylex";
+import { a11y, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * The artifacts workspace — manifest #146. Every artifact in the workspace reachable from a visible
@@ -115,13 +116,13 @@ export function ArtifactsWorkspacePanel() {
     <div {...stylex.props(styles.flexColFill)} data-testid="scenario-artifacts-workspace">
       <div {...stylex.props(styles.flexEndTight)}>
         <label {...stylex.props(styles.fillNarrowable)}>
-          <span {...stylex.props(styles.srOnly)}>Search artifacts</span>
+          <span {...stylex.props(a11y.srOnly)}>Search artifacts</span>
           <span {...stylex.props(styles.relBlock)}>
             <Search
               aria-hidden="true"
               className={stylex.props(styles.absMutedInert).className}
             />
-            <Input
+            <Input size="md" variant="plate"
               xstyle={styles.xs}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search kind, media type, job…"
@@ -133,7 +134,7 @@ export function ArtifactsWorkspacePanel() {
         <SelectMenuField
           fieldXstyle={styles.filterField}
           label="Kind"
-          labelXstyle={styles.fieldMetaLabel}
+          labelXstyle={typography.eyebrow}
           onChange={setKind}
           options={kindOptions}
           value={kind}

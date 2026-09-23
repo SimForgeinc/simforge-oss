@@ -36,6 +36,8 @@ import {
 } from "./simcloud/CloudDeleteAccountAction";
 import { SimCloudStorage } from "./simcloud/SimCloudStorage";
 import { cloudErrorMessage, studioCloud, useStudioCloudStatus } from "@/app/lib/host/cloud";
+import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { focus, hairline, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * SimCloud: the one surface for the account and everything the account
@@ -174,9 +176,9 @@ export function SimCloudSurface() {
       testId="simcloud-panel"
       actions={
         connected ? (
-          <nav {...stylex.props(plate.tabs)} aria-label="SimCloud sections">
+          <nav {...stylex.props([hairline.all, plate.tabs])} aria-label="SimCloud sections">
             <button
-              {...stylex.props(plate.tab, tab === "account" ? plate.tabActive : plate.tabIdle)}
+              {...stylex.props([focus.ringInset, plate.tab], tab === "account" ? plate.tabActive : plate.tabIdle)}
               aria-current={tab === "account" ? "page" : undefined}
               data-testid="simcloud-tab-account"
               onClick={() => setTab("account")}
@@ -186,7 +188,7 @@ export function SimCloudSurface() {
               Account
             </button>
             <button
-              {...stylex.props(plate.tab, tab === "storage" ? plate.tabActive : plate.tabIdle)}
+              {...stylex.props([focus.ringInset, plate.tab], tab === "storage" ? plate.tabActive : plate.tabIdle)}
               aria-current={tab === "storage" ? "page" : undefined}
               data-testid="simcloud-tab-storage"
               onClick={() => setTab("storage")}
@@ -206,9 +208,9 @@ export function SimCloudSurface() {
           status={cloud.status}
         />
         {state === null ? (
-          <p {...stylex.props(plate.root, plate.copy)}>Checking the SimCloud connection…</p>
+          <p {...stylex.props([hairline.all, plate.root], plate.copy)}>Checking the SimCloud connection…</p>
         ) : state === "connecting" ? (
-          <section {...stylex.props(plate.root)}>
+          <section {...stylex.props([hairline.all, plate.root])}>
             <CloudBrowserHop />
           </section>
         ) : connected ? (
@@ -222,7 +224,7 @@ export function SimCloudSurface() {
             />
           )
         ) : (
-          <section {...stylex.props(plate.root)} data-testid="simcloud-sign-in">
+          <section {...stylex.props([hairline.all, plate.root])} data-testid="simcloud-sign-in">
             <CloudAccountDeletedNotice />
             <CloudSignInForm status={cloud.status!} />
           </section>
@@ -251,45 +253,45 @@ function ProfileCard({
 
   return (
     <section
-      {...stylex.props(plate.root, styles.card)}
+      {...stylex.props([hairline.all, plate.root], styles.card)}
       data-testid="simcloud-profile"
       data-cloud-state={status?.state ?? "loading"}
     >
       <div {...stylex.props(styles.identity)}>
-        <span {...stylex.props(styles.avatar)}>
+        <span {...stylex.props([hairline.all, hairline.strong, styles.avatar])}>
           {connected ? <Cloud aria-hidden="true" /> : <CloudOff aria-hidden="true" />}
         </span>
         <div {...stylex.props(styles.identityBody)}>
-          <p {...stylex.props(plate.eyebrow)}>
+          <p {...stylex.props([typography.eyebrow, plate.eyebrow])}>
             {connected ? "Signed in" : expired ? "Session ended" : status === null ? "Checking…" : "Signed out"}
           </p>
-          <p {...stylex.props(styles.name, plate.truncate)}>
+          <p {...stylex.props(styles.name, [textLayout.truncate, plate.truncate])}>
             {user?.name ?? user?.email ?? "No SimCloud account"}
           </p>
-          {user?.email ? <p {...stylex.props(plate.copy, plate.truncate)}>{user.email}</p> : null}
+          {user?.email ? <p {...stylex.props(plate.copy, [textLayout.truncate, plate.truncate])}>{user.email}</p> : null}
         </div>
       </div>
 
       <div {...stylex.props(plate.row)}>
         {user ? (
           user.emailVerified ? (
-            <span {...stylex.props(plate.pill, plate.pillAccent)}>
+            <span {...stylex.props([typography.eyebrow, hairline.all, hairline.strong, plate.pill], plate.pillAccent)}>
               <BadgeCheck {...stylex.props(plate.icon)} aria-hidden="true" />
               Verified
             </span>
           ) : (
-            <span {...stylex.props(plate.pill)}>
+            <span {...stylex.props([typography.eyebrow, hairline.all, hairline.strong, plate.pill])}>
               <MailWarning {...stylex.props(plate.icon)} aria-hidden="true" />
               Email not verified
             </span>
           )
         ) : null}
-        {connected ? <span {...stylex.props(plate.pill)}>Unlimited use</span> : null}
+        {connected ? <span {...stylex.props([typography.eyebrow, hairline.all, hairline.strong, plate.pill])}>Unlimited use</span> : null}
       </div>
 
       <dl {...stylex.props(plate.facts)}>
         <div {...stylex.props(plate.fact)}>
-          <dt {...stylex.props(plate.factLabel)}>Organization</dt>
+          <dt {...stylex.props([typography.eyebrow, plate.factLabel])}>Organization</dt>
           {/* Wraps rather than truncating: an organization name plus a role is
               routinely wider than this column, and the name is the fact. */}
           <dd {...stylex.props(plate.factValue)}>
@@ -301,15 +303,15 @@ function ProfileCard({
           </dd>
         </div>
         <div {...stylex.props(plate.fact)}>
-          <dt {...stylex.props(plate.factLabel)}>Server</dt>
-          <dd {...stylex.props(plate.factValue, plate.mono, plate.truncate)}>
+          <dt {...stylex.props([typography.eyebrow, plate.factLabel])}>Server</dt>
+          <dd {...stylex.props(plate.factValue, plate.mono, [textLayout.truncate, plate.truncate])}>
             {status ? status.origin.replace(/^https?:\/\//, "") : "—"}
           </dd>
         </div>
         {connected ? (
           <>
             <div {...stylex.props(plate.fact)}>
-              <dt {...stylex.props(plate.factLabel)}>Sign-in kept</dt>
+              <dt {...stylex.props([typography.eyebrow, plate.factLabel])}>Sign-in kept</dt>
               <dd {...stylex.props(plate.factValue)}>
                 {status.credentialPersistence === "os-vault"
                   ? "In this computer's secure vault"
@@ -317,14 +319,14 @@ function ProfileCard({
               </dd>
             </div>
             <div {...stylex.props(plate.fact)}>
-              <dt {...stylex.props(plate.factLabel)}>Session until</dt>
+              <dt {...stylex.props([typography.eyebrow, plate.factLabel])}>Session until</dt>
               <dd {...stylex.props(plate.factValue)}>{formatWhen(status.sessionExpiresAt)}</dd>
             </div>
           </>
         ) : null}
       </dl>
 
-      <p {...stylex.props(plate.eyebrow, styles.capabilityHead)}>
+      <p {...stylex.props([typography.eyebrow, plate.eyebrow], styles.capabilityHead)}>
         {connected ? "This account unlocks" : "Without an account"}
       </p>
       <ul {...stylex.props(plate.list)} data-testid="simcloud-capability">
@@ -427,7 +429,7 @@ function AccountSection({ status }: { status: StudioCloudStatus }) {
     <div {...stylex.props(styles.pane)} data-testid="simcloud-account">
       <CloudVerifyEmailBanner status={status} />
 
-      <section {...stylex.props(plate.root)}>
+      <section {...stylex.props([hairline.all, plate.root])}>
         <h2 {...stylex.props(plate.title)}>
           <KeyRound {...stylex.props(plate.icon)} aria-hidden="true" /> Password
         </h2>
@@ -437,15 +439,15 @@ function AccountSection({ status }: { status: StudioCloudStatus }) {
         <form {...stylex.props(form.root)} onSubmit={(event) => void submitPassword(event)}>
           <div {...stylex.props(form.field)}>
             <label {...stylex.props(form.label)} htmlFor={`${id}-current`}>Current password</label>
-            <Input id={`${id}-current`} xstyle={form.input} type="password" autoComplete="current-password" maxLength={256} required value={currentPassword} onChange={(event) => setCurrentPassword(event.currentTarget.value)} />
+            <Input variant="plate" id={`${id}-current`} xstyle={form.input} type="password" autoComplete="current-password" maxLength={256} required value={currentPassword} onChange={(event) => setCurrentPassword(event.currentTarget.value)} />
           </div>
           <div {...stylex.props(form.field)}>
             <label {...stylex.props(form.label)} htmlFor={`${id}-new`}>New password</label>
-            <Input id={`${id}-new`} xstyle={form.input} type="password" autoComplete="new-password" minLength={8} maxLength={256} required value={newPassword} onChange={(event) => setNewPassword(event.currentTarget.value)} />
+            <Input variant="plate" id={`${id}-new`} xstyle={form.input} type="password" autoComplete="new-password" minLength={8} maxLength={256} required value={newPassword} onChange={(event) => setNewPassword(event.currentTarget.value)} />
             <p {...stylex.props(form.note)}>At least 8 characters.</p>
           </div>
           <div {...stylex.props(form.row)}>
-            <Button xstyle={plate.button} variant="outline" disabled={cloud.loading || currentPassword.length === 0 || newPassword.length < 8} type="submit">
+            <Button xstyle={[focus.ring, plate.button]} variant="outline" disabled={cloud.loading || currentPassword.length === 0 || newPassword.length < 8} type="submit">
               Change password
             </Button>
             {changed ? <span {...stylex.props(form.success)} role="status">Password changed</span> : null}
@@ -454,7 +456,7 @@ function AccountSection({ status }: { status: StudioCloudStatus }) {
         </form>
       </section>
 
-      <section {...stylex.props(plate.root)}>
+      <section {...stylex.props([hairline.all, plate.root])}>
         <h2 {...stylex.props(plate.title)}>Devices</h2>
         <p {...stylex.props(plate.copy)}>
           Every computer signed in to this account. Signing one out revokes its session in SimCloud.
@@ -468,19 +470,19 @@ function AccountSection({ status }: { status: StudioCloudStatus }) {
         {account ? (
           <ul {...stylex.props(plate.list)} data-testid="simcloud-devices">
             {account.sessions.map((session) => (
-              <li key={session.id} {...stylex.props(plate.item)} data-current={session.current || undefined}>
+              <li key={session.id} {...stylex.props([hairline.all, hairline.subtle, plate.item])} data-current={session.current || undefined}>
                 <div {...stylex.props(styles.deviceBody)}>
-                  <p {...stylex.props(plate.title, styles.deviceTitle, plate.truncate)}>
+                  <p {...stylex.props(plate.title, styles.deviceTitle, [textLayout.truncate, plate.truncate])}>
                     {session.label ?? session.userAgent ?? "Unnamed device"}
-                    {session.current ? <span {...stylex.props(plate.pill, plate.pillAccent)}>This computer</span> : null}
-                    {session.active ? null : <span {...stylex.props(plate.pill, plate.pillMuted)}>Signed out</span>}
+                    {session.current ? <span {...stylex.props([typography.eyebrow, hairline.all, hairline.strong, plate.pill], plate.pillAccent)}>This computer</span> : null}
+                    {session.active ? null : <span {...stylex.props([typography.eyebrow, hairline.all, hairline.strong, plate.pill], plate.pillMuted)}>Signed out</span>}
                   </p>
-                  <p {...stylex.props(plate.copy, plate.truncate)}>
+                  <p {...stylex.props(plate.copy, [textLayout.truncate, plate.truncate])}>
                     Signed in {formatWhen(session.createdAt)} · last used {formatWhen(session.lastUsedAt)}
                   </p>
                 </div>
                 {!session.current && session.active ? (
-                  <Button xstyle={plate.button} variant="outline" disabled={cloud.loading || revoking !== null} onClick={() => void revoke(session.id)} type="button">
+                  <Button xstyle={[focus.ring, plate.button]} variant="outline" disabled={cloud.loading || revoking !== null} onClick={() => void revoke(session.id)} type="button">
                     {revoking === session.id ? <LoaderCircle {...stylex.props(plate.icon, plate.spinner)} aria-hidden="true" /> : null}
                     Sign out
                   </Button>
@@ -491,7 +493,7 @@ function AccountSection({ status }: { status: StudioCloudStatus }) {
         ) : null}
       </section>
 
-      <section {...stylex.props(plate.root)}>
+      <section {...stylex.props([hairline.all, plate.root])}>
         <h2 {...stylex.props(plate.title)}>This computer</h2>
         <p {...stylex.props(plate.copy)}>
           Signing out revokes this installation&apos;s session in SimCloud and removes the sign-in from this
@@ -506,38 +508,35 @@ function AccountSection({ status }: { status: StudioCloudStatus }) {
 }
 
 const styles = stylex.create({
-  pane: { display: "grid", alignContent: "start", gap: "0.75rem", minWidth: 0 },
+  pane: { display: "grid", alignContent: "start", gap: space.s3, minWidth: 0 },
   card: { alignContent: "start" },
-  identity: { display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0 },
-  identityBody: { display: "grid", gap: "0.125rem", minWidth: 0 },
+  identity: { display: "flex", alignItems: "center", gap: space.s3, minWidth: 0 },
+  identityBody: { display: "grid", gap: space.s0_5, minWidth: 0 },
   avatar: {
     display: "grid",
     placeItems: "center",
     width: "2.75rem",
     height: "2.75rem",
     flexShrink: 0,
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "rgb(255 255 255 / 0.12)",
-    backgroundColor: "rgb(255 255 255 / 0.04)",
-    color: "#fff",
+    backgroundColor: colors.fillSubtle,
+    color: colors.ink,
   },
   name: {
-    fontFamily: "var(--font-display), system-ui, sans-serif",
-    fontSize: "1.125rem",
-    lineHeight: "1.5rem",
-    fontWeight: 600,
-    letterSpacing: "-0.02em",
+    fontFamily: text.fontDisplay,
+    fontSize: text.sizeLg,
+    lineHeight: text.lineBase,
+    fontWeight: text.weightSemibold,
+    letterSpacing: text.trackingTight,
   },
-  capabilityHead: { marginTop: "0.25rem" },
+  capabilityHead: { marginTop: space.s1 },
   capability: {
     display: "flex",
     alignItems: "flex-start",
-    gap: "0.5rem",
-    fontSize: "0.75rem",
+    gap: space.s2,
+    fontSize: text.sizeXs,
     lineHeight: "1.125rem",
-    color: "rgb(255 255 255 / 0.65)",
+    color: colors.inkSecondary,
   },
-  deviceBody: { display: "grid", gap: "0.125rem", minWidth: 0, flex: "1 1 12rem" },
-  deviceTitle: { display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem" },
+  deviceBody: { display: "grid", gap: space.s0_5, minWidth: 0, flex: "1 1 12rem" },
+  deviceTitle: { display: "flex", alignItems: "center", gap: space.s1_5, fontSize: "0.8125rem" },
 });

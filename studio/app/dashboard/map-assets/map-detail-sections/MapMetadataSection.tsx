@@ -6,6 +6,7 @@ import { ChevronRight, Check, Copy, Loader2 } from "lucide-react";
 import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 
 import type { MapAsset, MapAssetEnrichmentSnapshot } from "@simforge-oss/studio-shared";
+import { motionRecipe, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the MapMetadataSection component. */
 type MapMetadataSectionProps = {
@@ -46,11 +47,11 @@ export function MapMetadataSection({
         <button
           type="button"
           onClick={onToggleOpen}
-          {...stylex.props(styles.sectionToggleButton)}
+          {...stylex.props([motionRecipe.colors, [typography.caps, styles.sectionToggleButton]])}
           aria-expanded={open}
         >
           <ChevronRight
-            {...stylex.props(styles.chevron, open && styles.rotate90)}
+            {...stylex.props([motionRecipe.transform, styles.chevron], open && styles.rotate90)}
           />
           {title}
         </button>
@@ -69,7 +70,7 @@ export function MapMetadataSection({
             }
             aria-label="Copy map metadata as JSON"
             title="Copy map metadata as JSON"
-            {...stylex.props(styles.copyMetadataButton)}
+            {...stylex.props([motionRecipe.colors, styles.copyMetadataButton])}
           >
             {copiedKey === "mapMetadata" ? (
               <Check {...stylex.props(styles.copiedCheckIcon)} />
@@ -90,7 +91,7 @@ export function MapMetadataSection({
           )}
           {asset.place_context && (
             <div>
-              <h4 {...stylex.props(styles.metadataSubsectionHeading)}>
+              <h4 {...stylex.props([typography.eyebrow, styles.metadataSubsectionHeading])}>
                 Location
               </h4>
               <p {...stylex.props(styles.locationValue)}>
@@ -106,7 +107,7 @@ export function MapMetadataSection({
           )}
           {asset.map_source && (
             <div>
-              <h4 {...stylex.props(styles.metadataSubsectionHeading)}>
+              <h4 {...stylex.props([typography.eyebrow, styles.metadataSubsectionHeading])}>
                 Map source
               </h4>
               <dl {...stylex.props(styles.metadataDefinitionList)}>
@@ -151,7 +152,7 @@ export function MapMetadataSection({
           )}
           {asset.map_coordinate_ref && (
             <div>
-              <h4 {...stylex.props(styles.metadataSubsectionHeading)}>
+              <h4 {...stylex.props([typography.eyebrow, styles.metadataSubsectionHeading])}>
                 Coordinate reference
               </h4>
               <dl {...stylex.props(styles.metadataDefinitionList)}>
@@ -199,7 +200,7 @@ export function MapMetadataSection({
           )}
           {asset.carla_map_name && (
             <div>
-              <h4 {...stylex.props(styles.metadataSubsectionHeading)}>
+              <h4 {...stylex.props([typography.eyebrow, styles.metadataSubsectionHeading])}>
                 CARLA Metadata
               </h4>
               <dl {...stylex.props(styles.metadataDefinitionList)}>
@@ -215,7 +216,7 @@ export function MapMetadataSection({
           )}
           {enrichment && (
             <div>
-              <h4 {...stylex.props(styles.metadataSubsectionHeading)}>
+              <h4 {...stylex.props([typography.eyebrow, styles.metadataSubsectionHeading])}>
                 Third-Party Enrichment Source
               </h4>
               <dl {...stylex.props(styles.metadataDefinitionList)}>
@@ -254,7 +255,7 @@ export function MapMetadataSection({
               >
                 {populateBusy ? (
                   <>
-                    <Loader2 {...stylex.props(styles.populateMetadataSpinner)} />
+                    <Loader2 {...stylex.props([motionRecipe.spin, styles.populateMetadataSpinner])} />
                     Populating…
                   </>
                 ) : (

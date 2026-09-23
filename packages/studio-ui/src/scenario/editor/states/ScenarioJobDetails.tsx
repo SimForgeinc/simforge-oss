@@ -12,6 +12,7 @@ import type {
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenarioJobDetails.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * The provenance panel for a submitted render or 2D-interaction job.
@@ -54,7 +55,7 @@ export function ScenarioJobDetails({
     >
       <div {...stylex.props(styles.flexStart)}>
         <div>
-          <p {...stylex.props(styles.capsXsMuted)}>
+          <p {...stylex.props([typography.caps, styles.capsXsMuted])}>
             {job.mode === "interaction_2d" ? "2D interaction" : "Full render"}
           </p>
           <h2 {...stylex.props(styles.semibold)}>{job.status}</h2>
@@ -62,7 +63,7 @@ export function ScenarioJobDetails({
         <button
           type="button"
           aria-label="Close job details"
-          className={stylex.props(styles.inlineFlexCenterMid, motionStyles.editorMotion).className}
+          className={stylex.props([focus.ring, styles.inlineFlexCenterMid], motionStyles.editorMotion).className}
           onClick={onClose}
         >
           <X aria-hidden="true" className={stylex.props(styles.size4).className} />
@@ -159,7 +160,7 @@ export function ScenarioJobDetails({
               <button
                 type="button"
                 onClick={() => void studioHost.artifacts.openArtifact(artifact.id)}
-                className={stylex.props(styles.fillNarrowableLeftText, motionStyles.editorMotion).className}
+                className={stylex.props([focus.ring, styles.fillNarrowableLeftText], motionStyles.editorMotion).className}
               >
                 <span {...stylex.props(styles.accent)}>{artifact.kind}</span>
                 <span {...stylex.props(styles.muted)}>
@@ -220,7 +221,7 @@ function Details({
   const Body = list ? "dl" : "div";
   return (
     <section {...stylex.props(styles.ruleT)}>
-      <h3 {...stylex.props(styles.capsXsMuted2)}>
+      <h3 {...stylex.props([typography.caps, styles.capsXsMuted2])}>
         {title}
       </h3>
       <Body {...stylex.props(styles.mt3)}>{children}</Body>

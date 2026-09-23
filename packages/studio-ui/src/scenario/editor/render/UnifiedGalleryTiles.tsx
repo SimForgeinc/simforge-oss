@@ -12,6 +12,7 @@ import type { BrowserRecordingSummaryDto } from "../../../lib/scenario/recording
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./UnifiedGalleryTiles.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * The non-managed cards of the unified render gallery. They share the managed tile's card anatomy —
@@ -113,7 +114,7 @@ export function RecordingGalleryTile({
       <button
         type="button"
         aria-label={`Open Three.js recording from ${formatTimestamp(recording.createdAt)}`}
-        {...stylex.props(styles.absInset0Raised)}
+        {...stylex.props([focus.ring, styles.absInset0Raised])}
         onClick={onOpen}
         onFocus={play}
         onBlur={reset}
@@ -141,24 +142,24 @@ export function RecordingGalleryTile({
       </div>
 
       <div {...stylex.props(styles.absFlexCenter)}>
-        <span {...stylex.props(styles.capsMicro)}>
+        <span {...stylex.props([typography.eyebrow, styles.capsMicro])}>
           Three.js clip
         </span>
-        <span className={cn(stylex.props(styles.capsMicro2, chip.style).className, chip.className)}>
+        <span className={cn(stylex.props([typography.eyebrow, styles.capsMicro2], chip.style).className, chip.className)}>
           {chip.label}
         </span>
         {artifactRoles.includes("frames") ? (
-          <span {...stylex.props(styles.capsMicro)}>
+          <span {...stylex.props([typography.eyebrow, styles.capsMicro])}>
             Frames
           </span>
         ) : null}
         {artifactRoles.includes("sensor_archive") ? (
-          <span {...stylex.props(styles.capsMicro)}>
+          <span {...stylex.props([typography.eyebrow, styles.capsMicro])}>
             {artifactRoles.filter((role) => role === "sensor_archive").length} sensor archives
           </span>
         ) : null}
         {artifactRoles.includes("sensor_video") ? (
-          <span {...stylex.props(styles.capsMicro)}>
+          <span {...stylex.props([typography.eyebrow, styles.capsMicro])}>
             {artifactRoles.filter((role) => role === "sensor_video").length} sensor videos
           </span>
         ) : null}
@@ -178,9 +179,9 @@ export function RecordingGalleryTile({
           </div>
         ) : null}
         <div {...stylex.props(styles.flexBetweenBaseline)}>
-          <span {...stylex.props(styles.metaInkTruncate)}>{formatTimestamp(recording.createdAt)}</span>
+          <span {...stylex.props([textLayout.truncate, styles.metaInkTruncate])}>{formatTimestamp(recording.createdAt)}</span>
           {recording.status === "running" ? (
-            <span {...stylex.props(styles.tightCapsMicro)}>
+            <span {...stylex.props([typography.eyebrow, styles.tightCapsMicro])}>
               {progressPercent}%
             </span>
           ) : null}
@@ -235,26 +236,26 @@ export function EsminiGalleryTile({ run }: { run: ScenarioValidationRunDto }) {
       </div>
 
       <div {...stylex.props(styles.absFlexCenter)}>
-        <span {...stylex.props(styles.capsMicro)}>
+        <span {...stylex.props([typography.eyebrow, styles.capsMicro])}>
           esmini replay
         </span>
-        <span {...stylex.props(styles.capsMicro2, chip.style)}>
+        <span {...stylex.props([typography.eyebrow, styles.capsMicro2], chip.style)}>
           {chip.label}
         </span>
       </div>
 
       <div {...stylex.props(styles.absFlexCol2)}>
         <div {...stylex.props(styles.flexBetweenBaseline)}>
-          <span {...stylex.props(styles.metaInkTruncate)}>{formatTimestamp(run.created_at)}</span>
+          <span {...stylex.props([textLayout.truncate, styles.metaInkTruncate])}>{formatTimestamp(run.created_at)}</span>
           {detail ? (
-            <span {...stylex.props(styles.tightCapsMicro)}>{detail}</span>
+            <span {...stylex.props([typography.eyebrow, styles.tightCapsMicro])}>{detail}</span>
           ) : null}
         </div>
         {run.trace_artifact_id || run.report_artifact_id ? (
           <div {...stylex.props(styles.flexCenterGap15)}>
             {run.trace_artifact_id ? (
               <button
-                className={stylex.props(styles.inlineFlexCenterCaps, motionStyles.editorMotion).className}
+                className={stylex.props([focus.ring, [typography.eyebrow, styles.inlineFlexCenterCaps]], motionStyles.editorMotion).className}
                 onClick={() => void studioHost.artifacts.downloadArtifact(run.trace_artifact_id!)}
                 type="button"
               >
@@ -264,7 +265,7 @@ export function EsminiGalleryTile({ run }: { run: ScenarioValidationRunDto }) {
             ) : null}
             {run.report_artifact_id ? (
               <button
-                className={stylex.props(styles.inlineFlexCenterCaps, motionStyles.editorMotion).className}
+                className={stylex.props([focus.ring, [typography.eyebrow, styles.inlineFlexCenterCaps]], motionStyles.editorMotion).className}
                 onClick={() => void studioHost.artifacts.downloadArtifact(run.report_artifact_id!)}
                 type="button"
               >

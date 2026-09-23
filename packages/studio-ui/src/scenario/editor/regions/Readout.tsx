@@ -1,5 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./Readout.stylex";
+import { textLayout, typography } from "../../../stylex/recipes.stylex";
 /**
  * A labelled, non-editable value. The inspector's placement figures and the
  * diagnostics counts are both this shape.
@@ -24,10 +25,10 @@ export function Readout({
 }) {
   return (
     <div {...stylex.props(styles.borderedPad2, xstyle)}>
-      <dt {...stylex.props(styles.capsMicroMuted)}>
+      <dt {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>
         {label}
       </dt>
-      <dd {...stylex.props(styles.monoTruncate)}>{value}</dd>
+      <dd {...stylex.props([textLayout.truncate, styles.monoTruncate])}>{value}</dd>
     </div>
   );
 }

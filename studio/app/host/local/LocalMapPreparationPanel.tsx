@@ -10,6 +10,7 @@ import { useStudioCloudStatus } from "@/app/lib/host/cloud";
 import type { LocalMapDescriptor, LocalMapInstallState } from "@/app/lib/cloud/maps";
 import { followMapInstall, mapInstallErrorMessage, readMapInstall, startMapInstall, type LocalMapInstallProfile } from "@/app/lib/host/map-install";
 import { setup } from "@/app/components/setup-preparation.stylex";
+import { hairline, motionRecipe, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 const REQUIRES_CONNECTION = "map_requires_cloud_connection";
 
@@ -134,7 +135,7 @@ function ProfileRow({
       <div {...stylex.props(setup.rowBody)}>
         <p {...stylex.props(setup.rowTitle)}>
           {label}
-          <span {...stylex.props(setup.pill, ready && setup.pillReady)}>
+          <span {...stylex.props([typography.tag, hairline.all, setup.pill], ready && setup.pillReady)}>
             {status === null ? "Checking" : ready ? (remoteHost ? "On the Studio host" : "On this computer") : running ? percent === null ? "Downloading" : `${percent}%` : locked || requiresConnection ? "Needs account" : status.state === "error" ? "Failed" : "Not downloaded"}
           </span>
         </p>
@@ -144,11 +145,11 @@ function ProfileRow({
         {running ? <div {...stylex.props(setup.track)} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent ?? undefined} aria-label={`${label} download`}><div {...stylex.props(setup.fill)} style={{ "--map-install-progress": `${percent ?? 0}%` } as CSSProperties} /></div> : null}
       </div>
       {!ready && !running && !locked && !requiresConnection && status !== null ? (
-        <Button xstyle={setup.compactButton} disabled={starting} onClick={() => void start()} type="button" variant="outline">
-          {starting ? <LoaderCircle {...stylex.props(setup.iconSmall, setup.spinIcon)} aria-hidden="true" /> : <Download {...stylex.props(setup.iconSmall)} aria-hidden="true" />}
+        <Button xstyle={setup.compactButton} disabled={starting} onClick={() => void start()} type="button" variant="accentOutline">
+          {starting ? <LoaderCircle {...stylex.props(setup.iconSmall, motionRecipe.spin)} aria-hidden="true" /> : <Download {...stylex.props(setup.iconSmall)} aria-hidden="true" />}
           {status.state === "error" ? "Retry" : actionLabel}
         </Button>
-      ) : ready ? <Check {...stylex.props(setup.iconSmall)} aria-hidden="true" /> : running ? <LoaderCircle {...stylex.props(setup.iconSmall, setup.spinIcon)} aria-hidden="true" /> : null}
+      ) : ready ? <Check {...stylex.props(setup.iconSmall)} aria-hidden="true" /> : running ? <LoaderCircle {...stylex.props(setup.iconSmall, motionRecipe.spin)} aria-hidden="true" /> : null}
     </div>
   );
 }
@@ -189,15 +190,15 @@ export function LocalMapPreparationPanel({ map, xstyle }: { map: LocalMapDescrip
       data-map-access={map.access}
       data-map-locked={String(locked)}
     >
-      <p {...stylex.props(setup.panelLabel)}>{remoteHost ? `On the Studio host (${remoteHost})` : "On this computer"}</p>
+      <p {...stylex.props([typography.tag, setup.panelLabel])}>{remoteHost ? `On the Studio host (${remoteHost})` : "On this computer"}</p>
       {locked ? (
-        <div {...stylex.props(setup.locked)}>
+        <div {...stylex.props([hairline.all, setup.locked])}>
           <Lock {...stylex.props(setup.lockedIcon)} aria-hidden="true" />
           <p {...stylex.props(setup.lockedText)}>
             {cloud.status?.state === "expired" ? "Your SimCloud session ended. Sign in again to use this map on this computer." : cloud.status?.state === "connecting" ? "Finishing the SimCloud sign-in in your browser…" : "This map needs a SimCloud account. Sign in to download and render it on this computer."}
           </p>
-          {cloud.status?.state === "connecting" ? <LoaderCircle {...stylex.props(setup.iconSmall, setup.spinIcon)} aria-hidden="true" /> : (
-            <Button xstyle={setup.compactButton} disabled={cloud.status === null} onClick={cloud.openAccountPanel} type="button" variant="outline">
+          {cloud.status?.state === "connecting" ? <LoaderCircle {...stylex.props(setup.iconSmall, motionRecipe.spin)} aria-hidden="true" /> : (
+            <Button xstyle={setup.compactButton} disabled={cloud.status === null} onClick={cloud.openAccountPanel} type="button" variant="accentOutline">
               <LogIn {...stylex.props(setup.iconSmall)} aria-hidden="true" />
               {cloud.status?.state === "expired" ? "Sign in again" : "Sign in to SimCloud"}
             </Button>

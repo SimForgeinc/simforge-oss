@@ -25,6 +25,7 @@ import {
 } from "../../components/ui/tooltip";
 import { menu } from "../scenario-controls.stylex";
 import { datasetMonogram } from "../../lib/monogram";
+import { a11y, typography } from "../../stylex/recipes.stylex";
 
 /** Datasets the workspace owns can be edited; shared and system-managed ones are read-only (§6.5). */
 export function isDatasetEditable(dataset: ScenarioDatasetDto): boolean {
@@ -110,7 +111,7 @@ export function DatasetStrip({
     <li role="presentation" {...stylex.props(styles.section)}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span {...stylex.props(styles.sectionLabel)} tabIndex={0}>
+          <span {...stylex.props([typography.tag, styles.sectionLabel])} tabIndex={0}>
             {label}
           </span>
         </TooltipTrigger>
@@ -118,7 +119,7 @@ export function DatasetStrip({
           <div {...stylex.props(styles.tooltipTitle)}>{title}</div>
         </TooltipContent>
       </Tooltip>
-      {note ? <span {...stylex.props(styles.sectionNote)}>{note}</span> : null}
+      {note ? <span {...stylex.props([typography.tag, styles.sectionNote])}>{note}</span> : null}
     </li>
   );
 
@@ -184,7 +185,7 @@ export function DatasetStrip({
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={12}>
             <div {...stylex.props(styles.tooltipTitle)}>{dataset.name}</div>
-            <div {...stylex.props(styles.tooltipMeta)}>
+            <div {...stylex.props([typography.eyebrow, styles.tooltipMeta])}>
               {count} {count === 1 ? "scenario" : "scenarios"}
               {editable ? null : " · Read-only"}
             </div>
@@ -272,7 +273,7 @@ export function DatasetStrip({
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={12}>
             <div {...stylex.props(styles.tooltipTitle)}>{dataset.name}</div>
-            <div {...stylex.props(styles.tooltipMeta)}>
+            <div {...stylex.props([typography.eyebrow, styles.tooltipMeta])}>
               {dataset.documentCount} {dataset.documentCount === 1 ? "scenario" : "scenarios"} · In{" "}
               {organizationName}
             </div>
@@ -310,16 +311,16 @@ export function DatasetStrip({
           <li {...stylex.props(styles.item)}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button asChild size="icon" variant="ghost" xstyle={styles.connectButton}>
+                <Button asChild size="icon" variant="outline">
                   <Link href={SIMCLOUD_HREF} data-testid="scenario-dataset-cloud-connect">
                     <Cloud {...stylex.props(styles.footerIcon)} aria-hidden="true" />
-                    <span {...stylex.props(styles.srOnly)}>Sign in to SimCloud</span>
+                    <span {...stylex.props(a11y.srOnly)}>Sign in to SimCloud</span>
                   </Link>
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right" sideOffset={12}>
                 <div {...stylex.props(styles.tooltipTitle)}>Sign in to SimCloud</div>
-                <div {...stylex.props(styles.tooltipMeta)}>
+                <div {...stylex.props([typography.eyebrow, styles.tooltipMeta])}>
                   To see datasets your organization owns
                 </div>
               </TooltipContent>
@@ -362,7 +363,7 @@ export function DatasetStrip({
                 <Button asChild size="icon" variant="ghost" xstyle={styles.overflowButton}>
                   <Link href={SIMCLOUD_HREF} data-testid="scenario-dataset-cloud-overflow">
                     <span aria-hidden="true">+{hidden}</span>
-                    <span {...stylex.props(styles.srOnly)}>
+                    <span {...stylex.props(a11y.srOnly)}>
                       {hidden} more datasets in {cloudHome.organizationName}
                     </span>
                   </Link>
@@ -372,7 +373,7 @@ export function DatasetStrip({
                 <div {...stylex.props(styles.tooltipTitle)}>
                   {hidden} more {hidden === 1 ? "dataset" : "datasets"}
                 </div>
-                <div {...stylex.props(styles.tooltipMeta)}>
+                <div {...stylex.props([typography.eyebrow, styles.tooltipMeta])}>
                   In {cloudHome.organizationName} · Open SimCloud
                 </div>
               </TooltipContent>
@@ -434,7 +435,7 @@ export function DatasetStrip({
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button asChild size="icon" variant="ghost" xstyle={styles.footerLink}>
+              <Button asChild size="icon" variant="ghost">
                 <Link href="/dashboard/scenario/review" aria-label="Review queue">
                   <ClipboardCheck {...stylex.props(styles.footerIcon)} aria-hidden="true" />
                 </Link>

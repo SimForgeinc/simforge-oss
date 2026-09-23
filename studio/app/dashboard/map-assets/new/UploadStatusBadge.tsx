@@ -1,6 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./UploadStatusBadge.stylex";
 import { Loader2, Check, AlertCircle } from "lucide-react";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 export type UploadStatus = "hashing" | "uploading" | "done" | "error";
 export type TrackedUpload = {
@@ -17,13 +18,13 @@ export function UploadStatusBadge({ upload }: { upload: TrackedUpload | undefine
     case "hashing":
       return (
         <span {...stylex.props(styles.hashingStatus)}>
-          <Loader2 {...stylex.props(styles.loadingIcon)} /> Hashing…
+          <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingIcon])} /> Hashing…
         </span>
       );
     case "uploading":
       return (
         <span {...stylex.props(styles.uploadingStatus)}>
-          <Loader2 {...stylex.props(styles.loadingIcon)} /> Uploading…
+          <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingIcon])} /> Uploading…
         </span>
       );
     case "done":

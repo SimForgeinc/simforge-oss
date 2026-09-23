@@ -48,6 +48,7 @@ import { SelectMenuField } from "../../../components/ui/select-menu";
 import { Readout } from "../regions/Readout";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ActorDetailsPanel.stylex";
+import { a11y, focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 const PAINTS: readonly { value: string; label: string }[] = [
   { value: "#2f4f74", label: "Navy" },
@@ -127,7 +128,7 @@ export function ActorDetailsPanel({
       closeTestId="actor-details-close"
       headerFooter={(
         <fieldset disabled={!tintable} {...stylex.props(styles.ruleT)}>
-          <legend {...stylex.props(styles.srOnly)}>Color</legend>
+          <legend {...stylex.props(a11y.srOnly)}>Color</legend>
           {!tintable ? <p>Authored livery — colour is fixed.</p> : null}
           <div {...stylex.props(styles.flexCenterBetween)}>
             {PAINTS.map((option) => {
@@ -137,7 +138,7 @@ export function ActorDetailsPanel({
                   aria-label={option.label}
                   aria-pressed={active}
                   disabled={!tintable}
-                  {...stylex.props(styles.paintSwatch, active ? styles.paintSwatchActive : styles.paintSwatchIdle)}
+                  {...stylex.props([focus.ring, styles.paintSwatch], active ? styles.paintSwatchActive : styles.paintSwatchIdle)}
                   key={option.value}
                   onClick={() => controller?.updateActorAppearance(actor.id, { bodyColor: option.value })}
                   style={{ backgroundColor: option.value }}
@@ -181,8 +182,8 @@ export function ActorDetailsPanel({
         ) : null}
 
         <label {...stylex.props(styles.block2)} htmlFor={nameId}>
-          <span {...stylex.props(styles.caps)}>Name</span>
-          <Input
+          <span {...stylex.props([typography.tag, styles.caps])}>Name</span>
+          <Input size="md" variant="plate"
             id={nameId}
             xstyle={styles.xsWhite}
             placeholder={entry.label}
@@ -193,7 +194,7 @@ export function ActorDetailsPanel({
 
         {carlaCompatibility?.status === "native" ? null : (
           <div data-testid={`actor-carla-compatibility-${actor.id}`}>
-            <span {...stylex.props(styles.caps)}>CARLA</span>
+            <span {...stylex.props([typography.tag, styles.caps])}>CARLA</span>
             {carlaCompatibility ? (
               <div {...stylex.props(styles.stackedXs)}>
                 <CarlaCompatibilityPill compatibility={carlaCompatibility} size="sm" />
@@ -210,7 +211,7 @@ export function ActorDetailsPanel({
           aria-labelledby={`actor-carla-heading-${actor.id}`}
           {...stylex.props(styles.stackedXs)}
         >
-          <span id={`actor-carla-heading-${actor.id}`} {...stylex.props(styles.caps)}>CARLA object</span>
+          <span id={`actor-carla-heading-${actor.id}`} {...stylex.props([typography.tag, styles.caps])}>CARLA object</span>
           {selectedCarlaObject ? (
             <dl {...stylex.props(styles.stackedXs)}>
               <Readout label="Blueprint" value={selectedCarlaObject.blueprintId} />
@@ -234,9 +235,9 @@ export function ActorDetailsPanel({
 
         {actor.kind === "prop" ? (
           <label {...stylex.props(styles.block2)} htmlFor={rotationId}>
-            <span {...stylex.props(styles.caps)}>Rotation</span>
+            <span {...stylex.props([typography.tag, styles.caps])}>Rotation</span>
             <div {...stylex.props(styles.rel)}>
-              <Input
+              <Input size="md" variant="plate"
                 aria-label="Rotation"
                 id={rotationId}
                 xstyle={styles.xsWhite2}
@@ -258,7 +259,7 @@ export function ActorDetailsPanel({
         {showMotionControls ? (
           <label {...stylex.props(styles.block2)} htmlFor={speedId}>
             <span {...stylex.props(styles.flexBetweenBaseline)}>
-              <span {...stylex.props(styles.caps)}>Initial speed</span>
+              <span {...stylex.props([typography.tag, styles.caps])}>Initial speed</span>
               <output {...stylex.props(styles.monoNums)} htmlFor={speedId}>
                 {initialSpeedKph} <span {...stylex.props(styles.textTextWhite35)}>kph</span>
               </output>
@@ -288,7 +289,7 @@ export function ActorDetailsPanel({
 
         {showMotionControls && actor.kind === "vehicle" ? (
           <fieldset aria-label="Driver behavior" data-testid="actor-driver-profile">
-            <legend {...stylex.props(styles.caps)}>Driver behavior</legend>
+            <legend {...stylex.props([typography.tag, styles.caps])}>Driver behavior</legend>
             <div aria-label="Driver behavior choices" {...stylex.props(styles.gridCols1Gap15)} role="radiogroup">
               {DRIVER_PROFILE_IDS.map((id) => {
                 const active = (actor.driverProfile ?? "lawful") === id;
@@ -296,7 +297,7 @@ export function ActorDetailsPanel({
                   <button
                     aria-checked={active}
                     aria-label={`${DRIVER_PROFILES[id].label} behavior`}
-                    className={stylex.props(styles.profileOption, active ? styles.profileOptionActive : styles.profileOptionIdle).className}
+                    className={stylex.props([focus.ring, styles.profileOption], active ? styles.profileOptionActive : styles.profileOptionIdle).className}
                     key={id}
                     onClick={() => controller?.updateActorAppearance(actor.id, { driverProfile: id })}
                     role="radio"
@@ -311,7 +312,7 @@ export function ActorDetailsPanel({
                       unoptimized
                       width={32}
                     />
-                    <span {...stylex.props(styles.mediumTruncate)}>{DRIVER_PROFILES[id].label}</span>
+                    <span {...stylex.props([textLayout.truncate, styles.mediumTruncate])}>{DRIVER_PROFILES[id].label}</span>
                   </button>
                 );
               })}

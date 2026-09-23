@@ -30,6 +30,7 @@ import {
 } from "./readiness-model";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./ScenarioReadinessButton.stylex";
+import { focus, typography } from "../../../stylex/recipes.stylex";
 
 const SECTION_COPY: Record<
   ReadinessSection,
@@ -77,7 +78,7 @@ export function ScenarioReadinessButton({
               ? "Scenario readiness: Ready"
               : `Scenario readiness: Simulation warnings, ${summary.issueCount} ${summary.issueCount === 1 ? "item" : "items"}`
           }
-          xstyle={ready ? styles.borderedGlassyGap2 : styles.borderedGlassyGap22}
+          xstyle={ready ? styles.triggerReady : styles.triggerWarning}
           data-readiness-status={summary.status}
           data-testid="scenario-readiness-button"
           size="sm"
@@ -232,7 +233,7 @@ function ReadinessIssueRow({
           {item.detail}
         </p>
         <div {...stylex.props(styles.mt2BorderL2Border70)}>
-          <p {...stylex.props(styles.capsSemibold)}>
+          <p {...stylex.props([typography.tag, styles.capsSemibold])}>
             How to fix it
           </p>
           <p {...stylex.props(styles.breakWordsRelaxed)}>
@@ -246,7 +247,7 @@ function ReadinessIssueRow({
   if (onSelectIssue) {
     return (
       <button
-        {...stylex.props(styles.blockWide, styles.rowDivided)}
+        {...stylex.props([focus.ringInset, styles.blockWide], styles.rowDivided)}
         data-testid="scenario-readiness-issue"
         onClick={() => onSelectIssue(item.issue)}
         type="button"

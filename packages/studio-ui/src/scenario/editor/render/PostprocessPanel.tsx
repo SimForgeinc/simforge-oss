@@ -26,6 +26,7 @@ import type {
 } from "@simforge-oss/studio-host";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./PostprocessPanel.stylex";
+import { textLayout, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * Cosmos augment (#139, #144) and VLM annotate (#140, #145), reshaped onto v2's control plane.
@@ -126,7 +127,7 @@ export function PostprocessPanel({
   return (
     <section {...stylex.props(styles.flexColRuleT)}>
       <div {...stylex.props(styles.flexCenterGap2)}>
-        <h4 {...stylex.props(styles.capsMicroMuted)}>
+        <h4 {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>
           Postprocess
         </h4>
         <div {...stylex.props(styles.flexCenterPushRight)}>
@@ -180,7 +181,7 @@ function ChildList({ items, title }: { items: ScenarioGalleryItemDto[]; title: s
   if (items.length === 0) return null;
   return (
     <div {...stylex.props(styles.flexColGap1)}>
-      <h5 {...stylex.props(styles.capsMicroMuted2)}>
+      <h5 {...stylex.props([typography.eyebrow, styles.capsMicroMuted2])}>
         {title} · {items.length}
       </h5>
       <ul {...stylex.props(styles.borderedDivided)}>
@@ -188,7 +189,7 @@ function ChildList({ items, title }: { items: ScenarioGalleryItemDto[]; title: s
           <li {...stylex.props(styles.flexColGap12, index > 0 && styles.rowDivided)} key={child.id}>
             <div {...stylex.props(styles.flexCenterGap2)}>
               <RenderStateChip state={child.jobState} />
-              <span {...stylex.props(styles.fillXsInk)}>
+              <span {...stylex.props([textLayout.truncate, styles.fillXsInk])}>
                 {child.modelFamily ?? "—"}
               </span>
               <span {...stylex.props(styles.tightMicroMuted)}>
@@ -284,25 +285,25 @@ function PostprocessForm({
         void submit();
       }}
     >
-      <p {...stylex.props(styles.capsMicroMuted)}>
+      <p {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>
         {copy.title}
       </p>
       <SelectMenuField
         label="Source clip"
-        labelXstyle={styles.fieldMetaLabel}
+        labelXstyle={typography.eyebrow}
         onChange={setSourceArtifactId}
         options={sourceOptions}
         value={sourceArtifactId}
       />
       <SelectMenuField
         label="Model"
-        labelXstyle={styles.fieldMetaLabel}
+        labelXstyle={typography.eyebrow}
         onChange={setModelFamily}
         options={copy.families}
         value={modelFamily}
       />
       <label {...stylex.props(styles.flexColGap1)}>
-        <span {...stylex.props(styles.capsMicroMuted2)}>
+        <span {...stylex.props([typography.eyebrow, styles.capsMicroMuted2])}>
           {copy.promptLabel}
         </span>
         <Textarea
@@ -314,9 +315,8 @@ function PostprocessForm({
       </label>
       {mode === "cosmos_augment" ? (
         <label {...stylex.props(styles.flexColGap1)}>
-          <span {...stylex.props(styles.capsMicroMuted2)}>Guidance</span>
-          <Input
-            xstyle={styles.xs2}
+          <span {...stylex.props([typography.eyebrow, styles.capsMicroMuted2])}>Guidance</span>
+          <Input size="md" variant="plate"
             inputMode="numeric"
             onChange={(event) => setGuidance(event.target.value)}
             value={guidance}

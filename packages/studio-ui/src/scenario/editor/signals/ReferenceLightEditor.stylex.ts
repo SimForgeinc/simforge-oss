@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // min-w-0 (was min-w-0 space-y-2)
@@ -12,7 +12,7 @@ export const styles = stylex.create({
     minWidth: "0px",
     display: "flex",
     flexDirection: "column",
-    gap: space.md,
+    gap: space.s2,
   },
   // flex min-w-0 items-center justify-between gap-2
   flexCenterBetween: {
@@ -20,16 +20,13 @@ export const styles = stylex.create({
     minWidth: "0px",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: space.md,
+    gap: space.s2,
   },
   // min-w-0 truncate text-meta font-semibold text-foreground
   metaInkSemibold: {
     minWidth: "0px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     fontWeight: text.weightSemibold,
     color: colors.text,
   },
@@ -39,68 +36,51 @@ export const styles = stylex.create({
     height: "0.5rem",
     width: "100%",
     overflow: "hidden",
-    borderWidth: "1px",
-    borderColor: colors.border,
+    borderWidth: stroke.hairline,
+    borderColor: colors.hairline,
     backgroundColor: colors.muted,
   },
   // overflow-hidden rounded-md border border-border
   borderedClip: {
     overflow: "hidden",
-    borderRadius: "0",
-    borderWidth: "1px",
-    borderColor: colors.border,
+    borderWidth: stroke.hairline,
+    borderColor: colors.hairline,
   },
   // grid grid-cols-[20px_minmax(0,1fr)_58px_42px] items-center border-b border-border bg-muted/60 px-1.5 py-1 text-micro uppercase tracking-wide text-muted-foreground
   gridCenterCaps: {
     display: "grid",
     gridTemplateColumns: "20px minmax(0, 1fr) 58px 42px",
     alignItems: "center",
-    borderBottomWidth: "1px",
-    borderColor: colors.border,
-    backgroundColor: "hsl(var(--muted) / 0.6)",
-    paddingLeft: space.sm,
-    paddingRight: space.sm,
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
-    fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    textTransform: "uppercase",
-    letterSpacing: "0.025em",
+    borderBottomWidth: stroke.hairline,
+    borderColor: colors.hairline,
+    backgroundColor: colors.fillSubtle,
+    paddingLeft: space.s1_5,
+    paddingRight: space.s1_5,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
     color: colors.mutedForeground,
   },
   // text-right
   rightText: {
     textAlign: "right",
   },
-  // sr-only
-  srOnly: {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: space.none,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    borderWidth: "0",
-  },
   // text-micro leading-relaxed text-muted-foreground
   microMutedRelaxed: {
     fontSize: text.sizeMicro,
-    lineHeight: "1.625",
+    lineHeight: text.lineRelaxed,
     color: colors.mutedForeground,
   },
   // border border-signal-yellow/50 bg-signal-yellow/10 px-2 py-1.5 text-micro leading-relaxed text-signal-yellow
   microBorderedRelaxed: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderColor: "hsl(var(--signal-yellow) / 0.5)",
     backgroundColor: "hsl(var(--signal-yellow) / 0.1)",
-    paddingLeft: space.md,
-    paddingRight: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
+    paddingLeft: space.s2,
+    paddingRight: space.s2,
+    paddingTop: space.s1_5,
+    paddingBottom: space.s1_5,
     fontSize: text.sizeMicro,
-    lineHeight: "1.625",
+    lineHeight: text.lineRelaxed,
     color: "hsl(var(--signal-yellow) / 1)",
   },
   // grid grid-cols-[20px_minmax(0,1fr)_58px_42px] items-center border-b border-border px-1.5 py-1 last:border-b-0
@@ -109,14 +89,14 @@ export const styles = stylex.create({
     gridTemplateColumns: "20px minmax(0, 1fr) 58px 42px",
     alignItems: "center",
     borderBottomWidth: {
-      default: "1px",
+      default: stroke.hairline,
       ":last-child": "0px",
     },
-    borderColor: colors.border,
-    paddingLeft: space.sm,
-    paddingRight: space.sm,
-    paddingTop: space.xs,
-    paddingBottom: space.xs,
+    borderColor: colors.hairline,
+    paddingLeft: space.s1_5,
+    paddingRight: space.s1_5,
+    paddingTop: space.s1,
+    paddingBottom: space.s1,
   },
   // grid place-items-center
   gridCentered: {
@@ -127,22 +107,19 @@ export const styles = stylex.create({
   size3TextMutedForeground60: {
     width: "0.75rem",
     height: "0.75rem",
-    color: "hsl(var(--muted-foreground) / 0.6)",
+    color: colors.inkFaint,
   },
   // flex min-w-0 items-center gap-1.5
   flexCenterNarrowable: {
     display: "flex",
     minWidth: "0px",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.s1_5,
   },
   // truncate text-meta text-foreground
   metaInkTruncate: {
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
     fontSize: text.sizeMeta,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     color: colors.text,
   },
   // relative
@@ -151,23 +128,20 @@ export const styles = stylex.create({
   },
   // h-6 w-full pr-3 pl-1 text-right text-meta tabular-nums
   metaWideRightText: {
-    height: "1.5rem",
     width: "100%",
-    paddingLeft: space.xs,
-    paddingRight: space.lg,
+    paddingLeft: space.s1,
+    paddingRight: space.s3,
     textAlign: "right",
-    fontSize: text.sizeMeta,
-    lineHeight: "1rem",
     fontVariantNumeric: "tabular-nums",
   },
   // pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[8px] text-muted-foreground
   absMutedInert: {
     pointerEvents: "none",
     position: "absolute",
-    right: space.xs,
+    right: space.s1,
     top: "50%",
     transform: "translate(0, -50%)",
-    fontSize: "8px",
+    fontSize: text.sizeNano,
     color: colors.mutedForeground,
   },
   // flex justify-end
@@ -205,6 +179,5 @@ export const styles = stylex.create({
     width: "0.625rem",
     height: "0.625rem",
     flexShrink: 0,
-    borderRadius: "0",
   },
 });

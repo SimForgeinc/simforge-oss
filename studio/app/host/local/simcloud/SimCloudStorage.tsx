@@ -21,6 +21,7 @@ import { Button } from "@simforge-oss/studio-ui/components/ui/button";
 import { plate } from "@/app/components/AppStage.stylex";
 import { studioHost } from "@/app/lib/host";
 import { studioCloud, cloudErrorMessage, useStudioCloudStatus } from "@/app/lib/host/cloud";
+import { focus, hairline, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * Datasets and artifacts in a SimCloud organization next to the ones on this
@@ -240,12 +241,12 @@ export function SimCloudStorage({
       <div>
       <div {...stylex.props(plate.spread)}>
         <div {...stylex.props(plate.row)}>
-          <label {...stylex.props(plate.eyebrow)} htmlFor="simcloud-organization">
+          <label {...stylex.props([typography.eyebrow, plate.eyebrow])} htmlFor="simcloud-organization">
             Organization
           </label>
           <select
             id="simcloud-organization"
-            {...stylex.props(styles.select)}
+            {...stylex.props([hairline.all, hairline.strong, styles.select])}
             value={organizationId ?? ""}
             onChange={(event) => onOrganizationChange(event.target.value || null)}
             disabled={organizations.length === 0 || busy !== null}
@@ -259,7 +260,7 @@ export function SimCloudStorage({
           </select>
         </div>
         <Button
-          xstyle={plate.button}
+          xstyle={[focus.ring, plate.button]}
           variant="outline"
           onClick={() => void refresh()}
           disabled={loading || busy !== null}
@@ -302,7 +303,7 @@ export function SimCloudStorage({
                 detail={`${dataset.documentCount} scenario${dataset.documentCount === 1 ? "" : "s"} · updated ${formatWhen(dataset.updatedAt)}`}
                 badge={link ? `Local copy · imported ${formatWhen(link.lastImportedAt)}` : null}
                 action={
-                  <Button xstyle={plate.button} variant="outline" disabled={busy !== null} onClick={() => void importDataset(dataset)} type="button">
+                  <Button xstyle={[focus.ring, plate.button]} variant="outline" disabled={busy !== null} onClick={() => void importDataset(dataset)} type="button">
                     {busy === key ? <LoaderCircle {...stylex.props(plate.icon, plate.spinner)} aria-hidden="true" /> : <CloudDownload {...stylex.props(plate.icon)} aria-hidden="true" />}
                     {link ? "Update local copy" : "Import"}
                   </Button>
@@ -340,7 +341,7 @@ export function SimCloudStorage({
                   <div {...stylex.props(plate.row)}>
                     <select
                       aria-label={`Publish target for ${dataset.name}`}
-                      {...stylex.props(styles.select, styles.targetSelect)}
+                      {...stylex.props([hairline.all, hairline.strong, styles.select], styles.targetSelect)}
                       value={target}
                       disabled={busy !== null}
                       onChange={(event) => setPublishTargets((current) => ({ ...current, [dataset.id]: event.target.value }))}
@@ -352,7 +353,7 @@ export function SimCloudStorage({
                         </option>
                       ))}
                     </select>
-                    <Button xstyle={plate.button} variant="outline" disabled={busy !== null || dataset.documentCount === 0} onClick={() => void publishDataset(dataset)} type="button">
+                    <Button xstyle={[focus.ring, plate.button]} variant="outline" disabled={busy !== null || dataset.documentCount === 0} onClick={() => void publishDataset(dataset)} type="button">
                       {busy === key ? <LoaderCircle {...stylex.props(plate.icon, plate.spinner)} aria-hidden="true" /> : <CloudUpload {...stylex.props(plate.icon)} aria-hidden="true" />}
                       Publish
                     </Button>
@@ -378,7 +379,7 @@ export function SimCloudStorage({
                 detail={`${formatBytes(artifact.byteLength)} · ${artifact.mediaType} · ${artifact.renderJobId ? "render output" : "desktop upload"} · ${artifact.sha256.slice(0, 12)}`}
                 badge={link ? (link.direction === "upload" ? "Uploaded from here" : "Imported") : null}
                 action={
-                  <Button xstyle={plate.button} variant="outline" disabled={busy !== null} onClick={() => void importArtifact(artifact)} type="button">
+                  <Button xstyle={[focus.ring, plate.button]} variant="outline" disabled={busy !== null} onClick={() => void importArtifact(artifact)} type="button">
                     {busy === key ? <LoaderCircle {...stylex.props(plate.icon, plate.spinner)} aria-hidden="true" /> : <CloudDownload {...stylex.props(plate.icon)} aria-hidden="true" />}
                     {link ? "Import again" : "Import"}
                   </Button>
@@ -403,7 +404,7 @@ export function SimCloudStorage({
                 detail={`${formatBytes(artifact.byteLength)} · ${artifact.mediaType} · ${artifact.sha256.slice(0, 12)}`}
                 badge={link ? (link.direction === "import" ? "Imported from this organization" : "Uploaded") : null}
                 action={
-                  <Button xstyle={plate.button} variant="outline" disabled={busy !== null} onClick={() => void uploadArtifact(artifact)} type="button">
+                  <Button xstyle={[focus.ring, plate.button]} variant="outline" disabled={busy !== null} onClick={() => void uploadArtifact(artifact)} type="button">
                     {busy === key ? <LoaderCircle {...stylex.props(plate.icon, plate.spinner)} aria-hidden="true" /> : <CloudUpload {...stylex.props(plate.icon)} aria-hidden="true" />}
                     {link ? "Upload again" : "Upload"}
                   </Button>
@@ -433,16 +434,16 @@ function ListPlate<T>({
   renderItem: (item: T) => ReactNode;
 }) {
   return (
-    <section {...stylex.props(plate.root, plate.scroller)}>
+    <section {...stylex.props([hairline.all, plate.root], plate.scroller)}>
       <div>
       <div {...stylex.props(plate.spread)}>
         <div {...stylex.props(plate.row)}>
           {icon}
           <h2 {...stylex.props(plate.title)}>{title}</h2>
         </div>
-        <span {...stylex.props(plate.eyebrow)}>{items.length}</span>
+        <span {...stylex.props([typography.eyebrow, plate.eyebrow])}>{items.length}</span>
       </div>
-      <p {...stylex.props(plate.copy, plate.truncate)}>{subtitle}</p>
+      <p {...stylex.props(plate.copy, [textLayout.truncate, plate.truncate])}>{subtitle}</p>
       </div>
       {items.length === 0 ? (
         <p {...stylex.props(plate.empty)}>{empty}</p>
@@ -465,11 +466,11 @@ function Row({
   action: ReactNode;
 }) {
   return (
-    <li {...stylex.props(plate.item)}>
+    <li {...stylex.props([hairline.all, hairline.subtle, plate.item])}>
       <div {...stylex.props(styles.rowBody)}>
-        <p {...stylex.props(plate.title, plate.truncate, styles.rowTitle)}>{title}</p>
-        <p {...stylex.props(plate.copy, plate.truncate)}>{detail}</p>
-        {badge === null ? null : <span {...stylex.props(plate.pill)}>{badge}</span>}
+        <p {...stylex.props(plate.title, [textLayout.truncate, plate.truncate], styles.rowTitle)}>{title}</p>
+        <p {...stylex.props(plate.copy, [textLayout.truncate, plate.truncate])}>{detail}</p>
+        {badge === null ? null : <span {...stylex.props([typography.eyebrow, hairline.all, hairline.strong, plate.pill])}>{badge}</span>}
       </div>
       {action}
     </li>

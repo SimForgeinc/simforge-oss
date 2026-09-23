@@ -7,6 +7,7 @@ import type { EditorDocument } from "@simforge-oss/editor";
 import { InteractionTargetModeControls } from "./InteractionTargetControls";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./InteractionSemanticsControls.stylex";
+import { focus, typography } from "../../../stylex/recipes.stylex";
 
 export const MAX_AUTHORED_TARGET_SPEED_KPH = 130;
 type NumericSemantic = "targetSpeedKph" | "laneDelta" | "durationS";
@@ -155,7 +156,7 @@ export function InteractionSemanticsControls({
 
   return (
     <fieldset {...stylex.props(styles.gridRuleTNarrowable)}>
-      <legend {...stylex.props(styles.capsMetaMuted)}>
+      <legend {...stylex.props([typography.eyebrow, styles.capsMetaMuted])}>
         Driving behavior
       </legend>
       <InteractionTargetModeControls
@@ -198,7 +199,7 @@ export function InteractionSemanticsControls({
             return (
               <button
                 aria-checked={active}
-                {...stylex.props(styles.styleOption, active ? styles.styleOptionActive : styles.styleOptionIdle)}
+                {...stylex.props([focus.ring, styles.styleOption], active ? styles.styleOptionActive : styles.styleOptionIdle)}
                 key={preset.id}
                 onClick={() => applyStyle(preset.id)}
                 role="radio"
@@ -240,7 +241,7 @@ function SemanticNumberField({
   return (
     <div {...stylex.props(styles.narrowable)}>
       <label {...stylex.props(styles.blockMuted)} htmlFor={id}>{label}</label>
-      <Input
+      <Input size="md" variant="plate"
         id={id}
         xstyle={styles.mt1H8}
         max={max}

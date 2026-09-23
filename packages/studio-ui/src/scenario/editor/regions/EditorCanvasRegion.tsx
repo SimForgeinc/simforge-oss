@@ -17,6 +17,7 @@ import { cn } from "../../../lib/utils";
 import { sceneViewerOptions } from "../authoring-quality";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./EditorCanvasRegion.stylex";
+import { focus } from "../../../stylex/recipes.stylex";
 
 /**
  * OWNS: the `CityView` host element and the actor-library overlay.
@@ -88,7 +89,7 @@ export function EditorCanvasRegion({
           onViewerReady={registerViewer}
           onViewerMapLoaded={reportMapLoaded}
           onDisposed={reportDisposed}
-          className={stylex.props(styles.wideTall).className}
+          className={stylex.props([focus.ringInset, styles.wideTall]).className}
           ariaLabel={`${map.label} 3D scene. Click an actor to select it, drag to orbit.`}
           role="application"
           tabIndex={0}

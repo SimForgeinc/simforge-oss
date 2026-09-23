@@ -22,6 +22,7 @@ import {
 import { useJunctionIdentityLabels } from "@/app/lib/scenario-editor/signals/use-intersection-candidates";
 import { projectSignalHead } from "@/app/lib/scenario-editor/map-3d/signal-picking";
 import { styles } from "../map-canvas.stylex";
+import { typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * Junction markers on the map (plan 2026-07-24 §4.3, extended by the
@@ -444,7 +445,7 @@ function JunctionMarker({
           <span
             aria-hidden
             data-testid={`junction-mode-chip-${glyph.junction_id}`}
-            {...stylex.props(styles.junctionChip)}
+            {...stylex.props([typography.tag, styles.junctionChip])}
           >
             {SIGNAL_PLAN_MODE_LABELS[plan.mode]}
           </span>

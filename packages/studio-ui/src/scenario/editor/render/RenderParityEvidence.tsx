@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { CloudLoadingSurface } from "../../../components/CloudLoadingSurface";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./RenderParityEvidence.stylex";
+import { textLayout, typography } from "../../../stylex/recipes.stylex";
 
 const MAX_MANIFEST_BYTES = 2 * 1024 * 1024;
 
@@ -199,7 +200,7 @@ export function RenderParityEvidencePanel({
         {...stylex.props(styles.verdict, evidence.accepted && nativePhysics ? styles.verdictAccepted : styles.verdictRejected)}
         aria-labelledby="carla-parity-verdict-heading"
       >
-        <p {...stylex.props(styles.capsMicroMuted)}>CARLA behavior verdict</p>
+        <p {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>CARLA behavior verdict</p>
         <h4 {...stylex.props(styles.smSemibold)} id="carla-parity-verdict-heading">
           {!nativePhysics
             ? "Diagnostic pose replay — not physical acceptance"
@@ -215,7 +216,7 @@ export function RenderParityEvidencePanel({
       </section>
 
       <section aria-labelledby="carla-parity-measurements-heading">
-        <h4 {...stylex.props(styles.capsXsSemibold)} id="carla-parity-measurements-heading">
+        <h4 {...stylex.props(typography.caps)} id="carla-parity-measurements-heading">
           Measured physics deviations · {evidence.samples} samples
         </h4>
         <dl {...stylex.props(styles.borderedDivided)}>
@@ -239,7 +240,7 @@ export function RenderParityEvidencePanel({
 
       {evidence.divergences.length > 0 ? (
         <section aria-labelledby="carla-parity-divergences-heading">
-          <h4 {...stylex.props(styles.capsXsSemibold)} id="carla-parity-divergences-heading">Classified differences</h4>
+          <h4 {...stylex.props(typography.caps)} id="carla-parity-divergences-heading">Classified differences</h4>
           <ul {...stylex.props(styles.listMt2)}>
             {evidence.divergences.map((divergence, index) => (
               <li {...stylex.props(styles.xsBorderedPad2, index > 0 && styles.rowStackedXs)} key={divergence.id}>
@@ -277,7 +278,7 @@ export function RenderParityEvidencePanel({
 }
 
 function EvidenceValue({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return <div {...stylex.props(styles.narrowable)}><dt {...stylex.props(styles.muted)}>{label}</dt><dd {...stylex.props(mono ? styles.evidenceValueMono : styles.evidenceValue)} title={value}>{value}</dd></div>;
+  return <div {...stylex.props(styles.narrowable)}><dt {...stylex.props(styles.muted)}>{label}</dt><dd {...stylex.props(mono ? [textLayout.truncate, styles.evidenceValueMono] : [textLayout.truncate, styles.evidenceValue])} title={value}>{value}</dd></div>;
 }
 
 function parseDivergences(value: unknown): RenderParityDivergence[] {

@@ -1,4 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
+import { colors, layout, motion, stroke } from "../../../stylex/tokens.stylex";
 
 /**
  * The add-actor panel's two shared surfaces: the chip (a filter, a category, a
@@ -26,17 +27,17 @@ export const styles = stylex.create({
   chip: {
     transition: {
       default: "transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 140ms ease, border-color 140ms ease, color 140ms ease",
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
     transform: {
       default: null,
       ":hover": {
         default: "translateY(-1px)",
-        "@media (prefers-reduced-motion: reduce)": "none",
+        [layout.reducedMotion]: "none",
       },
       ":active": {
         default: "translateY(0) scale(0.97)",
-        "@media (prefers-reduced-motion: reduce)": "none",
+        [layout.reducedMotion]: "none",
       },
     },
   },
@@ -44,20 +45,19 @@ export const styles = stylex.create({
   // The tile owns its resting look here so hover can lift it without an
   // inline style winning the specificity fight.
   tile: {
-    borderWidth: "1px",
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
     borderColor: {
-      default: "rgba(255, 255, 255, 0.1)",
-      ":hover": "rgba(232, 224, 68, 0.4)",
+      default: colors.hairline,
+      ":hover": colors.accentLineSubtle,
       // Last word, as in the cascade this replaced: a chosen tile stays lit
       // while the pointer is over it.
-      '[data-active="true"]': "rgba(232, 224, 68, 0.62)",
+      '[data-active="true"]': colors.accentLine,
     },
-    borderRadius: "13px",
     backgroundColor: {
-      default: "rgba(255, 255, 255, 0.045)",
-      ":hover": "rgba(232, 224, 68, 0.07)",
-      '[data-active="true"]': "rgba(232, 224, 68, 0.12)",
+      default: colors.fillSubtle,
+      ":hover": colors.accentWash,
+      '[data-active="true"]': colors.accentWash,
     },
     boxShadow: {
       default: "inset 0 1px 0 rgba(255, 255, 255, 0.03)",
@@ -65,17 +65,17 @@ export const styles = stylex.create({
     },
     transition: {
       default: "transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease",
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
     transform: {
       default: null,
       ":hover": {
         default: "translateY(-3px)",
-        "@media (prefers-reduced-motion: reduce)": "none",
+        [layout.reducedMotion]: "none",
       },
       ":active": {
         default: "translateY(-1px) scale(0.985)",
-        "@media (prefers-reduced-motion: reduce)": "none",
+        [layout.reducedMotion]: "none",
       },
     },
     [tileIconVars.transform]: {
@@ -87,10 +87,10 @@ export const styles = stylex.create({
   tileEnter: {
     animationName: {
       default: tileIn,
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
-    animationDuration: "220ms",
-    animationTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+    animationDuration: motion.durBase,
+    animationTimingFunction: motion.easeExpressive,
     // `backwards`, never `both`: a forwards fill keeps the animation's final
     // transform winning over the hover rules above, so a filled entrance
     // silently disables every hover lift — and leaves a permanent composited
@@ -101,13 +101,13 @@ export const styles = stylex.create({
   tileIcon: {
     transform: {
       default: tileIconVars.transform,
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
     transitionProperty: {
       default: "transform",
-      "@media (prefers-reduced-motion: reduce)": "none",
+      [layout.reducedMotion]: "none",
     },
-    transitionDuration: "200ms",
-    transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+    transitionDuration: motion.durBase,
+    transitionTimingFunction: motion.easeExpressive,
   },
 });

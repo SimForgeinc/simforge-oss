@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text } from "../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../stylex/tokens.stylex";
 
 const TABLE_TRANSITION = "color, background-color, border-color, text-decoration-color, fill, stroke";
 
@@ -13,60 +13,41 @@ export const styles = stylex.create({
     width: "100%",
     captionSide: "bottom",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
   },
-  /**
-   * `<thead>` and `<tbody>` declare nothing: the baseline's only styling for
-   * them was the `[&_tr]` compat strings, which stay on `table.tsx` because
-   * they reach rows this element does not render. The keys exist so every
-   * part of the table composes through the same
-   * `stylex.props(styles.<part>, xstyle)` shape — dropping them would make
-   * two of nine parts pass `xstyle` alone, and a later declaration would have
-   * nowhere to land.
-   */
-  header: {},
-  body: {},
   footer: {
-    borderTopWidth: 1,
+    borderTopWidth: stroke.hairline,
     borderTopStyle: "solid",
-    borderTopColor: colors.border,
-    backgroundColor: "hsl(var(--muted) / 0.5)",
+    borderTopColor: colors.hairline,
+    backgroundColor: colors.fillSubtle,
     fontWeight: text.weightMedium,
   },
   row: {
-    borderBottomWidth: 1,
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderBottomColor: colors.border,
-    transitionProperty: TABLE_TRANSITION,
-    transitionDuration: "150ms",
-    transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+    borderBottomColor: colors.hairline,
     backgroundColor: {
       default: null,
-      ":hover": "hsl(var(--muted) / 0.4)",
+      ":hover": colors.fillSubtle,
       "[data-state=selected]": colors.muted,
     },
   },
   head: {
     height: "2.75rem",
-    paddingInline: "1rem",
+    paddingInline: space.s4,
     textAlign: "left",
     verticalAlign: "middle",
-    fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    fontWeight: text.weightMedium,
     color: colors.mutedForeground,
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
   },
   cell: {
-    paddingInline: "1rem",
-    paddingBlock: "0.875rem",
+    paddingInline: space.s4,
+    paddingBlock: space.s3_5,
     verticalAlign: "middle",
   },
   caption: {
-    marginTop: "1rem",
+    marginTop: space.s4,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
 });

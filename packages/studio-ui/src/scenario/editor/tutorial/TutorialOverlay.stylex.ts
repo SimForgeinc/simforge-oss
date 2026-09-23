@@ -1,18 +1,18 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space, layers } from "../../../stylex/tokens.stylex";
+import { colors, layers, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // pointer-events-none fixed inset-0 z-[80]
   fixedInertInset0: {
     pointerEvents: "none",
     position: "fixed",
-    inset: space.none,
+    inset: 0,
     zIndex: layers.editorOverlay,
   },
   // tutorial-spotlight-ring absolute border-2 border-primary
   abs: {
     position: "absolute",
-    borderWidth: "2px",
+    borderWidth: stroke.thick,
     borderColor: colors.primary,
   },
   // pointer-events-auto absolute w-[min(22rem,calc(100vw-2rem))] border border-border bg-popover p-4 text-popover-foreground shadow-2xl
@@ -20,18 +20,18 @@ export const styles = stylex.create({
     pointerEvents: "auto",
     position: "absolute",
     width: "min(22rem, calc(100vw - 2rem))",
-    borderWidth: "1px",
-    borderColor: colors.border,
+    borderWidth: stroke.hairline,
+    borderColor: colors.hairline,
     backgroundColor: colors.popover,
-    padding: space.xl,
+    padding: space.s4,
     color: "hsl(var(--popover-foreground))",
-    boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+    boxShadow: shadows.elevation2xl,
   },
   // flex items-start gap-2
   flexStartGap2: {
     display: "flex",
     alignItems: "flex-start",
-    gap: space.md,
+    gap: space.s2,
   },
   // min-w-0 flex-1
   fillNarrowable: {
@@ -40,18 +40,13 @@ export const styles = stylex.create({
   },
   // text-micro font-bold uppercase tracking-meta-wider text-primary
   capsMicroAccent: {
-    fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
     color: colors.primary,
   },
   // mt-1 text-sm font-semibold
   smSemibold: {
-    marginTop: space.xs,
+    marginTop: space.s1,
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     fontWeight: text.weightSemibold,
   },
   // motionStyles.editorMotion + -mr-1 -mt-1 inline-flex size-7 shrink-0 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-popover
@@ -68,21 +63,9 @@ export const styles = stylex.create({
       default: colors.mutedForeground,
       ":hover": colors.text,
     },
-    outline: {
-      default: null,
-      ":focus-visible": "2px solid transparent",
-    },
-    outlineOffset: {
-      default: null,
-      ":focus-visible": "2px",
-    },
-    boxShadow: {
-      default: null,
-      ":focus-visible": "0 0 0 1px hsl(var(--popover)), 0 0 0 3px hsl(var(--ring))",
-    },
     backgroundColor: {
       default: null,
-      ":hover": "hsl(var(--accent))",
+      ":hover": colors.hoverWash,
     },
   },
   // size-4
@@ -92,32 +75,27 @@ export const styles = stylex.create({
   },
   // mt-2 text-xs leading-5 text-muted-foreground
   xsMuted: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeXs,
-    lineHeight: "1.25rem",
+    lineHeight: text.lineSm,
     color: colors.mutedForeground,
   },
   // mt-4 flex items-center gap-2
   flexCenterGap2: {
-    marginTop: space.xl,
+    marginTop: space.s4,
     display: "flex",
     alignItems: "center",
-    gap: space.md,
-  },
-  // h-8
-  h8: {
-    height: "2rem",
+    gap: space.s2,
   },
   // ml-auto h-8
   pushRight: {
     marginLeft: "auto",
-    height: "2rem",
   },
   // mt-2 text-micro text-muted-foreground
   microMuted: {
-    marginTop: space.md,
+    marginTop: space.s2,
     fontSize: text.sizeMicro,
-    lineHeight: "0.875rem",
+    lineHeight: text.lineMicro,
     color: colors.mutedForeground,
   },
 });

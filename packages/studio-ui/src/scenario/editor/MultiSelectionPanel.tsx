@@ -19,6 +19,7 @@ import {
 } from "@simforge-oss/editor";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./multi-selection.stylex";
+import { hairline } from "../../stylex/recipes.stylex";
 
 export function MultiSelectionPanel({
   controller,
@@ -39,7 +40,7 @@ export function MultiSelectionPanel({
   if (count < 2) return null;
   return (
     <div
-      {...stylex.props(styles.panel)}
+      {...stylex.props([hairline.all, styles.panel])}
       data-testid="multi-selection-panel"
     >
       <span {...stylex.props(styles.count)} data-testid="multi-selection-count">
@@ -47,7 +48,6 @@ export function MultiSelectionPanel({
       </span>
       {unanchored.length > 0 ? (
         <Button
-          xstyle={styles.resnapButton}
           data-testid="multi-selection-resnap"
           onClick={() => controller?.resnapToLane(unanchored.map((actor) => actor.id))}
           size="sm"
@@ -57,7 +57,6 @@ export function MultiSelectionPanel({
         </Button>
       ) : null}
       <Button
-        xstyle={styles.button}
         data-testid="multi-selection-duplicate"
         onClick={() => controller?.duplicateSelection()}
         size="sm"
@@ -67,7 +66,6 @@ export function MultiSelectionPanel({
         Duplicate
       </Button>
       <Button
-        xstyle={styles.button}
         data-testid="multi-selection-delete"
         onClick={() => controller?.deleteSelection()}
         size="sm"
@@ -81,7 +79,7 @@ export function MultiSelectionPanel({
         xstyle={styles.clear}
         data-testid="multi-selection-clear"
         onClick={() => controller?.setSelection([])}
-        size="sm"
+        size="iconSm"
         variant="ghost"
       >
         <X aria-hidden="true" />

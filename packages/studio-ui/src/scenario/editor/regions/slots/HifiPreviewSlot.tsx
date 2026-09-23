@@ -17,6 +17,7 @@ import {
 } from "../../../../lib/hifi-preview/contracts";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./HifiPreviewSlot.stylex";
+import { motionRecipe, typography } from "../../../../stylex/recipes.stylex";
 
 /** Catalog physics families mapped to the scene-state actor classes. */
 const SCENE_ACTOR_CLASS: Record<CatalogActorClass, CreateHifiPreviewInput["scene"]["actors"][number]["actorClass"]> = {
@@ -228,13 +229,13 @@ export function HifiPreviewSlot({
           data-testid="hifi-preview-button"
           disabled={!viewer || preview.phase === "pending"}
           onClick={() => void start()}
-          size="sm"
+          size="md"
           title={viewer ? "Render this exact view with the native Bevy renderer" : "Viewport still loading"}
           type="button"
           variant="outline"
         >
           {preview.phase === "pending" ? (
-            <Loader2 aria-hidden="true" className={stylex.props(styles.spinner).className} />
+            <Loader2 aria-hidden="true" className={stylex.props([motionRecipe.spin, styles.spinner]).className} />
           ) : (
             <Sparkles aria-hidden="true" className={stylex.props(styles.size4).className} />
           )}
@@ -247,12 +248,12 @@ export function HifiPreviewSlot({
           {...stylex.props(styles.flexCenterXs)}
           data-testid="hifi-preview-progress"
         >
-          <Loader2 aria-hidden="true" className={stylex.props(styles.spinner2).className} />
+          <Loader2 aria-hidden="true" className={stylex.props([motionRecipe.spin, styles.spinner2]).className} />
           <span>
             Rendering one {profile} frame with the native renderer… the map prewarm can take a minute on
             first use. The editor stays fully interactive.
           </span>
-          <Button xstyle={styles.pushRight} onClick={dismiss} size="sm" type="button" variant="ghost">
+          <Button xstyle={styles.pushRight} onClick={dismiss} size="xs" type="button" variant="ghost">
             Cancel
           </Button>
         </div>
@@ -269,7 +270,7 @@ export function HifiPreviewSlot({
             aria-label="Dismiss high-fidelity preview error"
             xstyle={styles.pushRight}
             onClick={dismiss}
-            size="sm"
+            size="xs"
             type="button"
             variant="ghost"
           >
@@ -284,7 +285,7 @@ export function HifiPreviewSlot({
           data-testid="hifi-preview-frame"
         >
           <div {...stylex.props(styles.flexCenterBetween)}>
-            <span {...stylex.props(styles.capsMedium)}>
+            <span {...stylex.props([typography.eyebrow, styles.capsMedium])}>
               High-fidelity preview
             </span>
             <Button
@@ -292,7 +293,7 @@ export function HifiPreviewSlot({
               xstyle={styles.h6Px15}
               data-testid="hifi-preview-close"
               onClick={dismiss}
-              size="sm"
+              size="xs"
               type="button"
               variant="ghost"
             >

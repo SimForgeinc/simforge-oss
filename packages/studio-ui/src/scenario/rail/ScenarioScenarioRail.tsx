@@ -21,6 +21,7 @@ import type { ScenarioDocumentSummaryDto } from "../../lib/scenario/contracts";
 import { Button } from "../../components/ui/button";
 import { control, rail } from "../scenario-controls.stylex";
 import { documentMapLabel, documentName } from "../list/document-list-utils";
+import { focus, motionRecipe, textLayout, typography } from "../../stylex/recipes.stylex";
 
 /**
  * The in-editor scenario rail: every sibling document in the active dataset, selectable in place.
@@ -97,7 +98,7 @@ export function ScenarioScenarioRail({
         data-testid="scenario-scenario-header"
       >
         <div {...stylex.props(styles.divFlex)}>
-          <h2 {...stylex.props(styles.scenarios)}>
+          <h2 {...stylex.props([typography.eyebrow, styles.scenarios])}>
             Scenarios
           </h2>
           <span {...stylex.props(styles.spanMetaMicro)}>
@@ -109,16 +110,16 @@ export function ScenarioScenarioRail({
             <button
               type="button"
               onClick={onBack}
-              {...stylex.props(styles.backToAllDatasetsButton)}
+              {...stylex.props([textLayout.truncate, focus.ring, motionRecipe.colors, [typography.eyebrow, styles.backToAllDatasetsButton]])}
               title="Back to all datasets"
             >
               <ChevronLeft {...stylex.props(styles.chevronleftIcon)} aria-hidden="true" />
-              <span {...stylex.props(styles.spanTruncate)}>{datasetName ?? "Dataset"}</span>
+              <span {...stylex.props(textLayout.truncate)}>{datasetName ?? "Dataset"}</span>
             </button>
           ) : (
             <Link
               href={`/dashboard/scenario/${encodeURIComponent(datasetId)}`}
-              {...stylex.props(styles.openTheFullScenarioListLink)}
+              {...stylex.props([textLayout.truncate, focus.ring, motionRecipe.colors, [typography.eyebrow, styles.openTheFullScenarioListLink]])}
               title="Open the full scenario list"
             >
               <LayoutList {...stylex.props(styles.layoutlistIcon)} aria-hidden="true" />
@@ -165,7 +166,7 @@ export function ScenarioScenarioRail({
             type="button"
             size="sm"
             variant="ghost"
-            xstyle={[rail.autoplay, autoplayPlaying ? rail.autoplayOn : null]}
+            xstyle={[[typography.eyebrow, rail.autoplay], autoplayPlaying ? rail.autoplayOn : null]}
             aria-pressed={autoplayPlaying}
             title="Step through every scenario in this dataset"
             onClick={onToggleAutoplay}
@@ -181,8 +182,8 @@ export function ScenarioScenarioRail({
         {canCreate ? (
           <Button
             type="button"
-            size="sm"
-            variant="ghost"
+            size="md"
+            variant="accent"
             xstyle={rail.footerAction}
             disabled={creating}
             onClick={onCreateDocument}
@@ -241,12 +242,12 @@ export function ScenarioScenarioRail({
                     <span {...stylex.props(styles.spanMetaMedium)}>
                       {documentName(document)}
                     </span>
-                    <span {...stylex.props(styles.spanTruncateMetaMicro)}>
+                    <span {...stylex.props([textLayout.truncate, [typography.eyebrow, styles.spanTruncateMetaMicro]])}>
                       {documentMapLabel(document)} · {document.roleCount}{" "}
                       {document.roleCount === 1 ? "role" : "roles"}
                     </span>
                     {document.hasRender ? (
-                      <span {...stylex.props(styles.rendered)}>
+                      <span {...stylex.props([typography.eyebrow, styles.rendered])}>
                         Rendered
                       </span>
                     ) : null}

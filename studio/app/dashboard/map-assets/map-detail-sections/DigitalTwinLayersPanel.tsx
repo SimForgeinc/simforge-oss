@@ -10,6 +10,7 @@ import {
   RENDERING_PREFERENCE_CHOICES,
   saveRenderingPreference,
 } from "@simforge-oss/studio-ui/components/rendering-preference";
+import { hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 
 /** Controls shared authoring quality for the packaged @simforge-oss/viewer. */
@@ -31,14 +32,14 @@ export function DigitalTwinLayersPanel() {
           `<span>`, so a flex column would blockify it and change its line box. */}
       <div>
         <span {...stylex.props(styles.qualityLabel)}>Render quality</span>
-        <div {...stylex.props(styles.qualityOptions, styles.stackY1_5)}>
+        <div {...stylex.props([hairline.all, styles.qualityOptions], styles.stackY1_5)}>
           {RENDERING_PREFERENCE_CHOICES.map(({ id: value, label }) => (
             <button
               key={value}
               type="button"
               onClick={() => saveRenderingPreference(value)}
               {...stylex.props(
-                  styles.qualitySegment,
+                  [motionRecipe.colors, styles.qualitySegment],
                   quality === value ? styles.qualitySegmentActive : styles.qualitySegmentInactive,
                 )}
             >
@@ -51,7 +52,7 @@ export function DigitalTwinLayersPanel() {
         </p>
       </div>
 
-      <div {...stylex.props(styles.layerStatusList)}>
+      <div {...stylex.props([hairline.all, styles.layerStatusList])}>
         <LayerStatus icon={Building2} label="Streamed city geometry and road surface" />
         <LayerStatus icon={TreePine} label={quality === "low-no-foliage" ? "Vegetation disabled by rendering preference" : "Distance-admitted vegetation"} />
         <LayerStatus icon={Sun} label="Sky, sun shadows, and street luminaires" />
@@ -61,7 +62,7 @@ export function DigitalTwinLayersPanel() {
         type="button"
         onClick={handleClearCache}
         disabled={cacheState === "clearing"}
-        {...stylex.props(styles.clearCacheButton)}
+        {...stylex.props([motionRecipe.colors, [hairline.all, styles.clearCacheButton]])}
       >
         <Trash2 {...stylex.props(styles.clearCacheIcon)} />
         {cacheState === "clearing"

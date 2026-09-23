@@ -10,6 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@simforge-oss/studio-ui/components/ui/tooltip";
+import { motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 interface CopyJsonButtonProps {
   /** Object serialised to pretty-printed JSON on click. */
@@ -66,7 +67,7 @@ export function CopyJsonButton({
             onClick={handleCopy}
             disabled={disabled || !clipboardAvailable}
             aria-label={label}
-            {...stylex.props(styles.copyJsonButton)}
+            {...stylex.props([motionRecipe.colors, styles.copyJsonButton])}
           >
             {copied ? (
               <Check {...stylex.props(styles.copiedCheckIcon)} aria-hidden="true" />

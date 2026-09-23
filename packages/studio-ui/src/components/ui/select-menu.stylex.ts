@@ -1,5 +1,5 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii, text } from "../../stylex/tokens.stylex";
+import { colors, space, stroke, text } from "../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   field: { minWidth: 0 },
@@ -9,24 +9,19 @@ export const styles = stylex.create({
     alignItems: "center",
     width: "100%",
     height: "2.5rem",
-    gap: "0.5rem",
-    borderWidth: 1,
+    gap: space.s2,
+    borderWidth: stroke.hairline,
     borderStyle: "solid",
-    borderColor: "hsl(var(--input))",
-    borderRadius: radii.md,
-    paddingInline: "0.75rem",
+    borderColor: colors.input,
+    paddingInline: space.s3,
     textAlign: "left",
     fontSize: text.sizeSm,
-    lineHeight: "1.25rem",
-    outlineStyle: { default: null, ":focus-visible": "solid" },
-    outlineWidth: { default: null, ":focus-visible": "2px" },
-    outlineColor: { default: null, ":focus-visible": colors.ring },
-    outlineOffset: { default: null, ":focus-visible": "2px" },
+    lineHeight: text.lineSm,
     backgroundColor: { default: colors.bg, ":hover": colors.muted },
     cursor: { default: "pointer", ":disabled": "not-allowed" },
     opacity: { default: null, ":disabled": 0.5 },
   },
-  value: { minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  value: { minWidth: 0, flex: 1, },
   icon: { width: "1rem", height: "1rem", flexShrink: 0, opacity: 0.6 },
   content: { maxHeight: "18rem", overflowY: "auto" },
 });

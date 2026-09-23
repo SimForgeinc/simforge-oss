@@ -12,6 +12,7 @@ import {
 import type { ImportedMap } from "@/app/lib/map-ingest/map-import";
 import { Input } from "@simforge-oss/studio-ui/components/ui/input";
 import { dialog } from "./asset-dialogs.stylex";
+import { a11y, hairline, textLayout, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * Where the map upload is in its lifecycle. The dialog owns the shared progress
@@ -57,8 +58,8 @@ function formatBytes(bytes: number) {
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div {...stylex.props(dialog.stat)}>
-      <p {...stylex.props(dialog.statLabel)}>{label}</p>
+    <div {...stylex.props([hairline.all, dialog.stat])}>
+      <p {...stylex.props([typography.eyebrow, dialog.statLabel])}>{label}</p>
       <p {...stylex.props(dialog.statValue)}>{value}</p>
     </div>
   );
@@ -297,7 +298,7 @@ export function MapUploadPanel({
   return (
     <form id={formId} onSubmit={submit} {...stylex.props(dialog.form)}>
       <label onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); chooseFiles(Array.from(event.dataTransfer.files)); }} {...stylex.props(dialog.drop, dialog.dropPointer)}>
-        <input type="file" multiple disabled={busy} {...stylex.props(dialog.srOnly)} accept=".xodr,.glb" onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))} />
+        <input type="file" multiple disabled={busy} {...stylex.props(a11y.srOnly)} accept=".xodr,.glb" onChange={(event) => chooseFiles(Array.from(event.target.files ?? []))} />
         <FileUp {...stylex.props(dialog.iconAccent)} aria-hidden="true" />
         <span {...stylex.props(dialog.uploadDropLabel)}>Drop map.xodr and one GLB per layer here</span>
         <span {...stylex.props(dialog.dropHint)}>road.glb is required. Add sidewalk, building, vegetation, terrain, furniture, pole, signage or water as separate GLBs — the file name is the layer id.</span>
@@ -306,21 +307,21 @@ export function MapUploadPanel({
         <>
           <div {...stylex.props(dialog.preflightGrid)}>
             <div>
-              <img src={thumbnailUrl} alt="Rendered preview of the uploaded map" {...stylex.props(dialog.preview)} />
+              <img src={thumbnailUrl} alt="Rendered preview of the uploaded map" {...stylex.props([hairline.all, dialog.preview])} />
               <p {...stylex.props(dialog.mutedTextMt2)}>{map.totalTriangles.toLocaleString()} triangles · {formatBytes(totalLayerBytes)} of geometry</p>
             </div>
             <div {...stylex.props(dialog.stack)}>
-              <div><p {...stylex.props(dialog.statLabel)}>OpenDRIVE map name</p><p {...stylex.props(dialog.statText)}>{map.mapName}</p></div>
+              <div><p {...stylex.props([typography.eyebrow, dialog.statLabel])}>OpenDRIVE map name</p><p {...stylex.props(dialog.statText)}>{map.mapName}</p></div>
               <div {...stylex.props(dialog.grid2)}>
                 <StatTile label="Lanes" value={map.preflight.laneCount.toLocaleString()} />
                 <StatTile label="Drivable lanes" value={map.preflight.drivableLaneCount.toLocaleString()} />
                 <StatTile label="Junctions" value={map.preflight.junctionCount.toLocaleString()} />
                 <StatTile label="Georeferenced" value={map.preflight.georeferenced ? "Yes" : "Local coordinates only"} />
               </div>
-              <div><p {...stylex.props(dialog.statLabel)}>Plan-view geometry</p><p {...stylex.props(dialog.statText)}>{map.preflight.geometryKinds.join(", ")}</p></div>
+              <div><p {...stylex.props([typography.eyebrow, dialog.statLabel])}>Plan-view geometry</p><p {...stylex.props(dialog.statText)}>{map.preflight.geometryKinds.join(", ")}</p></div>
             </div>
           </div>
-          <div><p {...stylex.props(dialog.statLabel)}>{map.layers.length === 1 ? "1 layer" : `${map.layers.length} layers`}</p><ul {...stylex.props(dialog.layerList)}>{map.layers.map((layer) => <li key={layer.layerId} {...stylex.props(dialog.layerRow)}><span {...stylex.props(dialog.layerId)}>{layer.layerId}</span><span {...stylex.props(dialog.layerFile)}>{layer.fileName}</span><span {...stylex.props(dialog.layerMeta)}>{layer.triangleCount.toLocaleString()} tris · {formatBytes(layer.blob.size)}</span></li>)}</ul></div>
+          <div><p {...stylex.props([typography.eyebrow, dialog.statLabel])}>{map.layers.length === 1 ? "1 layer" : `${map.layers.length} layers`}</p><ul {...stylex.props([hairline.all, dialog.layerList])}>{map.layers.map((layer) => <li key={layer.layerId} {...stylex.props(dialog.layerRow)}><span {...stylex.props(dialog.layerId)}>{layer.layerId}</span><span {...stylex.props([textLayout.truncate, dialog.layerFile])}>{layer.fileName}</span><span {...stylex.props(dialog.layerMeta)}>{layer.triangleCount.toLocaleString()} tris · {formatBytes(layer.blob.size)}</span></li>)}</ul></div>
         </>
       ) : null}
 
@@ -338,7 +339,7 @@ export function MapUploadPanel({
         // Not a live region: the dialog's status line already announces the phase, and
         // announcing eight artifact names on top of it is noise, not information.
         <div {...stylex.props(dialog.generateCard)}>
-          <p {...stylex.props(dialog.generateHeading)}>Generating on the server</p>
+          <p {...stylex.props([typography.eyebrow, dialog.generateHeading])}>Generating on the server</p>
           <p {...stylex.props(dialog.generateText)}>Your files are stored. The publisher is now building the {SERVER_GENERATED_CLOSURE_PATHS.length} derived artifacts the editor loads, and binding them into one immutable map version. This usually takes up to a minute — keep this dialog open.</p>
           <ul {...stylex.props(dialog.artifactList)}>
             {SERVER_GENERATED_CLOSURE_PATHS.map((path) => (

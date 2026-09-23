@@ -8,6 +8,7 @@ import { AppSwitcherPanel } from "@/app/components/AppSwitcherPanel";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { styles } from "@/app/components/AppSwitcherOverlay.stylex";
+import { a11y, focus, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /**
  * The switcher as a dialog over whatever app is open: the same screen as
@@ -45,14 +46,14 @@ export function AppSwitcherOverlay({
             triggerRef.current?.focus();
           }}
         >
-          <DialogPrimitive.Title {...stylex.props(styles.srOnly)}>
+          <DialogPrimitive.Title {...stylex.props(a11y.srOnly)}>
             Switch app
           </DialogPrimitive.Title>
-          <DialogPrimitive.Description {...stylex.props(styles.srOnly)}>
+          <DialogPrimitive.Description {...stylex.props(a11y.srOnly)}>
             Choose a SimForge app or configure local features.
           </DialogPrimitive.Description>
           <DialogPrimitive.Close
-            {...stylex.props(styles.close)}
+            {...stylex.props([focus.ring, motionRecipe.colors, styles.close])}
             aria-label="Close app switcher"
           >
             <X {...stylex.props(styles.closeIcon)} aria-hidden="true" />

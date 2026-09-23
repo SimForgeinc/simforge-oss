@@ -40,6 +40,7 @@ import { ScenarioTagsPanel } from "./ScenarioTagsPanel";
 import { AdditionalArtifactsPanel } from "./AdditionalArtifactsPanel";
 import { buildDebugPayload } from "./AddMapDebugPayload";
 import { sha256Blob } from "@simforge-oss/engine/hash";
+import { hairline, motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 const CRS_OPTIONS = [{ value: "EPSG:4326", label: "EPSG:4326 — WGS84 (lat, long)" }];
 
@@ -707,7 +708,7 @@ export default function AddMapPageClient() {
                 {form.geojsonFile ? "Replace file" : "Choose file"}
               </Button>
               {form.geojsonFile && (
-                <span {...stylex.props(styles.selectedFilename)}>{form.geojsonFile.name}</span>
+                <span {...stylex.props([textLayout.truncate, styles.selectedFilename])}>{form.geojsonFile.name}</span>
               )}
               <UploadStatusBadge upload={uploads["geojson"]} />
             </div>
@@ -723,7 +724,7 @@ export default function AddMapPageClient() {
               <p {...stylex.props(styles.parseErrorMessage)}>{form.geojsonParseError}</p>
             )}
             {form.computed && (
-              <div {...stylex.props(styles.metadataSummary)}>
+              <div {...stylex.props([hairline.all, styles.metadataSummary])}>
                 <div {...stylex.props(styles.metadataDetails)}>
                   <span {...stylex.props(styles.metadataLabel)}>Center</span>
                   <span {...stylex.props(styles.metadataValue)}>
@@ -766,7 +767,7 @@ export default function AddMapPageClient() {
                 {form.xodrFile ? "Replace file" : "Choose file"}
               </Button>
               {form.xodrFile && (
-                <span {...stylex.props(styles.selectedFilename)}>{form.xodrFile.name}</span>
+                <span {...stylex.props([textLayout.truncate, styles.selectedFilename])}>{form.xodrFile.name}</span>
               )}
               <UploadStatusBadge upload={uploads["xodr"]} />
             </div>
@@ -779,7 +780,7 @@ export default function AddMapPageClient() {
               onChange={handleXodrChange}
             />
             {parsedMeta.xodr && (
-              <div {...stylex.props(styles.metadataSummary)}>
+              <div {...stylex.props([hairline.all, styles.metadataSummary])}>
                 <div {...stylex.props(styles.metadataDetails)}>
                   <span {...stylex.props(styles.metadataLabel)}>Road network</span>
                   <span {...stylex.props(styles.metadataValue)}>
@@ -812,7 +813,7 @@ export default function AddMapPageClient() {
                 {form.rrdataXmlFile ? "Replace file" : "Choose file"}
               </Button>
               {form.rrdataXmlFile && (
-                <span {...stylex.props(styles.selectedFilename)}>{form.rrdataXmlFile.name}</span>
+                <span {...stylex.props([textLayout.truncate, styles.selectedFilename])}>{form.rrdataXmlFile.name}</span>
               )}
               <UploadStatusBadge upload={uploads["rrdata_xml"]} />
             </div>
@@ -825,7 +826,7 @@ export default function AddMapPageClient() {
               onChange={handleRrdataChange}
             />
             {parsedMeta.rrdata_xml && (
-              <div {...stylex.props(styles.metadataSummary)}>
+              <div {...stylex.props([hairline.all, styles.metadataSummary])}>
                 <div {...stylex.props(styles.metadataDetails)}>
                   <span {...stylex.props(styles.metadataLabel)}>Signalization</span>
                   <span {...stylex.props(styles.metadataValue)}>
@@ -971,15 +972,15 @@ export default function AddMapPageClient() {
         <button
           type="button"
           onClick={() => setDebugOpen((v) => !v)}
-          {...stylex.props(styles.debugToggle)}
+          {...stylex.props([motionRecipe.colors, styles.debugToggle])}
         >
           <ChevronDown
-            {...stylex.props(styles.chevronLg, !debugOpen && styles.rotateMinus90)}
+            {...stylex.props([motionRecipe.transform, styles.chevronLg], !debugOpen && styles.rotateMinus90)}
           />
           Debug: full map payload (asset + metadata + stats)
         </button>
         {debugOpen && (
-          <pre {...stylex.props(styles.debugPayload)}>
+          <pre {...stylex.props([hairline.all, styles.debugPayload])}>
             {JSON.stringify(buildDebugPayload({ form, parsedMeta, autoTagSet, uploads }), null, 2)}
           </pre>
         )}

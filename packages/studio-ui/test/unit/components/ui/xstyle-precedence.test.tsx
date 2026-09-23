@@ -14,6 +14,7 @@ import {
   buttonSizes,
 } from "../../../../src/components/ui/controls.stylex";
 import { input as inputStyles } from "../../../../src/components/ui/form-controls.stylex";
+import { typography } from "../../../../src/stylex/recipes.stylex";
 import { styles as tabsStyles } from "../../../../src/components/ui/tabs.stylex";
 import { SelectMenu } from "../../../../src/components/ui/select-menu";
 import { styles as selectMenuStyles } from "../../../../src/components/ui/select-menu.stylex";
@@ -69,7 +70,8 @@ describe("xstyle precedence", () => {
     expect(classes).toContain(atomFor(callerStyles.button, "height"));
     expect(classes).toContain(atomFor(callerStyles.button, "fontSize"));
     expect(classes).not.toContain(atomFor(buttonSizes.default, "height"));
-    expect(classes).not.toContain(atomFor(buttonBase.base, "fontSize"));
+    expect(classes).not.toContain(atomFor(buttonSizes.default, "fontSize"));
+    expect(classes).toContain(atomFor(buttonBase.base, "fontWeight"));
   });
 
   it("lets a caller replace Input's font size and fill", () => {
@@ -186,15 +188,12 @@ describe("xstyle precedence", () => {
    * routed through `className` instead, the variant's conditional atom
    * outranks the caller's default atom and repaints on hover.
    */
-  it("cancels the Badge variant's hover fill when a caller pins the background", () => {
+  it("replaces the Badge variant's fill when a caller pins the background", () => {
     render(<Badge data-testid="badge" xstyle={callerStyles.badgeTone} />);
     const classes = atoms(screen.getByTestId("badge"));
 
     expect(classes).toContain(atomFor(callerStyles.badgeTone, "backgroundColor"));
-
-    const variantFill = atomsFor(badgeVariantStyles.default, "backgroundColor");
-    expect(variantFill.length).toBeGreaterThan(1);
-    for (const atom of variantFill) expect(classes).not.toContain(atom);
+    for (const atom of atomsFor(badgeVariantStyles.default, "backgroundColor")) expect(classes).not.toContain(atom);
   });
 
   /**
@@ -211,10 +210,14 @@ describe("xstyle precedence", () => {
     );
     const classes = atoms(screen.getByTitle(/vehicle\.tesla\.model3/));
 
-    for (const property of ["paddingInline", "paddingBlock", "fontSize"] as const) {
+    for (const property of ["paddingInline", "paddingBlock"] as const) {
       expect(classes).toContain(atomFor(pillStyles.small, property));
       expect(classes).not.toContain(atomFor(badgeBase.base, property));
     }
+    // The Badge's type comes from the eyebrow recipe; the pill's size wins
+    // (at 10px the two compile to the same atom, which is the point).
+    expect(classes).toContain(atomFor(pillStyles.small, "fontSize"));
+    expect(atomsFor(typography.eyebrow, "fontFamily").every((atom) => classes.has(atom))).toBe(true);
     for (const property of ["backgroundColor", "color", "borderColor"] as const) {
       for (const atom of atomsFor(pillStyles.native, property)) expect(classes).toContain(atom);
       for (const atom of atomsFor(badgeVariantStyles.secondary, property)) {

@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@simforge-oss/studio-ui/components/ui/tooltip";
 import type { MapAssetEnrichmentSnapshot } from "@simforge-oss/studio-shared";
+import { motionRecipe, typography } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type EnrichmentSectionProps = {
   open: boolean;
@@ -45,11 +46,11 @@ export function EnrichmentSection({
         <button
           type="button"
           onClick={onToggleOpen}
-          {...stylex.props(styles.sectionToggle)}
+          {...stylex.props([motionRecipe.colors, [typography.caps, styles.sectionToggle]])}
           aria-expanded={open}
         >
           <ChevronRight
-            {...stylex.props(styles.chevron, open && styles.rotate90)}
+            {...stylex.props([motionRecipe.transform, styles.chevron], open && styles.rotate90)}
           />
           Third-Party Enrichment
         </button>
@@ -61,11 +62,11 @@ export function EnrichmentSection({
                   type="button"
                   onClick={onEnrich}
                   disabled={enrichBusy}
-                  {...stylex.props(styles.enrichIconButton)}
+                  {...stylex.props([motionRecipe.colors, styles.enrichIconButton])}
                   aria-label="Run 3rd-party enrichment"
                 >
                   {enrichBusy ? (
-                    <Loader2 {...stylex.props(styles.enrichLoadingIcon)} />
+                    <Loader2 {...stylex.props([motionRecipe.spin, styles.enrichLoadingIcon])} />
                   ) : (
                     <Sparkles {...stylex.props(styles.enrichSparklesIcon)} />
                   )}
@@ -102,7 +103,7 @@ export function EnrichmentSection({
                 >
                   {enrichBusy ? (
                     <>
-                      <Loader2 {...stylex.props(styles.buttonLoadingIcon)} />
+                      <Loader2 {...stylex.props([motionRecipe.spin, styles.buttonLoadingIcon])} />
                       Enriching… (1–2 min)
                     </>
                   ) : (

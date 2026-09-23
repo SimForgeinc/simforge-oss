@@ -26,6 +26,7 @@ import {
 import type { SimulationIssue } from "../simulation-issues";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./SimulationIssuesButton.stylex";
+import { typography } from "../../../stylex/recipes.stylex";
 
 export function SimulationIssuesButton({
   issues,
@@ -58,7 +59,7 @@ export function SimulationIssuesButton({
           data-issue-state={issueState}
           data-testid="simulation-issues-button"
           data-warning-count={warningCount}
-          size="sm"
+          size="md"
           title="Open simulation errors and warnings"
           type="button"
           variant="outline"
@@ -70,7 +71,7 @@ export function SimulationIssuesButton({
           />
           <span>Simulation warnings</span>
           <span
-            {...stylex.props(styles.capsMonoMuted)}
+            {...stylex.props([typography.tag, styles.capsMonoMuted])}
             data-testid="simulation-issues-count"
           >
             {issues.length}

@@ -732,7 +732,7 @@ function OptionalNumberField({
   return (
     <label {...stylex.props(styles.blockMutedNarrowable)}>
       {label}
-      <Input
+      <Input size="md" variant="plate"
         xstyle={styles.mt1H8}
         min={min}
         step={0.1}

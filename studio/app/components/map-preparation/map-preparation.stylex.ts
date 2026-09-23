@@ -8,7 +8,7 @@
  */
 
 import * as stylex from "@stylexjs/stylex";
-import { colors, radii, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
+import { colors, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 /**
  * Completed fraction of one row, as a percentage string. The fill is one
@@ -25,26 +25,22 @@ export const preparation = stylex.create({
     fontSize: text.sizeMicro,
     lineHeight: text.lineMicro,
     textTransform: "uppercase",
-    color: colors.textFaint,
+    color: colors.inkFaint,
   },
   list: {
     display: "grid",
-    gap: space.md,
-    marginTop: space.lg,
+    gap: space.s2,
+    marginTop: space.s3,
   },
   row: {
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "rgba(255,255,255,0.1)",
-    borderRadius: radii.none,
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
-    paddingInline: space.lg,
-    paddingBlock: "0.625rem",
+    backgroundColor: colors.fillFaint,
+    paddingInline: space.s3,
+    paddingBlock: space.s2_5,
   },
   rowHead: {
     display: "flex",
     alignItems: "center",
-    gap: space.lg,
+    gap: space.s3,
   },
   stateIcon: {
     display: "grid",
@@ -57,42 +53,37 @@ export const preparation = stylex.create({
   rowLabel: {
     minWidth: 0,
     flex: 1,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    fontSize: "0.875rem",
-    lineHeight: "1.25rem",
-    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: text.sizeSm,
+    lineHeight: text.lineSm,
+    color: colors.inkSecondary,
   },
   rowBytes: {
     fontFamily: text.fontMono,
-    fontSize: "11px",
-    color: "rgba(255, 255, 255, 0.4)",
+    fontSize: text.sizeMeta,
+    color: colors.inkMuted,
   },
   rowActions: {
     display: "flex",
     flexShrink: 0,
-    gap: space.md,
+    gap: space.s2,
   },
   track: {
-    marginTop: space.md,
+    marginTop: space.s2,
     height: "0.25rem",
     overflow: "hidden",
-    borderRadius: radii.none,
-    backgroundColor: colors.chip,
+    backgroundColor: colors.fillStrong,
   },
   fill: {
     height: "100%",
     width: `var(${PROGRESS_VAR})`,
-    borderRadius: radii.none,
     backgroundColor: colors.accent,
     transitionProperty: "width",
     transitionDuration: "500ms",
   },
   rowMessage: {
-    marginTop: space.md,
-    fontSize: "0.75rem",
-    lineHeight: "1rem",
+    marginTop: space.s2,
+    fontSize: text.sizeXs,
+    lineHeight: text.lineXs,
     color: colors.danger,
   },
 });

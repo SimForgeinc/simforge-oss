@@ -22,6 +22,7 @@ import type {
 } from "@/app/lib/evaluation/contracts";
 import { formatScore, StatusBadge, useJsonFetch } from "../shared";
 import { styles } from "../route-residuals.stylex";
+import { hairline } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 const EVENT_COLOR: Record<EvalEvent["severity"], string> = {
   info: "#38bdf8",
@@ -59,7 +60,7 @@ function EgoSpeedChart({
   return (
     <svg
       viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-      {...stylex.props(styles.chart)}
+      {...stylex.props([hairline.all, styles.chart])}
       data-testid="ego-speed-chart"
       onClick={(mouse) => {
         const rect = mouse.currentTarget.getBoundingClientRect();
@@ -123,7 +124,7 @@ function PathPlot({ ticks, cursor }: { ticks: EvalViewTick[]; cursor: number }) 
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
-      {...stylex.props(styles.chartStatic)}
+      {...stylex.props([hairline.all, styles.chartStatic])}
       data-testid="path-plot"
     >
       <text x={6} y={14} {...stylex.props(styles.svgCaptionTiny)}>
@@ -339,7 +340,7 @@ export function EpisodePlaybackClient({
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           alt={`${cam} camera at step ${frames.tick.step}`}
-                          {...stylex.props(styles.image)}
+                          {...stylex.props([hairline.all, styles.image])}
                           src={`/api/evaluation/campaigns/${campaignId}/episodes/${episodeId}/frames/${relativePath}`}
                         />
                         <figcaption {...stylex.props(styles.centerCaption, styles.monoTiny, styles.muted)}>

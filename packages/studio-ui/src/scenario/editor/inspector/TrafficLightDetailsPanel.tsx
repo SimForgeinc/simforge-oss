@@ -13,6 +13,7 @@ import type {
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./TrafficLightDetailsPanel.stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
+import { focus, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 export type TrafficLightCycleSnapshot = {
   readonly timing: ReferenceCycleTiming;
@@ -55,10 +56,10 @@ export function TrafficLightDetailsPanel({
       preview={(
         <div {...stylex.props(styles.flexColCenter)}>
           <Signal aria-hidden="true" className={stylex.props(styles.size9Text).className} />
-          <span {...stylex.props(styles.caps)}>
+          <span {...stylex.props([typography.tag, styles.caps])}>
             Junction {authoring.junctionId}
           </span>
-          <strong {...stylex.props(styles.xsWhiteMedium)}>
+          <strong {...stylex.props([textLayout.truncate, styles.xsWhiteMedium])}>
             Traffic light {authoring.headId}
           </strong>
         </div>
@@ -83,7 +84,7 @@ export function TrafficLightDetailsPanel({
         headerAction={authoring.onRemoveControl ? (
           <button
             aria-label={`Remove control from traffic light ${authoring.headId}`}
-            className={stylex.props(styles.gridCenteredTight, motionStyles.editorMotion).className}
+            className={stylex.props([focus.ring, styles.gridCenteredTight], motionStyles.editorMotion).className}
             data-testid="traffic-light-remove-control"
             onClick={authoring.onRemoveControl}
             title="Remove control"
@@ -97,7 +98,7 @@ export function TrafficLightDetailsPanel({
       />
       {authoring.hasPlan ? (
         <button
-          className={stylex.props(styles.flexCenterMid, motionStyles.editorMotion).className}
+          className={stylex.props([focus.ring, styles.flexCenterMid], motionStyles.editorMotion).className}
           data-testid="traffic-light-details-reset"
           onClick={() => authoring.onReset(openingSnapshot.current)}
           type="button"

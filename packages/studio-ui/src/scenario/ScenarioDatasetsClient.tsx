@@ -46,6 +46,7 @@ import {
 } from "./list/scenarioViewState";
 import { runDatasetMorph } from "./list/datasetMorph";
 import { driveHref } from "./drive-route";
+import { hairline } from "../stylex/recipes.stylex";
 
 /** Shared width key for the floating dataset/scenario sidebar. */
 const SCENARIO_LIST_WIDTH_KEY = "uniscenario.scenario-list-width.v2";
@@ -782,7 +783,7 @@ export function ScenarioDatasetsClient({
           {/* Errors float over the scene rather than sitting in the rail: a failed delete belongs next to
             nothing in particular, and the rail is 220px wide — too narrow for a message plus a retry. */}
           {error && datasets !== null ? (
-            <div {...stylex.props(styles.divAbsoluteFlex)}>
+            <div {...stylex.props([hairline.all, styles.divAbsoluteFlex])}>
               <CopyableErrorMessage
                 message={error}
                 {...stylex.props(styles.copyableerrormessage)}

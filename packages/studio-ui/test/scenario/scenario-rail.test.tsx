@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ScenarioScenarioRail } from "../../src/scenario/rail/ScenarioScenarioRail";
 import { rail as railStyles } from "../../src/scenario/scenario-controls.stylex";
+import { buttonVariants } from "../../src/components/ui/controls.stylex";
 
 /** One compiled atom of a StyleX namespace, by the property it declares. */
 const atomFor = (namespace: object, property: string): string => {
@@ -10,6 +11,8 @@ const atomFor = (namespace: object, property: string): string => {
   if (!key) throw new Error(`no compiled ${property} atom`);
   return (namespace as Record<string, string>)[key];
 };
+/** Every atom a namespace compiled for one property, conditions included. */
+const atomsFor = (namespace: object, property: string): string[] => atomFor(namespace, property).split(" ").filter(Boolean);
 
 afterEach(cleanup);
 
@@ -51,13 +54,12 @@ describe("ScenarioScenarioRail", () => {
     expect(screen.getByRole("heading", { name: "Scenarios" })).toBeTruthy();
     expect(screen.getByText("Cut-in corpus")).toBeTruthy();
     expect(header.contains(addScenario)).toBe(true);
-    // The accent footer style — centered, on the accent fill, in the heavy meta
-    // weight — as the atoms the compiler emitted, not as literal class text.
-    for (const property of ["justifyContent", "backgroundColor", "fontWeight"]) {
-      expect(addScenario.className).toContain(
-        atomFor(railStyles.footerAction, property),
-      );
+    // The create action is the accent Button: the variant's fill, and the
+    // rail's own placement, as the atoms the compiler emitted.
+    for (const atom of atomsFor(buttonVariants.accent, "backgroundColor")) {
+      expect(addScenario.className).toContain(atom);
     }
+    expect(addScenario.className).toContain(atomFor(railStyles.footerAction, "justifyContent"));
     expect(screen.getByTestId("scenario-scenario-header").nextElementSibling?.className).toContain(
       "scenario-glass-scrollbar",
     );

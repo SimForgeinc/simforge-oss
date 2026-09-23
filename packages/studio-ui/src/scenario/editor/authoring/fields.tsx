@@ -7,6 +7,7 @@ import { newTemplateId } from "@simforge-oss/scenario";
 import * as stylex from "@stylexjs/stylex";
 import { motionStyles } from "../../../stylex/motion.stylex";
 import { styles } from "./authoring.stylex";
+import { focus } from "../../../stylex/recipes.stylex";
 
 /**
  * Shared controls for the authoring panel's six editors.
@@ -45,7 +46,7 @@ export function MiniAdd({
       title={label}
       onClick={onClick}
       disabled={disabled}
-      {...stylex.props(styles.iconButton, motionStyles.editorMotion)}
+      {...stylex.props([focus.ring, styles.iconButton], motionStyles.editorMotion)}
     >
       <Plus aria-hidden="true" {...stylex.props(styles.icon)} />
     </button>
@@ -66,7 +67,7 @@ export function DeleteButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      {...stylex.props(styles.iconButtonMuted, motionStyles.editorMotion)}
+      {...stylex.props([focus.ring, styles.iconButtonMuted], motionStyles.editorMotion)}
     >
       <Trash2 aria-hidden="true" {...stylex.props(styles.icon)} />
     </button>

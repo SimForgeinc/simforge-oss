@@ -11,6 +11,7 @@ import {
   buildTooltipDetail,
   type ScenarioFamily,
 } from "@/app/lib/scenario-intelligence-ui";
+import { hairline, motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 const MAX_VISIBLE_TAGS = 3;
 
@@ -44,7 +45,7 @@ export function CandidateLocationCard({
     <button
       type="button"
       onClick={() => onSelect(selected ? null : candidate.id)}
-      {...stylex.props(styles.candidateCard, selected ? styles.candidateCardSelected : styles.candidateCardIdle)}
+      {...stylex.props([motionRecipe.colors, styles.candidateCard], selected ? styles.candidateCardSelected : styles.candidateCardIdle)}
     >
       {/* Row 1: Label + confidence */}
       <div {...stylex.props(styles.candidateHeader)}>
@@ -56,7 +57,7 @@ export function CandidateLocationCard({
               ? styles.confidenceHigh
               : candidate.confidence >= 0.75
                 ? styles.confidenceMedium
-                : styles.confidenceLow,
+                : [hairline.all, styles.confidenceLow],
           )}
         >
           {Math.round(candidate.confidence * 100)}%
@@ -65,21 +66,21 @@ export function CandidateLocationCard({
 
       {/* Row 2: One-line explanation */}
       {explanation && (
-        <p {...stylex.props(styles.candidateExplanation)}>{explanation}</p>
+        <p {...stylex.props([textLayout.truncate, styles.candidateExplanation])}>{explanation}</p>
       )}
 
       {/* Row 3: Family chip + tag chips */}
       {(family || visibleTags.length > 0) && (
         <div {...stylex.props(styles.candidateTagsRow)}>
           {family && (
-            <span {...stylex.props(styles.familyChip)}>
+            <span {...stylex.props([hairline.all, styles.familyChip])}>
               {family.name}
             </span>
           )}
           {visibleTags.map((tag) => (
             <span
               key={tag}
-              {...stylex.props(styles.tagChip)}
+              {...stylex.props([hairline.all, styles.tagChip])}
             >
               {humanizeTag(tag)}
             </span>

@@ -1,24 +1,12 @@
 /**
- * Shared vocabulary for the StyleX primitives in this folder.
- *
- * Two axes run through them:
- *
- *   - `surface` — "technical" chrome (flat, hairline-ruled, instrument type)
- *     versus "expressive" chrome (glass, blur, soft elevation, product type).
- *   - `tone` — a semantic colour role, never a literal colour.
- *
- * Runtime numbers — a progress fraction, an overlay inset — are deliberately
- * not style variants. StyleX compiles `create()` ahead of time, so a variant
- * per value would mean a class per value; they travel instead as CSS custom
- * properties on the element's inline `style`, named once here so a consumer
- * can read or override them.
+ * Shared vocabulary for the StyleX primitives: the `tone` a primitive is
+ * coloured by (a semantic role, never a literal colour), the `xstyle` types
+ * that let a caller place a primitive without reskinning it, and the helper
+ * that merges StyleX output with a caller's `className`/`style`.
  */
 
 import type * as React from "react";
 import type * as stylex from "@stylexjs/stylex";
-
-/** Character of a surface: instrument chrome versus product chrome. */
-export type SurfaceVariant = "technical" | "expressive";
 
 /** Semantic colour role shared by readouts, indicators and progress. */
 export type Tone =
@@ -29,22 +17,74 @@ export type Tone =
   | "warning"
   | "critical";
 
-/** Spacing step, mapped onto the foundation's `space` scale. */
-export type PadStep = "none" | "xs" | "sm" | "md" | "lg" | "xl";
-
 /**
  * Caller-supplied StyleX styles. Every primitive takes one and applies it
  * last, so a consumer's own `stylex.create()` output wins on conflicts.
  */
 export type XStyle = stylex.StyleXStyles;
 
-/** CSS custom properties the primitives read at runtime. */
-export const cssVars = {
-  /** Progress fill fraction, 0–1, unitless. */
-  progress: "--sfx-progress",
-  /** Distance a `WorldOverlay` is held off its anchored edges. */
-  overlayInset: "--sfx-overlay-inset",
-} as const;
+/**
+ * The properties that make up a primitive's *look*. A caller changes those
+ * through the primitive's `variant`, `tone` or `size`, never through
+ * `xstyle`; see docs/engineering/studio-style-guide.md.
+ */
+type SkinProperties = {
+  color: string;
+  backgroundColor: string;
+  backgroundImage: string;
+  borderColor: string;
+  borderTopColor: string;
+  borderBottomColor: string;
+  borderInlineStartColor: string;
+  borderInlineEndColor: string;
+  borderWidth: string;
+  borderStyle: string;
+  borderRadius: string;
+  outlineColor: string;
+  outlineStyle: string;
+  outlineWidth: string;
+  outlineOffset: string;
+  boxShadow: string;
+  fontFamily: string;
+  fontSize: string;
+  fontWeight: string;
+  lineHeight: string;
+  letterSpacing: string;
+  textTransform: string;
+  opacity: string;
+  transitionProperty: string;
+  transitionDuration: string;
+  transitionTimingFunction: string;
+  animationName: string;
+  backdropFilter: string;
+  filter: string;
+};
+
+/**
+ * `xstyle` for a primitive that owns its look: where it sits and how much
+ * room it takes (margin, position, flex/grid placement, width), but not its
+ * colours, type, borders, shadows or motion.
+ */
+export type PlacementStyle = stylex.StyleXStylesWithout<SkinProperties>;
+
+/**
+ * `xstyle` for a control, which also owns its geometry through `size`: no
+ * height or padding either, so every control on a row keeps one height.
+ */
+export type ControlPlacementStyle = stylex.StyleXStylesWithout<
+  SkinProperties & {
+    height: string;
+    minHeight: string;
+    padding: string;
+    paddingInline: string;
+    paddingBlock: string;
+    paddingLeft: string;
+    paddingRight: string;
+    paddingTop: string;
+    paddingBottom: string;
+    gap: string;
+  }
+>;
 
 /**
  * Merge StyleX output with a caller's `className` / `style`.
@@ -73,10 +113,4 @@ export function mergeStyleProps(
     ...(classes ? { className: classes } : null),
     ...(merged ? { style: merged } : null),
   };
-}
-
-/** Clamp a caller-supplied fraction into 0–1, tolerating junk input. */
-export function clampFraction(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) return 0;
-  return value >= 1 ? 1 : value;
 }

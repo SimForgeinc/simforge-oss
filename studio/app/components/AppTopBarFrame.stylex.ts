@@ -13,10 +13,7 @@
  */
 
 import * as stylex from "@stylexjs/stylex";
-import { colors, layers } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-
-/** `md:` — the one breakpoint this chrome responds to. */
-const MD = "@media (min-width: 768px)";
+import { colors, layers, layout, motion, space, stroke } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 export const styles = stylex.create({
   /**
@@ -32,11 +29,11 @@ export const styles = stylex.create({
     width: "100%",
     flexShrink: 0,
     alignItems: "center",
-    borderBottomWidth: 1,
+    borderBottomWidth: stroke.hairline,
     borderBottomStyle: "solid",
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.hairline,
     backgroundColor: "hsl(var(--background) / 0.95)",
-    backdropFilter: "blur(4px)",
+    backdropFilter: motion.blurSm,
   },
   // flex h-full w-full items-center gap-3 px-3, inset around the desktop
   // shell's window controls exactly as `AppTopBar.stylex.ts`'s row is, so the
@@ -47,14 +44,14 @@ export const styles = stylex.create({
     marginLeft: "env(titlebar-area-x, 0px)",
     width: "env(titlebar-area-width, 100%)",
     alignItems: "center",
-    gap: "0.75rem",
-    paddingInline: "0.75rem",
+    gap: space.s3,
+    paddingInline: space.s3,
   },
   // flex shrink-0 items-center
   brandSlot: { display: "flex", flexShrink: 0, alignItems: "center" },
   // hidden size-10 items-center justify-center rounded-md md:flex
   desktopButton: {
-    display: { default: "none", [MD]: "flex" },
+    display: { default: "none", [layout.bpMd]: "flex" },
     width: "2.5rem",
     height: "2.5rem",
     alignItems: "center",
@@ -70,12 +67,12 @@ export const styles = stylex.create({
   },
   // flex h-10 items-center gap-2 px-2 pr-2.5 md:hidden
   mobileChip: {
-    display: { default: "flex", [MD]: "none" },
+    display: { default: "flex", [layout.bpMd]: "none" },
     height: "2.5rem",
     alignItems: "center",
-    gap: "0.5rem",
-    paddingLeft: "0.5rem",
-    paddingRight: "0.625rem",
+    gap: space.s2,
+    paddingLeft: space.s2,
+    paddingRight: space.s2_5,
   },
   // flex aspect-square size-7 shrink-0 items-center justify-center text-primary
   mobileMark: {

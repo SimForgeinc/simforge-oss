@@ -3,6 +3,7 @@ import * as stylex from "@stylexjs/stylex";
 import { styles } from "./UtilityButtons.stylex";
 
 import { Check, Copy } from "lucide-react";
+import { hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 /** Props for the UtilityButtons component. */
 type UtilityButtonsProps = {
@@ -26,7 +27,7 @@ export function UtilityButtons({
       <button
         type="button"
         onClick={() => onCopy(assetId, "mapId")}
-        {...stylex.props(styles.utilityCopyButton)}
+        {...stylex.props([motionRecipe.colors, [hairline.all, styles.utilityCopyButton]])}
       >
         {copiedKey === "mapId" ? <Check {...stylex.props(styles.copiedCheckIcon)} /> : <Copy {...stylex.props(styles.copyIcon)} />}
         Map ID
@@ -34,7 +35,7 @@ export function UtilityButtons({
       <button
         type="button"
         onClick={() => onCopy(bboxText, "bbox")}
-        {...stylex.props(styles.utilityCopyButton)}
+        {...stylex.props([motionRecipe.colors, [hairline.all, styles.utilityCopyButton]])}
       >
         {copiedKey === "bbox" ? <Check {...stylex.props(styles.copiedCheckIcon)} /> : <Copy {...stylex.props(styles.copyIcon)} />}
         bbox
@@ -42,7 +43,7 @@ export function UtilityButtons({
       <button
         type="button"
         onClick={() => onCopy(centerText, "center")}
-        {...stylex.props(styles.utilityCopyButton)}
+        {...stylex.props([motionRecipe.colors, [hairline.all, styles.utilityCopyButton]])}
       >
         {copiedKey === "center" ? <Check {...stylex.props(styles.copiedCheckIcon)} /> : <Copy {...stylex.props(styles.copyIcon)} />}
         center

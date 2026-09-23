@@ -32,6 +32,7 @@ import { useProximityArrows } from "./useProximityArrows";
 import { useMapAssetOperations } from "./useMapAssetOperations";
 import { MapDetailRightPanel } from "./MapDetailRightPanel";
 import { DigitalTwinViewerPanel } from "./DigitalTwinViewerPanel";
+import { focus, hairline, motionRecipe } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 type DetailTab = "overview" | "layers" | "analytics" | "insights";
 
@@ -567,7 +568,7 @@ export function MapDetailPageClient({
             type="button"
             aria-label="Close 2D map"
             onClick={onClose}
-            {...stylex.props(styles.closeButton)}
+            {...stylex.props([focus.ring, motionRecipe.colors, styles.closeButton])}
           >
             <X {...stylex.props(styles.controlIcon)} />
           </button>
@@ -581,7 +582,7 @@ export function MapDetailPageClient({
           aria-live="polite"
           {...stylex.props(styles.finalizingBanner)}
         >
-          <Loader2 {...stylex.props(styles.loadingIcon)} />
+          <Loader2 {...stylex.props([motionRecipe.spin, styles.loadingIcon])} />
           <span>
             Finalizing this map — extracting locations and building the search
             index. Locations and search results fill in automatically when
@@ -621,7 +622,7 @@ export function MapDetailPageClient({
               type="button"
               onClick={() => setSearchPanelOpen(false)}
               aria-label="Collapse search panel"
-              {...stylex.props(styles.collapseSearchButton)}
+              {...stylex.props([motionRecipe.colors, styles.collapseSearchButton])}
             >
               <PanelLeftClose {...stylex.props(styles.controlIcon)} />
             </button>
@@ -635,20 +636,20 @@ export function MapDetailPageClient({
             <button
               type="button"
               onClick={requestResetView}
-              {...stylex.props(styles.resetViewButton)}
+              {...stylex.props([motionRecipe.colors, [hairline.all, styles.resetViewButton]])}
               aria-label="Reset view"
               title="Reset view"
             >
               <Home {...stylex.props(styles.resetViewIcon)} />
             </button>
-            <div {...stylex.props(styles.viewModeToggle)}>
+            <div {...stylex.props([hairline.all, styles.viewModeToggle])}>
               {(["2d", "3d"] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
                   onClick={() => setViewMode(mode)}
                   {...stylex.props(
-                      styles.viewModeSegment,
+                      [motionRecipe.colors, styles.viewModeSegment],
                       viewMode === mode ? styles.viewModeSegmentActive : styles.viewModeSegmentInactive,
                     )}
                   aria-pressed={viewMode === mode}

@@ -7,6 +7,7 @@ import { Badge } from "@simforge-oss/studio-ui/components/ui/badge";
 import type { GalleryAssetSummary } from "@simforge-oss/studio-ui/lib/asset-gallery/contracts";
 import { card } from "./asset-grid.stylex";
 import { GALLERY_UPLOAD_CARLA_COMPATIBILITY } from "./gallery-filters";
+import { hairline, motionRecipe, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
 
 /** One tile in the local model catalog. */
@@ -49,8 +50,8 @@ export function AssetCard({
 
       <div {...stylex.props(card.body)}>
         <div {...stylex.props(card.titleRow)}>
-          <h3 {...stylex.props(card.title)}>{asset.title}</h3>
-          <span {...stylex.props(card.classChip)}>
+          <h3 {...stylex.props([textLayout.truncate, motionRecipe.colors, card.title])}>{asset.title}</h3>
+          <span {...stylex.props([hairline.all, card.classChip])}>
             {asset.actorClass.replaceAll("_", " ")}
           </span>
         </div>

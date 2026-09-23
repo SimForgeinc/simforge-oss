@@ -1,24 +1,24 @@
 import * as stylex from "@stylexjs/stylex";
-import { colors, text, space } from "../../../stylex/tokens.stylex";
+import { colors, shadows, space, stroke, text } from "../../../stylex/tokens.stylex";
 
 export const styles = stylex.create({
   // pointer-events-auto fixed bottom-0 right-0 top-14 z-[82] flex w-[420px] max-w-[92vw] flex-col border-l border-white/10 bg-[#0d0d0d] text-white shadow-2xl
   fixedFlexCol: {
     pointerEvents: "auto",
     position: "fixed",
-    bottom: space.none,
-    right: space.none,
+    bottom: 0,
+    right: 0,
     top: "3.5rem",
     zIndex: "82",
     display: "flex",
     width: "420px",
     maxWidth: "92vw",
     flexDirection: "column",
-    borderLeftWidth: "1px",
-    borderColor: "rgb(255 255 255 / 0.1)",
+    borderLeftWidth: stroke.hairline,
+    borderColor: colors.hairline,
     backgroundColor: "rgb(13 13 13 / 1)",
-    color: "rgb(255 255 255 / 1)",
-    boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+    color: colors.ink,
+    boxShadow: shadows.elevation2xl,
   },
   // flex h-14 shrink-0 items-center border-b border-white/10 px-4
   flexCenterTight: {
@@ -26,24 +26,20 @@ export const styles = stylex.create({
     height: "3.5rem",
     flexShrink: "0",
     alignItems: "center",
-    borderBottomWidth: "1px",
-    borderColor: "rgb(255 255 255 / 0.1)",
-    paddingLeft: space.xl,
-    paddingRight: space.xl,
+    borderBottomWidth: stroke.hairline,
+    borderColor: colors.hairline,
+    paddingLeft: space.s4,
+    paddingRight: space.s4,
   },
   // text-[10px] font-bold uppercase tracking-[0.18em] text-[#E8E044]
   capsBold: {
-    fontSize: "10px",
-    fontWeight: text.weightBold,
-    textTransform: "uppercase",
-    letterSpacing: text.trackingMetaWider,
     color: colors.accent,
   },
   // text-xs text-white/50
   xs: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
-    color: colors.textSubtle,
+    lineHeight: text.lineXs,
+    color: colors.inkMuted,
   },
   // ml-auto grid size-8 place-items-center text-white/60 hover:bg-white/10 hover:text-white
   gridCenteredPushRight: {
@@ -53,12 +49,12 @@ export const styles = stylex.create({
     height: "2rem",
     placeItems: "center",
     color: {
-      default: "rgb(255 255 255 / 0.6)",
-      ":hover": "rgb(255 255 255 / 1)",
+      default: colors.inkSecondary,
+      ":hover": colors.ink,
     },
     backgroundColor: {
       default: null,
-      ":hover": colors.chip,
+      ":hover": colors.fillStrong,
     },
   },
   // size-4
@@ -71,7 +67,7 @@ export const styles = stylex.create({
     minHeight: "0px",
     flex: "1 1 0%",
     overflowY: "auto",
-    padding: space.xl,
+    padding: space.s4,
   },
   /*
    * The old `space-y-5`. `space-y` is a `> * + *` rule with no StyleX
@@ -81,9 +77,9 @@ export const styles = stylex.create({
   // text-xs
   xs2: {
     fontSize: text.sizeXs,
-    lineHeight: "1rem",
+    lineHeight: text.lineXs,
     display: "flex",
     flexDirection: "column",
-    gap: "1.25rem",
+    gap: space.s5,
   },
 });

@@ -12,6 +12,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { styles as s } from "./evaluation-components.stylex";
 import type { OpenLoopItem } from "@simforge-oss/evaluation/client";
+import { hairline } from "../../stylex/recipes.stylex";
 
 const WIDTH = 320;
 const HEIGHT = 420;
@@ -58,7 +59,7 @@ export function TrajectoryPlot({
   const polylines = reference ? [...samples, reference] : samples;
 
   if (polylines.length === 0) {
-    const empty = stylex.props(s.plotEmpty, s.border, s.mutedSurface, s.textSm, s.textMuted, xstyle);
+    const empty = stylex.props(s.plotEmpty, hairline.all, s.mutedSurface, s.textSm, s.textMuted, xstyle);
     return (
       <div
         {...empty}

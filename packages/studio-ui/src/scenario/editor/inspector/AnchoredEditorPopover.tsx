@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 import { useAnchoredPopoverPosition } from "../../../lib/scenario/editor/anchored-popover";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./AnchoredEditorPopover.stylex";
+import { motionRecipe, textLayout, typography } from "../../../stylex/recipes.stylex";
 
 const FORM_CARD_WIDTH = 420;
 const FORM_CARD_MAX_HEIGHT = 560;
@@ -137,16 +138,16 @@ export function AnchoredEditorPopover({
       />
       <header {...stylex.props(styles.flexCenterTight)}>
         <div {...stylex.props(styles.fillNarrowable)}>
-          <p {...stylex.props(styles.capsBoldLeadNone)}>
+          <p {...stylex.props([typography.eyebrow, styles.capsBoldLeadNone])}>
             {kicker}
           </p>
-          <p {...stylex.props(styles.smWhiteSemibold)}>
+          <p {...stylex.props([textLayout.truncate, styles.smWhiteSemibold])}>
             {title}
           </p>
         </div>
         <button
           aria-label={`Close ${kind} editor`}
-          {...stylex.props(styles.flexCenterMid)}
+          {...stylex.props([motionRecipe.colors, styles.flexCenterMid])}
           data-testid={`${kind}-popover-close`}
           type="button"
           onClick={onClose}

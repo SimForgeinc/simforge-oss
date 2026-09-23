@@ -5,6 +5,7 @@ import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 import type { AuthoredRenderSensor } from "@simforge-oss/scenario";
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./recording-panel-fields.stylex";
+import { focus, typography } from "../../../stylex/recipes.stylex";
 
 /**
  * Reusable leaf controls and read-outs for render configuration surfaces.
@@ -32,7 +33,7 @@ export function EnvironmentSummary({ content }: { content: ScenarioTemplateV2 | 
     <section {...stylex.props(styles.ruleT)} aria-labelledby="recording-environment-heading">
       <div {...stylex.props(styles.flexCenterGap2)}>
         <CloudSun aria-hidden="true" className={stylex.props(styles.muted).className} />
-        <h3 {...stylex.props(styles.capsMicroMuted)} id="recording-environment-heading">
+        <h3 {...stylex.props([typography.eyebrow, styles.capsMicroMuted])} id="recording-environment-heading">
           Environment included
         </h3>
       </div>
@@ -72,7 +73,7 @@ export function NumberInput({ label, value, onChange, ...input }: {
   return (
     <label {...stylex.props(styles.xs)}>
       <span {...stylex.props(styles.medium)}>{label}</span>
-      <input {...input} {...stylex.props(styles.smBorderedWide, styles.stackedXs)} onChange={(event) => onChange(event.currentTarget.valueAsNumber)} type="number" value={value} />
+      <input {...input} {...stylex.props([focus.ring, styles.smBorderedWide], styles.stackedXs)} onChange={(event) => onChange(event.currentTarget.valueAsNumber)} type="number" value={value} />
     </label>
   );
 }
@@ -87,7 +88,7 @@ export function SelectInput({ label, value, onChange, options, disabled }: {
   return (
     <label {...stylex.props(styles.xs)}>
       <span {...stylex.props(styles.medium)}>{label}</span>
-      <select {...stylex.props(styles.xsBorderedWide, styles.stackedXs)} disabled={disabled} onChange={(event) => onChange(event.currentTarget.value)} value={value}>
+      <select {...stylex.props([focus.ring, styles.xsBorderedWide], styles.stackedXs)} disabled={disabled} onChange={(event) => onChange(event.currentTarget.value)} value={value}>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
     </label>
