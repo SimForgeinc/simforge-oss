@@ -26,6 +26,7 @@
     "app/lib/s3/s3-get-object.ts",
     "app/lib/s3/s3-object.ts",
     "app/lib/s3/s3-presign.ts",
-    "app/lib/s3/s3-put-object.ts"
+    "app/lib/s3/s3-put-object.ts",
+    "app/lib/host/asset-gallery-actions.ts"
   ]
 }
