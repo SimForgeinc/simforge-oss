@@ -30,6 +30,13 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Instant;
 
+const JOB_USAGE: &str = "simforge-render job --job JOB.json [--preset training|showcase] [--set key=value ...]\n\
+    simforge-render job --scene SCENE.json --trace TRACE.json --intent INTENT.json [--glb PATH] [--models DIR] [--sources all|id,...]\n\
+    common: [--scene-set field=json ...] [--start N] [--ticks N] [--out RESULT.json] [--dump-dir DIR --dump-every N]\n\
+            [--sweep ENTRIES.json] [--camera-size WxH] [--ablate a,b] [--shm-size-mb 512]\n\
+    JOB.json is simforge.render-job/v2: {schema, scene, sceneState?, rig: {cameras?, lidars?, radars?, pronto?}, ticks?: {start?, count?}, passes, outDir}.\n\
+    Artifacts: <outDir>/<sensor>/<tick:08>.<pass>.png|.f32.bin|.ply|.csv plus <outDir>/results.json.";
+
 struct Args {
     job: Option<PathBuf>,
     scene: PathBuf,
@@ -78,6 +85,10 @@ fn parse_args(argv: Vec<String>) -> Result<Args> {
     while let Some(arg) = args.next() {
         let mut value = || args.next().with_context(|| format!("{arg} requires a value"));
         match arg.as_str() {
+            "--help" | "-h" => {
+                println!("{JOB_USAGE}");
+                std::process::exit(0);
+            }
             "--job" => parsed.job = Some(value()?.into()),
             "--scene" => parsed.scene = value()?.into(),
             "--trace" => parsed.trace = value()?.into(),

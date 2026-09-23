@@ -32,9 +32,10 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-/// Scene description for prewarm (subset of the batch job schema).
+/// Scene description for prewarm. Unknown keys are refused: a retired
+/// field (`profile`) or a misspelt one fails loudly instead of being dropped.
 #[derive(Clone, Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SceneSpec {
     pub glbs: Vec<String>,
     /// Vegetation prototype GLBs with sibling instance sidecars.
