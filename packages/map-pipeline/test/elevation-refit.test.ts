@@ -11,6 +11,7 @@ import {
   runRefit,
   structuralDiff,
   verifyContinuity,
+  xodrGeometrySha256,
 } from '../src/elevation-refit/index.js';
 import { elevationRecords, evalComponent, fitSpline2, unknownIndex } from '../src/elevation-refit/spline.js';
 import { decodeGroundMesh, GroundQuery, parseXodrRoads, SURFACE_CLASSES, type GroundMesh } from '../src/ground/index.js';
@@ -250,6 +251,11 @@ describe('xodr elevation refit: synthetic map with known offsets', () => {
   it('is deterministic', () => {
     const again = runRefit({ mapId: 'synthetic', xodrText: source, query, groundMesh: { sha256: 'synthetic', source: 'test' } });
     expect(again.correctedText).toBe(corrected);
+  });
+
+  it('keeps the road-geometry digest (the refit changes no geometry)', () => {
+    expect(xodrGeometrySha256(corrected)).toBe(xodrGeometrySha256(source));
+    expect(xodrGeometrySha256(corrected.replace('hdg="0" length="20"', 'hdg="0.001" length="20"'))).not.toBe(xodrGeometrySha256(source));
   });
 
   it('flags structural changes outside the allowed elements', () => {
