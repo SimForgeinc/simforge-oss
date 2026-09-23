@@ -691,7 +691,7 @@ export async function renderTrace(options) {
   if (args.format !== 'stills') {
     const ffmpeg = spawnSync(
       '/usr/bin/ffmpeg',
-      ['-y', '-hide_banner', '-loglevel', 'error', '-framerate', String(args.fps), '-i', join(framesDir, 'frame-%03d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', videoPath],
+      ['-y', '-hide_banner', '-loglevel', 'error', '-framerate', String(args.fps), '-i', join(framesDir, 'frame-%03d.png'), '-c:v', 'libx264', '-threads', '19', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', videoPath],
       { stdio: 'pipe' },
     );
     if (ffmpeg.status !== 0) {

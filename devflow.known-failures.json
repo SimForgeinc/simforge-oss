@@ -1,12 +1,4 @@
 {
-  "_doc": "Turbo tasks that fail on a clean checkout of main (2026-09-22, found by the first pnpm verify). verify reports them as known-red and does not gate on them; it tells you when one starts passing so it can be removed. Fix the test, then delete the line.",
-  "tasks": {
-    "@simforge-oss/studio-ui#test": "15 tests in 9 files red on main: DatasetStrip cloudHome undefined, useScenarioDocumentActions, placement ghost",
-    "@simforge-oss/cli#test": "child-process CLI tests read non-JSON stdout; template-new --out mismatch",
-    "@simforge-oss/editor#test": "document-sensors metric-subject tests red",
-    "@simforge-oss/render#test": "web/engine.test needs packages/render/dist/harness.html (a build output)",
-    "@simforge-oss/trace-render#test": "needs uncommitted fixtures/evidence/golden-yale-bus-stop; --camera flag drift",
-    "@simforge-oss/showcase#test": "needs uncommitted fixtures/evidence/golden-yale-bus-stop",
-    "@simforge-oss/agentic-3d-experiment#test": "`node --test tests/` passes a directory, which Node 24 rejects"
-  }
+  "_doc": "Turbo tasks that are genuinely red on main: verify reports them as known-red and does not gate on them, and says when one starts passing. Each entry names its owner and the failure (\"owner: reason\"). Environment gaps (missing tools, build ordering, machine-dependent output) are fixed, not listed.",
+  "tasks": {}
 }
