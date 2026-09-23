@@ -7,6 +7,18 @@ import { Sha256 } from './sha256.js';
 import { canonicalJson } from './canonical-json.js';
 
 export const RENDER_INTENT_V1_SCHEMA = 'simforge.render-intent/v1' as const;
+
+/**
+ * The control plane still stores and serves these documents under the
+ * pre-rename `uniscenario.` namespace, and the digest that authorizes a render
+ * is taken over those exact bytes. Accepting either spelling is what the
+ * platform already does on its own wire contracts
+ * (`namespaceTolerantLiteral`, render-wire-contracts.ts:90-91); rewriting the
+ * tag instead would change the bytes and break the digest.
+ */
+const namespaceTolerantLiteral = (canonical: string) =>
+  z.union([z.literal(canonical), z.literal(canonical.replace(/^simforge\./, 'uniscenario.'))]);
+
 /**
  * A trailing presentation camera authored on the sensor host. It rides outside the
  * measurement rig so a render can ship a drive-along view without restating the rig counts.
@@ -95,7 +107,7 @@ export const RENDER_INTENT_MAX_ASSETS = 65_536;
  * so refreshing credentials never changes this document's content hash.
  */
 export const RenderIntentV1Schema = z.strictObject({
-  schema: z.literal(RENDER_INTENT_V1_SCHEMA),
+  schema: namespaceTolerantLiteral(RENDER_INTENT_V1_SCHEMA),
   intentId: RenderIntentIdSchema,
   executionPackage: z.strictObject({
     id: RenderIntentIdSchema,

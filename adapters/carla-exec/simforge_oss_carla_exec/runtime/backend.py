@@ -9,7 +9,7 @@ from pathlib import Path
 from dataclasses import dataclass
 import hashlib
 import json
-from math import atan2, cos, degrees, isfinite, radians, sin, sqrt
+from math import atan2, copysign, cos, degrees, isfinite, radians, sin, sqrt
 import os
 from threading import Condition, Lock
 from time import monotonic, sleep
@@ -198,6 +198,15 @@ SPAWN_NUDGE_OFFSETS_M: tuple[float, ...] = (0.0, 1.5, -1.5, 3.0, -3.0, 4.5, -4.5
 
 #: Clearance kept between spawn footprints so settled bodies never touch.
 SPAWN_FOOTPRINT_CLEARANCE_M = 0.15
+
+#: A camera looking within 30 deg of straight sideways is a flank camera: if it
+#: sits inside the body it films the door skin. Anything more forward-looking
+#: (the 50 deg corner cameras of the NVIDIA surround preset) sees past the
+#: bodywork and keeps its authored pose.
+# cos(35 deg): a camera within 35 degrees of straight ahead is looking out
+# through the windscreen, which is the intended mounting. Anything turned
+# further than that is aimed at bodywork if it sits inside the shell.
+FORWARD_CAMERA_COS_YAW = 0.819
 
 #: An OpenDRIVE lane elevation farther than this from the authored z is the
 #: wrong surface (overpass, tunnel roof) and is not used as the reference.
@@ -780,6 +789,7 @@ class CarlaBackend:
         self.sensor_pending: dict[int, dict[str, Any]] = {}
         self.sensor_last_frame: dict[str, int] = {}
         self.sensor_configs: dict[str, dict[str, Any]] = {}
+        self.sensor_mount_adjustments: list[dict[str, Any]] = []
         self.sensor_error: RuntimeError | None = None
         self.sensor_closed = False
         self.capture_disk_bytes = 0
@@ -2321,6 +2331,72 @@ class CarlaBackend:
             self.speed_integrals[actor_id] = integral
         return throttle, 0.0
 
+    def _clear_of_body(self, parent: Any, requested: Any,
+                       t: Mapping[str, float]) -> tuple[float, float, float]:
+        """Move a side-facing mount that sits inside the host body out to its skin.
+
+        Rig poses are authored about a reference vehicle. Substitute a wider one
+        — a class-preserving swap to a 2.15 m Patrol where the rig assumed
+        1.9 m — and a flank camera authored at the reference skin ends up inside
+        the real cabin, filming seats and a steering wheel for the whole
+        episode.
+
+        Only sideways-looking mounts are corrected. A forward camera behind the
+        windscreen is also geometrically "inside" the bounding box and is the
+        normal, working placement: nothing occludes it, because the body is
+        below and behind. What a door skin blocks is a camera aimed through it.
+        The published pose is otherwise kept, the mount moves the minimum
+        distance along the flank normal, and the change is recorded so the
+        delivered geometry is never a silent fiction.
+        """
+        x, y, z = t["x"], t["y"], t["z"]
+        box = getattr(parent, "bounding_box", None) if parent is not None else None
+        extent = getattr(box, "extent", None) if box is not None else None
+        if extent is None:
+            return x, y, z
+        yaw = radians(float(t.get("yaw", 0.0)))
+        # A forward camera behind the windscreen is also inside the box and is
+        # the normal, working placement: nothing occludes it, because the body
+        # is below and behind. Everything else aimed out through bodywork is
+        # filming that bodywork.
+        if abs(cos(yaw)) >= FORWARD_CAMERA_COS_YAW and cos(yaw) > 0:
+            return x, y, z
+        # CARLA's bounding box is centred on the actor's own origin.
+        centre = getattr(box, "location", None)
+        cx = float(getattr(centre, "x", 0.0) or 0.0)
+        cy = -float(getattr(centre, "y", 0.0) or 0.0)
+        half_x = float(extent.x)
+        half_y = float(extent.y)
+        local_x = x - cx
+        local_y = y - cy
+        if abs(local_x) >= half_x or abs(local_y) >= half_y:
+            return x, y, z
+        # Leave along the line of sight, so the camera keeps its authored view
+        # and simply stops looking through the car it is bolted to. Scaling
+        # each slab by the ray's component gives the exit distance; the
+        # smaller one is the face it leaves through.
+        margin = 0.04
+        dx, dy = cos(yaw), sin(yaw)
+        distances = []
+        if abs(dx) > 1e-9:
+            distances.append(((half_x if dx > 0 else -half_x) - local_x) / dx)
+        if abs(dy) > 1e-9:
+            distances.append(((half_y if dy > 0 else -half_y) - local_y) / dy)
+        if not distances:
+            return x, y, z
+        travel = min(d for d in distances if d > 0) + margin
+        x, y = x + dx * travel, y + dy * travel
+        self.sensor_mount_adjustments.append({
+            "sensorId": getattr(requested, "sensor_id", None),
+            "actorId": getattr(requested, "actor_id", None),
+            "authored": {"x": round(t["x"], 4), "y": round(t["y"], 4), "z": round(t["z"], 4)},
+            "mounted": {"x": round(x, 4), "y": round(y, 4), "z": round(z, 4)},
+            "hostHalfWidthM": round(half_y, 4),
+            "hostHalfLengthM": round(half_x, 4),
+            "reason": "mount fell inside the host body; moved along its line of sight to the skin",
+        })
+        return x, y, z
+
     def configure_sensors(self, spec: RenderSpec, output_dir: Path, max_capture_disk_bytes: int, abort: Callable[[], None] | None = None) -> None:
         assert self.world is not None
         check = abort or (lambda: None)
@@ -2426,11 +2502,12 @@ class CarlaBackend:
                     )
                 blueprint.set_attribute(name, str(value))
             t = requested.transform
+            parent = self.actors.get(requested.actor_id) if requested.actor_id is not None else None
+            mount_x, mount_y, mount_z = self._clear_of_body(parent, requested, t)
             transform = self.carla.Transform(
-                self.carla.Location(x=t["x"], y=-t["y"], z=t["z"]),
+                self.carla.Location(x=mount_x, y=-mount_y, z=mount_z),
                 self.carla.Rotation(pitch=t["pitch"], yaw=-t["yaw"], roll=t["roll"]),
             )
-            parent = self.actors.get(requested.actor_id) if requested.actor_id is not None else None
             sensor_actor = self.world.spawn_actor(blueprint, transform, attach_to=parent)
             if sensor_actor is None:
                 raise RuntimeError(f"CARLA failed to spawn native sensor {key}")

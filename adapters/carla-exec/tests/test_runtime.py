@@ -66,6 +66,49 @@ def test_sensor_frame_timeout_defaults_to_cold_start_safe_window(monkeypatch: py
     assert backend.sensor_timeout_s == 60.0
 
 
+def test_side_mount_inside_a_wider_host_body_is_pushed_to_its_flank(monkeypatch) -> None:
+    """A side camera authored at a 1.9 m-wide reference vehicle's skin ends up
+    inside a 2.15 m-wide substitute and films the cabin; it must move out,
+    while a forward camera behind the windscreen must be left alone."""
+    class FakeClient:
+        def __init__(self, _host: str, _port: int) -> None: ...
+        def set_timeout(self, _timeout: float) -> None: ...
+
+    monkeypatch.setitem(sys.modules, "carla", SimpleNamespace(Client=FakeClient))
+    backend = CarlaBackend()
+    host = SimpleNamespace(bounding_box=SimpleNamespace(
+        extent=SimpleNamespace(x=2.7955, y=1.0735, z=1.0295),
+        location=SimpleNamespace(x=0.0, y=0.0, z=0.0),
+    ))
+    requested = SimpleNamespace(sensor_id="camera_right_side", actor_id="ego")
+
+    # Authored 12 cm inside the flank, looking right: pushed just clear.
+    x, y, z = backend._clear_of_body(host, requested, {"x": 0.2, "y": 0.95, "z": 1.35, "yaw": 90})
+    assert y > 1.0735 and (x, z) == (0.2, 1.35)
+    assert backend.sensor_mount_adjustments[-1]["authored"]["y"] == 0.95
+
+    # Sign is preserved: the left camera leaves through the left flank.
+    _, left_y, _ = backend._clear_of_body(host, requested, {"x": 0.2, "y": -0.95, "z": 1.35, "yaw": -90})
+    assert left_y < -1.0735
+
+    # A forward camera is inside the box too, and is the normal placement.
+    before = len(backend.sensor_mount_adjustments)
+    assert backend._clear_of_body(host, requested, {"x": 2.1, "y": 0.0, "z": 1.45, "yaw": 0}) == (2.1, 0.0, 1.45)
+    # A rear corner camera at 140 deg is not looking out through the windscreen:
+    # inside the shell it films the cabin, so it leaves along its line of sight
+    # (the QA finding behind FORWARD_CAMERA_COS_YAW).
+    rear_x, rear_y, rear_z = backend._clear_of_body(host, requested, {"x": -1.0, "y": 0.38, "z": 1.33, "yaw": 140})
+    assert rear_z == 1.33 and (rear_x < -2.7955 or rear_y > 1.0735)
+    assert backend.sensor_mount_adjustments[-1]["authored"]["y"] == 0.38
+    before = len(backend.sensor_mount_adjustments)
+    # And a mount already outside the flank keeps the rig's exact pose.
+    assert backend._clear_of_body(host, requested, {"x": 0.2, "y": 1.4, "z": 1.35, "yaw": 90})[1] == 1.4
+    assert len(backend.sensor_mount_adjustments) == before
+
+    # No parent (a free chase camera) is never rewritten.
+    assert backend._clear_of_body(None, requested, {"x": -9.0, "y": 3.4, "z": 0.0, "yaw": 0}) == (-9.0, 3.4, 0.0)
+
+
 def artifact_bytes(body: bytes | Path) -> bytes:
     return body.read_bytes() if isinstance(body, Path) else body
 
@@ -3503,36 +3546,50 @@ def test_spawn_drops_execution_semantics_actors_with_a_recorded_reason():
     }
 
 
-def test_knockdown_pose_drops_the_actor_instead_of_failing_the_render():
+def test_knockdown_truncates_the_actor_at_impact_instead_of_erasing_the_episode():
     lease = parse_lease(lease_value(execution_mode="native-physics"))
     plan = ExecutionPlan(
         "simforge.execution-plan/v1", 0.02,
         {
             "ego": ActorBinding("ego", "actor_ego", "car", "vehicle.sedan"),
-            "deer": ActorBinding("deer", "actor_deer", "animal", "animal.deer"),
+            "walker": ActorBinding("walker", "actor_walker", "pedestrian", "walker.pedestrian"),
         },
         (
             PlanFrame(0, 0.0, {
                 "ego": ActorFrame("spawn", 0, 0, 0, 0, 1.0),
-                "deer": ActorFrame("spawn", 5, 0, 0, 0, 0.0),
+                "walker": ActorFrame("spawn", 5, 0, 0, 0, 1.2),
             }, {}),
             PlanFrame(1, 0.02, {
                 "ego": ActorFrame("active", 0.02, 0, 0, 0, 1.0),
-                # Knocked down mid-scenario, and sliding: the drop must also
-                # exempt the actor from the moving-animal gate.
-                "deer": ActorFrame("active", 5.01, 0, 0, 0, 0.5, downed=True),
+                "walker": ActorFrame("active", 5.01, 0, 0, 0, 1.2),
+            }, {}),
+            PlanFrame(2, 0.04, {
+                "ego": ActorFrame("active", 0.04, 0, 0, 0, 1.0),
+                # Struck here: authored as knocked down and sliding.
+                "walker": ActorFrame("active", 5.02, 0, 0, 0, 0.5, downed=True),
             }, {}),
         ), "a" * 64,
     )
-    drops = worker_runner._preflight_execution_semantics(lease, plan)
-    assert drops == {"deer": "native physics cannot execute authored knockdown poses without post-spawn teleport repair"}
 
-    # A knockdown-posed actor that hosts sensors cannot be dropped silently.
+    truncated, knocked_down_at = worker_runner.truncate_downed_actors(plan)
+    assert knocked_down_at == {"walker": 0.04}
+    # Present and upright up to the impact, gone from the impact onward.
+    assert [frame.actors["walker"].lifecycle for frame in truncated.frames] == [
+        "spawn", "active", "absent",
+    ]
+    assert not any(frame.actors["walker"].downed for frame in truncated.frames)
+    # The approach is untouched: it is what puts the strike on camera.
+    assert truncated.frames[1].actors["walker"].x == pytest.approx(5.01)
+
+    # Truncation replaces the whole-episode drop.
+    assert worker_runner._preflight_execution_semantics(lease, truncated) == {}
+
+    # Sensors cannot ride an actor that disappears mid-episode.
     hosted = lease_value(execution_mode="native-physics")
-    hosted["job"]["renderSpec"]["sensors"][0]["actorId"] = "deer"
+    hosted["job"]["renderSpec"]["sensors"][0]["actorId"] = "walker"
     hosted_lease = parse_lease(seal_lease(hosted))
-    with pytest.raises(ContractError, match="cannot attach to actors dropped from execution"):
-        worker_runner._preflight_execution_semantics(hosted_lease, plan)
+    with pytest.raises(ContractError, match="frame-closed when their attached actor is deleted"):
+        worker_runner._preflight_execution_semantics(hosted_lease, truncated)
 
 
 def test_cooked_map_registry_resolves_known_xodrs_and_env_extensions(monkeypatch):

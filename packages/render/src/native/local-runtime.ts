@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from 'node:fs';
+import { accessSync, constants, readFileSync, statSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
 
 import { nativeExecutableName, nativeRuntimeRoot } from '@simforge-oss/native-runtime';
@@ -186,6 +186,37 @@ export function probeLocalNativeRender(env: NodeJS.ProcessEnv = process.env): Lo
     reasons.push(`The pinned actor asset closure ${actorAssets.digest.slice(0, 12)} is not installed (looked in ${actorAssets.searched.join(', ')}).`);
   }
   return { ready: reasons.length === 0, runtimeRoot, renderService, encoder, actorAssets, reasons };
+}
+
+/** Local CARLA prerequisites only; server reachability is checked during execution. */
+export function probeLocalCarlaRender(env: NodeJS.ProcessEnv = process.env): {
+  readonly ready: boolean;
+  readonly reasons: readonly string[];
+} {
+  const binary = env.SIMFORGE_CARLA_BINARY ?? 'simforge-oss-carla-exec';
+  const candidates = binary.includes('/') || binary.includes('\\')
+    ? [binary]
+    : pathCandidates(binary, env);
+  const executable = candidates.some((path) => {
+    try {
+      accessSync(path, constants.X_OK);
+      return statSync(path).isFile();
+    } catch {
+      return false;
+    }
+  });
+  const reasons: string[] = [];
+  if (!executable) reasons.push(`The CARLA adapter is not installed or executable (looked in ${candidates.join(', ')}).`);
+  const host = env.CARLA_HOST ?? '127.0.0.1';
+  try {
+    const parsed = new URL(`http://${host.includes(':') && !host.startsWith('[') ? `[${host}]` : host}`);
+    if (!host || parsed.username || parsed.password || parsed.port || parsed.pathname !== '/' || parsed.search || parsed.hash || /\s/.test(host)) throw new Error('invalid host');
+  } catch {
+    reasons.push('The CARLA host is invalid.');
+  }
+  const port = Number(env.CARLA_PORT ?? 2000);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) reasons.push('The CARLA port must be an integer between 1 and 65535.');
+  return { ready: reasons.length === 0, reasons };
 }
 
 /**

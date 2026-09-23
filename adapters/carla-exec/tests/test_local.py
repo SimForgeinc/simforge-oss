@@ -191,6 +191,19 @@ def test_nvidia_sdg_av_rig_matches_the_platform_preset() -> None:
     assert left["position"]["x"] == right["position"]["x"] == 0.2
     assert left["rotation"]["yawRad"] == pytest.approx(-right["rotation"]["yawRad"])
 
+    # Every off-centre camera must be aimed at the flank it sits on. Negating
+    # the lateral offset without negating yaw put `camera_right_side` outside
+    # the right doors looking back through them, and mirrored the corner
+    # cameras left for right — both invisible in a manifest, obvious on screen.
+    for sensor_id in ("camera_left_side", "camera_right_side",
+                      "camera_front_left", "camera_front_right",
+                      "camera_rear_left", "camera_rear_right"):
+        transform = by_id[sensor_id]["transform"]
+        lateral = transform["position"]["z"]
+        yaw = transform["rotation"]["yawRad"]
+        assert lateral != 0 and yaw != 0
+        assert (yaw > 0) == (lateral > 0), f"{sensor_id} is aimed across the vehicle"
+
     # Rear cameras look backwards, not forwards.
     for sensor_id in ("camera_rear_left", "camera_rear_right"):
         transform = by_id[sensor_id]["transform"]

@@ -4,7 +4,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 
 import { createRenderEngine as createBrowserRenderEngine } from "@simforge-oss/render/web";
-import { canonicalize, type RenderIntentV1 } from "@simforge-oss/scenario";
+import { canonicalize, hashRenderIntent, type RenderIntentV1 } from "@simforge-oss/scenario";
 import {
   RenderArtifactManifestSchema,
   assertEngineSupportsIntent,
@@ -36,10 +36,13 @@ export async function executeEngine(
   const wireIntent = request.intent as unknown as RenderIntentV1 & { engine?: unknown; schedule?: unknown };
   const { engine: _engine, schedule: _schedule, ...portableIntent } = wireIntent;
   const intent = portableIntent as RenderIntentV1;
-  // Hash exactly as the control plane does: canonicalize (from @simforge-oss/scenario)
-  // sorts keys, drops undefined, and ROUNDS floats. A local canonicalizer without
-  // float rounding diverges on irrational sensor mount angles (e.g. the Pronto rig).
-  const intentSha256 = createHash("sha256").update(JSON.stringify(canonicalize(wireIntent))).digest("hex");
+  // `hashRenderIntent` is THE content hash: the control plane computes
+  // `intent_sha256` with this exact function (it imports it from
+  // @simforge-oss/scenario), and it canonicalizes without rounding. The
+  // local `canonicalize` helper used here previously rounds floats, so a
+  // spec carrying long mount doubles hashed differently on the worker than
+  // on the plane and every claim died with render_intent_digest_mismatch.
+  const intentSha256 = hashRenderIntent(wireIntent);
   if (request.intentSha256 && request.intentSha256 !== intentSha256) {
     throw new Error(`render intent digest mismatch: claim=${request.intentSha256} computed=${intentSha256}`);
   }

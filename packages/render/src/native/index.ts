@@ -39,7 +39,7 @@ export type {
 export { startNativeRenderService } from './service-process.js';
 export type { NativeServiceOptions, NativeServiceSession } from './service-process.js';
 export {
-  NATIVE_RENDER_SERVICE_NAME, actorClosureRelativePath, probeLocalBrowserRender, probeLocalNativeRender,
+  NATIVE_RENDER_SERVICE_NAME, actorClosureRelativePath, probeLocalBrowserRender, probeLocalCarlaRender, probeLocalNativeRender,
   resolveActorAssets, resolveEncoder, resolveNativeRenderService, resolveProbe,
 } from './local-runtime.js';
 export type {

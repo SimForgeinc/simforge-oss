@@ -19,6 +19,18 @@ import {
 import { SensorMountSchema } from './schema/v2/sensors.js';
 
 export const RENDER_SPEC_V3_SCHEMA = 'simforge.render-spec/v3' as const;
+
+/**
+ * The control plane still stores and serves these documents under the
+ * pre-rename `uniscenario.` namespace, and the digest that authorizes a render
+ * is taken over those exact bytes. Accepting either spelling is what the
+ * platform already does on its own wire contracts
+ * (`namespaceTolerantLiteral`, render-wire-contracts.ts:90-91); rewriting the
+ * tag instead would change the bytes and break the digest.
+ */
+const namespaceTolerantLiteral = (canonical: string) =>
+  z.union([z.literal(canonical), z.literal(canonical.replace(/^simforge\./, 'uniscenario.'))]);
+
 export const RESOLVED_CAPTURE_MANIFEST_V1_SCHEMA = 'simforge.capture-manifest/v1' as const;
 
 const Sha256Schema = z
@@ -284,7 +296,7 @@ export const RenderCapabilityIntentV3Schema = z.strictObject({
 });
 
 export const RenderSpecV3Schema = z.strictObject({
-  schema: z.literal(RENDER_SPEC_V3_SCHEMA),
+  schema: namespaceTolerantLiteral(RENDER_SPEC_V3_SCHEMA),
   sources: z.array(RenderSourceV3Schema).min(1).max(64),
   clip: RenderClipSchema,
   video: RenderVideoV3Schema.optional(),
