@@ -200,10 +200,14 @@ export class RenderTimeline {
      */
     static buildPlane(trace: Uint8Array, z0: number, gx: number, gy: number, catalog_digest?: string | null): RenderTimeline;
     /**
-     * Build a timeline from a trace (JSON bytes, gzip ok) and the map's
-     * `.xodr` + topology sidecar bytes.
+     * Build a timeline from a trace (JSON bytes, gzip ok; any released
+     * trace format, upgraded in memory) and the map's `.xodr` + topology
+     * sidecar bytes. `recorded_trace_sha256` binds the identity recorded
+     * next to a stored trace (verified by the caller against the stored
+     * bytes): a current-format trace must recompute to it, an upgraded one
+     * adopts it.
      */
-    static build(trace: Uint8Array, xodr: Uint8Array, topology: Uint8Array, catalog_digest?: string | null): RenderTimeline;
+    static build(trace: Uint8Array, xodr: Uint8Array, topology: Uint8Array, catalog_digest?: string | null, recorded_trace_sha256?: string | null): RenderTimeline;
     /**
      * Grade observed per-frame transforms (JSONL) against the sampler.
      * `profile` is `"bevy"`, `"carla"` or a profile JSON object; returns the
@@ -219,6 +223,12 @@ export class RenderTimeline {
      * document without per-tick channels).
      */
     headerJson(): string;
+    /**
+     * Parse a stored timeline of any sampler version, for inspection only
+     * (motion comparison across sampler versions). Never render it: a
+     * timeline from another sampler is re-derived from its trace.
+     */
+    static inspect(bytes: Uint8Array): RenderTimeline;
     /**
      * Resolved light states at `t`, as JSON.
      */
@@ -429,6 +439,11 @@ export class Trace {
     static parse(data: Uint8Array): Trace;
     sceneStateJson(): string;
     toJson(): string;
+    /**
+     * `simforge.trace-upgrade/v1` JSON when the stored trace was an older
+     * format upgraded in memory; `undefined` for a current-format trace.
+     */
+    upgradeJson(): string | undefined;
 }
 
 /**
@@ -858,7 +873,7 @@ export interface InitOutput {
     readonly rehearseSituation: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly rendertimeline_actorIds: (a: number) => [number, number];
     readonly rendertimeline_actorsJson: (a: number) => [number, number, number, number];
-    readonly rendertimeline_build: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number];
+    readonly rendertimeline_build: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => [number, number, number];
     readonly rendertimeline_buildFlat: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly rendertimeline_buildPlane: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];
     readonly rendertimeline_catalogDigest: (a: number) => [number, number];
@@ -867,6 +882,7 @@ export interface InitOutput {
     readonly rendertimeline_fromBytes: (a: number, b: number) => [number, number, number];
     readonly rendertimeline_headerJson: (a: number) => [number, number, number, number];
     readonly rendertimeline_heightFieldDigest: (a: number) => [number, number];
+    readonly rendertimeline_inspect: (a: number, b: number) => [number, number, number];
     readonly rendertimeline_key: (a: number) => [number, number];
     readonly rendertimeline_lightsAtJson: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly rendertimeline_poseArray: (a: number, b: number, c: number, d: number) => [number, number, number];
@@ -957,6 +973,7 @@ export interface InitOutput {
     readonly trace_parse: (a: number, b: number) => [number, number, number];
     readonly trace_sceneStateJson: (a: number) => [number, number, number, number];
     readonly trace_toJson: (a: number) => [number, number, number, number];
+    readonly trace_upgradeJson: (a: number) => [number, number, number, number];
     readonly traffichandoff_bodies: (a: number) => any;
     readonly traffichandoff_bodyCount: (a: number) => number;
     readonly traffichandoff_bodyIds: (a: number) => [number, number];

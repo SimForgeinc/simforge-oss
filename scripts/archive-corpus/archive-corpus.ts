@@ -6,6 +6,7 @@
  *
  *   pnpm archive-corpus add-trace <file> --id <id> --release <tag> --recorded <YYYY-MM-DD>
  *        --source <text> [--recorded-trace-sha256 <sha>] [--timeline <file>] [--note <text>]
+ *        [--container browser-preview] [--height-xodr <repo path> --height-topology <repo path>]
  *   pnpm archive-corpus add-document <file> --id <id> --release <tag> --recorded <YYYY-MM-DD>
  *        --source <text> [--kind document|revision] [--note <text>]
  *   pnpm archive-corpus verify
@@ -48,8 +49,14 @@ interface EntryBase {
 
 interface TraceEntry extends EntryBase {
   kind: 'trace';
+  /** `browser-preview`: the stored object is a legacy editor preview envelope whose `trace` member is the trace. */
+  container?: 'browser-preview';
+  /** Height source for rebuilding the timeline byte for byte: repo paths of the map's `.xodr(.gz)` and topology sidecar. */
+  height?: { xodr: string; topology: string };
   expect: {
-    shape: 'v1' | 'v3' | 'v4-pre-ledger' | 'v4';
+    /** `builds`, or why the render timeline must refuse this trace (loudly). */
+    timeline: 'builds' | 'refused-unsupported-dt';
+    shape: 'v1' | 'v3' | 'v4-pre-ledger' | 'v4-pre-ego' | 'v4';
     traceVersion: number;
     engineVersion: string;
     mapId: string;
@@ -82,7 +89,7 @@ function shapeOf(doc: Record<string, any>): TraceEntry['expect']['shape'] {
   const v = doc.header?.traceVersion;
   if (v === 1) return 'v1';
   if (v === 3) return 'v3';
-  if (v === 4) return doc.header.ego && doc.semanticLedger ? 'v4' : 'v4-pre-ledger';
+  if (v === 4) return doc.header.ego && doc.semanticLedger ? 'v4' : doc.semanticLedger ? 'v4-pre-ego' : 'v4-pre-ledger';
   throw new Error(`unknown traceVersion ${String(v)}: add its shape here and its upgrade step in native/crates/simforge-core/src/trace/upgrade.rs`);
 }
 
@@ -141,7 +148,11 @@ function addTrace(file: string, flags: Record<string, string>) {
   if (corpus.entries.some((e) => e.id === id)) throw new Error(`entry ${id} already exists (the corpus is append-only)`);
   const gz = file.endsWith('.gz');
   const { path, bytes } = place(file, 'traces', `${id}.trace.json${gz ? '.gz' : ''}`);
-  const doc = JSON.parse(plain(bytes).toString('utf8')) as Record<string, any>;
+  const stored = JSON.parse(plain(bytes).toString('utf8')) as Record<string, any>;
+  const container = flags.container === 'browser-preview' ? 'browser-preview' as const : undefined;
+  if (flags.container && !container) throw new Error(`unknown --container ${flags.container}`);
+  const doc = container ? stored.trace as Record<string, any> : stored;
+  if (!doc?.header) throw new Error(`${file}: no trace document${container ? ' in the preview envelope' : ''}`);
   const shape = shapeOf(doc);
   const documentSha256 = sha256(canonicalJson(doc));
   const recorded = flags['recorded-trace-sha256'] || null;
@@ -154,7 +165,10 @@ function addTrace(file: string, flags: Record<string, string>) {
     path,
     storedSha256: sha256(bytes),
     ...(flags.note ? { note: flags.note } : {}),
+    ...(container ? { container } : {}),
+    ...(flags['height-xodr'] ? { height: { xodr: flags['height-xodr'], topology: required(flags, 'height-topology') } } : {}),
     expect: {
+      timeline: doc.header.dt === 0.02 ? 'builds' : 'refused-unsupported-dt',
       shape,
       traceVersion: doc.header.traceVersion,
       engineVersion: doc.header.engineVersion,
@@ -221,8 +235,14 @@ function verify() {
     const problems: string[] = [];
     if (sha256(bytes) !== entry.storedSha256) problems.push('stored bytes changed');
     const doc = JSON.parse(plain(bytes).toString('utf8'));
-    if (sha256(canonicalJson(doc)) !== entry.expect.documentSha256) problems.push('document digest changed');
-    if (entry.kind === 'trace' && sha256(canonicalJson(motionOf(doc))) !== entry.expect.motionSha256) problems.push('motion digest changed');
+    const traceDoc = entry.kind === 'trace' && entry.container === 'browser-preview' ? doc.trace : doc;
+    if (sha256(canonicalJson(traceDoc)) !== entry.expect.documentSha256) problems.push('document digest changed');
+    if (entry.kind === 'trace' && sha256(canonicalJson(motionOf(traceDoc))) !== entry.expect.motionSha256) problems.push('motion digest changed');
+    if (entry.kind === 'trace' && entry.height) {
+      for (const repoPath of [entry.height.xodr, entry.height.topology]) {
+        if (!existsSync(join(ROOT, repoPath))) problems.push(`height source ${repoPath} is missing`);
+      }
+    }
     if (entry.kind === 'trace' && entry.timeline && sha256(readFileSync(join(CORPUS, entry.timeline.path))) !== entry.timeline.storedSha256) problems.push('stored timeline changed');
     if (problems.length) {
       failures++;
