@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["render-core", "sensors", "service", "ffi"]
-exclude = ["vendor/bevy_gltf", "vendor/bevy_pbr", "vendor/bevy_mesh"]
+exclude = ["vendor/bevy_gltf", "vendor/bevy_pbr", "vendor/bevy_mesh", "vendor/bevy_render"]
 
 [workspace.package]
 version = "0.1.0"
@@ -14,11 +14,19 @@ edition = "2021"
 #   dedup across textures.
 # - bevy_mesh / bevy_pbr: UV channels 2 and 3 and per-slot UV transforms on
 #   StandardMaterial (the material side of bevy#15310).
+# - bevy_pbr: a view's generated environment probe (the atmosphere's
+#   per-camera IBL) is downsampled/filtered in that view's schedule right
+#   after it is written, not one frame late (vendor/bevy_pbr-view-probe.patch;
+#   removes the only previous-pose dependence of a pinned capture).
+# - bevy_render: command encoders are finished in parallel at submission, in
+#   recording order (vendor/bevy_render.patch; output-identical, it only
+#   moves wgpu-core's per-encoder HAL recording off the render thread).
 # Every other Bevy crate stays pinned to crates.io 0.19.1.
 [patch.crates-io]
 bevy_gltf = { path = "vendor/bevy_gltf" }
 bevy_mesh = { path = "vendor/bevy_mesh" }
 bevy_pbr = { path = "vendor/bevy_pbr" }
+bevy_render = { path = "vendor/bevy_render" }
 
 [profile.dev]
 opt-level = 1

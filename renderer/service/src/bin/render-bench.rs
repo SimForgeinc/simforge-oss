@@ -347,6 +347,14 @@ fn main() -> Result<()> {
         if n > 0 {
             gpu_frames.extend(frame_times);
         }
+        if n == 0 && std::env::var_os("SIMFORGE_DEBUG_VIEW_STATE").is_some() {
+            let world = state.app.world_mut();
+            let mut q = world.query::<(&bevy::prelude::Camera, Option<&bevy::light::EnvironmentMapLight>, Option<&bevy::light::GeneratedEnvironmentMapLight>, Option<&bevy::light::AtmosphereEnvironmentMapLight>, Option<&bevy::camera::Exposure>)>();
+            let mut rows: Vec<String> = q.iter(world).map(|(c, e, g, a, x)| format!(
+                "order {} env {:?} gen {:?} atm {:?} ev {:?}", c.order, e.map(|e| e.intensity), g.map(|g| g.intensity), a.map(|a| a.intensity), x.map(|x| x.ev100))).collect();
+            rows.sort();
+            for row in rows { eprintln!("view-state {row}"); }
+        }
         if n == 0 {
             first_tick_ms = elapsed;
             eprintln!("render-bench: first tick {elapsed:.0} ms (includes lidar BVH build / pipeline warmup)");

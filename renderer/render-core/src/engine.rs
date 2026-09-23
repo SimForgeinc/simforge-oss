@@ -2485,6 +2485,20 @@ impl SceneApp {
         }
         app.finish();
         app.cleanup();
+        // Finish the frame's command encoders in parallel at submission
+        // (vendored bevy_render patch). Order and content of the submitted
+        // command buffers are unchanged, so output is identical; only
+        // wgpu-core's HAL recording leaves the render thread.
+        // SIMFORGE_ENCODER_FINISH_THREADS=1 restores serial finishing.
+        {
+            let threads = std::env::var("SIMFORGE_ENCODER_FINISH_THREADS")
+                .ok()
+                .and_then(|value| value.parse::<usize>().ok())
+                .unwrap_or_else(|| std::thread::available_parallelism().map_or(1, |n| n.get()).min(16)); // fallback-ok: thread count only; output does not depend on it
+            app.sub_app_mut(RenderApp)
+                .insert_resource(EncoderFinishThreads(threads))
+                .add_systems(RenderGraph, apply_encoder_finish_threads.in_set(RenderGraphSystems::Begin));
+        }
         // A CPU or virtual adapter (lavapipe, llvmpipe, SwiftShader) renders a
         // different image than the qualified GPU: never silently. It is an
         // explicit, logged opt-in for tests and tooling.
@@ -5764,6 +5778,17 @@ fn targets_image(camera: &ExtractedCamera, image: &Handle<Image>) -> bool {
 /// requested pass whose camera was not extracted this frame (just
 /// registered, inactive, or removed) is not copied and therefore never
 /// reported: stale staging bytes cannot be relabelled as this frame.
+/// Threads that finish the frame's command encoders (see `SceneApp::new`).
+#[derive(Resource)]
+struct EncoderFinishThreads(usize);
+
+fn apply_encoder_finish_threads(
+    threads: Res<EncoderFinishThreads>,
+    mut pending: ResMut<bevy::render::renderer::PendingCommandBuffers>,
+) {
+    pending.set_finish_threads(threads.0);
+}
+
 fn copy_passes(
     mut ctx: RenderContext,
     capture: Res<ExtractedCapture>,
@@ -6627,9 +6652,13 @@ mod tests {
     /// Probe (reports, does not gate): does a pinned capture depend on the
     /// pose drawn before it? The same pose and time captured after two
     /// different predecessors; prints which passes of the frame differ.
+    /// A pinned capture is a function of (scene, sim time) only: the pose
+    /// drawn before it must not leak in. It did through the atmosphere's
+    /// per-view environment probe, filtered one frame late (fixed in the
+    /// vendored bevy_pbr, `downsampling_current_view`).
     #[test]
-    #[ignore = "focused GPU integration probe"]
-    fn pinned_capture_pose_history_probe() {
+    #[ignore = "focused GPU integration test"]
+    fn pinned_capture_does_not_depend_on_the_previous_pose() {
         use crate::profiles::AntiAlias;
         let keys = vec!["cam:rgb".to_string()];
         let mut app = pinned_scene(AntiAlias::SmaaHigh, CaptureClock::Pinned { samples: 1 });
@@ -6644,8 +6673,8 @@ mod tests {
         let same = after(&mut app, ([6.0, 1.8, 6.0], [0.0, 0.8, 0.0]));
         let moved = after(&mut app, ([0.0, 2.5, 8.0], [0.0, 0.5, 0.0]));
         let differing = same.iter().zip(&moved).filter(|(a, b)| a != b).count();
-        eprintln!("pose-history probe: {differing} of {} bytes differ after a different predecessor pose", same.len());
         std::mem::forget(app);
+        assert_eq!(differing, 0, "{differing} of {} bytes depend on the previously drawn pose", same.len());
     }
 
     #[test]

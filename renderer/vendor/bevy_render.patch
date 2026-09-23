@@ -1,0 +1,132 @@
+diff -ru --label a/src --label b/src a/src b/src
+--- a/src
++++ b/src
+@@ -18,10 +18,21 @@
+ use core::marker::PhantomData;
+ use wgpu::CommandBuffer;
+ 
++// SIMFORGE PATCH (parallel command-buffer finish): pending work is one
++// ordered list of finished buffers and unfinished encoders, so encoders can
++// be finished in parallel at submission while the submission order stays
++// exactly the recording order. See renderer/vendor/bevy_render.patch.
++enum Pending {
++    Buffer(CommandBuffer),
++    Encoder(CommandEncoder),
++}
++
+ #[derive(Default)]
+ struct PendingCommandBuffersInner {
+-    buffers: Vec<CommandBuffer>,
+-    encoders: Vec<CommandEncoder>,
++    items: Vec<Pending>,
++    /// Finish unfinished encoders on this many threads (1 = serial, the
++    /// upstream behaviour).
++    finish_threads: usize,
+ }
+ 
+ /// A resource that holds command buffers and encoders that are pending submission to the render queue.
+@@ -36,30 +47,72 @@
+ 
+ impl PendingCommandBuffers {
+     pub fn push(&mut self, buffers: impl IntoIterator<Item = CommandBuffer>) {
+-        self.0.buffers.extend(buffers);
++        self.0.items.extend(buffers.into_iter().map(Pending::Buffer));
+     }
+ 
+     pub fn push_encoder(&mut self, encoder: CommandEncoder) {
+-        self.0.encoders.push(encoder);
++        self.0.items.push(Pending::Encoder(encoder));
++    }
++
++    /// Finish pending encoders on up to `threads` threads in [`Self::take`]
++    /// (SIMFORGE PATCH). The returned buffers keep the push order whatever
++    /// the thread count, so the GPU executes the same work in the same order.
++    pub fn set_finish_threads(&mut self, threads: usize) {
++        self.0.finish_threads = threads;
+     }
+ 
+     pub fn take(&mut self) -> Vec<CommandBuffer> {
+-        let encoders: Vec<_> = self.0.encoders.drain(..).collect();
+-        for encoder in encoders {
+-            self.0.buffers.push(encoder.finish());
+-        }
+-        core::mem::take(&mut self.0.buffers)
++        let items = core::mem::take(&mut self.0.items);
++        finish_in_order(items, self.0.finish_threads.max(1))
+     }
+ 
+     pub fn is_empty(&self) -> bool {
+-        self.0.buffers.is_empty() && self.0.encoders.is_empty()
++        self.0.items.is_empty()
+     }
+ 
+     pub fn len(&self) -> usize {
+-        self.0.buffers.len() + self.0.encoders.len()
++        self.0.items.len()
+     }
+ }
+ 
++/// Finish every encoder of `items` (on up to `threads` scoped threads, each
++/// taking whole encoders) and return all buffers in `items` order.
++fn finish_in_order(items: Vec<Pending>, threads: usize) -> Vec<CommandBuffer> {
++    let encoders = items.iter().filter(|item| matches!(item, Pending::Encoder(_))).count();
++    if threads <= 1 || encoders <= 1 {
++        return items
++            .into_iter()
++            .map(|item| match item {
++                Pending::Buffer(buffer) => buffer,
++                Pending::Encoder(encoder) => encoder.finish(),
++            })
++            .collect();
++    }
++    let slots: Vec<std::sync::Mutex<Option<Pending>>> =
++        items.into_iter().map(|item| std::sync::Mutex::new(Some(item))).collect();
++    let next = core::sync::atomic::AtomicUsize::new(0);
++    std::thread::scope(|scope| {
++        for _ in 0..threads.min(encoders) {
++            scope.spawn(|| loop {
++                let index = next.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
++                let Some(slot) = slots.get(index) else { break };
++                let mut slot = slot.lock().unwrap();
++                if let Some(Pending::Encoder(_)) = slot.as_ref() {
++                    let Some(Pending::Encoder(encoder)) = slot.take() else { unreachable!() };
++                    *slot = Some(Pending::Buffer(encoder.finish()));
++                }
++            });
++        }
++    });
++    slots
++        .into_iter()
++        .map(|slot| match slot.into_inner().unwrap() {
++            Some(Pending::Buffer(buffer)) => buffer,
++            _ => unreachable!("every encoder was finished"),
++        })
++        .collect()
++}
++
+ #[derive(Default)]
+ struct RenderContextStateInner {
+     command_encoder: Option<CommandEncoder>,
+@@ -111,14 +164,16 @@
+ 
+         let inner = &mut *self.0;
+ 
+-        // flush to ensure correct submission order
+-        if let Some(encoder) = inner.command_encoder.take() {
+-            inner.command_buffers.push(encoder.finish());
+-        }
+-
+-        if !inner.command_buffers.is_empty() {
++        // SIMFORGE PATCH: the encoder is queued unfinished (after the
++        // system's finished buffers, as before) and finished at submission,
++        // possibly in parallel with other systems' encoders.
++        let encoder = inner.command_encoder.take();
++        if !inner.command_buffers.is_empty() || encoder.is_some() {
+             let mut pending = world.resource_mut::<PendingCommandBuffers>();
+             pending.push(core::mem::take(&mut inner.command_buffers));
++            if let Some(encoder) = encoder {
++                pending.push_encoder(encoder);
++            }
+         }
+ 
+         inner.render_device = None;

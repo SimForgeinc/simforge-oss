@@ -1,0 +1,113 @@
+--- a/src/light_probe/generate.rs
++++ b/src/light_probe/generate.rs
+@@ -64,6 +64,8 @@
+ use tracing::info;
+ 
+ use crate::Bluenoise;
++use bevy_render::renderer::ViewQuery;
++use bevy_render::view::ExtractedView;
+ 
+ /// Stores the bind group layouts for the environment map generation pipelines
+ #[derive(Resource)]
+@@ -839,8 +841,35 @@
+     tex.create_view(&TextureViewDescriptor::default())
+ }
+ 
++// SIMFORGE PATCH (history-free view probes): a probe on a view (the
++// atmosphere's per-camera environment map) is written by that view's
++// `atmosphere_environment` node inside its camera schedule, after the Render
++// set's systems ran. Downsampling/filtering it here used the PREVIOUS frame's
++// cubemap, so a frame's lighting depended on the previous pose. View probes
++// are now filtered in the view's own schedule right after they are written
++// (`downsampling_current_view` / `filtering_current_view`); this Render-set
++// pass handles probes that are not views.
+ pub fn downsampling_system(
+-    query: Query<(&GeneratorBindGroups, &RenderEnvironmentMap)>,
++    query: Query<(&GeneratorBindGroups, &RenderEnvironmentMap), Without<ExtractedView>>,
++    pipeline_cache: Res<PipelineCache>,
++    pipelines: Option<Res<GeneratorPipelines>>,
++    ctx: RenderContext,
++) {
++    downsample_probes(query.iter(), pipeline_cache, pipelines, ctx);
++}
++
++/// SIMFORGE PATCH: [`downsampling_system`] for the current view's own probe.
++pub fn downsampling_current_view(
++    view: ViewQuery<Option<(&GeneratorBindGroups, &RenderEnvironmentMap)>>,
++    pipeline_cache: Res<PipelineCache>,
++    pipelines: Option<Res<GeneratorPipelines>>,
++    ctx: RenderContext,
++) {
++    downsample_probes(view.into_inner().into_iter(), pipeline_cache, pipelines, ctx);
++}
++
++fn downsample_probes<'a>(
++    probes: impl Iterator<Item = (&'a GeneratorBindGroups, &'a RenderEnvironmentMap)>,
+     pipeline_cache: Res<PipelineCache>,
+     pipelines: Option<Res<GeneratorPipelines>>,
+     mut ctx: RenderContext,
+@@ -868,7 +897,7 @@
+     let diagnostics = ctx.diagnostic_recorder();
+     let diagnostics = diagnostics.as_deref();
+ 
+-    for (bind_groups, env_map_light) in &query {
++    for (bind_groups, env_map_light) in probes {
+         // Copy base mip using compute shader with pre-built bind group
+         {
+             let mut compute_pass =
+@@ -940,7 +969,26 @@
+ }
+ 
+ pub fn filtering_system(
+-    query: Query<(&GeneratorBindGroups, &RenderEnvironmentMap)>,
++    query: Query<(&GeneratorBindGroups, &RenderEnvironmentMap), Without<ExtractedView>>,
++    pipeline_cache: Res<PipelineCache>,
++    pipelines: Option<Res<GeneratorPipelines>>,
++    ctx: RenderContext,
++) {
++    filter_probes(query.iter(), pipeline_cache, pipelines, ctx);
++}
++
++/// SIMFORGE PATCH: [`filtering_system`] for the current view's own probe.
++pub fn filtering_current_view(
++    view: ViewQuery<Option<(&GeneratorBindGroups, &RenderEnvironmentMap)>>,
++    pipeline_cache: Res<PipelineCache>,
++    pipelines: Option<Res<GeneratorPipelines>>,
++    ctx: RenderContext,
++) {
++    filter_probes(view.into_inner().into_iter(), pipeline_cache, pipelines, ctx);
++}
++
++fn filter_probes<'a>(
++    probes: impl Iterator<Item = (&'a GeneratorBindGroups, &'a RenderEnvironmentMap)>,
+     pipeline_cache: Res<PipelineCache>,
+     pipelines: Option<Res<GeneratorPipelines>>,
+     mut ctx: RenderContext,
+@@ -960,7 +1008,7 @@
+     let diagnostics = ctx.diagnostic_recorder();
+     let diagnostics = diagnostics.as_deref();
+ 
+-    for (bind_groups, env_map_light) in &query {
++    for (bind_groups, env_map_light) in probes {
+         // Radiance convolution pass
+         {
+             let mut compute_pass =
+--- a/src/atmosphere/mod.rs
++++ b/src/atmosphere/mod.rs
+@@ -193,7 +193,15 @@
+             .add_systems(
+                 Core3d,
+                 (
+-                    (atmosphere_luts, atmosphere_environment)
++                    // SIMFORGE PATCH: filter the view's probe in the same
++                    // schedule, right after it is written (see
++                    // light_probe::generate::downsampling_system).
++                    (
++                        atmosphere_luts,
++                        atmosphere_environment,
++                        crate::light_probe::generate::downsampling_current_view,
++                        crate::light_probe::generate::filtering_current_view,
++                    )
+                         .chain()
+                         .after(Core3dSystems::Prepass)
+                         .before(Core3dSystems::MainPass),
