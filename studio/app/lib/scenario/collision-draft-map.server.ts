@@ -6,7 +6,7 @@ import { createMapBundle } from "@simforge-oss/compiler/node";
 import type { CollisionDraftMapBinding } from "@simforge-oss/studio-host/node";
 
 import type { AppContext } from "@/app/lib/db/app-context";
-import { queryRows } from "@/app/lib/db/data-api";
+import { queryOne, queryRows } from "@/app/lib/db/data-api";
 import { gunzipToUtf8 } from "@/app/lib/s3/gzip";
 import { getS3ObjectBytes } from "@/app/lib/s3/s3-get-object";
 
@@ -99,6 +99,21 @@ async function loadBundle(mapVersionId: string, mapAssetId: string, mapName: str
   return { mapVersionId, mapId: bundle.mapId, mapName, xodrSha256: rows.find((row) => row.kind === "map-xodr")!.sha256, bundle };
 }
 
+/** One map version's bundle, loaded once per process and version; a failed load is not cached. */
+async function cachedBundle(mapVersionId: string, mapAssetId: string, mapName: string): Promise<CollisionDraftMapBinding> {
+  const cached = cache.get(mapVersionId);
+  if (cached) return cached;
+  const loading = loadBundle(mapVersionId, mapAssetId, mapName);
+  if (cache.size >= MAX_CACHED_BUNDLES) cache.delete(cache.keys().next().value!);
+  cache.set(mapVersionId, loading);
+  try {
+    return await loading;
+  } catch (error) {
+    if (cache.get(mapVersionId) === loading) cache.delete(mapVersionId);
+    throw error;
+  }
+}
+
 /** The current published map version of `mapAssetId` as a native map binding; cached per version. */
 export async function loadCollisionDraftMap(context: AppContext, mapAssetId: string): Promise<CollisionDraftMapBinding> {
   const descriptor = (await listScenarioMapDescriptors(context)).find((map) => map.sourceMapId === mapAssetId);
@@ -109,15 +124,53 @@ export async function loadCollisionDraftMap(context: AppContext, mapAssetId: str
       `map asset ${mapAssetId} has no published map version to execute scenarios on`,
     );
   }
-  const cached = cache.get(descriptor.mapVersionId);
-  if (cached) return cached;
-  const loading = loadBundle(descriptor.mapVersionId, descriptor.sourceMapId, descriptor.label);
-  if (cache.size >= MAX_CACHED_BUNDLES) cache.delete(cache.keys().next().value!);
-  cache.set(descriptor.mapVersionId, loading);
-  try {
-    return await loading;
-  } catch (error) {
-    if (cache.get(descriptor.mapVersionId) === loading) cache.delete(descriptor.mapVersionId);
-    throw error;
+  return cachedBundle(descriptor.mapVersionId, descriptor.sourceMapId, descriptor.label);
+}
+
+type MapVersionIdentityRow = { id: string; source_map_asset_id: string | null; label: string };
+
+async function readMapVersionIdentity(mapVersionId: string): Promise<MapVersionIdentityRow & { source_map_asset_id: string }> {
+  const row = await queryOne<MapVersionIdentityRow>(
+    `SELECT id, source_map_asset_id, label FROM simforge.map_versions WHERE id = :map_version_id`,
+    { map_version_id: mapVersionId },
+  );
+  if (!row?.source_map_asset_id) {
+    throw new CollisionDraftMapUnavailableError(
+      "map_version_missing",
+      row?.source_map_asset_id ?? "",
+      `map version ${mapVersionId} is not a published version of a map asset`,
+    );
   }
+  return { ...row, source_map_asset_id: row.source_map_asset_id };
+}
+
+/**
+ * Exactly `mapVersionId` (superseded and retired versions included) as a
+ * native map binding, from the same five verified artifacts; shares the
+ * per-version cache with {@link loadCollisionDraftMap}.
+ */
+export async function loadMapVersionBundle(mapVersionId: string): Promise<CollisionDraftMapBinding> {
+  const version = await readMapVersionIdentity(mapVersionId);
+  return cachedBundle(version.id, version.source_map_asset_id, version.label);
+}
+
+/** The verified OpenDRIVE text of exactly `mapVersionId` (not cached: callers diff it once). */
+export async function readMapVersionXodr(mapVersionId: string): Promise<string> {
+  const version = await readMapVersionIdentity(mapVersionId);
+  const row = await queryOne<ArtifactRow>(
+    `SELECT 'map-xodr' AS kind, a.storage_bucket, a.storage_key, a.sha256, a.byte_length
+       FROM simforge.map_versions mv
+       JOIN simforge.artifacts a ON a.id = mv.xodr_artifact_id
+        AND a.workspace_id = mv.workspace_id AND a.artifact_state = 'available'
+      WHERE mv.id = :map_version_id`,
+    { map_version_id: mapVersionId },
+  );
+  if (!row) {
+    throw new CollisionDraftMapUnavailableError(
+      "map_closure_incomplete",
+      version.source_map_asset_id,
+      `map version ${mapVersionId} has no available OpenDRIVE artifact`,
+    );
+  }
+  return readArtifactText(row);
 }

@@ -1075,3 +1075,66 @@ export type IndexedArtifact = ScenarioRenderArtifactDto & { renderJobId: string 
 
 /** Either shape. Components that only display metadata accept both. */
 export type DisplayArtifact = PresignedArtifact | ArtifactMetadata | IndexedArtifact;
+
+// ── Map version transition ───────────────────────────────────────────────────
+//
+// "Move to new map version": the plan the transition view draws before the draft moves
+// (studio/app/lib/scenario/map-transition.ts). Every coordinate is xodr-local metres,
+// `x` east and `y` north; a heading is radians CCW from +x (the scene heading).
+
+export type ScenarioMapTransitionPoseDto = {
+  x: number;
+  y: number;
+  headingRad: number;
+  /** Ground height of the placement: authored before, from the new map's ground after. Null when not map-bound. */
+  elevationM: number | null;
+};
+
+export type ScenarioMapTransitionPlacementStatus = "kept" | "moved" | "flagged" | "unplaced";
+
+export type ScenarioMapTransitionPlacementDto = {
+  roleId: string;
+  label: string;
+  /** The actor class (`car`, `pedestrian`, ...). */
+  kind: string;
+  /** The role the scenario measures. */
+  isSubject: boolean;
+  /** Compiled start pose on the current map version. */
+  before: ScenarioMapTransitionPoseDto | null;
+  /** Start pose on the new map version; null when it has none there. */
+  after: ScenarioMapTransitionPoseDto | null;
+  displacementM: number | null;
+  /** Largest distance between the old and new route over its first metres; null without a route on both sides. */
+  routeDeviationM: number | null;
+  status: ScenarioMapTransitionPlacementStatus;
+  /** Why it moved, was flagged or could not be placed, in the user's words; null when kept. */
+  reason: string | null;
+};
+
+export type ScenarioMapTransitionRoadChange = "none" | "elevation" | "geometry" | "added" | "removed";
+
+export type ScenarioMapTransitionRoadDto = {
+  roadId: string;
+  change: ScenarioMapTransitionRoadChange;
+  /** Lane centrelines on the current version (empty for an added road). */
+  before: Array<Array<[number, number]>>;
+  /** Lane centrelines on the new version (empty for a removed road). */
+  after: Array<Array<[number, number]>>;
+};
+
+export type ScenarioMapTransitionPlanDto = {
+  /** `same`: byte-identical OpenDRIVE or equal `xodrGeometrySha256`; placements carry over as they are. */
+  geometry: "same" | "changed";
+  source: { mapVersionId: string; name: string; publishedAt: string };
+  target: { mapVersionId: string; name: string; publishedAt: string };
+  /** The draft content to save on the target version; null when blocked. */
+  content: ScenarioTemplateV2 | null;
+  placements: ScenarioMapTransitionPlacementDto[];
+  /** Roads near the scenario (the placements' extent plus a margin), for drawing; nearest first. */
+  roads: ScenarioMapTransitionRoadDto[];
+  /** More roads were near the scenario than are listed. */
+  roadsTruncated: boolean;
+  /** The thresholds the statuses were judged by, metres. */
+  tolerances: { keptM: number; movedM: number; laneSearchM: number; routeMatchM: number; siteMatchM: number };
+  blocking: { code: string; message: string } | null;
+};
