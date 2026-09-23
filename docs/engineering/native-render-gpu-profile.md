@@ -73,7 +73,7 @@ rc.73 also rendered the rig about 4 times per tick, three of them readiness sett
 | + Bevy GPU occlusion culling | 86 | -3% more | not enabled (marginal) |
 
 Notes on these changes:
-- **Shared cascades.** Each of the 4 cascades is fitted to the union of the rig's frusta and rendered once. The atlas goes from 2048 to 2560, which puts texel density back where a per-view fit had it: the union is 1.25× coarser per cascade (unit test). The chase camera keeps its own tight fit. Duplicate passes are suppressed only when no unmarked view overwrites the atlas in between.
+- **Shared cascades.** Each of the 4 cascades is fitted to the union of the rig's frusta and rendered once. The union is 1.25× coarser per cascade than a per-view fit (unit test), so the atlas grows from 2048. It was configured as 2560, but Bevy rounds a non-power-of-two directional atlas up, so every shared measurement here rendered a 4096 atlas; the config now accepts only powers of two and the presets say 4096. The chase camera keeps its own tight fit. Duplicate passes are suppressed only when no unmarked view overwrites the atlas in between.
 - **LOD.** Per view, each heavy mesh draws at the coarsest level whose geometric error stays under 1 px for the rig's most demanding camera. The distance is measured to the manifest's bounds centre. Ranges are abrupt `VisibilityRange`s with no dither, so a frame is a pure function of the pose. The ID pass clones every level with the same ranges. Lidar and radar keep full detail.
 
 ## Lidar on RT cores (`sensors::gpu_rays`, `SceneSpec.lidarBackend`)

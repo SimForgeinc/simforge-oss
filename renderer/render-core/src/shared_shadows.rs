@@ -20,8 +20,9 @@
 //! the rig translates. For seven 120-degree cameras around a vehicle the
 //! union's texels are about 25% larger than one camera's own fit (the
 //! wide wedge of one view is nearly as large as the disc around all of
-//! them), so shared mode raises the atlas to [`SHARED_SHADOW_MAP_SIZE`]
-//! to restore the per-view texel density. Narrow presentation views (a
+//! them), so shared mode wants 1.25x the per-view atlas; atlas sizes are
+//! powers of two (Bevy rounds others up), so the presets use 4096 to keep at
+//! least the per-view texel density. Narrow presentation views (a
 //! trailing chase) should stay unmarked and keep their own tight fit.
 //!
 //! Bevy renders each view's cascades into array layers 0..n of one atlas,
@@ -39,10 +40,6 @@ use bevy::prelude::*;
 use bevy::render::camera::ExtractedCamera;
 use bevy::render::extract_component::{ExtractComponent, ExtractComponentPlugin};
 use bevy::render::{Render, RenderApp, RenderSystems};
-
-/// Directional atlas size in shared mode: 1.25 x the engine's 2048, the
-/// measured texel-size ratio of the union over one wide view's own fit.
-pub const SHARED_SHADOW_MAP_SIZE: usize = 2560;
 
 /// Marks a camera whose directional cascades are fitted to, and rendered
 /// once for, the union of all marked cameras.

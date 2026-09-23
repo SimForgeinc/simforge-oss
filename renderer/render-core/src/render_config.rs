@@ -294,7 +294,7 @@ impl RenderConfig {
         let base = Self {
             preset,
             aa: AaConfig { mode: AntiAlias::SmaaUltra, taa_samples: 4 },
-            shadows: ShadowConfig { map_size: 2560, cascades: 4, max_distance_m: 400.0, shared: true },
+            shadows: ShadowConfig { map_size: 4096, cascades: 4, max_distance_m: 400.0, shared: true },
             ssao: SsaoConfig { enabled: true, quality: SsaoQuality::Ultra, contact_shadows: true, contact_shadow_steps: 16 },
             ssr: SsrConfig { enabled: true, linear_steps: 10, bisection_steps: 5 },
             bloom: BloomConfig { intensity: look.bloom_intensity },
@@ -335,7 +335,7 @@ impl RenderConfig {
             // result of the 3080 sweep (docs/engineering/native-render-config.md).
             Preset::Training => Self {
                 aa: AaConfig { mode: AntiAlias::SmaaHigh, taa_samples: 4 },
-                shadows: ShadowConfig { map_size: 1536, cascades: 3, max_distance_m: 250.0, shared: true },
+                shadows: ShadowConfig { map_size: 2048, cascades: 3, max_distance_m: 250.0, shared: true },
                 ssao: SsaoConfig { enabled: true, quality: SsaoQuality::Medium, contact_shadows: true, contact_shadow_steps: 8 },
                 ssr: SsrConfig { enabled: true, linear_steps: 6, bisection_steps: 3 },
                 lod: LodConfig { enabled: true, pixel_error_px: 2.0 },
@@ -364,8 +364,10 @@ impl RenderConfig {
         if !(1..=16).contains(&self.aa.taa_samples) {
             return bad(format!("aa.taaSamples {} (1..=16)", self.aa.taa_samples));
         }
-        if !(512..=8192).contains(&self.shadows.map_size) {
-            return bad(format!("shadows.mapSize {} (512..=8192)", self.shadows.map_size));
+        // Bevy silently rounds a non-power-of-two atlas up (2560 renders as
+        // 4096), so such a size would not be what the config records.
+        if !(512..=8192).contains(&self.shadows.map_size) || !self.shadows.map_size.is_power_of_two() {
+            return bad(format!("shadows.mapSize {} (a power of two in 512..=8192)", self.shadows.map_size));
         }
         if !(1..=4).contains(&self.shadows.cascades) {
             return bad(format!("shadows.cascades {} (1..=4)", self.shadows.cascades));

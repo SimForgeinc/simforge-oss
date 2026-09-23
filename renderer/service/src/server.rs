@@ -99,7 +99,7 @@ pub struct SceneSpec {
     /// Render one directional cascade set for the whole RGB rig instead of
     /// one per camera (`render_core::shared_shadows`). Cascades are fitted
     /// to the union of the rig's frusta, so every view stays covered; the
-    /// atlas grows to 2560 so texel density matches a per-view fit.
+    /// atlas grows to 4096 so texel density is at least a per-view fit's.
     /// Default on: on the Belmont 8-camera rig it halves GPU time per
     /// render (624 -> 325 ms on an RTX 3080) at 55 dB mean / 52 dB min PSNR
     /// against per-view cascades (docs/engineering/native-render-gpu-profile.md).
@@ -223,7 +223,8 @@ fn legacy_render_config(spec: &SceneSpec) -> Result<RenderConfig> {
         Some(other) => anyhow::bail!("[native_render_config_invalid] captureClock {other:?} (free | pinned)"),
     };
     config.shadows.shared = spec.shared_shadows.unwrap_or(true); // fallback-ok: rc.74 default, recorded in the resolved config
-    config.shadows.map_size = if config.shadows.shared { 2560 } else { 2048 };
+    // What rc.74 rendered: its shared 2560 atlas was rounded up to 4096 by Bevy.
+    config.shadows.map_size = if config.shadows.shared { 4096 } else { 2048 };
     config.lidar.backend = match spec.lidar_backend.as_deref() {
         None | Some("auto") => LidarBackend::Auto,
         Some("gpu") => LidarBackend::Gpu,
