@@ -5,8 +5,9 @@
  * text evaluated in closed form, `oracle.ts`). Everything else is judged
  * against it:
  *
- * 1. **Ours** — SimForge's engine executing the case (`kind: engine`), or the
- *    live importer's handling of a hand-written probe (`kind: xosc`).
+ * 1. **Ours** — SimForge's engine executing the case (`kind: engine`). A
+ *    hand-written probe (`kind: xosc`) is outside SimForge's vocabulary and has
+ *    no SimForge side (`not-expressible`); it only records esmini evidence.
  * 2. **esmini** — secondary evidence only: it executes our XML 1.4 `actions`
  *    export (engine cases) or the probe itself, and is recorded as agreeing,
  *    disagreeing, or not supporting the construct.
@@ -21,7 +22,6 @@ import path from 'node:path';
 import type { LaneGraph, SimTrace } from '@simforge-oss/engine';
 import { engine, parseSimScenarioInput, runSimulation } from '@simforge-oss/engine/node';
 import { AsamExportError, exportOpenScenarioXml14 } from '@simforge-oss/openscenario/export';
-import { OpenScenarioImportError, analyzeOpenScenarioImport } from '@simforge-oss/openscenario/import';
 
 import {
   caseInput, caseTolerance, type CaseTolerance, type ConformanceCase, type EsminiVerdict, type OurVerdict,
@@ -76,7 +76,7 @@ export interface CaseResult {
   readonly feature: string;
   readonly clauses: readonly string[];
   readonly decisions: readonly string[];
-  readonly ours: SideResult<OurVerdict> & { readonly importDiagnostics?: readonly string[] };
+  readonly ours: SideResult<OurVerdict>;
   /** Our actions exporter's issue codes when it refused the case. */
   readonly exportIssueCodes: readonly string[] | null;
   readonly esmini: SideResult<EsminiVerdict> & { readonly diagnostics: readonly string[] };
@@ -300,37 +300,13 @@ export function runCase({ testCase, graph, esmini, workDir, roadXodr, corpusDir 
     const reasons = [...motionReasons(actors, tolerance), ...eventReasons('ours', events, (event) => event.ours, tolerance)];
     ours = { verdict: reasons.length ? 'deviates' : 'conforms', actors, reasons };
   } else {
-    // Hand-written probe: our side is the live importer's disposition.
+    // Hand-written probe for a construct outside SimForge's vocabulary. SimForge
+    // does not import OpenSCENARIO, so there is no SimForge side to run: the
+    // probe records esmini evidence against the oracle only.
     esminiXosc = readFileSync(path.join(corpusDir, testCase.xosc!), 'utf8');
     esminiNames = (id) => id;
     esminiEvent = (id) => id;
-    const reasons: string[] = [];
-    let importDiagnostics: string[] = [];
-    try {
-      const analysis = analyzeOpenScenarioImport(new TextEncoder().encode(esminiXosc), path.basename(testCase.xosc!));
-      importDiagnostics = analysis.diagnostics.map((diagnostic) => `${diagnostic.disposition}:${diagnostic.code}`);
-      const expectation = testCase.expect.import;
-      if (expectation) {
-        if (expectation.errorCode) reasons.push(`import succeeded, expected error ${expectation.errorCode}`);
-        if (analysis.actors.length !== expectation.actors) reasons.push(`import translated ${analysis.actors.length} actors, expected ${expectation.actors}`);
-        for (const code of expectation.diagnostics) {
-          if (!analysis.diagnostics.some((diagnostic) => diagnostic.code === code)) reasons.push(`import did not report ${code}`);
-        }
-        expectation.scenePoses?.forEach((pose, index) => {
-          const actor = analysis.actors[index];
-          if (!actor) return;
-          // ImportedActor carries the scene-frame role pose (x, y = up, z).
-          if (Math.abs(actor.x - pose.x) > 1e-6 || Math.abs(actor.z - pose.z) > 1e-6 || Math.abs(actor.heading - pose.headingRad) > 1e-9) {
-            reasons.push(`import pose of ${actor.id} is scene (x=${actor.x}, z=${actor.z}, h=${actor.heading}), spec frame mapping gives (x=${pose.x}, z=${pose.z}, h=${pose.headingRad})`);
-          }
-        });
-      }
-    } catch (error) {
-      if (!(error instanceof OpenScenarioImportError)) throw error;
-      importDiagnostics = [`error:${error.code}`];
-      if (testCase.expect.import?.errorCode !== error.code) reasons.push(`import failed with ${error.code}: ${error.message}`);
-    }
-    ours = { verdict: 'not-expressible', actors: [], reasons, importDiagnostics };
+    ours = { verdict: 'not-expressible', actors: [], reasons: [] };
   }
 
   // esmini: secondary evidence against the same oracle.
@@ -396,7 +372,6 @@ export function runCase({ testCase, graph, esmini, workDir, roadXodr, corpusDir 
     const want = expect.exportIssueCodes ? [...expect.exportIssueCodes].sort() : null;
     if (JSON.stringify(want) !== JSON.stringify(exportIssueCodes)) unexpected.push(`actions export ${exportIssueCodes ? `rejected ${JSON.stringify(exportIssueCodes)}` : 'accepted'}, recorded ${want ? `rejected ${JSON.stringify(want)}` : 'accepted'}`);
   }
-  if (kind === 'xosc' && ours.reasons.length) unexpected.push(...ours.reasons.map((reason) => `import: ${reason}`));
   if (esmini && esminiSide.verdict !== expect.esmini) unexpected.push(`esmini ${esminiSide.verdict}, recorded ${expect.esmini}`);
   const expectedRoundTrip = kind === 'engine' ? (expect.roundTrip ?? 'match') : 'skip';
   if (esmini && roundTrip.verdict !== expectedRoundTrip) unexpected.push(`round trip ${roundTrip.verdict}, recorded ${expectedRoundTrip}`);

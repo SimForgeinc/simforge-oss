@@ -235,7 +235,7 @@ Every package is released at the same stack version.
 | Studio runtime | [`@simforge-oss/playback`](packages/playback) | Deterministic trace playback, timing, and ambient traffic through `/traffic`. |
 | Studio runtime | [`@simforge-oss/asset-catalog`](packages/asset-catalog) | Canonical parametric vehicles, pedestrians, props, and generated catalog assets. |
 | Rendering | [`@simforge-oss/render`](packages/render) | Render-job contracts plus lazy web and native engines exposed at `/web` and `/native`. |
-| Interop | [`@simforge-oss/openscenario`](packages/openscenario) | ASAM OpenSCENARIO import/export, esmini execution via `/esmini`, and conformance comparison via `/trace-diff`. |
+| Interop | [`@simforge-oss/openscenario`](packages/openscenario) | ASAM OpenSCENARIO export (XML 1.4, XML 1.3 esmini compatibility, DSL 2.2), esmini execution via `/esmini`, and conformance comparison via `/trace-diff`. |
 | Training & evaluation | [`@simforge-oss/training-env`](packages/training-env) | Gymnasium-semantics environment and causal ground-truth channel without a CLI dependency. |
 | Training & evaluation | [`@simforge-oss/evaluation`](packages/evaluation) | Frozen policy-evaluation protocols and the scenario-faithfulness examiner. |
 | CLI | [`@simforge-oss/cli`](packages/cli) | `simforge`/`sf` orchestration and the stack-level integration surface. |

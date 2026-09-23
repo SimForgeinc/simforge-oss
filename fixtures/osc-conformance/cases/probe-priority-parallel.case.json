@@ -58,13 +58,6 @@
   },
   "expect": {
     "ours": "not-expressible",
-    "finding": "F-11",
-    "esmini": "agrees",
-    "import": {
-      "actors": 1,
-      "diagnostics": [
-        "storyboard_semantics_not_translated"
-      ]
-    }
+    "esmini": "agrees"
   }
 }

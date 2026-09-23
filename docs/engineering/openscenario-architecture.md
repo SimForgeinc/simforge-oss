@@ -27,8 +27,7 @@ Node-only execution modules.
 
 | Entry point | Runtime | Owns |
 |---|---|---|
-| `@simforge-oss/openscenario` | Browser-safe | Import analysis/translation, export compilers, capability reports, snapshots |
-| `@simforge-oss/openscenario/import` | Browser-safe | Bounded XML parsing, security rejection, map resolution, translation |
+| `@simforge-oss/openscenario` | Browser-safe | Export compilers, capability reports, snapshots, execution plans |
 | `@simforge-oss/openscenario/export` | Browser-safe | Format selection and portable compiler profiles |
 | `@simforge-oss/openscenario/types` | Type-only | Options, results, issues, warnings, fidelity vocabulary |
 | `@simforge-oss/openscenario/xml-1.4` | Browser-worker-safe | Native XML 1.4 compiler without Node dependencies |
@@ -65,13 +64,11 @@ durable jobs, storage, observability, and billing.
 
 ### Import
 
-1. An adapter applies transport limits before parsing.
-2. The browser-safe importer rejects unsupported DTD/entity behavior and
-   produces structured findings.
-3. Map references resolve through `@simforge-oss/maps` using explicit map identity
-   and digest.
-4. Translation produces a draft scenario plus a capability report; unsupported
-   constructs remain visible and never silently disappear.
+SimForge does not import OpenSCENARIO. The former `/import` entry point, the
+`simforge import` command and the Studio "Open OpenSCENARIO as reference" flow
+were removed; OpenSCENARIO is an export-only interchange format. Documents a
+previous import created still load (their `extensions.openScenarioImport`
+provenance is untyped and preserved).
 
 ## Artifact identity
 
@@ -87,7 +84,7 @@ the capability report. XML validity alone is not behavioral equivalence.
 | Scenario/schema semantics | `packages/scenario` | Studio/Cloud view models |
 | World compilation | `packages/compiler` | Studio/Cloud request handlers |
 | OpenDRIVE resolution | `packages/maps` | Storage and delivery adapters |
-| Snapshot/export/import | `packages/openscenario` | CLI/Studio/Cloud transports |
+| Snapshot/export | `packages/openscenario` | CLI/Studio/Cloud transports |
 | esmini execution | `packages/openscenario` `/esmini` | Local/cloud process transport |
 | Trace comparison | `packages/openscenario` `/trace-diff` | Qualification runners |
 | CARLA execution | `adapters/carla-exec` | Cloud worker leasing/storage |

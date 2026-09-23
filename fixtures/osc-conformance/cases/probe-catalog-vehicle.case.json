@@ -28,14 +28,6 @@
   },
   "expect": {
     "ours": "not-expressible",
-    "finding": "F-12",
-    "esmini": "agrees",
-    "import": {
-      "actors": 1,
-      "diagnostics": [
-        "catalog_reference_unresolved"
-      ]
-    },
-    "note": "Before the F-12 fix the live importer dropped a valid catalog-referenced vehicle as entity_type_unsupported; it now keeps it and reports the unresolved catalog."
+    "esmini": "agrees"
   }
 }

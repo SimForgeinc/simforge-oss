@@ -44,13 +44,6 @@
   },
   "expect": {
     "ours": "not-expressible",
-    "finding": "F-14",
-    "esmini": "agrees",
-    "import": {
-      "actors": 0,
-      "diagnostics": [],
-      "errorCode": "invalid_number"
-    },
-    "note": "The live importer rejects the file with invalid_number instead of resolving parameters or naming the construct."
+    "esmini": "agrees"
   }
 }

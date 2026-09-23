@@ -94,7 +94,6 @@
     "draco3dgltf": "^1.5.7",
     "earcut": "^3.0.2",
     "electron-updater": "^6.8.9",
-    "fast-xml-parser": "^5.5.6",
     "fflate": "^0.8.2",
     "flatbush": "^4.5.1",
     "gl-matrix": "^3.4.4",
