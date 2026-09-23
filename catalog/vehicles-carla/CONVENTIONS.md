@@ -92,3 +92,57 @@ instead of shrinking a Fuso bus to minibus length; the Camry uses the rigged
 Impala sedan rather than duplicating the Lincoln used for the generic sedan.
 An HGV tractor is not an articulated semi with a trailer, so `vehicle.semi_truck`
 deliberately retains its builder.
+
+## Ridden two-wheelers (`*_rider.glb`)
+
+CARLA 0.10 never ships a riderless two-wheeler: every `2Wheeled` blueprint
+attaches a G2 walker skeletal mesh and drives it with the anim blueprint
+`Animations/Base/AB_Biker` (static `AS_Pedestrian_BikeHands` grip pose, hips on
+the bike's `Seat` bone, two-bone IK of the hands to `Handler{Left,Right}Socket`
+and the feet to `{Left,Right}PedalGeo`, head look-at). The riderless GLBs above
+dropped those components; the seven `*_rider.glb` files restore them.
+`tools/riders/` re-evaluates AB_Biker offline on the same walker (our
+`catalog/pedestrians-carla` conversion of the mesh the blueprint names) and
+bakes the result. The catalog binds `vehicle.bicycle` and `vehicle.motorcycle`
+to ridden models only.
+
+| model | CARLA blueprint | rider (walker) | helmet |
+|---|---|---|---|
+| `vehicle_bicycle_bh_crossbike_rider` | BP_CrossBike | SK_AfroF02_A_G2 (0017) | — |
+| `vehicle_bicycle_gazelle_omafiets_rider` | BP_LeisureBike | SK_EuroM02_A_G2 (0047) | — |
+| `vehicle_bicycle_diamondback_century_rider` | BP_RoadBike | SK_AsiaM02_A_G2 (0038) | — |
+| `vehicle_motorcycle_harley_rider` | BP_Harley | SK_AfroM02_A_G2 (0027) | open |
+| `vehicle_motorcycle_kawasaki_ninja_rider` | BP_KawasakiNinja | SK_AsiaF01_G2 (0032) | full |
+| `vehicle_motorcycle_yamaha_yzf_rider` | BP_Yamaha | SK_EuroF02_B_G2 (0043) | full |
+| `vehicle_scooter_vespa_rider` | BP_Vespa | SK_EuroF01_A_G2 (0039) | open |
+
+Scene graph: the bike nodes as above, plus a `rider` node under the bike root
+(static mount; yaw +π/2 because the walker bind pose faces +Z) holding the
+walker skeleton, and the skinned `rider_mesh` as a **second scene root** (glTF
+ignores a skinned mesh's parents; some loaders would otherwise bake them into
+the bind matrix). Helmets are rigid `rider_helmet` meshes parented to
+`crl_Head__C`; hair primitives are removed under them. The `rider` node,
+`rider_mesh` and `rider_helmet` carry `extras.semanticClass = "rider"`:
+segmentation labels them `rider`, distinct from the bicycle/motorcycle.
+
+Animation: exactly one looping clip, `ride`, duration 1 s, LINEAR, 48 keys.
+Bicycles: one crank revolution (crank, orbiting pedals, IK'd legs, wheels 2
+turns). Motor: one wheel revolution, rider static. The clip time is a function
+of distance only: `t = frac(odometerM / metersPerCycle) · 1 s`, odometer from
+the render timeline (`wheelSpinRad · 0.35`); `metersPerCycle` is in the
+animation extras, `manifest.json` and the catalog binding. Renderers must not
+additionally articulate `wheel_*`/`handlebar` on a ridden model, and must fail
+rather than draw the bike alone if the rider cannot be posed.
+
+Materials: clothing is renamed to `rider_top`, `rider_bottom`, `rider_shoes`
+(`rider_helmet` on helmets). Variant `k = fnv1a32(actorId) % palettes.length`;
+`palettes[0]` is `null` (authored CARLA colours), otherwise the palette's
+linear-RGB values replace those slots' `baseColorFactor` (untextured slots).
+`body_paint` keeps the actor tint contract above.
+
+Pose fidelity: AB_Biker pins the hips to the `Seat` bone and never stretches
+the arms, so on long-reach bikes CARLA's hands stop short of the grips. The
+offline solve lets the rider slide forward along the saddle (≤ 0.25 m) and pitch
+the torso before giving up; `asset.extras.riderPoseReport` records lean, slide
+and reach per model. Build fails if a hand misses its grip by ≥ 3 cm or the
+rider penetrates the ground.

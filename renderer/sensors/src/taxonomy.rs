@@ -25,13 +25,18 @@ pub enum SemanticClass {
     /// Trucks and buses (scenario model `kind: bus` folds into truck class).
     Truck = 5,
     Pedestrian = 6,
+    /// A bicycle. With ridden models the person on it is `Rider`; before
+    /// riders existed this class covered the whole cyclist actor.
     Cyclist = 7,
     /// Props and anything else authored in the prop catalog.
     Prop = 8,
+    /// The person riding a bicycle or motorcycle (Cityscapes/CARLA `rider`),
+    /// labelled apart from the two-wheeler they ride.
+    Rider = 9,
 }
 
 impl SemanticClass {
-    pub const ALL: [SemanticClass; 9] = [
+    pub const ALL: [SemanticClass; 10] = [
         SemanticClass::Unlabeled,
         SemanticClass::Road,
         SemanticClass::Building,
@@ -41,6 +46,7 @@ impl SemanticClass {
         SemanticClass::Pedestrian,
         SemanticClass::Cyclist,
         SemanticClass::Prop,
+        SemanticClass::Rider,
     ];
 
     pub fn id(self) -> u8 {
@@ -58,17 +64,29 @@ impl SemanticClass {
             SemanticClass::Pedestrian => "pedestrian",
             SemanticClass::Cyclist => "cyclist",
             SemanticClass::Prop => "prop",
+            SemanticClass::Rider => "rider",
         }
     }
 
     /// Classify a scenario-model actor class/kind string.
     pub fn from_actor_class(actor_class: &str) -> SemanticClass {
+        Self::try_from_actor_class(actor_class).unwrap_or(SemanticClass::Prop) // fallback-ok: lenient mapping for the sensor-capture harness; the render service uses try_from_actor_class
+    }
+
+    /// Strict actor-class mapping (every class the render engine emits:
+    /// `packages/render/src/native/lowering.ts` NATIVE_ACTOR_CLASSES). Vans,
+    /// SUVs, pickups and motorcycles are motor vehicles (`Car`); `prop` is
+    /// the prop class. Any other class is an error, never a silent `Prop`.
+    pub fn try_from_actor_class(actor_class: &str) -> Result<SemanticClass, String> {
         match actor_class {
-            "car" => SemanticClass::Car,
-            "truck" | "bus" => SemanticClass::Truck,
-            "pedestrian" => SemanticClass::Pedestrian,
-            "cyclist" => SemanticClass::Cyclist,
-            _ => SemanticClass::Prop,
+            "car" | "van" | "suv" | "pickup" | "motorcycle" => Ok(SemanticClass::Car),
+            "truck" | "bus" => Ok(SemanticClass::Truck),
+            "pedestrian" => Ok(SemanticClass::Pedestrian),
+            "cyclist" => Ok(SemanticClass::Cyclist),
+            // A ridden two-wheeler's rider meshes (engine rider instance ids).
+            "rider" => Ok(SemanticClass::Rider),
+            "prop" => Ok(SemanticClass::Prop),
+            other => Err(format!("[native_actor_class_unmapped] actor class {other:?} has no semantic class")),
         }
     }
 
@@ -123,5 +141,20 @@ pub fn lidar_albedo(class: SemanticClass) -> f32 {
         SemanticClass::Pedestrian => 0.60,
         SemanticClass::Cyclist => 0.60,
         SemanticClass::Prop => 0.50,
+        SemanticClass::Rider => 0.60,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SemanticClass;
+
+    #[test]
+    fn rider_is_its_own_class() {
+        assert_eq!(SemanticClass::try_from_actor_class("rider"), Ok(SemanticClass::Rider));
+        assert_eq!(SemanticClass::Rider.id(), 9);
+        assert_eq!(SemanticClass::Rider.name(), "rider");
+        assert!(SemanticClass::ALL.contains(&SemanticClass::Rider));
+        assert_ne!(SemanticClass::try_from_actor_class("cyclist"), Ok(SemanticClass::Rider));
     }
 }

@@ -77,6 +77,12 @@ export function createTruthViewerBridge(
    * so this holds the few steps between the render clock and the newest.
    */
   const buffered: TruthFrame[] = [];
+  /**
+   * Distance each actor has travelled at each received step (Σ signed v·dt over
+   * steps it was present on, the render timeline's `wheelSpinRad` rule). It
+   * phases ridden two-wheelers' pedals and wheels by distance, not clock.
+   */
+  const odometers = new WeakMap<TruthFrame, ReadonlyMap<string, number>>();
   let latest: TruthFrame | null = null;
   let drawnOnce = false;
   let followId: string | null = null;
@@ -143,6 +149,8 @@ export function createTruthViewerBridge(
       const headingRad = prior ? lerpAngle(prior.yawRad, current.yawRad, alpha) : current.yawRad;
       const y = groundReady ? sampleGround(x, z) ?? current.position[1] : current.position[1];
       const look = appearanceOf(current.id, meta.class);
+      const odometerNow = odometers.get(to)?.get(current.id);
+      const odometerPrior = from === to ? undefined : odometers.get(from)?.get(current.id);
       actors.push({
         id: current.id,
         catalogId: look.catalogId,
@@ -154,6 +162,9 @@ export function createTruthViewerBridge(
         dims: meta.dims,
         kind: renderKindFor(meta.class),
         speedMps: Math.hypot(current.velocity[0], current.velocity[2]),
+        ...(odometerNow === undefined
+          ? {}
+          : { odometerM: odometerPrior === undefined ? odometerNow : lerp(odometerPrior, odometerNow, alpha) }),
       });
     }
 
@@ -202,6 +213,19 @@ export function createTruthViewerBridge(
     apply(frame) {
       if (disposed) return;
       if (latest && frame.tick <= latest.tick) return;
+      const previous = latest ? odometers.get(latest) : undefined;
+      const dt = latest ? frame.timeSec - latest.timeSec : 0;
+      const distances = new Map<string, number>();
+      for (const actor of frame.scene.actors) {
+        if (actor.kind === 'despawn') continue;
+        const before = previous?.get(actor.id);
+        // Signed like the timeline's speed: velocity against the body's
+        // heading (yaw CCW from +X about +Y) runs the odometer back.
+        const along = actor.velocity[0] * Math.cos(actor.yawRad) - actor.velocity[2] * Math.sin(actor.yawRad);
+        const speed = Math.hypot(actor.velocity[0], actor.velocity[1], actor.velocity[2]);
+        distances.set(actor.id, before === undefined ? 0 : before + (along < 0 ? -speed : speed) * dt);
+      }
+      odometers.set(frame, distances);
       latest = frame;
       buffered.push(frame);
       // A world that stops being drawn (suspended viewer) must not grow this

@@ -43,6 +43,12 @@ from .runtime.contract import (
     RENDER_SPEC_V3_SCHEMA,
 )
 from .runtime.executor import execute_lease, filesystem_validator
+from .runtime.policy import (
+    CarlaRenderError,
+    RenderPolicy,
+    parse_allow_substitutions,
+    parse_control_features,
+)
 
 # historical name retained for stored-data compat
 DEFAULT_XSD = Path(__file__).parent / "assets" / "OpenSCENARIO.xsd"
@@ -168,6 +174,7 @@ def _execute_local_lease(
     host: str,
     port: int,
     progress: Callable[[str, Mapping[str, object]], None] | None = None,
+    policy: RenderPolicy | None = None,
 ) -> dict[str, object]:
     timeline_path = asset_paths.get("local:timeline")
     asset_paths = {url: path for url, path in asset_paths.items() if url != "local:timeline"}
@@ -218,6 +225,7 @@ def _execute_local_lease(
         authorize_upload=bind_local,
         progress=progress,
         render_timeline=timeline_path.read_bytes() if timeline_path is not None else None,
+        policy=policy if policy is not None else RenderPolicy(),
     )
 
 
@@ -323,6 +331,109 @@ def _xosc_source_digest(xosc: bytes) -> str:
 
 
 
+#: `renderSpec.video.quality` -> the CARLA camera post-process level. The
+#: encoder's rate control is fixed and recorded per artifact; `lossless` is
+#: not something it produces, so it is refused rather than mapped.
+VIDEO_QUALITY_TO_RENDER_QUALITY: Mapping[str, str] = {
+    "draft": "preview", "standard": "standard", "high": "high",
+}
+
+SUPPORTED_CAPABILITIES = frozenset({
+    "actor.lifecycle", "actor.trajectory", "actor.native_controls", "actor.route",
+    "actor.lane_change", "actor.speed", "vehicle.lights", "pedestrian.trajectory",
+    "static.object", "traffic_signal.state", "traffic_signal.flashing",
+    "traffic_signal.controller_logic", "weather", "collision.observe",
+    "custom.map.opendrive", "occlusion.metric",
+    "environment.authored", "timing.fixed_step",
+    "artifact.video", "artifact.frames", "artifact.sensor_archive",
+    "artifact.manifest", "artifact.trace", "artifact.annotations",
+    *(f"sensor.{modality}" for modality in native_sensor_capabilities()),
+})
+
+#: Weather preset -> (cloudiness, precipitation, deposits, wetness, fog
+#: density), the CARLA reading of each authored preset. Wind and fog distance
+#: are not part of any preset (the scenario schema has no wind), so both are 0.
+WEATHER_PRESETS: Mapping[str, tuple[float, float, float, float, float]] = {
+    "clear": (0.0, 0.0, 0.0, 0.0, 0.0),
+    "cloudy": (60.0, 0.0, 0.0, 0.0, 0.0),
+    "overcast": (90.0, 0.0, 0.0, 0.0, 0.0),
+    "light_rain": (75.0, 25.0, 30.0, 30.0, 0.0),
+    "heavy_rain": (95.0, 80.0, 80.0, 90.0, 0.0),
+    "wet_road": (50.0, 0.0, 80.0, 80.0, 0.0),
+    "fog_light": (60.0, 0.0, 10.0, 20.0, 20.0),
+    "fog_dense": (90.0, 0.0, 30.0, 40.0, 80.0),
+}
+#: Time-of-day preset -> sun elevation (degrees) when the scenario authors no
+#: `sunElevationDeg` ("leave it out and the preset decides").
+TIME_OF_DAY_SUN_ELEVATION_DEG: Mapping[str, float] = {
+    "dawn": 5.0, "morning": 25.0, "noon": 75.0, "afternoon": 35.0,
+    "dusk": 3.0, "night": -45.0,
+}
+#: CARLA's preset sun azimuth when the scenario authors none. An authored
+#: `sunAzimuthDeg` is corridor-relative and cannot be used (see below).
+TIME_OF_DAY_SUN_AZIMUTH_DEG = 0.0
+
+
+def _native_environment(environment: Any) -> dict[str, float]:
+    """The authored environment as CARLA weather, refusing what CARLA cannot show."""
+    if not isinstance(environment, Mapping) or set(environment) - {
+        "weather", "timeOfDay", "frictionScale", "sunAzimuthDeg", "sunElevationDeg",
+        "surfacePatches", "extensions",
+    }:
+        raise ContractError("renderSpec.authoredEnvironment has invalid fields")
+    if environment.get("surfacePatches") or environment.get("extensions"):
+        raise ContractError("CARLA native rendering does not support authored surface patches or environment extensions")
+    if "frictionScale" in environment:
+        raise ContractError("CARLA native rendering does not yet own authored tyre friction")
+    missing = sorted({"weather", "timeOfDay"} - set(environment))
+    if missing:
+        raise CarlaRenderError(
+            "carla_environment_incomplete",
+            "renderSpec.authoredEnvironment must state " + " and ".join(missing)
+            + "; CARLA does not pick a weather or time of day for the scenario",
+        )
+    weather, time_of_day = environment["weather"], environment["timeOfDay"]
+    if weather not in WEATHER_PRESETS:
+        raise CarlaRenderError("carla_environment_unsupported", f"CARLA weather preset {weather!r} is unsupported")
+    if time_of_day == "night_lit":
+        raise CarlaRenderError(
+            "carla_environment_unsupported",
+            "timeOfDay night_lit needs street lighting CARLA cannot switch on; it would render as unlit night",
+        )
+    if time_of_day not in TIME_OF_DAY_SUN_ELEVATION_DEG:
+        raise CarlaRenderError(
+            "carla_environment_unsupported", f"renderSpec.authoredEnvironment.timeOfDay {time_of_day!r} is unsupported",
+        )
+    if "sunAzimuthDeg" in environment:
+        # The scenario schema defines the azimuth clockwise from the corridor's
+        # forward direction; the intent carries no corridor heading, so it
+        # cannot be turned into CARLA's world azimuth.
+        raise CarlaRenderError(
+            "carla_environment_unresolvable",
+            "authoredEnvironment.sunAzimuthDeg is corridor-relative and the render intent carries no "
+            "corridor heading to resolve it to a world azimuth",
+        )
+    sun_altitude = environment["sunElevationDeg"] if "sunElevationDeg" in environment else TIME_OF_DAY_SUN_ELEVATION_DEG[time_of_day]
+    if not isinstance(sun_altitude, (int, float)) or isinstance(sun_altitude, bool):
+        raise ContractError("render intent environment expressions must be resolved before CARLA execution")
+    cloudiness, precipitation, deposits, wetness, fog_density = WEATHER_PRESETS[weather]
+    return {
+        "cloudiness": cloudiness, "precipitation": precipitation, "deposits": deposits,
+        "wind": 0.0, "sunAzimuth": TIME_OF_DAY_SUN_AZIMUTH_DEG,
+        "sunAltitude": float(sun_altitude), "fogDensity": fog_density,
+        "fogDistance": 0.0, "wetness": wetness,
+    }
+
+
+def _unmet_preferred_capabilities(render_spec: Any) -> list[str]:
+    """Preferred capabilities CARLA does not provide (recorded, never silent)."""
+    intent = render_spec.get("capabilityIntent") if isinstance(render_spec, Mapping) else None
+    preferred = intent.get("preferred") if isinstance(intent, Mapping) else None
+    if not isinstance(preferred, list):
+        return []
+    return sorted(str(item) for item in preferred if item not in SUPPORTED_CAPABILITIES)
+
+
 def _render_spec_v3_to_native(value: Any) -> tuple[dict[str, Any], RenderSpec, str]:
     if not isinstance(value, Mapping) or set(value) not in (
         {"schema", "sources", "clip", "artifacts", "capabilityIntent", "authoredEnvironment"},
@@ -360,10 +471,13 @@ def _render_spec_v3_to_native(value: Any) -> tuple[dict[str, Any], RenderSpec, s
         video_fps = float(video["fps"])
         if not 0 < video_fps <= 240:
             raise ContractError("renderSpec.video.fps must be in (0, 240]")
-        if video["quality"] not in {"draft", "standard", "high", "lossless"}:
-            raise ContractError("renderSpec.video.quality is unsupported")
-    else:
-        video_fps = 24.0
+        if video["quality"] not in VIDEO_QUALITY_TO_RENDER_QUALITY:
+            raise CarlaRenderError(
+                "carla_video_quality_unsupported",
+                f"CARLA encodes h264 at fixed, recorded rate control; renderSpec.video.quality "
+                f"{video['quality']!r} is not one it can produce (supported: "
+                + ", ".join(sorted(VIDEO_QUALITY_TO_RENDER_QUALITY)) + ")",
+            )
     capability_intent = value["capabilityIntent"]
     if not isinstance(capability_intent, Mapping) or set(capability_intent) != {"required", "preferred", "fidelity"}:
         raise ContractError("renderSpec.capabilityIntent has invalid fields")
@@ -375,65 +489,25 @@ def _render_spec_v3_to_native(value: Any) -> tuple[dict[str, Any], RenderSpec, s
         or capability_intent["fidelity"] not in {"review", "dataset"}
     ):
         raise ContractError("renderSpec.capabilityIntent is invalid")
-    supported_required = {
-        "actor.lifecycle", "actor.trajectory", "actor.native_controls", "actor.route",
-        "actor.lane_change", "actor.speed", "vehicle.lights", "pedestrian.trajectory",
-        "static.object", "traffic_signal.state", "traffic_signal.flashing",
-        "traffic_signal.controller_logic", "weather", "collision.observe",
-        "custom.map.opendrive", "occlusion.metric",
-        "environment.authored", "timing.fixed_step",
-        "artifact.video", "artifact.frames", "artifact.sensor_archive",
-        "artifact.manifest", "artifact.trace", "artifact.annotations",
-        *(f"sensor.{modality}" for modality in native_sensor_capabilities()),
-    }
-    unsupported_required = sorted(set(required) - supported_required)
+    unsupported_required = sorted(set(required) - SUPPORTED_CAPABILITIES)
     if unsupported_required:
         raise ContractError("CARLA cannot satisfy required capabilities: " + ", ".join(unsupported_required))
-    environment = value["authoredEnvironment"]
-    if not isinstance(environment, Mapping) or set(environment) - {
-        "weather", "timeOfDay", "frictionScale", "sunAzimuthDeg", "sunElevationDeg",
-        "surfacePatches", "extensions",
-    }:
-        raise ContractError("renderSpec.authoredEnvironment has invalid fields")
-    if environment.get("surfacePatches", []) or environment.get("extensions"):
-        raise ContractError("CARLA native rendering does not support authored surface patches or environment extensions")
-    if "frictionScale" in environment:
-        raise ContractError("CARLA native rendering does not yet own authored tyre friction")
-    weather = environment.get("weather", "cloudy")
-    weather_values = {
-        "clear": (0.0, 0.0, 0.0, 0.0, 0.0),
-        "cloudy": (60.0, 0.0, 0.0, 0.0, 0.0),
-        "overcast": (90.0, 0.0, 0.0, 0.0, 0.0),
-        "light_rain": (75.0, 25.0, 30.0, 30.0, 0.0),
-        "heavy_rain": (95.0, 80.0, 80.0, 90.0, 0.0),
-        "wet_road": (50.0, 0.0, 80.0, 80.0, 0.0),
-        "fog_light": (60.0, 0.0, 10.0, 20.0, 20.0),
-        "fog_dense": (90.0, 0.0, 30.0, 40.0, 80.0),
-    }
-    if weather not in weather_values:
-        raise ContractError(f"CARLA weather preset {weather!r} is unsupported")
-    time_of_day = environment.get("timeOfDay", "dusk")
-    sun_by_time = {
-        "dawn": 5.0, "morning": 25.0, "noon": 75.0, "afternoon": 35.0,
-        "dusk": 3.0, "night": -45.0, "night_lit": -45.0,
-    }
-    if time_of_day not in sun_by_time:
-        raise ContractError("renderSpec.authoredEnvironment.timeOfDay is unsupported")
-    cloudiness, precipitation, deposits, wetness, fog_density = weather_values[weather]
-    sun_azimuth = environment.get("sunAzimuthDeg", 0.0)
-    sun_altitude = environment.get("sunElevationDeg", sun_by_time[time_of_day])
-    if not isinstance(sun_azimuth, (int, float)) or not isinstance(sun_altitude, (int, float)):
-        raise ContractError("render intent environment expressions must be resolved before CARLA execution")
-    native_environment = {
-        "cloudiness": cloudiness, "precipitation": precipitation, "deposits": deposits,
-        "wind": 0.0, "sunAzimuth": float(sun_azimuth) % 360.0,
-        "sunAltitude": float(sun_altitude), "fogDensity": fog_density,
-        "fogDistance": 0.0, "wetness": wetness,
-    }
+    if "actor.native_controls" in preferred:
+        # CARLA-native physics turns the job into a physics-validation run,
+        # whose output is not the scenario render. A preference cannot make
+        # that switch; the intent must require it.
+        raise CarlaRenderError(
+            "carla_capability_preference_unsupported",
+            "actor.native_controls selects CARLA physics validation instead of the scenario render; "
+            "it must be a required capability, never a preferred one",
+        )
+    native_environment = _native_environment(value["authoredEnvironment"])
     sensor_values: list[dict[str, Any]] = []
     identities: set[tuple[str, str, str]] = set()
     output_names: set[str] = set()
-    camera_fps: set[float] = set()
+    camera_fps: dict[str, float] = {}
+    camera_sizes: dict[str, tuple[int, int]] = {}
+    primary_rgb: str | None = None
     for index, source in enumerate(sources):
         label = f"renderSpec.sources.{index}"
         if not isinstance(source, Mapping) or set(source) != {
@@ -462,7 +536,8 @@ def _render_spec_v3_to_native(value: Any) -> tuple[dict[str, Any], RenderSpec, s
                 raise ContractError(f"{label}.attributes has invalid camera fields")
             if float(attributes["farM"]) <= float(attributes["nearM"]):
                 raise ContractError(f"{label}.attributes.farM must exceed nearM")
-            camera_fps.add(float(attributes["fps"]))
+            camera_fps[output_name] = float(attributes["fps"])
+            camera_sizes[output_name] = (int(attributes["width"]), int(attributes["height"]))
             config = {
                 "width": attributes["width"], "height": attributes["height"],
                 "fov": attributes["horizontalFovDeg"],
@@ -470,7 +545,7 @@ def _render_spec_v3_to_native(value: Any) -> tuple[dict[str, Any], RenderSpec, s
         elif modality == "lidar":
             expected_attributes = {
                 "channels", "rangeM", "pointsPerSecond", "rotationFrequencyHz",
-                "upperFovDeg", "lowerFovDeg",
+                "upperFovDeg", "lowerFovDeg", "horizontalFovDeg",
             }
             if not isinstance(attributes, Mapping) or set(attributes) != expected_attributes:
                 raise ContractError(f"{label}.attributes has invalid lidar fields")
@@ -482,6 +557,8 @@ def _render_spec_v3_to_native(value: Any) -> tuple[dict[str, Any], RenderSpec, s
             config = dict(attributes)
         else:
             raise ContractError(f"{label}.modality is unsupported by render-spec/v3")
+        if modality == "rgb" and primary_rgb is None:
+            primary_rgb = output_name
         from math import degrees
         sensor_values.append({
             "role": output_name, "actorId": actor_id, "sensorId": sensor_id,
@@ -498,20 +575,49 @@ def _render_spec_v3_to_native(value: Any) -> tuple[dict[str, Any], RenderSpec, s
         output for output in artifacts
         if output in {"video", "trace", "manifest", "annotations"}
     ]
-    quality = "standard" if video is None else {
-        "draft": "preview", "standard": "standard", "high": "high", "lossless": "cinematic",
-    }[video["quality"]]
+    # Every sensor is captured on one schedule, so each camera's own fps must
+    # be the render fps: CARLA cannot capture two cameras at different rates.
+    if video is not None:
+        render_fps = video_fps
+        if primary_rgb is None:
+            raise ContractError("renderSpec.video requires an rgb source")
+        if camera_sizes[primary_rgb] != (int(video["width"]), int(video["height"])):
+            raise CarlaRenderError(
+                "carla_video_size_mismatch",
+                f"the review video is the primary rgb camera {primary_rgb}'s stream at "
+                f"{camera_sizes[primary_rgb][0]}x{camera_sizes[primary_rgb][1]}; renderSpec.video asks for "
+                f"{video['width']}x{video['height']} and CARLA does not rescale it",
+            )
+    elif camera_fps:
+        render_fps = next(iter(camera_fps.values()))
+    else:
+        raise CarlaRenderError(
+            "carla_render_fps_unspecified",
+            "the render spec has no video and no camera, so nothing states the capture rate "
+            "for its lidar/radar sources",
+        )
+    mismatched = sorted(name for name, fps in camera_fps.items() if fps != render_fps)
+    if mismatched:
+        raise CarlaRenderError(
+            "carla_camera_fps_mismatch",
+            f"CARLA captures every sensor at one rate ({render_fps:g} fps); cameras "
+            + ", ".join(f"{name} ({camera_fps[name]:g} fps)" for name in mismatched)
+            + " ask for another",
+        )
+    # Without a video no camera pixels are published, so the camera
+    # post-process level cannot change any output; the standard level applies.
+    quality = "standard" if video is None else VIDEO_QUALITY_TO_RENDER_QUALITY[video["quality"]]
     # CARLA renders the scenario by kinematic trace replay. CARLA-native
-    # physics is an explicit opt-in (the intent asks for the
+    # physics is an explicit opt-in (the intent requires the
     # `actor.native_controls` capability) that yields a labelled physics
     # validation run, never the scenario's render.
     execution_mode = (
         EXECUTION_MODE_PHYSICS_VALIDATION
-        if "actor.native_controls" in (*required, *preferred)
+        if "actor.native_controls" in required
         else EXECUTION_MODE_TRACE_REPLAY
     )
     native_value = {
-        "schema": "simforge.render-spec/v1", "fps": video_fps,
+        "schema": "simforge.render-spec/v1", "fps": render_fps,
         "sensors": sensor_values, "outputs": outputs, "executionMode": execution_mode,
         "quality": quality, "environment": native_environment,
         "formats": ["png", "ply", "csv", "mp4-h264", "json", "jsonl"],
@@ -566,8 +672,11 @@ def _intent_lease(
     output_dir: Path,
 ) -> tuple[Any, dict[str, Path]]:
     expected_fields = {"schema", "intentId", "executionPackage", "scenarioRevision", "renderSpec", "sensorHosts", "assets", "seed"}
-    if set(intent) != expected_fields or intent.get("schema") not in INTENT_SCHEMAS:
+    if set(intent) - {"allowSubstitutions", "motionSource"} != expected_fields or intent.get("schema") not in INTENT_SCHEMAS:
         raise ContractError(f"render intent must use strict {INTENT_SCHEMA} fields")
+    parse_allow_substitutions(intent.get("allowSubstitutions"))
+    if intent.get("motionSource") not in (None, "original", "resimulated", "original-xosc"):
+        raise ContractError(f"render intent motionSource {intent.get('motionSource')!r} is not original, resimulated or original-xosc")
     intent_id = intent.get("intentId")
     revision = intent.get("scenarioRevision")
     assets = intent.get("assets")
@@ -635,6 +744,16 @@ def _intent_lease(
     catalog_path = inputs.get(str(catalog_asset.get("assetId")))
     if xodr_path is None or catalog_path is None:
         raise ContractError("input package is missing the intent map or catalog asset")
+    # Only a cooked world has the map's meshes, buildings, props and signal
+    # heads; a world generated from the bare OpenDRIVE is a road mesh in a
+    # void. It is refused here, before any CARLA work.
+    cooked_map_name = cooked_map_name_for_xodr(str(map_asset["sha256"]))
+    if cooked_map_name is None:
+        raise CarlaRenderError(
+            "carla_map_not_cooked",
+            f"map {map_identity['mapId']} (XODR {map_asset['sha256']}) has no cooked CARLA world in this "
+            "engine image; CARLA renders only cooked maps",
+        )
     catalog_body = catalog_path.read_bytes()
     try:
         catalog_json = json.loads(catalog_body)
@@ -807,11 +926,9 @@ def _intent_lease(
         "mapVersionId": map_identity["revisionId"],
         "manifest": {"url": "local:manifest", "sha256": hashlib.sha256(manifest_body).hexdigest(), "sizeBytes": len(manifest_body)},
         "xosc": {"url": "local:xosc", "sha256": open_scenario["sha256"], "sizeBytes": open_scenario["sizeBytes"], "xsdSha256": OFFICIAL_XSD_SHA256},
-        # A map whose XODR is cooked into the engine image must be requested by
-        # its cooked runtime world name so CARLA loads the real meshes and the
-        # approved signal identity remaps engage; uncooked maps keep their
-        # control-plane identity and render via the generated-OpenDRIVE world.
-        "xodr": {"url": "local:xodr", "sha256": map_asset["sha256"], "sizeBytes": map_asset["sizeBytes"], "mapName": cooked_map_name_for_xodr(str(map_asset["sha256"])) or map_identity["mapId"]},
+        # The map is requested by its cooked runtime world name so CARLA
+        # loads the real meshes and the approved signal identity remaps engage.
+        "xodr": {"url": "local:xodr", "sha256": map_asset["sha256"], "sizeBytes": map_asset["sizeBytes"], "mapName": cooked_map_name},
         "assetCatalog": {"url": "local:catalog", "sha256": catalog_asset["sha256"], "sizeBytes": catalog_asset["sizeBytes"], "contractVersion": ASSET_CATALOG_SCHEMA, "catalogVersionId": catalog_version},
         "ambient": ambient, "runtimeRequirements": runtime_requirements,
     }
@@ -838,6 +955,21 @@ def _intent_lease(
     )
     if len(timeline_paths) > 1:
         raise ContractError("render intent contains multiple render timelines")
+    # The render contract is the render timeline. The only other motion
+    # source is the explicitly requested legacy replay of a revision without a
+    # stored trace (`motionSource: original-xosc`); it is never chosen because
+    # a timeline is absent (docs/engineering/no-silent-fallbacks.md).
+    legacy_replay = intent.get("motionSource") == "original-xosc"
+    if legacy_replay and timeline_paths:
+        raise CarlaRenderError(
+            "carla_motion_source_conflict",
+            "the intent requests the legacy OpenSCENARIO replay but also declares render.timeline",
+        )
+    if not legacy_replay and not timeline_paths:
+        raise CarlaRenderError(
+            "carla_render_timeline_missing",
+            "CARLA renders the declared render.timeline; the intent has none and does not request motionSource 'original-xosc'",
+        )
     return lease, {
         "local:manifest": manifest_path, "local:xosc": xosc_path,
         "local:xodr": xodr_path, "local:catalog": catalog_path, "local:traffic": traffic_path,
@@ -1004,12 +1136,26 @@ def _run_intent(args: argparse.Namespace) -> dict[str, object]:
     lease, asset_paths = _intent_lease(
         intent, intent_sha, execution_package_control_sha256, inputs, output_dir,
     )
+    policy = RenderPolicy(
+        allow_substitutions=parse_allow_substitutions(intent.get("allowSubstitutions")),
+        control_features=parse_control_features(getattr(args, "control_features", None)),
+    )
+    unmet_preferences = _unmet_preferred_capabilities(intent.get("renderSpec"))
     progress_path = Path(args.progress)
     progress_path.parent.mkdir(parents=True, exist_ok=True)
     sequence = 0
 
     def emit(event: str, payload: Mapping[str, object]) -> None:
         nonlocal sequence
+        if event == "substitution":
+            # Every substitution is surfaced as a job event, never only in a file.
+            event, payload = "warning", {
+                "code": f"carla.substitution.{payload['kind']}",
+                "message": (
+                    f"{payload['subject']}: rendered {payload['rendered']} instead of "
+                    f"{payload['requested']} (allowed by {payload['allowedBy']})"
+                ),
+            }
         if event not in {"job.started", "stage.started", "progress", "warning"}:
             return
         if event == "progress":
@@ -1044,10 +1190,20 @@ def _run_intent(args: argparse.Namespace) -> dict[str, object]:
     progress_path.write_text("", "utf-8")
     emit("job.started", {})
     emit("stage.started", {"stage": "preparing"})
+    warnings = [
+        {
+            "code": "carla.capability_preference_unmet",
+            "message": f"preferred capability {capability} is not provided by CARLA",
+        }
+        for capability in unmet_preferences
+    ]
+    for warning in warnings:
+        emit("warning", warning)
     started_at = datetime.now(timezone.utc).isoformat()
     try:
         result = _execute_local_lease(
             lease, asset_paths, output_dir, DEFAULT_XSD, args.host, args.port, progress=emit,
+            policy=policy,
         )
     except Exception as exc:
         emit("warning", {
@@ -1077,6 +1233,21 @@ def _run_intent(args: argparse.Namespace) -> dict[str, object]:
         emit("warning", {"code": "carla.parity_failed", "message": message[:4096]})
         raise RuntimeError(message)
     manifest_entries = _artifact_manifest_entries(result["artifacts"])
+    substitutions = result.get("substitutions")
+    if not isinstance(substitutions, list):
+        raise RuntimeError("native executor returned no substitutions list")
+    if substitutions and not policy.reports_substitutions:
+        raise CarlaRenderError(
+            "carla_substitutions_unreportable",
+            "the render made substitutions the lease cannot record",
+        )
+    warnings.extend(
+        {
+            "code": f"carla.substitution.{item['kind']}",
+            "message": f"{item['subject']}: rendered {item['rendered']} instead of {item['requested']}",
+        }
+        for item in substitutions
+    )
     artifact_manifest = {
         "schema": "simforge.render-artifact-manifest/v1",
         "intentSha256": intent_sha,
@@ -1088,7 +1259,14 @@ def _run_intent(args: argparse.Namespace) -> dict[str, object]:
         "startedAt": started_at,
         "completedAt": datetime.now(timezone.utc).isoformat(),
         "artifacts": manifest_entries,
-        "warnings": [],
+        "warnings": warnings,
+        # A newer control-plane field: written only when the lease lists it,
+        # with exactly the `RenderSubstitution` fields (details stay in the
+        # CARLA render manifest artifact).
+        **({"substitutions": [
+            {key: item[key] for key in ("kind", "subject", "requested", "rendered", "allowedBy")}
+            for item in substitutions
+        ]} if policy.reports_substitutions else {}),
     }
     manifest_path = Path(args.manifest)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1124,6 +1302,11 @@ def main() -> None:
     intent.add_argument("--output", required=True)
     intent.add_argument("--progress", required=True)
     intent.add_argument("--manifest", required=True)
+    intent.add_argument(
+        "--control-features", default="",
+        help="comma-separated lease controlFeatures (e.g. render-evidence.substitutions); "
+             "manifest fields beyond the baseline are written only when listed",
+    )
     preflight = commands.add_parser(
         "preflight-intent",
         help="validate a render intent, CARLA runtime, exact map, and vehicle without rendering",
@@ -1184,7 +1367,18 @@ def main() -> None:
         from .pose_smoke import run_pose_smoke
         result = run_pose_smoke(args.host, args.port, args.map, args.mode)
     else:
-        result = _run_intent(args)
+        try:
+            result = _run_intent(args)
+        except CarlaRenderError as exc:
+            # A policy refusal: print the machine code for the engine to
+            # report non-retryable, and exit distinctly from a crash.
+            print(json.dumps({
+                "schema": "simforge.carla-render-failure/v1",
+                "code": exc.code,
+                "message": str(exc)[:4096],
+                "retryable": False,
+            }, sort_keys=True))
+            raise SystemExit(3) from exc
     print(json.dumps(result, sort_keys=True))
     if args.command in {"probe-ticks", "pose-smoke"} and result.get("verdict") != "pass":
         raise SystemExit(1)

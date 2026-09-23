@@ -68,3 +68,22 @@ cargo run --release -- ../models/vehicle_sedan_lincoln_mkz.glb /tmp/out.png [--t
 
 Loads the GLB, applies the tint to `body_paint` (proving the slot convention),
 frames the scene AABB, saves a screenshot, exits.
+
+## 5. `riders/` — ridden two-wheelers (python3 + numpy)
+
+```sh
+# one-time, from CUE4Parse dumps of CARLA content (Bicycle, Motorcycle,
+# Blueprints/Vehicles/2Wheeled, Animations/Base, the seven rider walkers)
+SimforgeCarlaExport <content> skel.json --skel sks.txt          # SK_<bike> bones
+SimforgeCarlaExport <content> <bp-dir> --dumpbps bps.txt        # BP_<bike>, BP_Base2wheeledNew, AB_Biker
+SimforgeCarlaExport <content> <anim-dir> --animations           # AS_Pedestrian_BikeHands
+python3 riders/extract_rigs.py skel.json <bp-dir> riders/rigs.json
+# build (deterministic: same inputs, same bytes) + record
+cd riders && python3 build_riders.py --bike-dir ../../models \
+  --pedestrian-dir ../../../pedestrians-carla/models --out ../../models
+python3 finalize_riders.py   # manifest.json / ATTRIBUTION.json *_rider entries
+```
+
+`rigs.json` (Seat/Handler/Pedal bone positions, blueprint rider component) and
+`bikehands-pose.json` (the static grip pose) are committed, so rebuilding needs
+no CARLA content. See `../CONVENTIONS.md` § Ridden two-wheelers.

@@ -29,9 +29,16 @@ suite('native retained service GPU e2e', () => {
     const binary = process.env.SIMFORGE_NATIVE_RENDER_BINARY;
     const xoscPath = process.env.SIMFORGE_NATIVE_E2E_XOSC;
     const mapDirectory = process.env.SIMFORGE_NATIVE_E2E_MAP;
-    if (!binary || !xoscPath || !mapDirectory) {
-      throw new Error('native e2e requires SIMFORGE_NATIVE_RENDER_BINARY, SIMFORGE_NATIVE_E2E_XOSC, and SIMFORGE_NATIVE_E2E_MAP (a complete master directory)');
+    // The engine renders only from a render timeline (no xosc re-lowering): the
+    // timeline built from the same scenario's trace (`simforge render timeline`).
+    const timelinePath = process.env.SIMFORGE_NATIVE_E2E_TIMELINE;
+    if (!binary || !xoscPath || !mapDirectory || !timelinePath) {
+      throw new Error('native e2e requires SIMFORGE_NATIVE_RENDER_BINARY, SIMFORGE_NATIVE_E2E_XOSC, SIMFORGE_NATIVE_E2E_TIMELINE and SIMFORGE_NATIVE_E2E_MAP (a complete master directory with its map.xodr)');
     }
+    const timelineBytes = await fs.readFile(timelinePath);
+    const timelineSha256 = createHash('sha256').update(timelineBytes).digest('hex');
+    const xodrBytes = await fs.readFile(path.join(mapDirectory, 'map.xodr'));
+    const xodrSha256 = createHash('sha256').update(xodrBytes).digest('hex');
     await fs.rm(output, { recursive: true, force: true });
     await fs.mkdir(output, { recursive: true });
     const xosc = await fs.readFile(xoscPath);
@@ -77,7 +84,7 @@ suite('native retained service GPU e2e', () => {
       scenarioRevision: {
         revisionId: 'native-gpu-e2e-revision', scenarioSha256: 'b'.repeat(64),
         openScenario: { sha256: xoscSha256, sizeBytes: xosc.byteLength },
-        map: { mapId: plan.mapId, revisionId: 'native-corpus', sha256: 'c'.repeat(64) },
+        map: { mapId: plan.mapId, revisionId: 'native-corpus', sha256: xodrSha256 },
       },
       sensorHosts: [{ sourceId: 'front-rgb', actorId: actor.id, vehicleAsset: { catalogAssetId: hostCatalogId } }],
       renderSpec: {
@@ -99,12 +106,16 @@ suite('native retained service GPU e2e', () => {
         },
         authoredEnvironment: { weather: 'clear', timeOfDay: 'noon', surfacePatches: [] },
       },
-      assets: [{ assetId: actorClosure.inputId, kind: 'catalog', sha256: actorClosure.sha256, sizeBytes: actorClosure.sizeBytes }],
+      assets: [
+        { assetId: actorClosure.inputId, kind: 'catalog', sha256: actorClosure.sha256, sizeBytes: actorClosure.sizeBytes },
+        { assetId: 'render.timeline', kind: 'other', sha256: timelineSha256, sizeBytes: timelineBytes.byteLength },
+      ],
       seed: 1,
     };
     const inputRecords: RenderInputFile[] = [
       { inputId: 'scenario.xosc', path: xoscPath, sha256: xoscSha256, sizeBytes: xosc.byteLength },
       { inputId: actorClosure.inputId, path: closurePath, relativePath: actorClosure.relativePath, sha256: actorClosure.sha256, sizeBytes: actorClosure.sizeBytes },
+      { inputId: 'render.timeline', path: timelinePath, sha256: timelineSha256, sizeBytes: timelineBytes.byteLength },
     ];
     for (const entry of await fs.readdir(mapDirectory, { recursive: true, withFileTypes: true })) {
       if (!entry.isFile()) continue;

@@ -29,6 +29,43 @@ pub struct LidarConfig {
 }
 
 impl LidarConfig {
+    /// Azimuth steps per revolution the model supports.
+    pub const AZIMUTH_STEPS: std::ops::RangeInclusive<u32> = 64..=4096;
+
+    /// Reject a configuration the scan would otherwise reshape (the clamps in
+    /// [`Self::azimuth_steps`] and `channels.max(1)` in [`scan`]): the render
+    /// service validates every declared lidar with this before scanning.
+    pub fn validate(&self) -> Result<(), String> {
+        let bad = |what: String| Err(format!("[native_lidar_config_invalid] {what}"));
+        if self.channels == 0 {
+            return bad("channels is 0".into());
+        }
+        if !(self.rotation_frequency_hz.is_finite() && self.rotation_frequency_hz > 0.0) {
+            return bad(format!("rotation frequency {} Hz", self.rotation_frequency_hz));
+        }
+        if self.points_per_second == 0 {
+            return bad("points per second is 0".into());
+        }
+        if !(self.hfov_deg.is_finite() && self.hfov_deg > 0.0 && self.hfov_deg <= 360.0) {
+            return bad(format!("horizontal FOV {} deg (0, 360]", self.hfov_deg));
+        }
+        if !(self.vfov_deg.is_finite() && self.vfov_deg > 0.0 && self.vfov_deg < 180.0) {
+            return bad(format!("vertical FOV {} deg (0, 180)", self.vfov_deg));
+        }
+        if !(self.range_m.is_finite() && self.range_m > 0.0) {
+            return bad(format!("range {} m", self.range_m));
+        }
+        let per_channel =
+            (self.points_per_second as f32 / (self.channels as f32 * self.rotation_frequency_hz)).round() as u32;
+        if !Self::AZIMUTH_STEPS.contains(&per_channel) {
+            return bad(format!(
+                "{} points/s over {} channels at {} Hz is {per_channel} azimuth steps per revolution; the model supports {:?}",
+                self.points_per_second, self.channels, self.rotation_frequency_hz, Self::AZIMUTH_STEPS
+            ));
+        }
+        Ok(())
+    }
+
     pub fn azimuth_steps(&self) -> u32 {
         if self.rotation_frequency_hz <= 0.0 || self.channels == 0 {
             return 360;

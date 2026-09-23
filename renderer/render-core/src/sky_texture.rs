@@ -37,7 +37,7 @@ pub fn load_equirect(path: &Path) -> Result<Image> {
         1 => TextureFormat::Rgba8UnormSrgb,
         other => bail!("{path:?} has unknown SKYTEX format {other}"),
     };
-    let texel = format.block_copy_size(None).unwrap_or(4) as usize;
+    let texel = format.block_copy_size(None).unwrap_or(4) as usize; // fallback-ok: sky textures are uncompressed 4-byte formats
     let expected = width as usize * height as usize * texel;
     let payload = &bytes[HEADER..];
     if payload.len() != expected {

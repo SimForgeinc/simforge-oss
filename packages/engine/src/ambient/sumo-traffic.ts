@@ -51,9 +51,11 @@ import {
 } from './materialized-traffic.js';
 import type { ResolvedAmbientTrafficProfile } from './profile.js';
 import {
+  SUMO_VEHICLE_BODIES,
   sumoNetworkHeadingToScene,
   sumoNetworkToScene,
   sumoNumericSeed,
+  type SumoVehicleClass,
   sumoSceneHeadingToNetwork,
   sumoSceneToNetwork,
   validateSumoNetworkManifest,
@@ -76,8 +78,11 @@ import {
   type SumoSignalSynthesisReport,
 } from './sumo-signals.js';
 
-/** Bumped whenever the coupling, demand, signal rewrite or quantization changes output bytes. */
-export const SUMO_TRAFFIC_COUPLING_VERSION = 'simforge.sumo-traffic/v2';
+/**
+ * Bumped whenever the coupling, demand, signal rewrite or quantization changes output bytes.
+ * v3: the profile's `vehicleMix` draws each route slot's class (one vType and body per class).
+ */
+export const SUMO_TRAFFIC_COUPLING_VERSION = 'simforge.sumo-traffic/v3';
 export const SUMO_TRAFFIC_STEP_SECONDS = 0.02;
 export const SUMO_TRAFFIC_PRE_ROLL_SECONDS = SUMO_DEMAND_WARMUP_SECONDS;
 /** Largest float32 spacing tolerated for network coordinates (network extent < 4096 m). */
@@ -90,12 +95,8 @@ export const SUMO_TRAFFIC_TELEPORT_MARGIN_M = 8;
 /** Explicit origin every SUMO actor carries in the merged authoritative trace. */
 export const SUMO_TRAFFIC_ORIGIN = 'sumo';
 
-/** The rendered body of every SUMO vehicle, shared by SUMO car following and the renderers. */
-export const SUMO_TRAFFIC_VEHICLE = Object.freeze({
-  kind: 'car' as const,
-  catalogId: 'vehicle.sedan',
-  dims: Object.freeze({ l: 4.55, w: 1.82, h: 1.48 }),
-});
+/** The body of a SUMO `car`; every class's body is `SUMO_VEHICLE_BODIES`. */
+export const SUMO_TRAFFIC_VEHICLE = SUMO_VEHICLE_BODIES.car;
 
 export interface SumoTrafficNetwork {
   /** Exact bytes of the map's `derived/sumo/map.net.xml`. */
@@ -185,6 +186,12 @@ export interface SumoTrafficDiagnostics {
 export interface SumoTrafficResult {
   readonly key: string;
   readonly artifact: MaterializedTrafficArtifactEnvelope;
+  /**
+   * The class every recorded actor was simulated as (teleport splits keep
+   * their vehicle's class), keyed by trace actor id. The merge renders each
+   * actor with its class body; the artifact itself carries only `vehicle`.
+   */
+  readonly vehicleClasses: Readonly<Record<string, SumoVehicleClass>>;
   readonly diagnostics: SumoTrafficDiagnostics;
 }
 
@@ -257,6 +264,15 @@ function runSumoTrafficWithModule(
     throw new SumoTrafficError('sumo_trace_grid', 'authored trace ticks do not cover the clip on the fixed grid');
   }
   if (input.profile.preset === 'off') throw new SumoTrafficError('sumo_profile_off', 'ambient profile is off');
+  // SUMO demand is vehicles on passenger routes: it cannot produce the
+  // pedestrians or cyclists a profile asks for, and dropping them would
+  // simulate (and render) another traffic mix than the one authored.
+  if (input.profile.pedestrianShare > 0 || input.profile.cyclistShare > 0) {
+    throw new SumoTrafficError(
+      'sumo_road_user_share_unsupported',
+      `SUMO traffic generates vehicles only; the ambient profile asks for ${input.profile.pedestrianShare} pedestrians and ${input.profile.cyclistShare} cyclists (set both shares to 0 for SUMO)`,
+    );
+  }
   const manifest = input.network.manifest;
   validateSumoNetworkManifest(manifest, manifest.mapId);
   const networkSha256 = sha256Bytes(input.network.bytes);
@@ -313,15 +329,22 @@ function runSumoTrafficWithModule(
   const focuses = demandFocuses(sceneTrace);
   const corridor = sumoEdgesForRoadLanes(networkXml, authoredCorridorLanes(trace));
   const proxyEdge = sumoIsolatedProxyEdge(networkXml, manifest.routeCandidates);
-  const demand = planSumoDemand(manifest.routeCandidates, networkXml, transform, input.profile, focuses, {
-    ...SUMO_DEMAND_ROUTE_OPTIONS,
-    vehicleDimensions: {
-      lengthM: SUMO_TRAFFIC_VEHICLE.dims.l,
-      widthM: SUMO_TRAFFIC_VEHICLE.dims.w,
-      heightM: SUMO_TRAFFIC_VEHICLE.dims.h,
-    },
-    ...(proxyEdge ? { proxyRouteEdges: [proxyEdge] } : {}),
-  }, corridor);
+  let demand: ReturnType<typeof planSumoDemand>;
+  try {
+    demand = planSumoDemand(manifest.routeCandidates, networkXml, transform, input.profile, focuses, {
+      ...SUMO_DEMAND_ROUTE_OPTIONS,
+      // One vType per drawn class, each with its class body.
+      vehicleMix: true,
+      ...(proxyEdge ? { proxyRouteEdges: [proxyEdge] } : {}),
+    }, corridor);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const code = /^(sumo_[a-z0-9_]+):/u.exec(message)?.[1];
+    if (code) throw new SumoTrafficError(code, message);
+    throw error;
+  }
+  const classesByIdHash = demand.classesByIdHash!;
+  const vehicleClasses: Record<string, SumoVehicleClass> = {};
 
   const session = new SumoWasmSession(module);
   const recorder = new MaterializedTrafficRecorder({
@@ -353,7 +376,7 @@ function runSumoTrafficWithModule(
       session.step(dt);
     }
     const record = (tick: number) => {
-      const actors = continuity.apply(sceneActors(session, transform));
+      const actors = continuity.apply(sceneActors(session, transform, classesByIdHash, vehicleClasses));
       peakActors = Math.max(peakActors, actors.length);
       actors.forEach((actor) => uniqueActors.add(actor.id));
       recorder.record({ t: recorder.nextTime, actors, signals: {} });
@@ -380,9 +403,17 @@ function runSumoTrafficWithModule(
     session.close();
   }
   const artifact = recorder.finalize();
+  // Teleport splits (`<id>-t<n>`) are the same vehicle, of the same class.
+  const classes: Record<string, SumoVehicleClass> = {};
+  for (const actor of artifact.artifact.actors) {
+    const vehicleClass = vehicleClasses[actor.id.replace(/-t\d+$/u, '')];
+    if (!vehicleClass) throw new SumoTrafficError('sumo_vehicle_class_unknown', `SUMO actor ${actor.id} has no simulated class`);
+    classes[actor.id] = vehicleClass;
+  }
   return {
     key,
     artifact,
+    vehicleClasses: classes,
     diagnostics: {
       key,
       couplingVersion: SUMO_TRAFFIC_COUPLING_VERSION,
@@ -500,13 +531,26 @@ function sameProxy(previous: SumoExternalProxy | undefined, next: SumoExternalPr
     && previous.lengthM === next.lengthM && previous.widthM === next.widthM;
 }
 
-/** SUMO-driven vehicles in the scene frame, quantized, sorted by id. */
-function sceneActors(session: SumoWasmSession, transform: SumoNetworkWorldTransform): MaterializedTrafficFrameActor[] {
+/**
+ * SUMO-driven vehicles in the scene frame, quantized, sorted by id. Each one's
+ * class comes from the demand that inserted it; a vehicle the demand did not
+ * declare is refused, never given a default body.
+ */
+function sceneActors(
+  session: SumoWasmSession,
+  transform: SumoNetworkWorldTransform,
+  classesByIdHash: ReadonlyMap<number, SumoVehicleClass>,
+  classes: Record<string, SumoVehicleClass>,
+): MaterializedTrafficFrameActor[] {
   const actors = session.vehicles().map((vehicle) => {
     const scene = sumoNetworkToScene({ x: vehicle.x, y: vehicle.y }, transform);
     const headingDegrees = sumoNetworkHeadingToScene(vehicle.headingDegrees, transform);
+    const id = sumoTrafficActorId(vehicle.idHash);
+    const vehicleClass = classesByIdHash.get(vehicle.idHash >>> 0);
+    if (!vehicleClass) throw new SumoTrafficError('sumo_vehicle_class_unknown', `SUMO vehicle ${id} was not inserted by the planned demand`);
+    classes[id] = vehicleClass;
     return {
-      id: sumoTrafficActorId(vehicle.idHash),
+      id,
       kind: 'vehicle' as const,
       x: quantize(scene.x, SUMO_TRAFFIC_POSITION_QUANTUM_M),
       z: quantize(scene.z, SUMO_TRAFFIC_POSITION_QUANTUM_M),

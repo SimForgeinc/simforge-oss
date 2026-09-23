@@ -177,6 +177,11 @@ export function jobFailureMessage(job: {
     }
     if (detail && typeof detail === "object" && "message" in detail && typeof detail.message === "string") return detail.message;
   }
+  // Worker and control-plane policy codes (`render.carla_actors_dropped`): the
+  // namespace says nothing to an author, and `failureDetail` carries the message
+  // that names what is missing.
+  const policy = /^render\.((?:native|carla|render)_[a-z0-9_]+)$/.exec(job.failureCode);
+  if (policy) return humanizeCode(policy[1]!);
   return FAILURE_MESSAGES[job.failureCode] ?? humanizeCode(job.failureCode);
 }
 

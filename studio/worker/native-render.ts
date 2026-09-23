@@ -4,7 +4,7 @@ import { copyFile, link, mkdir, rename, rm, stat } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
-import type { RenderInputFile, RenderProgressRecord } from "@simforge-oss/render";
+import { RenderInputError, type RenderInputFile, type RenderProgressRecord } from "@simforge-oss/render";
 import { assertSafeNativeMapMemberPath, createRenderEngine } from "@simforge-oss/render/native";
 
 import { executeEngine, safeArtifactPath } from "./executor.js";
@@ -101,6 +101,21 @@ export async function runNativeClaim(
     }, engine);
   } finally {
     await engine.close?.();
+  }
+
+  // No engine warning is silently discarded (docs/engineering/no-silent-fallbacks.md):
+  // each becomes a job event the host shows with the render, and one that
+  // cannot be recorded fails the job rather than vanishing.
+  for (const warning of execution.runtimeManifest.warnings) {
+    await client.event(claim, "warning", { code: warning.code, message: warning.message.slice(0, 2_000) }, signal);
+  }
+
+  // The native engine reports degraded output by failing, never by a warning
+  // (docs/engineering/no-silent-fallbacks.md); a warning here is an engine
+  // that did not, and its output is not uploaded as a final render.
+  const warnings = execution.runtimeManifest.warnings;
+  if (warnings.length > 0) {
+    throw new RenderInputError("native_render_degraded", `the native engine reported degraded output: ${warnings.map((warning) => `${warning.code}: ${warning.message}`).join("; ")}`);
   }
 
   const artifacts: NativeCompletionArtifact[] = [];

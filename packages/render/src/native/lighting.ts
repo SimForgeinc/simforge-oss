@@ -1,11 +1,15 @@
-import { z } from 'zod';
 
 import type { Environment, TimeOfDay, Weather } from '@simforge-oss/scenario';
 import {
+  EnvironmentExtensionError,
   LIGHTING_EXTENSION_KEY,
-  SCENE_TIME_EXTENSION_KEY,
-  resolveEditorLightingOverrides,
+  parseRenderLightingOverrides,
+  parseRenderSceneMinutes,
+  sceneClockSunAngles,
+  type EditorLightingOverrides,
 } from '@simforge-oss/scenario/contracts';
+
+import { RenderInputError } from '../render-input-error.js';
 
 /**
  * The scenario's environment as the native renderer's `Lighting` and
@@ -16,15 +20,73 @@ import {
  * same cinematic profile. A campaign render of "cloudy at 19:55" is the lab's
  * "cloudy at 19:55". Every value the renderer would otherwise default is sent
  * explicitly, so the manifest names the look.
+ *
+ * The sun is placed at the map's own site (its OpenDRIVE `geoReference`) on
+ * the scene clock, which is local civil time there. Nothing about the look is
+ * silently substituted: a malformed extension block, an explicit sun the
+ * renderer cannot place, weather it cannot draw or a site whose civil time is
+ * unknown fails the render.
  */
 
-/** Corpus site (Palo Alto), the lab's `SITE_*`. */
-export const SITE_LAT_DEG = 37.44;
-export const SITE_LON_DEG = -122.14;
-/** Scene clock is PDT. */
-export const SITE_TZ_OFFSET_H = -7;
-/** Day of year the scene clock runs on when the scenario does not say. */
+/** Day of year the scene clock runs on: the scenario schema has no date, so this is the product's documented date. */
 export const DEFAULT_DAY_OF_YEAR = 172;
+
+/** Where and in which civil time the scene clock runs: the map origin. */
+export interface NativeLightingSite {
+  readonly latitudeDeg: number;
+  readonly longitudeDeg: number;
+  /** Civil UTC offset of the scene clock on {@link DEFAULT_DAY_OF_YEAR}. */
+  readonly utcOffsetHours: number;
+  readonly timeZone: string;
+}
+
+/**
+ * Civil time zones the scene clock can run in, as the UTC offset they keep on
+ * {@link DEFAULT_DAY_OF_YEAR} (summer: daylight time). A site outside every
+ * zone is refused rather than given another zone's clock.
+ */
+const SITE_TIME_ZONES: readonly {
+  readonly timeZone: string;
+  readonly utcOffsetHours: number;
+  readonly latitude: readonly [number, number];
+  readonly longitude: readonly [number, number];
+}[] = [
+  // California, Oregon, Washington, Nevada.
+  { timeZone: 'America/Los_Angeles (PDT)', utcOffsetHours: -7, latitude: [32.5, 49], longitude: [-124.8, -114] },
+  // Germany, Austria, Switzerland, Benelux, Czechia, Poland, Denmark.
+  { timeZone: 'Europe/Berlin (CEST)', utcOffsetHours: 2, latitude: [45.8, 55.1], longitude: [2.5, 24.2] },
+];
+
+/**
+ * The lighting site of a map from its OpenDRIVE header: the transverse
+ * Mercator origin (`+lat_0`, `+lon_0`) every SimForge map is georeferenced
+ * with, and the civil zone that contains it (`native_lighting_site_unknown`
+ * when either is missing).
+ */
+export function nativeLightingSiteFromOpenDrive(xodr: string, mapId: string): NativeLightingSite {
+  const geoReference = /<geoReference>\s*(?:<!\[CDATA\[)?([^<\]]*)(?:\]\]>)?\s*<\/geoReference>/u.exec(xodr)?.[1]?.trim();
+  if (!geoReference) {
+    throw new RenderInputError('native_lighting_site_unknown', `map ${mapId} has no OpenDRIVE geoReference; the sun cannot be placed`);
+  }
+  const parameter = (name: string): number | undefined => {
+    const match = new RegExp(`(?:^|\\s)\\+${name}=(-?[0-9.]+)(?:\\s|$)`, 'u').exec(geoReference);
+    const value = match ? Number(match[1]) : Number.NaN;
+    return Number.isFinite(value) ? value : undefined;
+  };
+  const latitudeDeg = parameter('lat_0');
+  const longitudeDeg = parameter('lon_0');
+  if (!/(?:^|\s)\+proj=tmerc(?:\s|$)/u.test(geoReference) || latitudeDeg === undefined || longitudeDeg === undefined
+    || Math.abs(latitudeDeg) > 90 || Math.abs(longitudeDeg) > 180) {
+    throw new RenderInputError('native_lighting_site_unknown', `map ${mapId} geoReference "${geoReference}" is not a transverse Mercator origin with +lat_0/+lon_0`);
+  }
+  const zone = SITE_TIME_ZONES.find((candidate) =>
+    latitudeDeg >= candidate.latitude[0] && latitudeDeg <= candidate.latitude[1]
+    && longitudeDeg >= candidate.longitude[0] && longitudeDeg <= candidate.longitude[1]);
+  if (!zone) {
+    throw new RenderInputError('native_lighting_site_unknown', `map ${mapId} lies at ${latitudeDeg}, ${longitudeDeg}, where the scene clock has no known civil time zone`);
+  }
+  return { latitudeDeg, longitudeDeg, utcOffsetHours: zone.utcOffsetHours, timeZone: zone.timeZone };
+}
 
 /** Renderer weather label (`render_core::weather::Weather`). */
 export type NativeWeather = 'clear' | 'cloudy' | 'overcast' | 'fog' | 'rain';
@@ -66,10 +128,11 @@ export function weatherPreset(weather: Weather): WeatherPreset {
     case 'wet_road': return { ...WEATHER_PRESETS.overcast, wetness: 0.7 };
     case 'fog_light': return { ...WEATHER_PRESETS.fog, cloudCover: 0.6, visibilityM: 600, wetness: 0.1 };
     case 'fog_dense': return WEATHER_PRESETS.fog;
-    // Snow and sleet have no air-mass state of their own in the renderer:
-    // an overcast sky with a wet road is what they look like from the car.
-    case 'snow': return { ...WEATHER_PRESETS.overcast, visibilityM: 2_000, wetness: 0.3 };
-    case 'sleet': return { ...WEATHER_PRESETS.overcast, visibilityM: 3_000, wetness: 0.8 };
+    // The renderer has no falling snow, sleet or snow cover: drawing an
+    // overcast wet road instead would render a different scenario.
+    case 'snow':
+    case 'sleet':
+      throw new RenderInputError('native_weather_unsupported', `the native renderer cannot draw ${weather}`);
   }
 }
 
@@ -84,22 +147,36 @@ export const PRESET_MINUTES: Readonly<Record<TimeOfDay, number>> = {
   night_lit: 21 * 60,
 };
 
-/** Studio's `org.simforge.sceneTime.v1` block: the exact authored clock. */
-const SceneTimeBlock = z.object({ minutes: z.number().finite() }).passthrough();
-
-/** Scene clock in minutes past midnight PDT: the exact authored time, else the preset's. */
-export function sceneMinutes(environment: Environment): number {
-  const stored = SceneTimeBlock.safeParse(environment.extensions?.[SCENE_TIME_EXTENSION_KEY]);
-  if (stored.success) return ((stored.data.minutes % 1440) + 1440) % 1440;
-  return PRESET_MINUTES[environment.timeOfDay];
+function environmentExtension<T>(read: () => T): T {
+  try {
+    return read();
+  } catch (error) {
+    if (error instanceof EnvironmentExtensionError) {
+      throw new RenderInputError('render_environment_extension_invalid', `scenario environment extension ${error.message}`, { extension: error.extension });
+    }
+    throw error;
+  }
 }
 
 /**
- * NOAA low-precision solar position at the corpus site. Elevation and
- * compass azimuth in degrees; the lab's `solar_position`, to the same
- * three decimals.
+ * Scene clock in local minutes past midnight: the exact authored time
+ * (`org.simforge.sceneTime.v1`), else the time-of-day preset's documented
+ * minutes. A malformed clock block fails (`render_environment_extension_invalid`).
  */
-export function solarPosition(timeMinutes: number, dayOfYear = DEFAULT_DAY_OF_YEAR): { elevationDeg: number; azimuthDeg: number } {
+export function sceneMinutes(environment: Environment): number {
+  const exact = environmentExtension(() => parseRenderSceneMinutes(environment));
+  return exact ?? PRESET_MINUTES[environment.timeOfDay];
+}
+
+/**
+ * NOAA low-precision solar position at `site`. Elevation and compass azimuth
+ * in degrees; the lab's `solar_position`, to the same three decimals.
+ */
+export function solarPosition(
+  timeMinutes: number,
+  dayOfYear: number,
+  site: Pick<NativeLightingSite, 'latitudeDeg' | 'longitudeDeg' | 'utcOffsetHours'>,
+): { elevationDeg: number; azimuthDeg: number } {
   const gamma = 2 * Math.PI / 365 * (dayOfYear - 1 + (timeMinutes / 60 - 12) / 24);
   const eqtime = 229.18 * (
     0.000075
@@ -115,10 +192,10 @@ export function solarPosition(timeMinutes: number, dayOfYear = DEFAULT_DAY_OF_YE
     + 0.000907 * Math.sin(2 * gamma)
     - 0.002697 * Math.cos(3 * gamma)
     + 0.00148 * Math.sin(3 * gamma);
-  const timeOffset = eqtime + 4 * SITE_LON_DEG - 60 * SITE_TZ_OFFSET_H;
+  const timeOffset = eqtime + 4 * site.longitudeDeg - 60 * site.utcOffsetHours;
   const trueSolar = timeMinutes + timeOffset;
   const hourAngle = (trueSolar / 4 - 180) * Math.PI / 180;
-  const lat = SITE_LAT_DEG * Math.PI / 180;
+  const lat = site.latitudeDeg * Math.PI / 180;
   const cosZenith = Math.max(-1, Math.min(1,
     Math.sin(lat) * Math.sin(decl) + Math.cos(lat) * Math.cos(decl) * Math.cos(hourAngle)));
   const zenith = Math.acos(cosZenith);
@@ -218,33 +295,64 @@ export interface NativeLightingResolution {
     readonly sceneMinutes: number;
     readonly dayOfYear: number;
     readonly sunSource: 'solar-model';
+    readonly site: NativeLightingSite;
     readonly overrides: Readonly<Record<string, number>>;
   };
 }
 
 /**
+ * Authored sun angles the renderer cannot honour: azimuth is corridor-relative
+ * (`environment.sunAzimuthDeg`) and the render has no corridor frame to place
+ * it in. Angles Studio derived from the scene clock (`sceneClockSunAngles`)
+ * are the clock's shadow, not a sun of their own, and the solar model places
+ * that clock's sun.
+ */
+function assertNoExplicitSun(environment: Environment, exactMinutes: number | null): void {
+  const { sunAzimuthDeg: azimuth, sunElevationDeg: elevation } = environment;
+  if (azimuth === undefined && elevation === undefined) return;
+  if (exactMinutes !== null) {
+    const derived = sceneClockSunAngles(exactMinutes);
+    if (typeof azimuth === 'number' && typeof elevation === 'number'
+      && Math.abs(azimuth - derived.azimuthDeg) < 1e-6 && Math.abs(elevation - derived.elevationDeg) < 1e-6) {
+      return;
+    }
+  }
+  throw new RenderInputError(
+    'native_lighting_sun_override_unsupported',
+    `the scenario authors its own sun (azimuth ${JSON.stringify(azimuth)} deg corridor-relative, elevation ${JSON.stringify(elevation)} deg); the native renderer places the sun from the scene clock and cannot resolve a corridor-relative azimuth`,
+  );
+}
+
+/**
  * Resolve a scenario environment into the renderer's lighting.
  *
- * The sun always comes from the solar model at the scene clock — the same
- * NOAA position the lab uses — not from the authored `sunElevationDeg`,
- * which Studio derives from a sinusoid and whose azimuth is corridor-relative.
- * Studio's lighting block (`org.simforge.lighting.v1`) is honoured as the
- * lab's normalized knobs: `sun`/`ambient` scale the resolved sources,
- * `exposure` is a bias on the meter, `visibilityM` and `haze` replace the
- * preset's air. `sky` and `sunWarmth` have no physical counterpart under the
- * atmosphere and are reported, not applied.
+ * The sun comes from the solar model at the scene clock and the map's site —
+ * the same NOAA position the lab uses. Sun angles the scenario authors
+ * explicitly are refused (`native_lighting_sun_override_unsupported`), not
+ * overwritten. Studio's lighting block (`org.simforge.lighting.v1`) is
+ * honoured as the lab's normalized knobs: `sun`/`ambient`/`sky` scale the
+ * resolved sources, `exposure` is a bias on the meter, `visibilityM` and
+ * `haze` replace the preset's air. `sunWarmth` has no counterpart under the
+ * physical atmosphere: a non-neutral value is refused.
  */
 export function resolveNativeLighting(
   environment: Environment,
-  options: { readonly dayOfYear?: number; readonly cloudFixedStepS?: number } = {},
+  options: { readonly site: NativeLightingSite; readonly dayOfYear?: number; readonly cloudFixedStepS?: number },
 ): NativeLightingResolution {
   const preset = weatherPreset(environment.weather);
-  const minutes = sceneMinutes(environment);
+  const exactMinutes = environmentExtension(() => parseRenderSceneMinutes(environment));
+  const minutes = exactMinutes ?? PRESET_MINUTES[environment.timeOfDay];
+  assertNoExplicitSun(environment, exactMinutes);
+  const site = options.site;
   const dayOfYear = options.dayOfYear ?? DEFAULT_DAY_OF_YEAR;
-  const sun = solarPosition(minutes, dayOfYear);
-  const overrides = resolveEditorLightingOverrides(environment);
-  const utcMinutes = (minutes - 60 * SITE_TZ_OFFSET_H) % 1440;
-  const utcDay = 1 + ((dayOfYear - 1 + (minutes - 60 * SITE_TZ_OFFSET_H >= 1440 ? 1 : 0)) % 365);
+  const sun = solarPosition(minutes, dayOfYear, site);
+  const overrides: EditorLightingOverrides = environmentExtension(() => parseRenderLightingOverrides(environment));
+  if (overrides.sunWarmth !== undefined && overrides.sunWarmth !== 0) {
+    throw new RenderInputError('native_lighting_sun_warmth_unsupported', `authored sunWarmth ${overrides.sunWarmth} has no counterpart in the native renderer's physical sun`);
+  }
+  const utcMinutes = (((minutes - 60 * site.utcOffsetHours) % 1440) + 1440) % 1440;
+  const utcDayShift = Math.floor((minutes - 60 * site.utcOffsetHours) / 1440);
+  const utcDay = 1 + ((((dayOfYear - 1 + utcDayShift) % 365) + 365) % 365);
   const lighting: NativeLighting = {
     sun_elev_deg: sun.elevationDeg,
     sun_azim_deg: sun.azimuthDeg,
@@ -268,8 +376,8 @@ export function resolveNativeLighting(
       utc_year: 2026,
       utc_day_of_year: utcDay,
       utc_minutes: utcMinutes,
-      latitude_deg: 37.4419,
-      longitude_deg: -122.143,
+      latitude_deg: site.latitudeDeg,
+      longitude_deg: site.longitudeDeg,
       elevation_m: 15,
       natural_ambient_lux: 0.002,
       urban_skyglow_lux: 0.05,
@@ -298,6 +406,7 @@ export function resolveNativeLighting(
       sceneMinutes: minutes,
       dayOfYear,
       sunSource: 'solar-model',
+      site,
       overrides: Object.fromEntries(
         Object.entries(overrides).filter((entry): entry is [string, number] => typeof entry[1] === 'number'),
       ),

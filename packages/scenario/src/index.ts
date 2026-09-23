@@ -290,3 +290,4 @@ export {
   type StorageLike,
   type WebScenarioFileStoreOptions,
 } from './stores/web.js';
+export * from './scene-actor-class.js';
