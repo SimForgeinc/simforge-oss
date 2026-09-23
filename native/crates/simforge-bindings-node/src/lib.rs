@@ -1602,7 +1602,8 @@ pub struct JsTrace {
 
 #[napi]
 impl JsTrace {
-    /// Parse plain or gzip current-format trace JSON; older formats are rejected.
+    /// Parse plain or gzip trace JSON of any released format; older formats
+    /// are upgraded in memory (see `upgradeJson`), unknown ones rejected.
     #[napi(factory)]
     pub fn parse(data: Uint8Array) -> Result<Self> {
         Ok(Self {
@@ -1612,6 +1613,12 @@ impl JsTrace {
     #[napi]
     pub fn digest(&self) -> Result<String> {
         self.inner.digest().js()
+    }
+    /// `simforge.trace-upgrade/v1` JSON when the stored trace was an older
+    /// format upgraded in memory; `null` for a current-format trace.
+    #[napi]
+    pub fn upgrade_json(&self) -> Result<Option<String>> {
+        self.inner.upgrade_json().js()
     }
     #[napi]
     pub fn to_json(&self) -> Result<String> {

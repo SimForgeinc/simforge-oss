@@ -118,6 +118,16 @@ jobs:
           cargo test --manifest-path native/Cargo.toml -p simforge-core --test canonical_json_vectors
         env:
           CARGO_TARGET_DIR: native/target
+      - name: Archive corpus (fixtures/archive-corpus/README.md)
+        # Artifacts from every past release still load, upgrade in memory,
+        # keep their identity and replay the same motion through a CPU-built
+        # render timeline. Append-only; adding to it is a release step.
+        run: |
+          pnpm archive-corpus:verify
+          cargo test --manifest-path native/Cargo.toml -p simforge-core --test archive_corpus
+          pnpm --filter @simforge-oss/scenario exec vitest run src/__tests__/archive-corpus.test.ts
+        env:
+          CARGO_TARGET_DIR: native/target
       - name: OpenSCENARIO conformance (docs/engineering/openscenario-conformance.md)
         # Primary suite: SimForge vs the ASAM-derived oracle and the storyboard
         # protocol properties (hand-written probes are esmini evidence only).
