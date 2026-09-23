@@ -4,17 +4,15 @@
 goldens/<gpuFingerprint>/<scene>.json
 ```
 
-- `<gpuFingerprint>`: first 16 hex of sha256 over canonical
-  `{gpus:[{name,driverVersion,vbiosVersion,pciBusId}], kernel, arch}` from the
-  same nvidia-smi query as WSB4's `qualification/render-determinism/gpu-fingerprint.mjs`.
-  Current entry: `75b333b1506af34f` = NVIDIA GeForce RTX 5080, driver 595.84,
-  vbios 98.03.6C.00.3E, PCI 00000000:02:00.0.
+- `<gpuFingerprint>`: the adapter-of-record fingerprint (lavapipe build + CPU
+  model; `lib/fingerprint.mjs`, docs/engineering/native-golden-ci.md). Goldens
+  are recorded and verified on Mesa lavapipe, never on a GPU: NVIDIA drivers
+  are not run-to-run byte-stable for this renderer.
+  Current entry: `c398eadcadbd2754` = llvmpipe (LLVM 20.1.2, 256 bits), Mesa
+  25.2.8-0ubuntu0.24.04.2, Intel Core Ultra 9 285K (the 5080 box's CPU).
 - One file per scene; full evidence manifest (schema
   `simforge-oss.render-determinism-manifest.v1`, extensions in
-  `docs/native-golden-ci.md`). Gates read `passHashes` + `timings.avgFrameMs`.
-- `0c79cc9fe7b267f4` = NVIDIA GeForce RTX 3080, driver 595.91.07 (the dev
-  Bevy worker box): render-timeline actor scenes (`richmond-06-timeline`,
-  `yale-05-timeline`).
+  `docs/engineering/native-golden-ci.md`). Gates read `passHashes`.
 
 ## Renderer
 
@@ -26,7 +24,7 @@ and, for parity scenes, `observe`); the manifest records the binary
 (`rendererPath.file`, `sha256`) and the full job (`rendererPath.invocation`).
 Artifacts follow the job layout: `<outDir>/<sensor>/<tick:08>.<pass>.png`
 (`rgb`, `id`, `semantic`), `.depth.f32.bin`, lidar `<tick:08>.ply`, plus
-`results.json` (per-tick timings, which feed the frame-time gate; one-tick
+`results.json` (per-tick timings, recorded and gated only with GOLDEN_FRAME_BUDGET; one-tick
 jobs have none).
 
 Actor substitutions a scene declares (`actorModelRefs`,
@@ -42,12 +40,11 @@ gpu fingerprint × renderer binary (`rendererPath.sha256`) × render config
 
 ## Current status
 
-The hash files under `75b333b1506af34f/` and `0c79cc9fe7b267f4/` were
-recorded with the retired renderer binaries (single-shot job, timeline
-playback, Pronto capture) and their Sensor look, under the old artifact layout. They
-are retired evidence: every scene must be re-recorded with `simforge-render`
-(rc.75) before the gate is armed again; `verify` reports missing keys as
-drift until then.
+Recorded 2026-09-23 on lavapipe (`c398eadcadbd2754`) with `simforge-render`
+(perf/gpu-deep). The yale-frame0 and yale-pronto scenes render the
+yale-street master (same world frame as the retired spike and WSB1 tiles,
+which no longer exist). The GPU-keyed tables recorded with the retired
+binaries are deleted (git history keeps them).
 
 The timeline scenes' fixtures were regenerated on 2026-09-23 from their
 source traces (edge cases 05/06, engine 0.7.0; trace `inputHash`

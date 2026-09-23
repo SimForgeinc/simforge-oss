@@ -45,6 +45,7 @@ use bevy::render::render_resource::{
     RenderPassColorAttachment, RenderPassDescriptor, RenderPipelineDescriptor, ShaderStages, ShaderType,
     TextureFormat, TextureSampleType,
 };
+use bevy::render::diagnostic::RecordDiagnostics;
 use bevy::render::renderer::{RenderContext, RenderDevice, RenderQueue, ViewQuery};
 use bevy::render::sync_component::SyncComponent;
 use bevy::render::texture::GpuImage;
@@ -435,7 +436,10 @@ fn camera_model_pass(
         &pipeline_cache.get_bind_group_layout(&pipelines.apply_layout),
         &BindGroupEntries::sequential((binding, post.source, buffers.result.as_entire_binding())),
     );
+    let diagnostics = ctx.diagnostic_recorder();
+    let diagnostics = diagnostics.as_deref();
     let encoder = ctx.command_encoder();
+    let span = diagnostics.time_span(encoder, "camera_model");
     // The histogram starts from zero every frame: nothing carries over.
     encoder.clear_buffer(&buffers.histogram, 0, None);
     {
@@ -462,6 +466,8 @@ fn camera_model_pass(
     pass.set_pipeline(apply);
     pass.set_bind_group(0, &apply_group, &[offset.0]);
     pass.draw(0..3, 0..1);
+    drop(pass);
+    span.end(encoder);
 }
 
 /// The exposure a camera program realises for a final EV100: aperture
