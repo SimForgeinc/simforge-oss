@@ -121,3 +121,28 @@ Model authentication and quota are part of the recorded scoreboard row; a failed
 ## Baseline ledger
 
 The baseline ledger is committed only after a real run. It must include the full report path, exact command, engine, corpus identity and machine fingerprint. Do not fill these fields with estimates. If a leg cannot be captured, leave its metric `null` and state the operational reason in the report. In particular, a browser-only machine cannot claim native timings, and an ffmpeg build without libvmaf cannot claim VMAF.
+
+## Map load (web studio)
+
+`pnpm bench:map-load` (`scripts/benchmarks/map-load-benchmark.mjs`) measures how long a map takes to become usable and interactive in the web studio, per map, rendering setting (`low-no-foliage`, `low`, `medium`) and surface (scenario editor, free drive). It runs a real Chrome with GPU flags (`--gpu vulkan`, the default, is ANGLE on Vulkan), cold then warm: the first run of each (map, setting) starts from an empty profile, and every later run reuses the profile with a fresh browser process. A warm run is a returning user whose map cache holds everything.
+
+```sh
+# Against a local host (private SIMFORGE_CLOUD_ROOT; never the user's ~/.simforge/cloud):
+pnpm bench:map-load --base-url http://127.0.0.1:5199 --data-root "$SIMFORGE_CLOUD_ROOT" \
+  --maps richmond-field-station,belmont-research-center --settings low-no-foliage,medium \
+  --modes editor,drive --runs 4 --budgets config/bench/map-load-budgets.json --out artifacts/bench/map-load
+# Against a deployment: SIMFORGE_BENCH_EMAIL / SIMFORGE_BENCH_PASSWORD instead of --data-root.
+# --trace writes a Chrome trace (with CPU samples) of the last warm run of each surface.
+```
+
+Stages, in milliseconds after navigation start:
+
+- `contextMs`: the viewer's WebGL2 context exists, i.e. the application has booted.
+- `firstFrameMs`: the viewer's first map draw.
+- `usableMs`: roads and every in-view cell are on screen.
+- `interactiveMs`: the surface accepts input. For the editor, the world is loaded. For drive, the session has its car and no status overlay.
+- `fullMs`: nothing is loading, queued or uploading.
+
+Structural counts: Cache Storage reads and bytes, map network requests, Basis transcodes, meshopt decodes, browser-pack inflates, compressed texture bytes uploaded, programs linked, albedo GPU readbacks and main-thread long tasks.
+
+The run exits 1 when a budget in `config/bench/map-load-budgets.json` is exceeded. Time budgets bound the warm median; count budgets bound the warm maximum, because a structural regression (a map without its pack, a Basis transcode on a GPU-native tier) shows up in every run. The budget evaluator is unit-tested in CI (`pnpm test:bench`). The benchmark itself runs on the RTX 5080 self-hosted runner (`.github/workflows/map-load-bench.yml`): a load-time budget is only meaningful on the GPU it was set on. Every run records the host's one-minute load average, because the 5080 box is shared, and a run on a busy host is not evidence of a regression.
