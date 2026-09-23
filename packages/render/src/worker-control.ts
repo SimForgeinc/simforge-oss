@@ -63,7 +63,9 @@ export const WORKER_CONTROL_FEATURES_V1 = 'v1' as const;
  */
 export const CONTROL_FEATURE_NATIVE_SCENE_SOURCE = 'native-evidence.scene-source' as const;
 export const CONTROL_FEATURE_NATIVE_PARITY = 'native-evidence.parity' as const;
-export const CONTROL_FEATURES_V1 = [CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY] as const;
+/** `timings.stages` in native run diagnostics (per-stage service and host timings). */
+export const CONTROL_FEATURE_NATIVE_STAGE_TIMINGS = 'native-evidence.stage-timings' as const;
+export const CONTROL_FEATURES_V1 = [CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS] as const;
 
 export const JobInputTransferSchema = z.strictObject({
   inputId: z.string().min(1).max(256),

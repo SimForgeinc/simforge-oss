@@ -18,7 +18,7 @@ import {
   type RenderInputFile,
   type RenderInputSelectionContext,
 } from '../index.js';
-import { CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_SCENE_SOURCE } from '../worker-control.js';
+import { CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS } from '../worker-control.js';
 import { parseRenderIntent, type RenderSourceV3 } from '@simforge-oss/scenario';
 
 import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
@@ -35,6 +35,7 @@ import { resolveActorAssets, resolveEncoder, resolveNativeRenderService } from '
 import { resolveNativeLighting } from './lighting.js';
 import { collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInputId, NATIVE_MAP_MASTER_INPUT_ID } from './map-closure.js';
 import { NativeGpuMemoryError, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
+import { NATIVE_STAGE_TIMINGS_V1_SCHEMA, StageSamples, splitServiceStages, type NativeStageTimings } from './stage-timings.js';
 
 export const NATIVE_RENDER_ENGINE_ID = 'bevy-retained';
 /** Per-RPC budgets for a started service (the start itself scales with the scene: `nativeStartupTimeoutMs`). */
@@ -152,6 +153,8 @@ interface Encoder {
   readonly path: string;
   readonly stderr: string[];
   readonly completion: Promise<unknown[]>;
+  /** ffmpeg video encoder (`libx264`, `h264_nvenc`). */
+  readonly codec: string;
   frames: number;
 }
 
@@ -177,7 +180,7 @@ function startEncoder(ffmpeg: string, outputPath: string, source: RenderSourceV3
   });
   return {
     source, width: format.width, height: format.height, framesPerSecond: format.framesPerSecond,
-    process: child, path: outputPath, stderr, completion: once(child, 'exit'), frames: 0,
+    process: child, path: outputPath, stderr, completion: once(child, 'exit'), codec: 'libx264', frames: 0,
   };
 }
 
@@ -233,6 +236,19 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
     async execute(context: RenderExecutionContext): Promise<RenderArtifactManifest> {
       const startedAt = new Date().toISOString();
       const wallStarted = performance.now();
+      // Stage timings (`timings.stages`): one-off phases, per-tick service
+      // stages from each bundle response, and per-tick host stages.
+      const startupMs: Record<string, number> = {};
+      let phaseStarted = wallStarted;
+      const phase = (name: string): void => {
+        const now = performance.now();
+        startupMs[name] = (startupMs[name] ?? 0) + (now - phaseStarted);
+        phaseStarted = now;
+      };
+      const serverStages = new StageSamples();
+      const clientStages = new StageSamples();
+      const counters: Record<string, number> = {};
+      const tickRecords: string[] = [];
       await fs.mkdir(context.workspace, { recursive: true });
       const intent = parseRenderIntent(context.intent);
       const sources = intent.renderSpec.sources;
@@ -262,6 +278,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       if (context.gpuMemory && textureProfile.estimatedBytes > context.gpuMemory.freeBytes) {
         throw new NativeGpuMemoryError(textureProfile.estimatedBytes, context.gpuMemory, intent.renderTextures);
       }
+      phase('textureProfile');
       const masterPath = textureProfile.masterPath;
       await writeJson(path.join(context.workspace, 'native-texture-profile.json'), textureProfile);
       const { masterPath: _stagedPath, ...textureEvidence } = textureProfile;
@@ -294,6 +311,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         ...(packagedActorRoot ? {} : { treeRoot: path.join(actorCacheDir, 'trees') }),
       });
 
+      phase('actorAssets');
       // The render contract is the render timeline: sample the authoritative
       // trace through the shared sampler. Re-lowering the derived xosc is a
       // labelled fallback for execution packages that predate the timeline.
@@ -317,6 +335,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         warnings.push({ code: 'scene_source_openscenario_legacy', message: 'no render.timeline input; poses were re-lowered from the derived OpenSCENARIO export' });
       }
       assertActorAppearanceGrounded(lowering.appearances, intent.sensorHosts, actorAssets);
+      phase('lowering');
       const cameraSchedule = createNativeCameraSchedule(sources, intent.sensorHosts, lowering.states);
       const sensorRigs = createNativeSensorRigs(sources, intent.sensorHosts);
       // Lidar and radar videos ride the cameras' fixed-step clock: one frame
@@ -364,6 +383,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       // Scene load is the longest silent stretch of a large-map job: report
       // it as `preparing` seconds against a budget that scales with the scene.
       const startupTimeoutMs = options.startupTimeoutMs ?? nativeStartupTimeoutMs(textureProfile);
+      phase('sceneSpec');
       const loadStarted = performance.now();
       const loadTicker = setInterval(() => {
         const elapsedS = Math.min(startupTimeoutMs / 1000, (performance.now() - loadStarted) / 1000);
@@ -382,6 +402,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       } finally {
         clearInterval(loadTicker);
       }
+      phase('serviceStart');
       const { client } = session;
 
       const encoders = new Map<string, Encoder>();
@@ -400,6 +421,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         // heartbeating lease) forever. The first bundle also compiles
         // pipelines, so it gets the longer budget.
         await client.rpc({ op: 'load_scene_state', states: lowering.states }, NATIVE_LOAD_STATE_TIMEOUT_MS);
+        phase('loadSceneState');
         const cameras = cameraSchedule;
         await fs.mkdir(path.join(context.workspace, 'video'), { recursive: true });
         for (const source of sources) {
@@ -417,11 +439,19 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
             archives.set(source.outputName, await openSensorArchive(path.join(context.workspace, 'sensors', `${source.outputName}.zip`)));
           }
         }
+        phase('encoderStart');
         const wantedMicros = new Map<string, Set<number>>();
         for (const [sourceId, schedule] of scheduleBySource) wantedMicros.set(sourceId, new Set(scheduleFrameMicros(schedule)));
 
         for (let tick = 0; tick < lowering.states.length; tick += 1) {
           if (context.signal.aborted) throw context.signal.reason instanceof Error ? context.signal.reason : new Error('native render aborted');
+          const tickStarted = performance.now();
+          const tickClient: Record<string, number> = {};
+          const clientStage = (name: string, since: number): number => {
+            const now = performance.now();
+            tickClient[name] = (tickClient[name] ?? 0) + (now - since);
+            return now;
+          };
           const response = await client.renderBundle({
             sim_tick: tick, tick_index: tick, cameras: cameras[tick], passes: ['rgb'],
             // The non-camera rig is retained by the service: declare it once.
@@ -433,6 +463,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           }
           serverMs += response.server_ms ?? 0;
           frameIdentities.push(response.frame);
+          let clientMark = clientStage('bundleRpc', tickStarted);
+          const service = splitServiceStages(response.stages);
+          for (const [stage, ms] of Object.entries(service.durations)) serverStages.add(stage, ms);
+          serverStages.add('total', response.server_ms ?? 0);
+          for (const [counter, value] of Object.entries(service.counts)) counters[counter] = (counters[counter] ?? 0) + value;
           if (observing) {
             const observation = await client.observeActors();
             if (observation === null) {
@@ -447,6 +482,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
                 })),
               }));
             }
+            clientMark = clientStage('observe', clientMark);
           }
           const frameMicros = Math.round(lowering.frameTimes[tick]! * 1_000_000);
           for (const frame of response.frames) {
@@ -455,15 +491,19 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
               const rasterizer = rasterizers.get(frame.sensorId);
               if (!encoder || !rasterizer) throw new Error(`native service returned unknown ${frame.pass} sensor ${frame.sensorId}`);
               const payload = await client.readFrame(frame);
+              clientMark = clientStage('read', clientMark);
               const rgba = rasterizer instanceof LidarVideoRasterizer
                 ? rasterizer.frame(parseLidarPly(payload))
                 : rasterizer.frame(parseRadarCsv(payload));
+              clientMark = clientStage('raster', clientMark);
               if (!encoder.process.stdin.write(rgba)) await once(encoder.process.stdin, 'drain');
               encoder.frames += 1;
+              clientMark = clientStage('encodeWrite', clientMark);
               const archive = archives.get(frame.sensorId);
               if (archive) {
                 const extension = frame.pass === 'lidar' ? 'ply' : 'csv';
                 await archive.writer.add(`tick-${String(tick).padStart(6, '0')}.${extension}`, payload, context.signal);
+                clientMark = clientStage('archive', clientMark);
               }
               continue;
             }
@@ -471,18 +511,28 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
             const encoder = encoders.get(frame.sensorId);
             if (!encoder) throw new Error(`native service returned unknown camera ${frame.sensorId}`);
             const rgba = stripRgbaPadding(await client.readFrame(frame), frame.width, frame.height);
+            clientMark = clientStage('read', clientMark);
             if (!encoder.process.stdin.write(rgba)) await once(encoder.process.stdin, 'drain');
             encoder.frames += 1;
+            clientMark = clientStage('encodeWrite', clientMark);
           }
           const total = lowering.states.length;
           // Every ~1% (at least each second-ish tick group) and the last tick: enough for a live bar, not a flood.
           if (tick + 1 === total || (tick + 1) % Math.max(1, Math.floor(total / 100)) === 0) {
             await context.reportProgress({ ...progressBase(), event: 'stage.progress', stage: 'rendering', completed: tick + 1, total, unit: 'frames' });
+            clientMark = clientStage('progress', clientMark);
           }
+          const tickMs = performance.now() - tickStarted;
+          clientStages.add('tick', tickMs);
+          for (const [stage, ms] of Object.entries(tickClient)) clientStages.add(stage, ms);
+          tickRecords.push(JSON.stringify({ tick, tickMs, serverMs: response.server_ms ?? null, server: response.stages ?? null, client: tickClient }));
         }
+        phase('ticks');
         await context.reportProgress({ ...progressBase(), event: 'stage.progress', stage: 'encoding', completed: 0, total: 1, unit: 'items' });
         await Promise.all([...encoders.values()].map(finishEncoder));
+        phase('encoderFinish');
         for (const archive of archives.values()) archive.receipt = await archive.writer.close(context.signal);
+        phase('archiveClose');
         await context.reportProgress({ ...progressBase(), event: 'stage.progress', stage: 'encoding', completed: 1, total: 1, unit: 'items' });
         encodingComplete = true;
       } finally {
@@ -494,6 +544,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           for (const archive of archives.values()) await archive.writer.abort(new Error('native render did not complete'));
         }
         await session.close();
+        phase('serviceClose');
       }
 
       // The parity gate: with a timeline, every drawn actor must match the
@@ -521,6 +572,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         ...(parity ? { parity } : {}),
       });
       const traceDigest = await hashFile(tracePath);
+      phase('parityAndTrace');
       if (parity && !parity.pass) {
         throw new Error(`native_render_parity_failed: max ${parity.maxPositionErrorM.toExponential(3)} m / ${parity.maxHeadingErrorDeg.toFixed(4)} deg heading, ${parity.presenceMismatches} presence mismatches (tolerance 1e-3 m / 0.05 deg)`);
       }
@@ -603,6 +655,21 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         mediaType: 'application/json', frameCount: null,
       });
 
+      phase('evidence');
+      const stageTimings: NativeStageTimings = {
+        schema: NATIVE_STAGE_TIMINGS_V1_SCHEMA,
+        ticks: frameIdentities.length,
+        startupMs,
+        server: serverStages.summary(),
+        client: clientStages.summary(),
+        counters,
+        encoders: Object.fromEntries([...encoders.values()].map((encoder) => [encoder.source.outputName, encoder.codec])),
+      };
+      // Per-tick detail stays in the workspace (not an uploaded artifact);
+      // the summary goes to the worker log and, when accepted, the evidence.
+      await fs.mkdir(path.join(context.workspace, 'diagnostics'), { recursive: true });
+      await fs.writeFile(path.join(context.workspace, 'diagnostics', 'native-stages.jsonl'), `${tickRecords.join('\n')}\n`);
+      console.error(JSON.stringify({ event: 'native.stage_timings', jobId: context.jobId, wallMs: performance.now() - wallStarted, serverMs, ...stageTimings }));
       const diagnosticsRelative = 'diagnostics/native-run.json';
       const diagnosticsPath = path.join(context.workspace, diagnosticsRelative);
       await writeJson(diagnosticsPath, NativeRunDiagnosticsSchema.parse({
@@ -627,7 +694,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           maxPitchErrorDeg: parity.maxPitchErrorDeg, maxRollErrorDeg: parity.maxRollErrorDeg,
           presenceMismatches: parity.presenceMismatches,
         } } : {}),
-        timings: { wallMs: performance.now() - wallStarted, serverMs },
+        timings: {
+          wallMs: performance.now() - wallStarted,
+          serverMs,
+          ...(features.has(CONTROL_FEATURE_NATIVE_STAGE_TIMINGS) ? { stages: stageTimings } : {}),
+        },
       }));
       const diagnosticsDigest = await hashFile(diagnosticsPath);
       artifacts.push({

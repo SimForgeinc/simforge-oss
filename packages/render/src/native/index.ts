@@ -32,6 +32,8 @@ export {
 export type {
   HostParsedEvidence, NativeEvidenceFailure, TolerantParseIssue, TolerantParseSchema, NativeRenderManifest, NativeReservedArtifact, NativeRunDiagnostics, NativeRunExpectations,
 } from './evidence.js';
+export { NATIVE_STAGE_TIMINGS_V1_SCHEMA, NativeStageTimingsSchema, StageSamples, splitServiceStages, summarizeStage } from './stage-timings.js';
+export type { NativeStageTimings, StageSummary } from './stage-timings.js';
 export { NATIVE_SERVICE_PROTOCOL, NativeServiceClient, NativeServiceTimeoutError, stripRgbaPadding } from './service-client.js';
 export type {
   NativeBundleResponse, NativeFrameIdentity, NativeFrameRecord, NativeServiceConnectOptions, NativeServiceResponse,
