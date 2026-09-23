@@ -191,6 +191,11 @@ impl Default for SkyPass {
 pub struct SkyClock {
     pub seconds: f64,
     pub fixed_step: Option<f32>,
+    /// Simulation time the clock is pinned to (`SceneApp::set_sim_time`):
+    /// while set, rendering frames never moves the sky, so a capture's
+    /// clouds are a function of its scene time, not of how many frames the
+    /// renderer happened to draw before it.
+    pub pinned: Option<f64>,
     origin: Option<std::time::Instant>,
 }
 
@@ -199,6 +204,7 @@ impl Default for SkyClock {
         Self {
             seconds: 0.0,
             fixed_step: None,
+            pinned: None,
             origin: None,
         }
     }
@@ -210,6 +216,11 @@ impl SkyClock {
     /// frames in between. Recordings set `fixed_step` and the clock becomes a
     /// pure function of the frame index instead.
     pub fn advance(&mut self) -> f32 {
+        if let Some(seconds) = self.pinned {
+            let step = (seconds - self.seconds) as f32;
+            self.seconds = seconds;
+            return step;
+        }
         match self.fixed_step {
             Some(step) => {
                 self.seconds += step as f64;

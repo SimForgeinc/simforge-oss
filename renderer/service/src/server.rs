@@ -67,6 +67,32 @@ pub struct SceneSpec {
     /// printing a white sky). Off, the incident meter alone sets exposure.
     #[serde(default = "default_true")]
     pub auto_meter: bool,
+    /// Directory for the content-addressed static sensor BVH cache (the
+    /// first lidar/radar request on a map builds it; later services load it).
+    #[serde(default)]
+    pub sensor_cache_dir: Option<String>,
+    /// `free` (default; rc.73 semantics: captures depend on how many frames
+    /// were drawn) or `pinned` (a capture is a function of its scene and
+    /// simulation time; see `render_core::engine::CaptureClock`).
+    #[serde(default)]
+    pub capture_clock: Option<String>,
+    /// Jittered frames a pinned capture accumulates on TAA views (default 4).
+    #[serde(default)]
+    pub taa_samples: Option<u32>,
+}
+
+impl SceneSpec {
+    pub fn capture_clock(&self) -> Result<render_core::engine::CaptureClock> {
+        match self.capture_clock.as_deref() {
+            None | Some("free") => Ok(render_core::engine::CaptureClock::Free),
+            Some("pinned") => {
+                let samples = self.taa_samples.unwrap_or(4);
+                anyhow::ensure!((1..=16).contains(&samples), "taaSamples must be 1..=16, got {samples}");
+                Ok(render_core::engine::CaptureClock::Pinned { samples })
+            }
+            Some(other) => anyhow::bail!("unknown captureClock {other:?} (free | pinned)"),
+        }
+    }
 }
 
 fn default_true() -> bool {
@@ -87,13 +113,23 @@ fn default_warmup() -> u32 {
 /// The warmup cameras are registered before the readiness barrier so the
 /// pipelines the real rig will need are compiled up front.
 pub fn prewarm(spec: &SceneSpec) -> Result<SceneApp> {
+    let clock = spec.capture_clock()?;
+    let mut phases: Vec<(String, f64)> = Vec::new();
+    let mut mark = std::time::Instant::now();
+    let mut phase = |name: &str, mark: &mut std::time::Instant| {
+        phases.push((name.to_string(), mark.elapsed().as_secs_f64()));
+        *mark = std::time::Instant::now();
+    };
     let mut app =
         SceneApp::new_with_profile_config(&spec.lighting, spec.profile_config)?;
+    app.set_capture_clock(clock);
+    phase("device", &mut mark);
     // The constructor spawns the ladder with calibration defaults (IBL gain
     // 1.0, no EV bias); only a relight resolves the spec's `ambient_scale`,
     // `ev100_bias`, weather and night controls. A scene that never receives a
     // `set_lighting` request must still render the lighting it declared.
     app.apply_lighting(&spec.lighting, spec.profile_config)?;
+    phase("lighting", &mut mark);
     app.load_tiles(&spec.glbs)?;
     app.load_vegetation(&spec.veg_glbs)?;
     // Bevy's atmosphere bindings are a per-view mesh layout. Mixing a
@@ -124,10 +160,20 @@ pub fn prewarm(spec: &SceneSpec) -> Result<SceneApp> {
         );
     }
     let _legend = app.wait_until_ready()?;
+    phase("ready", &mut mark);
     app.warmup(spec.warmup_frames);
+    phase("warmup", &mut mark);
     // Prewarm views must not consume render/readback work in every service
     // tick; real retained-rig cameras are registered on first request.
     app.clear_cameras();
+    let mut record = serde_json::Map::new();
+    for (name, seconds) in phases {
+        record.insert(name, serde_json::json!(seconds));
+    }
+    for (name, value) in app.ready_phases() {
+        record.insert(format!("ready.{name}"), serde_json::json!(value));
+    }
+    eprintln!("prewarm-phases: {}", serde_json::Value::Object(record));
     Ok(app)
 }
 
@@ -209,6 +255,149 @@ pub(crate) fn build_map_sensor_scenes(
     })
 }
 
+/// Format/algorithm tag of the sensor-scene cache key: bump with any change
+/// to how the map scenes are derived from the triangle snapshot.
+const SENSOR_SCENE_CACHE_VERSION: &str = "simforge.sensor-scenes/v1";
+/// Maps whose scenes stay cached; older entries are pruned by mtime.
+const SENSOR_SCENE_CACHE_KEEP: usize = 3;
+
+/// Content key of the map scenes: the exact triangle snapshot (bit
+/// patterns and instance ids, in snapshot order) and which instances are road.
+fn sensor_scene_cache_key(triangles: &[SensorTriangle], legend: &HashMap<u32, String>) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(SENSOR_SCENE_CACHE_VERSION.as_bytes());
+    hasher.update((triangles.len() as u64).to_le_bytes());
+    let mut chunk = Vec::with_capacity(40 * 16_384);
+    for part in triangles.chunks(16_384) {
+        chunk.clear();
+        for tri in part {
+            for c in tri.a.iter().chain(&tri.b).chain(&tri.c) {
+                chunk.extend_from_slice(&c.to_bits().to_le_bytes());
+            }
+            chunk.extend_from_slice(&tri.instance_id.to_le_bytes());
+        }
+        hasher.update(&chunk);
+    }
+    let mut roads: Vec<u32> = legend
+        .iter()
+        .filter(|(_, name)| sensors::taxonomy::SemanticClass::from_mesh_name(name) == sensors::taxonomy::SemanticClass::Road)
+        .map(|(id, _)| *id)
+        .collect();
+    roads.sort_unstable();
+    hasher.update((roads.len() as u64).to_le_bytes());
+    for id in roads {
+        hasher.update(id.to_le_bytes());
+    }
+    format!("{:x}", hasher.finalize())
+}
+
+fn read_cached_scene(path: &Path) -> std::io::Result<RaycastScene> {
+    let file = std::fs::File::open(path)?;
+    RaycastScene::read_from(&mut std::io::BufReader::with_capacity(8 << 20, file))
+}
+
+fn load_cached_sensor_scenes(dir: &Path, key: &str) -> Option<MapSensorScenes> {
+    let static_path = dir.join(format!("{key}.static.bvh"));
+    let road_path = dir.join(format!("{key}.road.bvh"));
+    if !static_path.is_file() || !road_path.is_file() {
+        return None;
+    }
+    let loaded = std::thread::scope(|scope| {
+        let road = scope.spawn(|| read_cached_scene(&road_path));
+        let static_scene = read_cached_scene(&static_path);
+        (static_scene, road.join().expect("road scene load panicked"))
+    });
+    match loaded {
+        (Ok(static_scene), Ok(road)) => {
+            // Touch for the keep-newest pruning.
+            let now = std::time::SystemTime::now();
+            for path in [&static_path, &road_path] {
+                let _ = std::fs::File::options().append(true).open(path).and_then(|file| file.set_modified(now));
+            }
+            Some(MapSensorScenes { static_scene, road })
+        }
+        (static_scene, road) => {
+            eprintln!(
+                "sensor-scenes: cache entry {key} unreadable ({:?} / {:?}); rebuilding",
+                static_scene.err(),
+                road.err()
+            );
+            None
+        }
+    }
+}
+
+/// Free bytes on the filesystem holding `dir` (unknown: `None`).
+fn free_bytes(dir: &Path) -> Option<u64> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        let path = std::ffi::CString::new(dir.as_os_str().as_bytes()).ok()?;
+        let mut stat: libc::statvfs = unsafe { std::mem::zeroed() };
+        if unsafe { libc::statvfs(path.as_ptr(), &mut stat) } != 0 {
+            return None;
+        }
+        Some(stat.f_bavail as u64 * stat.f_frsize as u64)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = dir;
+        None
+    }
+}
+
+/// Keep this much of the cache filesystem free after a write.
+const SENSOR_SCENE_CACHE_HEADROOM_BYTES: u64 = 20 << 30;
+
+/// Write both scenes atomically (temp + rename), then prune old maps.
+/// Skips (returns `false`) when the write would leave the filesystem with
+/// less than [`SENSOR_SCENE_CACHE_HEADROOM_BYTES`] free.
+fn store_cached_sensor_scenes(dir: &Path, key: &str, scenes: &MapSensorScenes) -> std::io::Result<bool> {
+    std::fs::create_dir_all(dir)?;
+    let needed = 48 + (scenes.static_scene.triangle_count() + scenes.road.triangle_count()) as u64 * 60;
+    if let Some(free) = free_bytes(dir) {
+        if free < needed + SENSOR_SCENE_CACHE_HEADROOM_BYTES {
+            eprintln!(
+                "sensor-scenes: not caching {key}: {:.1} GB needed, {:.1} GB free (keeping {} GB headroom)",
+                needed as f64 / 1e9,
+                free as f64 / 1e9,
+                SENSOR_SCENE_CACHE_HEADROOM_BYTES >> 30
+            );
+            return Ok(false);
+        }
+    }
+    for (suffix, scene) in [("road", &scenes.road), ("static", &scenes.static_scene)] {
+        let path = dir.join(format!("{key}.{suffix}.bvh"));
+        let tmp = dir.join(format!("{key}.{suffix}.bvh.{}.tmp", std::process::id()));
+        let written = (|| {
+            let mut out = std::io::BufWriter::with_capacity(8 << 20, std::fs::File::create(&tmp)?);
+            scene.write_to(&mut out)?;
+            std::io::Write::flush(&mut out)?;
+            std::fs::rename(&tmp, &path)
+        })();
+        if let Err(error) = written {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(error);
+        }
+    }
+    let mut entries: Vec<(std::time::SystemTime, String)> = std::fs::read_dir(dir)?
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            let name = entry.file_name().into_string().ok()?;
+            let key = name.strip_suffix(".static.bvh")?.to_string();
+            Some((entry.metadata().ok()?.modified().ok()?, key))
+        })
+        .collect();
+    entries.sort_by(|a, b| b.0.cmp(&a.0));
+    for (_, stale) in entries.into_iter().skip(SENSOR_SCENE_CACHE_KEEP) {
+        for suffix in ["static", "road"] {
+            let _ = std::fs::remove_file(dir.join(format!("{stale}.{suffix}.bvh")));
+        }
+    }
+    Ok(true)
+}
+
 struct CombinedSensorScene<'a> {
     static_scene: &'a RaycastScene,
     actor_scene: &'a RaycastScene,
@@ -260,7 +449,22 @@ pub struct ServiceState {
     radars: Vec<ServiceRadar>,
     /// Static map BVHs, built on first lidar/radar render or episode and
     /// reused for every later tick (see [`MapSensorScenes`]).
-    sensor_scenes: Option<MapSensorScenes>,
+    sensor_scenes: Option<std::sync::Arc<MapSensorScenes>>,
+    /// Whether caching the built scenes waits for the write (the one-shot
+    /// `--build-sensor-cache` mode) or leaves it to a background thread.
+    pub sync_sensor_cache_writes: bool,
+    /// Content-addressed cache of the static map scenes (see [`SceneSpec::sensor_cache_dir`]).
+    sensor_cache_dir: Option<PathBuf>,
+    /// Static legend id -> sensor class, built with the sensor scenes.
+    static_sensor_classes: Option<std::sync::Arc<HashMap<u32, sensors::taxonomy::SemanticClass>>>,
+    /// Something that can queue new pipelines or materials (a camera, a
+    /// spawned actor or model, a relight) changed since the last readiness
+    /// wait. Under a pinned capture clock readiness runs only then; the
+    /// capture itself still verifies the GPU was idle and retries if not.
+    needs_settle: bool,
+    /// Run a tick's lidar/radar scans while the GPU renders it (on by
+    /// default; outputs are verified bit-identical to the serial path).
+    pub overlap_sensors: bool,
     vehicle_models: Option<VehicleModelCatalog>,
     pedestrian_models: Option<VehicleModelCatalog>,
     actor_model_refs: HashMap<String, PathBuf>,
@@ -275,12 +479,28 @@ pub struct ServiceState {
     pending_export: Option<render_core::gpu_interop::ExportedStream>,
 }
 
+/// What [`ServiceState::ensure_sensor_scenes_outcome`] did.
+pub struct SensorScenesOutcome {
+    /// Content key of the map scenes (`None` without a cache directory).
+    pub key: Option<String>,
+    /// Loaded from the cache instead of built.
+    pub loaded: bool,
+    pub triangles: usize,
+}
+
 impl ServiceState {
     /// Build the map's sensor scenes if nothing has needed them yet. Logs
     /// progress: on a large map this runs for minutes inside one request.
     fn ensure_sensor_scenes(&mut self) {
-        if self.sensor_scenes.is_some() {
-            return;
+        if self.sensor_scenes.is_none() {
+            self.ensure_sensor_scenes_outcome();
+        }
+    }
+
+    /// [`Self::ensure_sensor_scenes`], reporting whether the cache served it.
+    pub fn ensure_sensor_scenes_outcome(&mut self) -> SensorScenesOutcome {
+        if let Some(scenes) = &self.sensor_scenes {
+            return SensorScenesOutcome { key: None, loaded: true, triangles: scenes.static_scene.triangle_count() };
         }
         let started = std::time::Instant::now();
         let triangles = self.app.sensor_triangles(false);
@@ -289,6 +509,21 @@ impl ServiceState {
             triangles.len()
         );
         let snapshot_s = started.elapsed().as_secs_f64();
+        let cache = self.sensor_cache_dir.clone().map(|dir| {
+            let key = sensor_scene_cache_key(&triangles, &self.legend);
+            (dir, key)
+        });
+        let triangle_count = triangles.len();
+        if let Some((dir, key)) = &cache {
+            if let Some(scenes) = load_cached_sensor_scenes(dir, key) {
+                self.sensor_scenes = Some(std::sync::Arc::new(scenes));
+                eprintln!(
+                    "sensor-scenes: loaded cached {key} in {:.1} s (triangle snapshot {snapshot_s:.1} s)",
+                    started.elapsed().as_secs_f64()
+                );
+                return SensorScenesOutcome { key: Some(key.clone()), loaded: true, triangles: triangle_count };
+            }
+        }
         // A heartbeat while the BVHs build, so a watcher of the service log
         // sees progress instead of a silent minute on a large map.
         let done = std::sync::atomic::AtomicBool::new(false);
@@ -311,12 +546,56 @@ impl ServiceState {
             done.store(true, std::sync::atomic::Ordering::Relaxed);
             scenes
         });
-        self.sensor_scenes = Some(scenes);
         eprintln!(
             "sensor-scenes: built in {:.1} s (triangle snapshot {:.1} s)",
             started.elapsed().as_secs_f64(),
             snapshot_s
         );
+        let scenes = std::sync::Arc::new(scenes);
+        if let Some((dir, key)) = &cache {
+            // Writing a large map's trees takes a while: a render keeps
+            // rendering while it lands (temp + rename, so readers never see
+            // a partial entry); the one-shot build mode waits for it.
+            let (dir, key, shared) = (dir.clone(), key.clone(), scenes.clone());
+            let write = move || {
+                let stored = std::time::Instant::now();
+                match store_cached_sensor_scenes(&dir, &key, &shared) {
+                    Ok(true) => eprintln!("sensor-scenes: cached {key} in {:.1} s", stored.elapsed().as_secs_f64()),
+                    Ok(false) => {}
+                    Err(error) => eprintln!("sensor-scenes: could not cache {key}: {error}"),
+                }
+            };
+            if self.sync_sensor_cache_writes {
+                write();
+            } else {
+                std::thread::Builder::new().name("sensor-cache-write".into()).spawn(write).ok();
+            }
+        }
+        self.sensor_scenes = Some(scenes);
+        SensorScenesOutcome { key: cache.map(|(_, key)| key), loaded: false, triangles: triangle_count }
+    }
+
+    /// Classes of the frozen static legend, resolved once: the legend never
+    /// changes after readiness and dynamic actors take ids beyond it.
+    fn static_sensor_classes(&mut self) -> std::sync::Arc<HashMap<u32, sensors::taxonomy::SemanticClass>> {
+        if let Some(classes) = &self.static_sensor_classes {
+            return classes.clone();
+        }
+        let classes: HashMap<u32, sensors::taxonomy::SemanticClass> = self
+            .legend
+            .iter()
+            .map(|(instance_id, name)| {
+                let class = self
+                    .app
+                    .actor_instance_class(*instance_id)
+                    .map(sensors::taxonomy::SemanticClass::from_actor_class)
+                    .unwrap_or_else(|| sensors::taxonomy::SemanticClass::from_mesh_name(name));
+                (*instance_id, class)
+            })
+            .collect();
+        let classes = std::sync::Arc::new(classes);
+        self.static_sensor_classes = Some(classes.clone());
+        classes
     }
 
     /// Whether the map sensor scenes exist (tests, diagnostics).
@@ -367,6 +646,15 @@ impl ServiceState {
             lidars: Vec::new(),
             radars: Vec::new(),
             sensor_scenes: None,
+            sync_sensor_cache_writes: false,
+            static_sensor_classes: None,
+            needs_settle: true,
+            sensor_cache_dir: spec
+                .sensor_cache_dir
+                .clone()
+                .or_else(|| std::env::var("SIMFORGE_NATIVE_SENSOR_CACHE_DIR").ok().filter(|dir| !dir.is_empty()))
+                .map(PathBuf::from),
+            overlap_sensors: std::env::var("SIMFORGE_NATIVE_SERIAL_SENSORS").map_or(true, |value| value.is_empty() || value == "0"),
             vehicle_models,
             pedestrian_models,
             actor_model_refs: spec
@@ -587,7 +875,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
                 let tick=frame.tick;
                 let time_seconds=tick as f64/frame.tick_hz as f64;
                 replace_episode_frame(state,frame);
-                let response=render_bundle_op(state,i,tick as u64,None,None,None,Some(0),Some(vec!["rgb".into()]),Vec::new());
+                let response=render_bundle_op(state,i,tick as u64,None,None,None,Some(0),Some(vec!["rgb".into()]),Vec::new(),Some(time_seconds));
                 match response.body {
                     ResponseBody::RenderBundle {frame,frames,..}=>history.push(crate::proto::EpisodeImageHistory {time_seconds,frame,frames}),
                     body=>return WireResponse {i,body},
@@ -700,6 +988,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             };
             match outcome {
                 Ok((resolved, full_relight)) => {
+                    state.needs_settle = true;
                     state.profile_config = profile_config;
                     state.lighting_authored = lighting.clone();
                     state.auto_meter_view = None;
@@ -747,6 +1036,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             tick_index,
             passes,
             device_sensors,
+            sim_time_s,
         } => render_bundle_op(
             state,
             i,
@@ -757,6 +1047,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             tick_index,
             passes,
             device_sensors.unwrap_or_default(),
+            sim_time_s,
         ),
         RequestBody::EncodeJpeg { items } => encode_jpeg_op(state, i, items),
         RequestBody::OpenDeviceStream { sensor_id, passes, slots, wait_ms } => {
@@ -796,8 +1087,9 @@ fn render_episode(state: &mut ServiceState, i: u64) -> WireResponse {
     let consumer=state.episode.as_ref().unwrap().consumer.clone();
     let mut passes=vec!["rgb".into()];
     if consumer.depth.is_some() {passes.push("depth".into());}
+    let tick_hz = state.scene[0].tick_hz;
     let response = render_bundle_op(state, i, tick as u64, None, None, None,
-        Some(0), Some(passes), Vec::new());
+        Some(0), Some(passes), Vec::new(), (tick_hz > 0.0).then(|| f64::from(tick) / f64::from(tick_hz)));
     match response.body {
         ResponseBody::RenderBundle { frame, frames, bundle_offset, bundle_len, server_ms, sensor_to_policy, .. } => {
             WireResponse { i, body: ResponseBody::Episode {
@@ -882,7 +1174,9 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
                 if !body_centred {
                     body_position=(Vec3::from_array(position)+rotation*Vec3::new(0.0,dims[1]*0.5,0.0)).to_array();
                 }
-                state.actor_extents.insert(actor.id.clone(), dims);
+                if state.actor_extents.insert(actor.id.clone(), dims).is_none() {
+                    state.needs_settle = true;
+                }
                 state.app.upsert_actor(
                     &actor.id,
                     &class,
@@ -924,6 +1218,7 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
                                 1.0
                             }
                         });
+                        state.needs_settle = true;
                         if let Err(error) = state.app.attach_actor_asset(
                             &actor.id,
                             glb_path,
@@ -1139,6 +1434,7 @@ fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera) {
     let prefix = format!("{}:", cam.sensor_id);
     state.cache.retain(|key, _| !key.starts_with(&prefix));
     state.app.add_camera(spec, profile);
+    state.needs_settle = true;
 }
 
 /// Bring the resident rig in line with `cameras` for this tick: register
@@ -1620,6 +1916,7 @@ fn render_bundle_op(
     tick_index: Option<u32>,
     passes: Option<Vec<String>>,
     device_sensors: Vec<String>,
+    sim_time_s: Option<f64>,
 ) -> WireResponse {
     let t0 = std::time::Instant::now();
     let mut stages = crate::proto::BundleStages::default();
@@ -1666,14 +1963,54 @@ fn render_bundle_op(
             return WireResponse::error(i, format!("render_bundle: device sensor {sensor_id:?} is not in the rig"));
         }
     }
+    // The sky of this capture: its simulation time (pinned clock only).
+    let sim_time = sim_time_s.or_else(|| {
+        let frame = state.scene.get(state.current_tick? as usize)?;
+        (frame.tick_hz > 0.0).then(|| f64::from(frame.tick) / f64::from(frame.tick_hz))
+    });
+    if let Some(seconds) = sim_time {
+        state.app.set_sim_time(seconds);
+    }
     let mark = std::time::Instant::now();
-    match state.app.wait_for_capture_ready() {
-        Ok(updates) => stages.readiness_updates = updates,
-        Err(error) => return WireResponse::error(i, format!("capture readiness: {error:#}")),
+    let pinned = state.app.capture_clock() != render_core::engine::CaptureClock::Free;
+    if !pinned || state.needs_settle {
+        match state.app.wait_for_capture_ready() {
+            Ok(updates) => stages.readiness_updates = updates,
+            Err(error) => return WireResponse::error(i, format!("capture readiness: {error:#}")),
+        }
+        state.needs_settle = false;
     }
     stages.readiness_ms = ms(mark);
+    let sensors_wanted = !lidar_rig.is_empty() || !radar_rig.is_empty();
+    let policy_host = policy_host_frame(state);
+    let mut early_work = None;
+    if sensors_wanted {
+        let mark = std::time::Instant::now();
+        state.ensure_sensor_scenes();
+        stages.sensor_scenes_ms = ms(mark);
+        if state.overlap_sensors {
+            let mark = std::time::Instant::now();
+            match prepare_sensor_work(state, &lidar_rig, &radar_rig, policy_host) {
+                Ok(work) => early_work = Some(work),
+                Err(error) => return WireResponse::error(i, error),
+            }
+            stages.sensor_setup_ms = ms(mark);
+        }
+    }
     let mark = std::time::Instant::now();
-    let captured = match capture_bundle(state, sim_tick, &host_keys, &device_sensors) {
+    // Lidar/radar for this tick run on their own thread (the ray pool) while
+    // the GPU renders and reads back the cameras.
+    let scenes = state.sensor_scenes.clone();
+    let (captured, early_result) = std::thread::scope(|scope| {
+        let scan = match (&early_work, &scenes) {
+            (Some(work), Some(scenes)) => Some(scope.spawn(move || run_sensor_work(&scenes.static_scene, work))),
+            _ => None,
+        };
+        let captured = capture_bundle(state, sim_tick, &host_keys, &device_sensors);
+        (captured, scan.map(|handle| handle.join().expect("sensor scan thread panicked")))
+    });
+    drop(scenes);
+    let captured = match captured {
         Ok(captured) => captured,
         Err(error) => return WireResponse::error(i, format!("render: {error:#}")),
     };
@@ -1685,20 +2022,13 @@ fn render_bundle_op(
         stages.readback_wait_ms = capture.readback_wait_ms;
         stages.readback_copy_ms = capture.readback_copy_ms;
         stages.readback_bytes = capture.readback_bytes;
+        stages.accumulation_frames = capture.accumulation_frames;
     }
     let mark = std::time::Instant::now();
 
     let start_cursor = state.shm.cursor_total();
     let mut frames: Vec<FrameRecord> = Vec::new();
     let mut sensor_to_policy=std::collections::BTreeMap::new();
-    let policy_host=state.episode.as_ref().and_then(|episode| {
-        let frame=state.scene.get(state.current_tick? as usize)?;
-        let actor=frame.actors.iter().find(|actor|actor.id==episode.ego_id)?;
-        let p=actor.transform.position;
-        let origin=Vec3::new(p[0],actor_base_y(p[1],frame.ground_y,state.app.ground_at(p[0],p[2])),p[2]);
-        Some(render_core::coordinates::SensorFrame::from_bevy_pose(origin,
-            Quat::from_rotation_y(quat_yaw(&actor.transform.rotation))))
-    });
     let mut entries: Vec<BundleEntry> = Vec::new();
     let published = PassSet { rgb: want.rgb, id: want_id_output, depth: want.depth };
     for cam in &rig {
@@ -1717,164 +2047,36 @@ fn render_bundle_op(
     }
     stages.publish_cameras_ms = ms(mark);
     let mut sensor_payload_mark = None;
-    if !lidar_rig.is_empty() || !radar_rig.is_empty() {
+    if sensors_wanted {
+        // The scans read the world as the capture left it. An overlapped scan
+        // ran on a snapshot taken before the capture; it is published only
+        // when that snapshot is bit-identical to one taken now, else the
+        // scans rerun serially on the current world.
         let mark = std::time::Instant::now();
-        state.ensure_sensor_scenes();
-        stages.sensor_scenes_ms = ms(mark);
-        let mark = std::time::Instant::now();
-        let actor_scene = build_sensor_scene(state.app.sensor_triangles(true));
-        stages.actor_scene_ms = ms(mark);
-        let setup_mark = std::time::Instant::now();
-        let combined_scene = CombinedSensorScene {
-            static_scene: &state.sensor_scenes.as_ref().expect("sensor scenes built").static_scene,
-            actor_scene: &actor_scene,
+        let current = match prepare_sensor_work(state, &lidar_rig, &radar_rig, policy_host) {
+            Ok(work) => work,
+            Err(error) => return WireResponse::error(i, error),
         };
-        let mut instance_velocities = HashMap::new();
-        let tick_hz = state
-            .current_tick
-            .and_then(|index| state.scene.get(index as usize))
-            .map(|frame| frame.tick_hz)
-            .filter(|tick_hz| *tick_hz > 0.0)
-            .unwrap_or(20.0);
-        if let Some(frame) = state
-            .current_tick
-            .and_then(|index| state.scene.get(index as usize))
-        {
-            for actor in &frame.actors {
-                if let Some(instance_id) = state.app.actor_instance_id(&actor.id) {
-                    instance_velocities.insert(instance_id, Vec3::from_array(actor.velocity));
-                }
+        stages.sensor_setup_ms += ms(mark);
+        let result = match (early_work, early_result) {
+            (Some(work), Some(result)) if work.same_as(&current) => {
+                stages.sensors_overlapped = true;
+                result
             }
-        }
-        // The sensor models now split a scan across worker threads, so their
-        // class lookup has to be `Sync`; the engine `App` is not. Resolve every
-        // instance's class up front into a plain map and let the scan read that.
-        //
-        // `state.legend` is the frozen STATIC legend, so it alone would drop
-        // every actor back to the default albedo. The current frame's actors are
-        // resolved through the engine as well, so a car stays a car.
-        let mut instance_classes: std::collections::HashMap<u32, sensors::taxonomy::SemanticClass> =
-            state
-                .legend
-                .iter()
-                .map(|(instance_id, name)| {
-                    let class = state
-                        .app
-                        .actor_instance_class(*instance_id)
-                        .map(sensors::taxonomy::SemanticClass::from_actor_class)
-                        .unwrap_or_else(|| {
-                            sensors::taxonomy::SemanticClass::from_mesh_name(name)
-                        });
-                    (*instance_id, class)
-                })
-                .collect();
-        if let Some(frame) = state
-            .current_tick
-            .and_then(|index| state.scene.get(index as usize))
-        {
-            for actor in &frame.actors {
-                let Some(instance_id) = state.app.actor_instance_id(&actor.id) else { continue };
-                if let Some(class) = state
-                    .app
-                    .actor_instance_class(instance_id)
-                    .map(sensors::taxonomy::SemanticClass::from_actor_class)
-                {
-                    instance_classes.insert(instance_id, class);
+            (early, _) => {
+                if early.is_some() {
+                    stages.sensor_resnapshots = 1;
                 }
+                let static_scene = &state.sensor_scenes.as_ref().expect("sensor scenes built").static_scene;
+                run_sensor_work(static_scene, &current)
             }
-        }
-        let instance_class = move |instance_id: u32| -> sensors::taxonomy::SemanticClass {
-            instance_classes
-                .get(&instance_id)
-                .copied()
-                .unwrap_or(sensors::taxonomy::SemanticClass::Prop)
         };
-        let mut sensor_payloads: Vec<(
-            String,
-            &'static str,
-            u32,
-            &'static str,
-            u32,
-            Vec<u8>,
-        )> = Vec::with_capacity(lidar_rig.len() + radar_rig.len());
-        stages.sensor_setup_ms = ms(setup_mark);
-        let mark = std::time::Instant::now();
-        for sensor in &lidar_rig {
-            let mount = match resolve_sensor_mount(state, &sensor.attach) {
-                Ok(mount) => mount,
-                Err(error) => return WireResponse::error(i, error),
-            };
-            if let Some(host)=policy_host {
-                let pose=render_core::coordinates::SensorFrame::from_bevy_pose(mount.origin,mount.rotation);
-                sensor_to_policy.insert(sensor.sensor_id.clone(),pose.policy_relative_to(host));
-            }
-            let config = sensors::lidar::LidarConfig {
-                channels: sensor.channels,
-                rotation_frequency_hz: sensor.rotation_frequency_hz,
-                points_per_second: sensor.points_per_second,
-                vfov_deg: sensor.vertical_fov_deg,
-                hfov_deg: sensor.horizontal_fov_deg,
-                range_m: sensor.range_m,
-            };
-            let points = sensors::lidar::scan(
-                &combined_scene,
-                &config,
-                mount.origin,
-                mount.rotation,
-                &instance_class,
-            );
-            let count = points.len() as u32;
-            let binary=state.episode.as_ref().is_some_and(|episode|
-                matches!(episode.consumer.lidar,Some(render_core::products::PointEncoding::Binary)));
-            sensor_payloads.push((
-                sensor.sensor_id.clone(),
-                "lidar",
-                if binary {FORMAT_LIDAR_BINARY} else {FORMAT_LIDAR_PLY},
-                if binary {"ply-binary"} else {"ply-ascii"},
-                count,
-                if binary {sensors::formats::encode_lidar_ply_binary(&points)} else {sensors::formats::encode_lidar_ply(&points)},
-            ));
-        }
-        stages.lidar_ms = ms(mark);
-        let mark = std::time::Instant::now();
-        for sensor in &radar_rig {
-            let mount = match resolve_sensor_mount(state, &sensor.attach) {
-                Ok(mount) => mount,
-                Err(error) => return WireResponse::error(i, error),
-            };
-            let config = sensors::radar::RadarConfig::from_budget(
-                Some(sensor.points_per_second),
-                tick_hz,
-                sensor.horizontal_fov_deg,
-                sensor.vertical_fov_deg,
-                sensor.range_m,
-            );
-            let detections = sensors::radar::scan(
-                &combined_scene,
-                &config,
-                mount.origin,
-                mount.rotation,
-                mount.host_velocity,
-                &|instance_id| {
-                    instance_velocities
-                        .get(&instance_id)
-                        .copied()
-                        .unwrap_or(Vec3::ZERO)
-                },
-            );
-            let count = detections.len() as u32;
-            sensor_payloads.push((
-                sensor.sensor_id.clone(),
-                "radar",
-                FORMAT_RADAR_CSV,
-                "radar-csv",
-                count,
-                sensors::formats::encode_radar_csv(&detections),
-            ));
-        }
-        stages.radar_ms = ms(mark);
+        stages.actor_scene_ms = result.actor_scene_ms;
+        stages.lidar_ms = result.lidar_ms;
+        stages.radar_ms = result.radar_ms;
+        sensor_to_policy = current.sensor_to_policy;
         sensor_payload_mark = Some(std::time::Instant::now());
-        for (sensor_id, pass, format_tag, format_name, count, data) in sensor_payloads {
+        for SensorPayload { sensor_id, pass, format_tag, format_name, count, data } in result.payloads {
             if let Err(error) = publish_bundle_frame(
                 state, &sensor_id, pass, count, 1, format_tag, format_name, sim_tick, &data, &mut entries,
                 &mut frames,
@@ -1916,6 +2118,255 @@ fn render_bundle_op(
         },
         Err(error) => WireResponse::error(i, format!("publish bundle: {error}")),
     }
+}
+
+/// The ego frame sensor poses are reported relative to in policy episodes.
+fn policy_host_frame(state: &ServiceState) -> Option<render_core::coordinates::SensorFrame> {
+    let episode = state.episode.as_ref()?;
+    let frame = state.scene.get(state.current_tick? as usize)?;
+    let actor = frame.actors.iter().find(|actor| actor.id == episode.ego_id)?;
+    let p = actor.transform.position;
+    let origin = Vec3::new(p[0], actor_base_y(p[1], frame.ground_y, state.app.ground_at(p[0], p[2])), p[2]);
+    Some(render_core::coordinates::SensorFrame::from_bevy_pose(
+        origin,
+        Quat::from_rotation_y(quat_yaw(&actor.transform.rotation)),
+    ))
+}
+
+/// One lidar scan of a tick: resolved mount and payload encoding.
+struct LidarJob {
+    sensor_id: String,
+    config: sensors::lidar::LidarConfig,
+    origin: Vec3,
+    rotation: Quat,
+    binary: bool,
+}
+
+/// One radar scan of a tick.
+struct RadarJob {
+    sensor_id: String,
+    config: sensors::radar::RadarConfig,
+    origin: Vec3,
+    rotation: Quat,
+    host_velocity: Vec3,
+}
+
+/// Everything one tick's lidar/radar scans read, owned, so the scans can run
+/// on another thread while the GPU renders. Built from the world by
+/// [`prepare_sensor_work`]; [`run_sensor_work`] is a pure function of it and
+/// the static map scene.
+struct SensorWork {
+    actor_triangles: Vec<SensorTriangle>,
+    /// Frozen static legend classes (built once per service).
+    static_classes: std::sync::Arc<HashMap<u32, sensors::taxonomy::SemanticClass>>,
+    /// The current frame's actors, resolved through the engine.
+    actor_classes: HashMap<u32, sensors::taxonomy::SemanticClass>,
+    instance_velocities: HashMap<u32, Vec3>,
+    lidars: Vec<LidarJob>,
+    radars: Vec<RadarJob>,
+    sensor_to_policy: std::collections::BTreeMap<String, render_core::coordinates::PolicyFromSensor>,
+}
+
+fn same_f32(a: f32, b: f32) -> bool {
+    a.to_bits() == b.to_bits()
+}
+
+fn same_vec3(a: Vec3, b: Vec3) -> bool {
+    same_f32(a.x, b.x) && same_f32(a.y, b.y) && same_f32(a.z, b.z)
+}
+
+fn same_quat(a: Quat, b: Quat) -> bool {
+    same_f32(a.x, b.x) && same_f32(a.y, b.y) && same_f32(a.z, b.z) && same_f32(a.w, b.w)
+}
+
+fn same_triangles(a: &[SensorTriangle], b: &[SensorTriangle]) -> bool {
+    a.len() == b.len()
+        && a.iter().zip(b).all(|(x, y)| {
+            x.instance_id == y.instance_id
+                && x.a.iter().chain(&x.b).chain(&x.c).zip(y.a.iter().chain(&y.b).chain(&y.c)).all(|(p, q)| same_f32(*p, *q))
+        })
+}
+
+impl SensorWork {
+    /// Bit-for-bit equality of every scan input (floats by bit pattern).
+    fn same_as(&self, other: &SensorWork) -> bool {
+        let lidar = |a: &LidarJob, b: &LidarJob| {
+            a.sensor_id == b.sensor_id
+                && a.binary == b.binary
+                && same_vec3(a.origin, b.origin)
+                && same_quat(a.rotation, b.rotation)
+                && a.config.channels == b.config.channels
+                && a.config.points_per_second == b.config.points_per_second
+                && same_f32(a.config.rotation_frequency_hz, b.config.rotation_frequency_hz)
+                && same_f32(a.config.vfov_deg, b.config.vfov_deg)
+                && same_f32(a.config.hfov_deg, b.config.hfov_deg)
+                && same_f32(a.config.range_m, b.config.range_m)
+        };
+        let radar = |a: &RadarJob, b: &RadarJob| {
+            a.sensor_id == b.sensor_id
+                && same_vec3(a.origin, b.origin)
+                && same_quat(a.rotation, b.rotation)
+                && same_vec3(a.host_velocity, b.host_velocity)
+                && same_f32(a.config.hfov_deg, b.config.hfov_deg)
+                && same_f32(a.config.vfov_deg, b.config.vfov_deg)
+                && same_f32(a.config.range_m, b.config.range_m)
+                && a.config.azimuth_rays == b.config.azimuth_rays
+                && a.config.elevation_rows == b.config.elevation_rows
+        };
+        std::sync::Arc::ptr_eq(&self.static_classes, &other.static_classes)
+            && self.actor_classes == other.actor_classes
+            && self.instance_velocities.len() == other.instance_velocities.len()
+            && self.instance_velocities.iter().all(|(id, v)| other.instance_velocities.get(id).is_some_and(|w| same_vec3(*v, *w)))
+            && self.lidars.len() == other.lidars.len()
+            && self.lidars.iter().zip(&other.lidars).all(|(a, b)| lidar(a, b))
+            && self.radars.len() == other.radars.len()
+            && self.radars.iter().zip(&other.radars).all(|(a, b)| radar(a, b))
+            && same_triangles(&self.actor_triangles, &other.actor_triangles)
+    }
+}
+
+/// One published lidar/radar payload.
+struct SensorPayload {
+    sensor_id: String,
+    pass: &'static str,
+    format_tag: u32,
+    format_name: &'static str,
+    count: u32,
+    data: Vec<u8>,
+}
+
+struct SensorResult {
+    payloads: Vec<SensorPayload>,
+    actor_scene_ms: f64,
+    lidar_ms: f64,
+    radar_ms: f64,
+}
+
+/// Snapshot the scan inputs of the current tick from the world.
+fn prepare_sensor_work(
+    state: &mut ServiceState,
+    lidar_rig: &[ServiceLidar],
+    radar_rig: &[ServiceRadar],
+    policy_host: Option<render_core::coordinates::SensorFrame>,
+) -> Result<SensorWork, String> {
+    let static_classes = state.static_sensor_classes();
+    let actor_triangles = state.app.sensor_triangles(true);
+    let frame = state.current_tick.and_then(|index| state.scene.get(index as usize));
+    let tick_hz = frame.map(|frame| frame.tick_hz).filter(|tick_hz| *tick_hz > 0.0).unwrap_or(20.0);
+    let mut instance_velocities = HashMap::new();
+    // The static legend alone would drop every actor back to the default
+    // albedo: the current frame's actors are resolved through the engine.
+    let mut actor_classes = HashMap::new();
+    if let Some(frame) = frame {
+        for actor in &frame.actors {
+            let Some(instance_id) = state.app.actor_instance_id(&actor.id) else { continue };
+            instance_velocities.insert(instance_id, Vec3::from_array(actor.velocity));
+            if let Some(class) = state
+                .app
+                .actor_instance_class(instance_id)
+                .map(sensors::taxonomy::SemanticClass::from_actor_class)
+            {
+                actor_classes.insert(instance_id, class);
+            }
+        }
+    }
+    let binary = state.episode.as_ref().is_some_and(|episode| {
+        matches!(episode.consumer.lidar, Some(render_core::products::PointEncoding::Binary))
+    });
+    let mut sensor_to_policy = std::collections::BTreeMap::new();
+    let mut lidars = Vec::with_capacity(lidar_rig.len());
+    for sensor in lidar_rig {
+        let mount = resolve_sensor_mount(state, &sensor.attach)?;
+        if let Some(host) = policy_host {
+            let pose = render_core::coordinates::SensorFrame::from_bevy_pose(mount.origin, mount.rotation);
+            sensor_to_policy.insert(sensor.sensor_id.clone(), pose.policy_relative_to(host));
+        }
+        lidars.push(LidarJob {
+            sensor_id: sensor.sensor_id.clone(),
+            config: sensors::lidar::LidarConfig {
+                channels: sensor.channels,
+                rotation_frequency_hz: sensor.rotation_frequency_hz,
+                points_per_second: sensor.points_per_second,
+                vfov_deg: sensor.vertical_fov_deg,
+                hfov_deg: sensor.horizontal_fov_deg,
+                range_m: sensor.range_m,
+            },
+            origin: mount.origin,
+            rotation: mount.rotation,
+            binary,
+        });
+    }
+    let mut radars = Vec::with_capacity(radar_rig.len());
+    for sensor in radar_rig {
+        let mount = resolve_sensor_mount(state, &sensor.attach)?;
+        radars.push(RadarJob {
+            sensor_id: sensor.sensor_id.clone(),
+            config: sensors::radar::RadarConfig::from_budget(
+                Some(sensor.points_per_second),
+                tick_hz,
+                sensor.horizontal_fov_deg,
+                sensor.vertical_fov_deg,
+                sensor.range_m,
+            ),
+            origin: mount.origin,
+            rotation: mount.rotation,
+            host_velocity: mount.host_velocity,
+        });
+    }
+    Ok(SensorWork { actor_triangles, static_classes, actor_classes, instance_velocities, lidars, radars, sensor_to_policy })
+}
+
+/// Build the actor scene and run every scan of `work` (pure; any thread).
+fn run_sensor_work(static_scene: &RaycastScene, work: &SensorWork) -> SensorResult {
+    let started = std::time::Instant::now();
+    let actor_scene = build_sensor_scene(work.actor_triangles.clone());
+    let actor_scene_ms = started.elapsed().as_secs_f64() * 1000.0;
+    let combined_scene = CombinedSensorScene { static_scene, actor_scene: &actor_scene };
+    let instance_class = |instance_id: u32| -> sensors::taxonomy::SemanticClass {
+        work.actor_classes
+            .get(&instance_id)
+            .or_else(|| work.static_classes.get(&instance_id))
+            .copied()
+            .unwrap_or(sensors::taxonomy::SemanticClass::Prop)
+    };
+    let mut payloads = Vec::with_capacity(work.lidars.len() + work.radars.len());
+    let started = std::time::Instant::now();
+    for job in &work.lidars {
+        let points = sensors::lidar::scan(&combined_scene, &job.config, job.origin, job.rotation, &instance_class);
+        payloads.push(SensorPayload {
+            sensor_id: job.sensor_id.clone(),
+            pass: "lidar",
+            format_tag: if job.binary { FORMAT_LIDAR_BINARY } else { FORMAT_LIDAR_PLY },
+            format_name: if job.binary { "ply-binary" } else { "ply-ascii" },
+            count: points.len() as u32,
+            data: if job.binary {
+                sensors::formats::encode_lidar_ply_binary(&points)
+            } else {
+                sensors::formats::encode_lidar_ply(&points)
+            },
+        });
+    }
+    let lidar_ms = started.elapsed().as_secs_f64() * 1000.0;
+    let started = std::time::Instant::now();
+    for job in &work.radars {
+        let detections = sensors::radar::scan(
+            &combined_scene,
+            &job.config,
+            job.origin,
+            job.rotation,
+            job.host_velocity,
+            &|instance_id| work.instance_velocities.get(&instance_id).copied().unwrap_or(Vec3::ZERO),
+        );
+        payloads.push(SensorPayload {
+            sensor_id: job.sensor_id.clone(),
+            pass: "radar",
+            format_tag: FORMAT_RADAR_CSV,
+            format_name: "radar-csv",
+            count: detections.len() as u32,
+            data: sensors::formats::encode_radar_csv(&detections),
+        });
+    }
+    SensorResult { payloads, actor_scene_ms, lidar_ms, radar_ms: started.elapsed().as_secs_f64() * 1000.0 }
 }
 
 /// PNG demotion: encoding happens off the critical path after the response.
@@ -2120,6 +2571,113 @@ mod tests {
                 )
             })
             .collect()
+    }
+
+    fn sensor_work(actor_triangles: Vec<SensorTriangle>) -> super::SensorWork {
+        super::SensorWork {
+            actor_triangles,
+            static_classes: std::sync::Arc::new(HashMap::from([(1, SemanticClass::Building)])),
+            actor_classes: HashMap::from([(7, SemanticClass::Car)]),
+            instance_velocities: HashMap::from([(7, Vec3::new(3.0, 0.0, 0.0))]),
+            lidars: vec![super::LidarJob {
+                sensor_id: "lidar".into(),
+                config: sensors::lidar::LidarConfig {
+                    channels: 4, rotation_frequency_hz: 10.0, points_per_second: 4096,
+                    vfov_deg: 20.0, hfov_deg: 360.0, range_m: 60.0,
+                },
+                origin: Vec3::new(0.0, 1.5, 0.0),
+                rotation: Quat::IDENTITY,
+                binary: false,
+            }],
+            radars: vec![super::RadarJob {
+                sensor_id: "radar".into(),
+                config: sensors::radar::RadarConfig::from_budget(Some(512), 20.0, 60.0, 10.0, 60.0),
+                origin: Vec3::new(0.0, 1.0, 0.0),
+                rotation: Quat::IDENTITY,
+                host_velocity: Vec3::new(10.0, 0.0, 0.0),
+            }],
+            sensor_to_policy: Default::default(),
+        }
+    }
+
+    #[test]
+    fn overlapped_scans_publish_only_a_bit_identical_snapshot_and_match_the_serial_scan() {
+        let mut map = Vec::new();
+        map.extend(quad(-50.0, -50.0, 100.0, 0.0, 1));
+        for (i, x) in [10.0f32, -12.0, 0.0].into_iter().enumerate() {
+            map.extend(quad(x, 8.0, 2.0, 0.5, 1 + i as u32));
+        }
+        let scenes = build_map_sensor_scenes(map, &HashMap::new());
+        let actor = quad(5.0, -3.0, 2.0, 1.0, 7).to_vec();
+        let early = sensor_work(actor.clone());
+        // Production snapshots share the service's one cached class map.
+        let with_shared_classes = |mut work: super::SensorWork| {
+            work.static_classes = early.static_classes.clone();
+            work
+        };
+        let now = with_shared_classes(sensor_work(actor.clone()));
+        assert!(early.same_as(&now));
+        assert!(!early.same_as(&sensor_work(actor.clone())), "a rebuilt class map is not the same snapshot");
+        // Overlapped (another thread) and serial scans are the same bytes.
+        let threaded = std::thread::scope(|scope| scope.spawn(|| super::run_sensor_work(&scenes.static_scene, &early)).join().unwrap());
+        let serial = super::run_sensor_work(&scenes.static_scene, &now);
+        let bytes = |result: &super::SensorResult| result.payloads.iter().map(|p| (p.sensor_id.clone(), p.count, p.data.clone())).collect::<Vec<_>>();
+        assert_eq!(bytes(&threaded), bytes(&serial));
+        assert!(threaded.payloads.iter().any(|p| p.count > 0), "fixture must produce hits");
+        // One flipped mantissa bit in an actor triangle, a moved mount or a
+        // new actor class is a different snapshot: the serial scan reruns.
+        let mut moved = actor.clone();
+        moved[0].a[0] = f32::from_bits(moved[0].a[0].to_bits() ^ 1);
+        assert!(!early.same_as(&with_shared_classes(sensor_work(moved))));
+        let mut remounted = with_shared_classes(sensor_work(actor.clone()));
+        remounted.lidars[0].origin.y = f32::from_bits(remounted.lidars[0].origin.y.to_bits() ^ 1);
+        assert!(!early.same_as(&remounted));
+        let mut reclassed = with_shared_classes(sensor_work(actor.clone()));
+        reclassed.actor_classes.insert(7, SemanticClass::Pedestrian);
+        assert!(!early.same_as(&reclassed));
+        // Signed zero is a different bit pattern (never treated as equal).
+        let mut signed = actor;
+        signed[0].a[1] = if signed[0].a[1] == 0.0 { -0.0 } else { signed[0].a[1] };
+        if signed[0].a[1].to_bits() != early.actor_triangles[0].a[1].to_bits() {
+            assert!(!early.same_as(&with_shared_classes(sensor_work(signed))));
+        }
+    }
+
+    #[test]
+    fn cached_sensor_scenes_load_as_the_built_trees_and_prune_old_maps() {
+        let dir = std::env::temp_dir().join(format!("sensor-cache-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let legend: HashMap<u32, String> = [(1, "Road_Asphalt_01".to_string()), (2, "Building".to_string())].into();
+        let mut triangles = quad(0.0, 0.0, 10.0, 0.0, 1).to_vec();
+        triangles.extend(quad(20.0, 0.0, 10.0, 5.0, 2));
+        let key = super::sensor_scene_cache_key(&triangles, &legend);
+        assert_eq!(key, super::sensor_scene_cache_key(&triangles, &legend), "key is a pure function");
+        let mut shifted = triangles.clone();
+        shifted[0].a[0] += 1.0;
+        assert_ne!(key, super::sensor_scene_cache_key(&shifted, &legend));
+        let renamed: HashMap<u32, String> = [(1, "Building_Annex".to_string()), (2, "Building".to_string())].into();
+        assert_ne!(key, super::sensor_scene_cache_key(&triangles, &renamed), "the road set is part of the key");
+
+        let built = build_map_sensor_scenes(triangles, &legend);
+        assert!(super::store_cached_sensor_scenes(&dir, &key, &built).unwrap());
+        let loaded = super::load_cached_sensor_scenes(&dir, &key).expect("cached");
+        for x in [1.0f32, 5.0, 9.0, 21.0, 29.0] {
+            let origin = Vec3::new(x, 100.0, 5.0);
+            let hit = |scene: &RaycastScene| scene.cast(origin, Vec3::NEG_Y, 1000.0).map(|h| (h.distance.to_bits(), h.instance_id));
+            assert_eq!(hit(&loaded.static_scene), hit(&built.static_scene));
+            assert_eq!(hit(&loaded.road), hit(&built.road));
+        }
+        // Keep-newest pruning: only SENSOR_SCENE_CACHE_KEEP maps survive.
+        for n in 0..super::SENSOR_SCENE_CACHE_KEEP + 1 {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+            assert!(super::store_cached_sensor_scenes(&dir, &format!("{n:064x}"), &built).unwrap());
+        }
+        let kept = std::fs::read_dir(&dir).unwrap().filter(|entry| {
+            entry.as_ref().unwrap().file_name().to_string_lossy().ends_with(".static.bvh")
+        }).count();
+        assert_eq!(kept, super::SENSOR_SCENE_CACHE_KEEP);
+        assert!(super::load_cached_sensor_scenes(&dir, &key).is_none(), "the oldest map was pruned");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
