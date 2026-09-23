@@ -52,17 +52,18 @@ try {
   await execute(
     `INSERT INTO simforge.map_versions
      SELECT (jsonb_populate_record(NULL::simforge.map_versions, to_jsonb(mv.*)
-       || jsonb_build_object('id', :target, 'xodr_sha256', :sha, 'xodr_artifact_id', :artifact, 'browser_asset_set_id', NULL,
+       || jsonb_build_object('id', CAST(:target AS text), 'xodr_sha256', CAST(:sha AS text), 'xodr_artifact_id', CAST(:artifact AS text), 'browser_asset_set_id', NULL,
+            'derivative_release_id', CAST(:release AS text),
             'created_at', NOW(), 'label', mv.label, 'retired_at', NULL,
             'descriptor', mv.descriptor || jsonb_build_object('xodrGeometrySha256', CAST(:geometry AS text))))).*
        FROM simforge.map_versions mv WHERE mv.id = :source
      ON CONFLICT (id) DO NOTHING`,
-    { target: targetId, sha: xodrSha, artifact: artifactId, geometry, source: sourceId },
+    { target: targetId, sha: xodrSha, artifact: artifactId, geometry, source: sourceId, release: sha(`release:${targetId}`) },
   );
   await execute(
     `INSERT INTO simforge.browser_asset_sets
      SELECT (jsonb_populate_record(NULL::simforge.browser_asset_sets, to_jsonb(bs.*)
-       || jsonb_build_object('id', :set, 'map_version_id', :target, 'closure_sha256', :closure))).*
+       || jsonb_build_object('id', CAST(:set AS text), 'map_version_id', CAST(:target AS text), 'closure_sha256', CAST(:closure AS text)))).*
        FROM simforge.browser_asset_sets bs WHERE bs.id = :source_set
      ON CONFLICT (id) DO NOTHING`,
     { set: setId, target: targetId, closure: sha(`${set.closure_sha256}:${xodrSha}`), source_set: set.id },

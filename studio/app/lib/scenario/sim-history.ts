@@ -22,7 +22,7 @@ import type { AppContext } from "@/app/lib/db/app-context";
 import { queryOne, queryRows } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
 
-import { parseDiff, SimulationHistoryError, simulationMotionDiff } from "./sim-diff";
+import { identicalMotion, parseDiff, SimulationHistoryError, simulationMotionDiff } from "./sim-diff";
 import {
   createScenarioRevision,
   getScenarioDocument,
@@ -546,12 +546,22 @@ export async function previewMapRepin(
     contentSha256: canonicalContentSha256(plan.content),
     mapVersionId: plan.target.mapVersionId,
   }, { waitMs: input.waitMs ?? 0 });
-  const draft = await readDraftSim(context.workspaceId, documentId);
-  const base = draft?.last_sim_key ?? null;
+  // The map's effect alone: the draft under THIS engine on its pinned version (memoized; the editor
+  // has usually resolved it already), not whatever an older engine produced.
+  const current = await resolveSimulation({
+    workspaceId: context.workspaceId,
+    userId: context.userId,
+    canonicalContent: document.content,
+    contentSha256: document.contentSha256,
+    mapVersionId: plan.source.mapVersionId,
+  }, { waitMs: input.waitMs ?? 0 });
+  const base = current.state === "succeeded" ? current.result.simKey : null;
   const motionDiff = status.state === "succeeded" && base && base !== status.result.simKey
     ? await simulationMotionDiff(context.workspaceId, base, status.result.simKey)
-    : null;
-  return { target: plan.target, plan, status, motionDiff };
+    : status.state === "succeeded" && base === status.result.simKey
+      ? await identicalMotion(context.workspaceId, base)
+      : null;
+  return { target: plan.target, plan, status: status.state === "succeeded" && !base ? current : status, motionDiff };
 }
 
 /**

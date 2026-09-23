@@ -135,3 +135,55 @@ test("engine change: keep the old motion, use the new one, roll back, compare", 
   await page.waitForTimeout(15_000);
   await expect(page.getByTestId("engine-change-banner")).toHaveCount(0);
 });
+
+/**
+ * Map version transition, on the same seeded host after e2e/tools/sim-history-map-v2.mts published
+ * a newer version of the map (heights only): banner -> before/after view -> move -> the state
+ * before the move is a version -> "Revert to previous map version" is offered.
+ */
+test("newer map version: review the transition, move, and keep the before", async ({ page, context }) => {
+  test.skip(!process.env.SIM_HISTORY_MAP_DOCUMENT, "needs SIM_HISTORY_MAP_DOCUMENT (a seeded document on the older map version)");
+  test.setTimeout(20 * 60_000);
+  const seeded = JSON.parse(readFileSync(SEEDED, "utf8")) as Seeded;
+  const doc = seeded.made[Number(process.env.SIM_HISTORY_MAP_DOCUMENT)]!;
+  await context.route("**/api/simforge/host/setup", (route) => route.request().method() === "GET"
+    ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ completedAt: "2026-09-22T00:00:00.000Z", mode: "local", quality: "medium" }) })
+    : route.continue());
+  await context.addInitScript(() => {
+    try {
+      localStorage.setItem("simcloud.uniscenario.editor-experience.v1", "advanced");
+      for (const mode of ["simple", "advanced"]) localStorage.setItem(`uniscenario.tutorial.completed.v2.${mode}`, "1");
+      localStorage.setItem("simcloud.uniscenario.simple-route-tutorial.v1", "1");
+    } catch {
+      // Storage may be unavailable.
+    }
+  });
+  await page.goto(await loginUrl(`/dashboard/scenario?dataset=${seeded.datasetId}&document=${doc.id}`), { waitUntil: "commit", timeout: 10 * 60_000 });
+
+  const banner = page.getByTestId("newer-map-banner");
+  await expect(banner).toBeVisible({ timeout: 10 * 60_000 });
+  await expect(banner).toContainText("Newer map version available");
+  await shot(page, "11-newer-map-banner");
+
+  await banner.getByTestId("newer-map-review").click();
+  const dialog = page.getByTestId("map-transition-dialog");
+  await expect(dialog.getByTestId("map-transition-geometry")).toHaveText("Same roads; only heights change", { timeout: 5 * 60_000 });
+  await expect(dialog.getByTestId("map-transition-before")).toBeVisible();
+  await expect(dialog.getByTestId("map-transition-after")).toBeVisible();
+  await expect(dialog.locator('[data-road-change="elevation"]').first()).toBeAttached();
+  await expect(dialog.getByTestId("map-transition-placement").first()).toBeVisible();
+  await expect(dialog.getByTestId("map-transition-move")).toBeEnabled({ timeout: 5 * 60_000 });
+  await shot(page, "12-map-transition");
+
+  await dialog.getByTestId("map-transition-move").click();
+  const notice = page.getByTestId("map-move-notice");
+  await expect(notice).toContainText(/saved as Version \d+/, { timeout: 5 * 60_000 });
+  const beforeNumber = /saved as Version (\d+)/.exec((await notice.textContent()) ?? "")![1]!;
+  await shot(page, "13-moved");
+
+  await page.getByTestId("scenario-versions-button").click();
+  const before = page.getByTestId("scenario-versions-panel").locator(`[data-testid="scenario-version"][data-revision-number="${beforeNumber}"]`);
+  await expect(before).toBeVisible({ timeout: 60_000 });
+  await expect(before.getByTestId("scenario-version-restore")).toHaveText("Revert to previous map version");
+  await shot(page, "14-before-kept");
+});

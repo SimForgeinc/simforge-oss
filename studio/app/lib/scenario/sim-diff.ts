@@ -158,3 +158,9 @@ export async function compareSimulations(workspaceId: string, baseSimKey: string
     },
   };
 }
+
+/** Two moves of one scenario that resolve to the same result: motion identical by construction. */
+export async function identicalMotion(workspaceId: string, simKey: string): Promise<SimulationMotionDiffDto> {
+  const trace = await readSimulationTrace(workspaceId, simKey);
+  return identicalDiff(simKey, simKey, trace.header.clipSeconds);
+}
