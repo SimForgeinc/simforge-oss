@@ -1604,7 +1604,29 @@ type MapDescriptorRow = {
   sumo_status: { state?: unknown; reason?: unknown } | string | null;
   ambient_turn_verdicts_sha256: string | null;
   ambient_turn_verdicts: Record<string, unknown> | string | null;
+  ground_sha256: string | null;
+  ground: Record<string, unknown> | string | null;
 };
+
+/**
+ * The ground derivative of one map revision (engine 0.11 contact), when its
+ * closure carries `derived/ground/ground-mesh.bin`: the member digest plus the
+ * ingest validation the publish recorded (`descriptor.ground`) for that exact
+ * member, or `unreported`.
+ */
+function mapGround(memberSha256: string | null, recorded: MapDescriptorRow["ground"]) {
+  if (!memberSha256) return null;
+  let report = recorded;
+  if (typeof report === "string") {
+    try { report = JSON.parse(report) as Record<string, unknown>; } catch { report = null; }
+  }
+  const strings = (value: unknown) => (Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : []);
+  const status = report?.["status"];
+  if (!report || report["sha256"] !== memberSha256 || (status !== "ok" && status !== "flagged" && status !== "no-xodr")) {
+    return { sha256: memberSha256, status: "unreported" as const, flags: [], warnings: [] };
+  }
+  return { sha256: memberSha256, status: status as "ok" | "flagged" | "no-xodr", flags: strings(report["flags"]), warnings: strings(report["warnings"]) };
+}
 
 /**
  * The published ambient turn-verdict table of one map revision, when its
@@ -1705,6 +1727,13 @@ async function readScenarioMapDescriptorRows(_activeReleaseCacheKey: string) {
          WHERE verdicts_member.asset_set_id = bs.id
            AND verdicts_member.relative_path = 'derived/ambient/turn-verdicts.json.gz') AS ambient_turn_verdicts_sha256,
        mv.descriptor->'ambientTurnVerdicts' AS ambient_turn_verdicts,
+       (SELECT ground_blob.sha256
+          FROM simforge.browser_asset_members ground_member
+          JOIN simforge.browser_asset_blobs ground_blob ON ground_blob.id = ground_member.blob_id
+           AND ground_blob.verification_state = 'verified'
+         WHERE ground_member.asset_set_id = bs.id
+           AND ground_member.relative_path = 'derived/ground/ground-mesh.bin') AS ground_sha256,
+       mv.descriptor->'ground' AS ground,
        ROW_NUMBER() OVER (
          PARTITION BY mv.source_map_asset_id
          ORDER BY mv.created_at DESC, mv.id DESC
@@ -1749,7 +1778,7 @@ async function readScenarioMapDescriptorRows(_activeReleaseCacheKey: string) {
        browser_closure_sha256, browser_xodr_sha256, topology_sha256,
        derived_topology_sha256, locations_sha256, signals_sha256,
        lane_polygons_sha256, sumo_network_sha256, sumo_status,
-       ambient_turn_verdicts_sha256, ambient_turn_verdicts
+       ambient_turn_verdicts_sha256, ambient_turn_verdicts, ground_sha256, ground
      FROM ranked_map_versions
      WHERE source_publication_rank = 1
      ORDER BY label, id`,
@@ -1807,6 +1836,7 @@ export async function listScenarioMapDescriptors(_context: AppContext) {
     sumoNetworkSha256: row.sumo_network_sha256,
     sumoStatus: mapSumoStatus(row.sumo_network_sha256, row.sumo_status),
     ambientTurnVerdicts: mapAmbientTurnVerdicts(row.ambient_turn_verdicts_sha256, row.ambient_turn_verdicts),
+    ground: mapGround(row.ground_sha256, row.ground),
     // Existing aliases remain on the same browser route. Unlike presigned
     // artifact URLs, these cannot expire while a page is open.
     // Named from `MAP_GRAPH_SIDECARS`, which is also what decides these five

@@ -1971,6 +1971,7 @@ mod tests {
             present: vec![1; n],
             physics: None,
             down_since_s: None,
+            contact: None,
         }
     }
 
@@ -1997,6 +1998,7 @@ mod tests {
             seed: crate::rng::Seed::Number(1.0),
             map_id: "fixture".into(),
             engine_graph_digest: "g".into(),
+            ground_digest: None,
             dt: 1.0,
             clip_seconds: 5.0,
             warmup_seconds: 0.0,

@@ -13,7 +13,7 @@
  * Every verb runs the same Rust functions as the editor, Bevy and CARLA.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { gzipSync } from 'node:zlib';
 
@@ -81,11 +81,14 @@ async function timelineCommand(argv: readonly string[]): Promise<number> {
   const map = optionalString(args, 'map');
   let xodrPath = optionalString(args, 'xodr');
   let topologyPath = optionalString(args, 'topology');
+  let groundPath = optionalString(args, 'ground');
   if (map) {
     if (xodrPath || topologyPath) throw new CliError('bad_value', 'pass --map or --xodr/--topology, not both');
     const dir = mapDir(map);
     xodrPath = path.join(dir, 'map.xodr');
     topologyPath = path.join(dir, ARTIFACTS.topology);
+    const groundFile = path.join(dir, 'derived', 'ground', 'ground-mesh.bin');
+    if (!groundPath && existsSync(groundFile)) groundPath = groundFile;
   }
   if (!xodrPath || !topologyPath) {
     throw new CliError('missing_argument', 'the height source needs --map <mapId> or both --xodr and --topology');
@@ -96,6 +99,7 @@ async function timelineCommand(argv: readonly string[]): Promise<number> {
       trace: readBytes(tracePath),
       xodr: readBytes(xodrPath),
       topology: readBytes(topologyPath),
+      ...(groundPath ? { ground: readBytes(groundPath) } : {}),
       catalogDigest: optionalString(args, 'catalog-digest') ?? null,
     });
   } catch (error) {

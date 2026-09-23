@@ -53,7 +53,7 @@ timelineKey = sha256(canonicalJson({
 - `heightFieldDigest` is `heightSource.digest` (section 4).
 - `catalogDigest` is the actor-catalog closure digest the caller pins. It is
   `null` when the caller pins none.
-- `samplerVersion` is currently `"simforge.timeline-sampler/1"`. It covers
+- `samplerVersion` is currently `"simforge.timeline-sampler/2"`. It covers
   both the derivation rules (heights, attitude, lights) and the sampling
   rules. Changing either one bumps it, which changes every key.
 
@@ -97,29 +97,26 @@ Each renderer converts at its own boundary:
 
 ## 4. Height source: one source, evaluated once
 
-`heightSource = {kind, xodrSha256?, topologyDigest?, flatZM?, planeGradient?, digest}`,
-where `digest = sha256(canonicalJson(the other fields))`.
+Sampler `simforge.timeline-sampler/2`. Ground height is owned by the engine
+(docs/engineering/ground-height.md): from ENGINE_SEM_VER 0.11.0 every body is
+grounded each tick on the map's ground derivative (`derived/ground`, the
+rendered road/terrain mesh), and trace v5 carries the contact.
 
-- **`xodr-elevation/v1`.** Evaluates the OpenDRIVE `<elevation>` reference-line
-  profile, projected onto the topology's lane ribbons.
-  - It is a step-for-step Rust port of the resolver the xosc exporter used
-    (`packages/compiler/src/xodr-elevation.ts`): same ribbon acceptance, same
-    driving-lane preference, same ambiguity refusal, and the same 25 m
-    off-network bound, beyond which the build fails.
-  - One difference from the exporter: overlapping decks are disambiguated by
-    the road of the actor's per-tick `laneRsl`. The exporter used the actor's
-    authored route roads.
-  - The build fails with `MapMismatch` when `xodrSha256` differs from the
-    trace's `engineGraphDigest`.
-- **Reserved: `xodr-elevation/v2`.** Superelevation and `<laneHeight>`. It
-  needs reference-line lateral offsets that the topology does not carry yet.
-- **`flat/v1`, `plane/v1`.** Constant and inclined synthetic surfaces, for
-  maps without elevation and for tests. Their digests never alias an XODR
-  source.
+`heightSource = {kind, groundSha256? | xodrSha256?, topologyDigest?, flatZM?, planeGradient?, digest}`,
+where `digest = sha256(canonicalJson(the other fields))` is the key's
+`heightFieldDigest`. `contactOrigin` (top level of the document) states where
+`z` and road attitude came from:
 
-Renderers never raycast and never sample their own terrain for bodies. A
-CARLA cooked-mesh raycast may run only as a diagnostic that reports the
-mesh-vs-XODR delta.
+| kind | contactOrigin | when |
+|---|---|---|
+| `ground-contact/v1` | `trace` | trace v5 with `header.groundDigest` equal to the ground's digest (copied) |
+| `ground-contact/v1` | `derived-at-timeline-build` | a trace recorded without contact (v4 and older); the engine's contact solver runs over the trace poses on the same surface |
+| `xodr-elevation/v1` | `legacy-xodr-elevation` | a map version published before its ground derivative; the retired OpenDRIVE resolver probed at the wheels. Renders surface it as a warning |
+| `flat/v1`, `plane/v1` | `synthetic` | tests and the binding identity corpus |
+
+A trace grounded on one surface is refused against another
+(`GroundMismatch`) or against a synthetic one. Renderers never raycast and
+never sample their own terrain for bodies.
 
 ## 5. Time origin
 
@@ -153,7 +150,8 @@ its manifest as `capture.policy`:
   "version": "simforge.render-timeline.v1",
   "identity": { "traceSha256", "heightFieldDigest", "catalogDigest", "samplerVersion", "timelineKey" },
   "trace": { "traceSha256", "traceVersion", "engineVersion", "inputHash", "mapId", "engineGraphDigest" },
-  "heightSource": { "kind", "xodrSha256", "topologyDigest", "digest" },
+  "heightSource": { "kind": "ground-contact/v1", "groundSha256", "digest" },
+  "contactOrigin": "trace",
   "mapId": "yale-street",
   "frame": "xodr-local",
   "dtS": 0.02, "tickCount": 1001, "t": [0, 0.02, ...],
@@ -167,7 +165,9 @@ its manifest as `capture.policy`:
       "present", "x", "y", "z", "headingRad", "speedMps",
       "roadPitchRad", "roadRollRad", "bodyPitchRad", "bodyRollRad",
       "pitchRad", "rollRad",            // = road + body; what renderers apply
-      "wheelSteerRad"?, "wheelSpinRad"? // vehicles only
+      "wheelSteerRad"?,                  // four-wheelers
+      "wheelSpinRad"?,                   // every wheeled class
+      "wheelDropM"?                      // four-wheelers, [FL, FR, RL, RR]
     },
     "lights": [ { "tick", "light", "mode": "on" | "off" | "flashing" } ],
     "downedSinceTick"?: 201             // knocked off its feet from this tick on
@@ -181,7 +181,7 @@ its manifest as `capture.policy`:
 scene-state.v1 `ActorDesc` binds them. `emit_scene_state` and the timeline
 share `catalog_id_for` / `actor_class_of`.
 
-### Channel derivations (samplerVersion `simforge.timeline-sampler/1`)
+### Channel derivations (samplerVersion `simforge.timeline-sampler/2`)
 
 The first four channels are copied from trace v4:
 
@@ -191,26 +191,30 @@ The first four channels are copied from trace v4:
 The remaining channels are derived:
 
 - **z**: `heightSource` at `(x, y)`, 4 decimals.
-- **roadPitchRad / roadRollRad** (6 decimals). The surface is probed at
-  footprint points, with wheelbase `= max(0.6·l, 0.5)` and track `= 0.85·w`:
-  - Four-wheeled vehicles: `pitch = atan((z_rear − z_front) / wheelbase)` and
-    `roll = atan((z_left − z_right) / track)`.
-  - Two-wheelers: pitch only.
-  - Pedestrians and props: `0`.
-  - A probe that cannot be resolved contributes `0`.
-- **bodyPitchRad / bodyRollRad**, four-wheeled vehicles only. Each is a
-  first-order low-pass (τ = 0.15 s at 0.02 s, α = dt/(τ+dt), reset to 0 on
-  spawn) applied to:
-  - pitch: `clamp(−0.006 · a_long, ±0.05)`, so braking pitches the nose down;
-  - roll: `clamp(0.008 · v · yawRate, ±0.05)`, so a left turn puts the right
-    side down.
-
-  `a_long` and `yawRate` are backward differences over one tick.
-- **pitchRad / rollRad** = road + body.
+- **z, roadPitchRad, roadRollRad**: from engine contact (see §4). Rigid
+  wheel contact: four-wheelers stand on the least-squares plane through
+  their four wheel contacts (wheelbase from the class physics profile, track
+  `0.85·w`), two-wheelers on the line through front and rear contact (road
+  roll 0), everything else on one centre contact. **wheelDropM**
+  `[FL, FR, RL, RR]` (four-wheelers) is each wheel's contact minus the body
+  plane.
+- **bodyPitchRad / bodyRollRad**. Four-wheelers: a first-order low-pass
+  (τ = 0.15 s, reset on spawn) of pitch `clamp(−0.006·a_long, ±0.05)` and
+  roll `clamp(0.008·v·yawRate, ±0.05)`. Two-wheelers: lean,
+  `bodyRollRad = clamp(−atan(v·yawRate/9.81)·min(1, v/1), ±0.60)`,
+  low-passed with τ = 0.25 s; `bodyPitchRad = 0`.
+- **pitchRad / rollRad**: what renderers apply to the actor transform. Four-
+  wheelers: road attitude only; their body attitude is applied to the model's
+  `body` node and `wheelDropM` to its `wheel_*` nodes, so the wheels stay on
+  the ground. Two-wheelers have no sprung body separate from their wheels:
+  `rollRad = roadRollRad + bodyRollRad` (the whole machine leans about its
+  contact line), `pitchRad = roadPitchRad`.
 - **wheelSteerRad** (vehicles): the physics `steerRad` channel when recorded,
   otherwise `atan(wheelbase · yawRate / (sign(v)·max(|v|, 0.5)))`, clamped to
   ±0.7.
-- **wheelSpinRad**: `Σ v·dt / 0.35 m` since spawn, unwrapped.
+- **wheelSpinRad** (every wheeled class): `Σ v·dt / 0.35 m` over present,
+  non-fresh ticks since spawn (signed speed), unwrapped:
+  `odometerM = wheelSpinRad × 0.35`.
 
 ### Lifecycle
 
@@ -286,7 +290,7 @@ A single Rust function (`sampler::pose`). Its rules:
      bits.
 
 The sampler returns a `TimelinePose` with these fields:
-`{present, tick, x, y, z, headingRad, pitchRad, rollRad, speedMps, velocity[3], acceleration[3], roadPitchRad, roadRollRad, bodyPitchRad, bodyRollRad, wheelSteerRad?, wheelSpinRad?, downed}`.
+`{present, tick, x, y, z, headingRad, pitchRad, rollRad, speedMps, velocity[3], acceleration[3], roadPitchRad, roadRollRad, bodyPitchRad, bodyRollRad, wheelSteerRad?, wheelSpinRad?, wheelDropM?, downed}`.
 Bindings also expose a flat, lossless encoding of 20 f64 values:
 `[present, x, y, z, h, p, r, speed, vx, vy, vz, ax, ay, az, roadP, roadR, bodyP, bodyR, steer|NaN, spin|NaN]`.
 

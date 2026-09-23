@@ -30,6 +30,7 @@ const graph = bundle.graph as unknown as {
 
 const CAR = { l: 4.6, w: 1.85, h: 1.5 };
 const TRUCK = { l: 8.5, w: 2.5, h: 3.3 };
+const VAN = { l: 5.9, w: 2.3, h: 2.7 };
 const PEDESTRIAN = { l: 0.6, w: 0.6, h: 1.75 };
 const RULES = { obeySignals: true, yieldToVehicles: true, yieldToPedestrians: true, collisionAvoidance: true, aggression: 0.5, speedFactor: 1 };
 
@@ -39,11 +40,11 @@ function poseOn(rsl: string, s: number): { x: number; z: number; headingRad: num
   return { x: x!, z: -y!, headingRad: heading! };
 }
 
-function vehicle(id: string, kind: 'car' | 'truck', lanes: string[], s: number, speedMps: number, extra: Record<string, unknown> = {}) {
+function vehicle(id: string, kind: 'car' | 'truck' | 'van', lanes: string[], s: number, speedMps: number, extra: Record<string, unknown> = {}) {
   return {
     id,
     kind,
-    dims: kind === 'truck' ? TRUCK : CAR,
+    dims: kind === 'truck' ? TRUCK : kind === 'van' ? VAN : CAR,
     initial: { laneRef: { rsl: lanes[0], s, tFrac: 0 }, pose: poseOn(lanes[0]!, s), speedMps },
     behavior: { rules: RULES, route: { kind: 'lanePath', lanes }, cruiseSpeedMps: speedMps },
     presentAtStart: true,
@@ -70,7 +71,10 @@ const straight = graph.followRoute('51:0:-1', ['Straight', 'Straight', 'Straight
 
 const cases: Record<string, unknown> = {
   'rfs-uturn-car': base(30, 'golden:rfs-uturn-car', [vehicle('ego', 'car', uturn, 120, 7)]),
-  'rfs-uturn-truck': base(34, 'golden:rfs-uturn-truck', [vehicle('truck', 'truck', uturn, 110, 6)]),
+  // Richmond's only U-turn: a van fits. An 8.5 m truck's sweep puts its left
+  // wheels over a hole in the rendered map, which engine 0.11.0 refuses
+  // (simforge-core tests/ground_contact.rs, the negative case).
+  'rfs-uturn-van': base(34, 'golden:rfs-uturn-van', [vehicle('van', 'van', uturn, 110, 6)]),
   'rfs-stop-and-go': base(20, 'golden:rfs-stop-and-go', [vehicle('ego', 'car', straight, 5, 11)], [
     { id: 'halt', actorId: 'ego', trigger: { kind: 'at', t: 4 }, verb: 'speed', target: { mode: 'stop' }, dynamics: { shape: 'cubic', constraint: 'time', value: 2.5 } },
     { id: 'resume', actorId: 'ego', trigger: { kind: 'at', t: 9 }, verb: 'speed', target: { mode: 'absolute', value: 9 }, dynamics: { shape: 'step', constraint: 'time', value: 2 } },

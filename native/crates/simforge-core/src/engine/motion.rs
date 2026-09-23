@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 use std::f64::consts::PI;
 
-use crate::error::{SimIssue, SimIssueCode};
+use crate::error::{SimEngineError, SimIssue, SimIssueCode};
 use crate::map::LaneId;
 use crate::math::{angle_delta, atan2, cos, hypot, normalize_angle, sin, Vec2};
 use crate::physics::{
@@ -1680,6 +1680,89 @@ impl Simulation {
         lane
     }
 
+    /// Ground every present body on the map surface (see `engine::contact`).
+    /// Runs every tick, warm-up and live mode included, so each contact
+    /// continues from the previous one. A body with no surface under it is an
+    /// engine error.
+    pub(super) fn update_contacts(&mut self) -> EngineResult<()> {
+        let Some(ground) = self.options.ground.clone() else {
+            return Ok(());
+        };
+        for index in 0..self.actors.len() {
+            let a = &self.actors[index];
+            if !a.present {
+                self.contact[index] = super::contact::ContactState::default();
+                continue;
+            }
+            let wheelbase = a
+                .body
+                .and_then(|body| self.physics.profile(body))
+                .map(|profile| profile.wheelbase_m);
+            let geometry = super::contact::ContactGeometry::for_actor(a.kind, &a.dims, wheelbase);
+            let lane = a.route.pose_at(a.route_s).lane.or_else(|| {
+                if a.route.is_freeform() {
+                    a.freeform_lane_binding.and_then(|b| b.1)
+                } else {
+                    None
+                }
+            });
+            let road_hint = lane.and_then(|lane| {
+                self.graph
+                    .rsl(lane)
+                    .split(':')
+                    .next()
+                    .and_then(|road| road.parse::<i64>().ok())
+            });
+            let state = super::contact::solve_contact(
+                &ground,
+                geometry,
+                a.position.x,
+                a.position.y,
+                a.heading_rad,
+                &self.contact[index],
+                road_hint,
+                &a.id,
+            )
+            .map_err(|e| {
+                SimEngineError::new(
+                    format!(
+                        "actor {} has no ground under it at t={:.2}s: {e}",
+                        a.id, self.t
+                    ),
+                    Vec::new(),
+                )
+            })?;
+            if state.any_unsupported() {
+                let path = format!("actors.{}", a.id);
+                let already = self.issues.iter().any(|issue| {
+                    issue.code == SimIssueCode::GroundWheelUnsupported && issue.path == path
+                });
+                if !already {
+                    let wheels: Vec<&str> = ["FL", "FR", "RL", "RR"]
+                        .iter()
+                        .zip(state.unsupported)
+                        .filter_map(|(name, hanging)| hanging.then_some(*name))
+                        .collect();
+                    let reason = format!(
+                        "actor {} has wheel(s) {} over a hole in the rendered map at t={:.2}s (x={:.2}, y={:.2}); the body rests on its other wheels",
+                        a.id,
+                        wheels.join("+"),
+                        self.t,
+                        a.position.x,
+                        a.position.y
+                    );
+                    self.issues.push(SimIssue::warning(
+                        SimIssueCode::GroundWheelUnsupported,
+                        path,
+                        reason,
+                    ));
+                }
+            }
+            self.contact[index] = state;
+        }
+        Ok(())
+    }
+
     pub(super) fn record_tracks(&mut self, t: f64) -> EngineResult<()> {
         // Resolve freeform lane bindings first (mutable), then borrow for frames.
         for index in 0..self.actors.len() {
@@ -1737,6 +1820,11 @@ impl Simulation {
                         s: a.route_s,
                         present: a.present,
                         physics,
+                        contact: self
+                            .options
+                            .ground
+                            .as_ref()
+                            .map(|_| self.contact[a.index.index()].frame),
                         route_ref: self.route_refs.get(a.route_ref),
                     }
                 })

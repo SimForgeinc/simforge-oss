@@ -381,10 +381,12 @@ fn recorded_identity_binds_upgraded_traces_and_checks_current_ones() {
     assert_eq!(tl.trace.trace_sha256, recorded);
     assert_eq!(tl.trace.upgraded_from_trace_version, Some(3));
 
-    let mut current = SimTrace::from_json_slice(
-        &serde_json::to_vec(&fixture_doc("rc65-v4-geometry-proxy")).unwrap(),
-    )
-    .unwrap();
+    // A current-format (v5) document: v5 differs from v4 only by the optional
+    // ground-contact channels, so a v4 document restamped as v5 is current.
+    let mut current_doc = fixture_doc("rc65-v4-geometry-proxy");
+    current_doc["header"]["traceVersion"] = serde_json::json!(5);
+    let mut current =
+        SimTrace::from_json_slice(&serde_json::to_vec(&current_doc).unwrap()).unwrap();
     assert!(current.upgrade.is_none());
     let own = current.digest().unwrap();
     current.bind_recorded_identity(&own).unwrap();

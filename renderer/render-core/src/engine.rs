@@ -1715,6 +1715,8 @@ pub struct SceneApp {
     actors: HashMap<String, (Entity, u32)>,
     /// Dynamic actor id -> (loaded catalog GLB root, authored scale, mesh count).
     actor_models: HashMap<String, (Entity, f32, usize)>,
+    /// Rest transforms of articulated model nodes (`body`, `wheel_*`).
+    actor_rest_poses: HashMap<String, HashMap<Entity, Transform>>,
     /// Layer-1 ID clone of each actor's cuboid; moved with the actor so the
     /// instance-ID pass never shows a body at its spawn pose.
     actor_id_clones: HashMap<String, Entity>,
@@ -1961,6 +1963,7 @@ impl SceneApp {
             ready: false,
             actors: HashMap::new(),
             actor_models: HashMap::new(),
+            actor_rest_poses: HashMap::new(),
             actor_id_clones: HashMap::new(),
             actor_tint_materials: HashMap::new(),
             actor_asset_cache: HashMap::new(),
@@ -3300,6 +3303,78 @@ impl SceneApp {
         self.apply_actor_layers(id);
     }
 
+    /// Apply the sprung-body attitude and wheel drop of a rigged catalog
+    /// model (sampler/2, docs/engineering/ground-height.md): `body_attitude`
+    /// `(pitch, roll)` rotates the model's `body` node about its origin
+    /// (OpenSCENARIO signs, pitch positive nose down, roll positive right side
+    /// down); `wheel_drop_m` `[FL, FR, RL, RR]` moves the `wheel_*` nodes along
+    /// the body's up axis. The actor transform itself carries road attitude
+    /// only, so the wheels stay on the ground. Models without these nodes
+    /// (single-mesh bodies) keep their pose; absent inputs restore the rest
+    /// pose. Returns the number of nodes posed.
+    pub fn set_actor_articulation(
+        &mut self,
+        actor_id: &str,
+        body_attitude: Option<(f32, f32)>,
+        wheel_drop_m: Option<[f32; 4]>,
+    ) -> Result<usize> {
+        let Some(&(root, scale, _)) = self.actor_models.get(actor_id) else {
+            bail!("actor {actor_id} has no attached catalog asset");
+        };
+        const WHEELS: [&str; 4] = ["wheel_fl", "wheel_fr", "wheel_rl", "wheel_rr"];
+        let nodes: Vec<(Entity, String)> = {
+            let world = self.app.world();
+            let mut stack = vec![root];
+            let mut found = Vec::new();
+            while let Some(entity) = stack.pop() {
+                if let Some(children) = world.get::<Children>(entity) {
+                    stack.extend(children.iter());
+                }
+                if let Some(name) = world.get::<Name>(entity) {
+                    let name = name.as_str();
+                    if name == "body" || WHEELS.contains(&name) {
+                        found.push((entity, name.to_owned()));
+                    }
+                }
+            }
+            found
+        };
+        let mut posed = 0;
+        for (entity, name) in nodes {
+            let rest = *self
+                .actor_rest_poses
+                .entry(actor_id.to_owned())
+                .or_default()
+                .entry(entity)
+                .or_insert_with(|| {
+                    self.app
+                        .world()
+                        .get::<Transform>(entity)
+                        .copied()
+                        .unwrap_or(Transform::IDENTITY)
+                });
+            let mut pose = rest;
+            if name == "body" {
+                if let Some((pitch, roll)) = body_attitude {
+                    pose.rotation =
+                        Quat::from_rotation_z(-pitch) * Quat::from_rotation_x(roll) * rest.rotation;
+                }
+            } else if let Some(drop) = wheel_drop_m {
+                let index = WHEELS.iter().position(|w| *w == name).expect("wheel name");
+                // Node translations live inside the uniformly scaled model root.
+                pose.translation.y += drop[index] / scale.max(1e-6);
+            }
+            if let Some(mut transform) = self.app.world_mut().get_mut::<Transform>(entity) {
+                if *transform != pose {
+                    *transform = pose;
+                    self.scene_revision += 1;
+                }
+                posed += 1;
+            }
+        }
+        Ok(posed)
+    }
+
     /// Pose visible catalog geometry independently of the canonical cuboid.
     /// Asset yaw/origin corrections must not rotate or bury sensor geometry.
     pub fn set_actor_asset_pose(&mut self, actor_id:&str, position:[f32;3], rotation:Quat)->Result<()> {
@@ -3626,6 +3701,7 @@ impl SceneApp {
             }
             self.actor_tint_materials.remove(id);
             self.actor_animations.remove(id);
+            self.actor_rest_poses.remove(id);
         }
     }
 
