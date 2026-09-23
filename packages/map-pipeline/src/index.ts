@@ -449,7 +449,7 @@ export async function webStage(master: MasterStageResult, options: DeriveClosure
  * master image and the texture tiers cook them for every GPU. Null when the
  * master carries no derivative.
  */
-async function vegetationLodLevels(io: NodeIO, masterDir: string, contentDir: string): Promise<(() => AsyncIterable<VegetationLodLevel>) | null> {
+export async function vegetationLodLevels(io: NodeIO, masterDir: string, contentDir: string): Promise<(() => AsyncIterable<VegetationLodLevel>) | null> {
   const lodDir = path.join(masterDir, ...GEOMETRY_LOD_DIR.split('/'));
   let manifestBytes: Buffer;
   try { manifestBytes = await readFile(path.join(lodDir, 'manifest.json')); }
