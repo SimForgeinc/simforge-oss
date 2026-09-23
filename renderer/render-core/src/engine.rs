@@ -1812,6 +1812,9 @@ pub struct SceneApp {
     /// Atmosphere IBL gain the last relight resolved, reused for views
     /// registered afterwards.
     env_gain: f32,
+    /// Fit one directional cascade set to the whole RGB rig and render it
+    /// once per frame ([`crate::shared_shadows`]).
+    shared_shadows: bool,
 }
 
 impl SceneApp {
@@ -1884,6 +1887,7 @@ impl SceneApp {
                 crate::road_detail::RoadDetailPlugin,
                 crate::sky_pass::SkyPassPlugin { assets: sky_assets },
                 crate::readiness::GpuReadinessPlugin,
+                crate::shared_shadows::SharedShadowsPlugin,
             ))
             .add_systems(
                 Update,
@@ -1981,6 +1985,7 @@ impl SceneApp {
         // sets the variable.
         if crate::gpu_diagnostics::enabled() {
             app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin);
+            crate::gpu_diagnostics::install_frame_timer(&mut app);
         }
 
         // Drive the plugin lifecycle to completion manually (we never call
@@ -2047,7 +2052,60 @@ impl SceneApp {
             sun_cookie: None,
             probe_cubemap: None,
             env_gain: 1.0,
+            shared_shadows: false,
         })
+    }
+
+    /// Share one directional cascade set across every RGB camera
+    /// ([`crate::shared_shadows`]). Applies to registered and future views.
+    pub fn set_shared_shadows(&mut self, enabled: bool) {
+        self.shared_shadows = enabled;
+        let entities: Vec<Entity> = self.groups.iter().map(|g| g.rgb_entity).collect();
+        let world = self.app.world_mut();
+        world.resource_mut::<DirectionalLightShadowMap>().size = if enabled {
+            crate::shared_shadows::SHARED_SHADOW_MAP_SIZE
+        } else {
+            2048
+        };
+        for entity in entities {
+            let mut e = world.entity_mut(entity);
+            if enabled {
+                e.insert(crate::shared_shadows::SharedShadowView);
+            } else {
+                e.remove::<crate::shared_shadows::SharedShadowView>();
+            }
+        }
+    }
+
+    /// Take one camera in or out of the shared cascade set (for example a
+    /// narrow presentation camera that should keep its own tight fit).
+    /// No-op unless shared shadows are enabled.
+    pub fn set_camera_shared_shadows(&mut self, sensor_id: &str, shared: bool) {
+        if !self.shared_shadows {
+            return;
+        }
+        let Some(entity) = self.groups.iter().find(|g| g.spec.sensor_id == sensor_id).map(|g| g.rgb_entity) else {
+            return;
+        };
+        let mut e = self.app.world_mut().entity_mut(entity);
+        let marked = e.contains::<crate::shared_shadows::SharedShadowView>();
+        if shared && !marked {
+            e.insert(crate::shared_shadows::SharedShadowView);
+        } else if !shared && marked {
+            e.remove::<crate::shared_shadows::SharedShadowView>();
+        }
+    }
+
+    /// Whole-frame GPU times (ms) completed since the last call; empty unless
+    /// [`crate::gpu_diagnostics::enabled`].
+    pub fn take_gpu_frame_times(&mut self) -> Vec<f64> {
+        crate::gpu_diagnostics::take_frame_times(self.app.world())
+    }
+
+    /// Direct world access for profiling tools and ablation experiments
+    /// (`render-bench`). Production paths go through the typed methods.
+    pub fn world_mut(&mut self) -> &mut World {
+        self.app.world_mut()
     }
 
     /// Drain the GPU pass timings recorded since the last call (see
@@ -3023,6 +3081,12 @@ impl SceneApp {
         ));
         let rgb_entity = e.id();
         self.next_camera_order += 10;
+        if self.shared_shadows {
+            self.app
+                .world_mut()
+                .entity_mut(rgb_entity)
+                .insert(crate::shared_shadows::SharedShadowView);
+        }
 
         // Sensor views retain the deterministic contract. Cinematic views use
         // the configured temporal/reflection/filmic stack and can coexist in

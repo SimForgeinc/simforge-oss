@@ -48,6 +48,7 @@ pub mod platform;
 pub mod post_grain;
 pub mod profiles;
 pub mod products;
+pub mod shared_shadows;
 pub mod sky_texture;
 pub mod veg;
 pub mod vehicle_model;

@@ -41,6 +41,8 @@ struct Args {
     dump_every: usize,
     out: Option<PathBuf>,
     shm_size_mb: u64,
+    ablate: Vec<String>,
+    spec_overrides: Vec<(String, String)>,
 }
 
 fn parse_args() -> Result<Args> {
@@ -58,6 +60,8 @@ fn parse_args() -> Result<Args> {
         dump_every: 0,
         out: None,
         shm_size_mb: 512,
+        ablate: Vec::new(),
+        spec_overrides: Vec::new(),
     };
     while let Some(arg) = args.next() {
         let mut value = || args.next().with_context(|| format!("{arg} requires a value"));
@@ -74,6 +78,12 @@ fn parse_args() -> Result<Args> {
             "--dump-every" => parsed.dump_every = value()?.parse()?,
             "--out" => parsed.out = Some(value()?.into()),
             "--shm-size-mb" => parsed.shm_size_mb = value()?.parse()?,
+            "--set" => {
+                let kv = value()?;
+                let (k, v) = kv.split_once('=').context("--set key=json")?;
+                parsed.spec_overrides.push((k.to_string(), v.to_string()));
+            }
+            "--ablate" => parsed.ablate = value()?.split(',').filter(|v| !v.is_empty()).map(String::from).collect(),
             other => bail!("unknown argument {other}"),
         }
     }
@@ -101,6 +111,73 @@ fn attachment(source: &serde_json::Value, pitch_offset_deg: f64) -> serde_json::
     })
 }
 
+/// Diagnostic ablations, applied to the live world before every tick so a
+/// relight or re-registration cannot quietly restore what was removed.
+/// Each one isolates the cost of one feature; none is a production mode.
+fn ablate(world: &mut bevy::prelude::World, flags: &[String]) {
+    use bevy::prelude::*;
+    if flags.is_empty() {
+        return;
+    }
+    let has = |name: &str| flags.iter().any(|f| f == name);
+    let cameras: Vec<Entity> = world
+        .query_filtered::<Entity, With<Camera3d>>()
+        .iter(world)
+        .collect();
+    for entity in cameras {
+        let mut e = world.entity_mut(entity);
+        if has("nossao") {
+            e.remove::<bevy::pbr::ScreenSpaceAmbientOcclusion>();
+            e.remove::<bevy::pbr::ContactShadows>();
+        }
+        if has("nocontact") {
+            e.remove::<bevy::pbr::ContactShadows>();
+        }
+        if has("nossr") {
+            e.remove::<bevy::pbr::ScreenSpaceReflections>();
+        }
+        if has("notaa") {
+            e.remove::<bevy::anti_alias::taa::TemporalAntiAliasing>();
+        }
+        if has("nobloom") {
+            e.remove::<bevy::post_process::bloom::Bloom>();
+        }
+        if has("noatmo") {
+            e.remove::<bevy::pbr::AtmosphereSettings>();
+        }
+        if has("nosky") {
+            e.remove::<render_core::sky_pass::SkyPass>();
+        }
+        if has("occlusion") {
+            e.insert(bevy::render::occlusion_culling::OcclusionCulling);
+        }
+    }
+    if has("noshadows") {
+        for mut light in world.query::<&mut DirectionalLight>().iter_mut(world) {
+            if light.shadow_maps_enabled { light.shadow_maps_enabled = false; }
+        }
+        for mut light in world.query::<&mut SpotLight>().iter_mut(world) {
+            if light.shadow_maps_enabled { light.shadow_maps_enabled = false; }
+        }
+        for mut light in world.query::<&mut PointLight>().iter_mut(world) {
+            if light.shadow_maps_enabled { light.shadow_maps_enabled = false; }
+        }
+    }
+    for flag in flags.iter().filter_map(|f| f.strip_prefix("hide:")) {
+        let hidden: Vec<Entity> = world
+            .query::<(Entity, &bevy::gltf::GltfMeshName)>()
+            .iter(world)
+            .filter(|(_, name)| name.0.contains(flag))
+            .map(|(e, _)| e)
+            .collect();
+        for entity in hidden {
+            if let Some(mut visibility) = world.get_mut::<Visibility>(entity) {
+                if *visibility != Visibility::Hidden { *visibility = Visibility::Hidden; }
+            }
+        }
+    }
+}
+
 fn vertical_fov(horizontal_deg: f64, width: f64, height: f64) -> f64 {
     2.0 * ((horizontal_deg.to_radians() / 2.0).tan() * height / width).atan().to_degrees()
 }
@@ -114,6 +191,9 @@ fn main() -> Result<()> {
     if let Some(models) = &args.models {
         spec_json["vehicleModels"] = serde_json::json!(models);
         spec_json["pedestrianModels"] = serde_json::json!(models);
+    }
+    for (key, value) in &args.spec_overrides {
+        spec_json[key] = serde_json::from_str(value).with_context(|| format!("--set {key}"))?;
     }
     let spec: SceneSpec = serde_json::from_value(spec_json)?;
     let trace: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&args.trace)?)?;
@@ -197,6 +277,8 @@ fn main() -> Result<()> {
     let mut digests: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut gpu: BTreeMap<String, (f64, usize)> = BTreeMap::new();
     let mut first_tick_ms = 0.0;
+    let mut stages: BTreeMap<String, f64> = BTreeMap::new();
+    let mut gpu_frames: Vec<f64> = Vec::new();
     for (n, tick) in (args.start..end).enumerate() {
         let mut body = serde_json::json!({
             "i": 10 + tick, "op": "render_bundle", "sim_tick": tick, "tick_index": tick,
@@ -206,10 +288,11 @@ fn main() -> Result<()> {
             if !lidars.is_empty() { body["lidars"] = serde_json::json!(lidars); }
             if !radars.is_empty() { body["radars"] = serde_json::json!(radars); }
         }
+        ablate(state.app.world_mut(), &args.ablate);
         let started = Instant::now();
         let response = dispatch(&mut state, request(body)?);
         let elapsed = started.elapsed().as_secs_f64() * 1000.0;
-        let ResponseBody::RenderBundle { frames: records, server_ms: reported, .. } = response.body else {
+        let ResponseBody::RenderBundle { frames: records, server_ms: reported, stages: tick_stages, .. } = response.body else {
             if let ResponseBody::Error { error, .. } = response.body { bail!("tick {tick}: {error}"); }
             bail!("tick {tick}: unexpected response");
         };
@@ -234,6 +317,10 @@ fn main() -> Result<()> {
             entry.0 += pass.total;
             entry.1 += pass.count;
         }
+        let frame_times = state.app.take_gpu_frame_times();
+        if n > 0 {
+            gpu_frames.extend(frame_times);
+        }
         if n == 0 {
             first_tick_ms = elapsed;
             eprintln!("render-bench: first tick {elapsed:.0} ms (includes lidar BVH build / pipeline warmup)");
@@ -241,6 +328,15 @@ fn main() -> Result<()> {
         } else {
             tick_ms.push(elapsed);
             server_ms.push(reported);
+            if let Some(tick_stages) = tick_stages {
+                if let serde_json::Value::Object(map) = serde_json::to_value(tick_stages)? {
+                    for (key, value) in map {
+                        if let Some(v) = value.as_f64() {
+                            *stages.entry(key).or_default() += v;
+                        }
+                    }
+                }
+            }
         }
         if n % 8 == 0 {
             eprintln!("render-bench: tick {tick} {elapsed:.1} ms");
@@ -258,19 +354,35 @@ fn main() -> Result<()> {
         .collect();
     gpu_rows.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
     eprintln!("render-bench: mean {mean:.1} ms/tick, median {median:.1} ms/tick over {} ticks", tick_ms.len());
+    let mut frames_sorted = gpu_frames.clone();
+    frames_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let gpu_frame_median = frames_sorted.get(frames_sorted.len() / 2).copied().unwrap_or(0.0);
+    let gpu_frame_total: f64 = gpu_frames.iter().sum();
+    eprintln!(
+        "render-bench: GPU frames {} (median {gpu_frame_median:.1} ms, max {:.1} ms), GPU busy {:.1} ms/tick",
+        gpu_frames.len(), frames_sorted.last().copied().unwrap_or(0.0), gpu_frame_total / measured
+    );
+    for (key, total) in &stages {
+        eprintln!("  stage {key:24} {:9.2} /tick", total / measured);
+    }
     for (path, per_tick, spans) in gpu_rows.iter().filter(|row| row.0.ends_with("elapsed_gpu")).take(40) {
         eprintln!("  {per_tick:9.3} ms/tick  {spans:5.1} spans  {path}");
     }
     let result = serde_json::json!({
         "schema": "simforge.render-bench/v1",
+        "ablate": args.ablate,
         "prewarmS": prewarm_s,
         "firstTickMs": first_tick_ms,
         "ticks": tick_ms.len(),
         "meanMsPerTick": mean,
         "medianMsPerTick": median,
         "tickMs": tick_ms,
+        "gpuFrameMs": gpu_frames,
+        "gpuFrameMedianMs": gpu_frame_median,
+        "gpuBusyMsPerTick": gpu_frame_total / measured,
         "serverMs": server_ms,
         "gpuPerTick": gpu_rows.iter().map(|(p, v, c)| serde_json::json!({"path": p, "perTick": v, "spansPerTick": c})).collect::<Vec<_>>(),
+        "stagesPerTick": stages.iter().map(|(k, v)| (k.clone(), serde_json::json!(v / measured))).collect::<serde_json::Map<_, _>>(),
         "digests": digests,
     });
     if let Some(out) = &args.out {

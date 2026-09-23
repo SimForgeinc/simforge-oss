@@ -67,6 +67,11 @@ pub struct SceneSpec {
     /// printing a white sky). Off, the incident meter alone sets exposure.
     #[serde(default = "default_true")]
     pub auto_meter: bool,
+    /// Render one directional cascade set for the whole RGB rig instead of
+    /// one per camera (`render_core::shared_shadows`). Cascades are fitted
+    /// to the union of the rig's frusta, so every view stays covered.
+    #[serde(default)]
+    pub shared_shadows: bool,
 }
 
 fn default_true() -> bool {
@@ -94,6 +99,7 @@ pub fn prewarm(spec: &SceneSpec) -> Result<SceneApp> {
     // `ev100_bias`, weather and night controls. A scene that never receives a
     // `set_lighting` request must still render the lighting it declared.
     app.apply_lighting(&spec.lighting, spec.profile_config)?;
+    app.set_shared_shadows(spec.shared_shadows);
     app.load_tiles(&spec.glbs)?;
     app.load_vegetation(&spec.veg_glbs)?;
     // Bevy's atmosphere bindings are a per-view mesh layout. Mixing a
@@ -1139,6 +1145,14 @@ fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera) {
     let prefix = format!("{}:", cam.sensor_id);
     state.cache.retain(|key, _| !key.starts_with(&prefix));
     state.app.add_camera(spec, profile);
+    // A presentation camera that shows its host (the trailing chase) is
+    // narrow: the rig-wide cascade union would coarsen its shadows ~3x, so
+    // it keeps its own fit. Rig sensors share one cascade set.
+    let presentation = cam.attach.as_ref().is_some_and(|attach| attach.host_visible);
+    if std::env::var_os("SIMFORGE_DEBUG_SHARED_SHADOWS").is_some() {
+        eprintln!("shared-shadows: camera {} presentation={presentation}", cam.sensor_id);
+    }
+    state.app.set_camera_shared_shadows(&cam.sensor_id, !presentation);
 }
 
 /// Bring the resident rig in line with `cameras` for this tick: register
