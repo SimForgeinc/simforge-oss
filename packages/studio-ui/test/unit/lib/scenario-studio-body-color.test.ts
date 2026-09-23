@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
-import type { SimScenarioInput } from "@simforge-oss/engine";
+import { contentHash, parseSimScenarioInput, type SimScenarioInput } from "@simforge-oss/engine";
+import { engine } from "@simforge-oss/engine/node";
 import {
   STUDIO_BODY_COLOR_TAG_PREFIX,
   normalizeStudioBodyColor,
-  withStudioBodyColorTags,
 } from "@simforge-oss/compiler";
+
+/** Paint reconciliation is native (`studio_refinements`): the same code the editor worker and the host run. */
+function withStudioBodyColorTags(scenario: SimScenarioInput, document: ScenarioTemplateV2): SimScenarioInput {
+  return JSON.parse(engine().studioConcreteInput(scenario, document).toJson()) as SimScenarioInput;
+}
 
 /**
  * The exact validator `@simforge-oss/playback` applies before it accepts a
@@ -27,7 +32,20 @@ function template(roles: Array<{ id: string; bodyColor?: unknown }>): ScenarioTe
 }
 
 function input(actors: Array<{ id: string; tags: string[] }>): SimScenarioInput {
-  return { actors } as unknown as SimScenarioInput;
+  return parseSimScenarioInput({
+    mapId: "studio-body-color",
+    clipSeconds: 1,
+    warmupSeconds: 0,
+    dt: 0.02,
+    seed: "studio-body-color",
+    actors: actors.map((actor, index) => ({
+      id: actor.id,
+      kind: "vehicle",
+      initial: { pose: { x: index * 10, z: 0, headingRad: 0 }, speedMps: 0 },
+      behavior: { route: { kind: "polyline", points: [{ x: index * 10, z: 0 }, { x: index * 10 + 1, z: 0 }] } },
+      tags: actor.tags,
+    })),
+  });
 }
 
 describe("normalizeStudioBodyColor", () => {
@@ -105,10 +123,10 @@ describe("withStudioBodyColorTags", () => {
   it("is idempotent, so recompiling does not change the input", () => {
     const doc = template([{ id: "hero", bodyColor: "#c98a2e" }]);
     const once = withStudioBodyColorTags(input([{ id: "a", tags: ["role:hero"] }]), doc);
-    expect(withStudioBodyColorTags(once, doc)).toBe(once);
+    expect(contentHash(withStudioBodyColorTags(once, doc))).toBe(contentHash(once));
   });
 
-  it("leaves untinted and ambient actors untouched by identity", () => {
+  it("leaves untinted and ambient actors untouched", () => {
     // Ambient actors carry no role: tag, so nothing can be attributed to them,
     // and an unchanged input must keep its hash stable.
     const original = input([
@@ -116,8 +134,8 @@ describe("withStudioBodyColorTags", () => {
       { id: "b", tags: ["role:extra", "class:vehicle"] },
     ]);
 
-    expect(withStudioBodyColorTags(original, template([{ id: "hero", bodyColor: "#2f4f74" }]))).toBe(
-      original,
+    expect(contentHash(withStudioBodyColorTags(original, template([{ id: "hero", bodyColor: "#2f4f74" }])))).toBe(
+      contentHash(JSON.parse(engine().scenario(original).toJson())),
     );
   });
 });

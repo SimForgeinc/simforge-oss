@@ -593,6 +593,11 @@ export function engineSemVer(): string;
 export function engineVersion(): string;
 
 /**
+ * The refinements every executor applies to the input it runs (stable high-speed world routes, cruise restoration).
+ */
+export function executionRefinements(input: ScenarioInput): ScenarioInput;
+
+/**
  * Resolve one site: `siteId = null` picks the top-ranked site.
  */
 export function findSite(template_json: string, bundle: MapBundle, site_id?: string | null): Site;
@@ -643,6 +648,11 @@ export function sha256Hex(data: Uint8Array): string;
 export function solveSituation(document_json: string, bundle: MapBundle, options_json?: string | null, on_evaluation?: Function | null, policy?: Function | null): string;
 
 export function stateVectorSize(): number;
+
+/**
+ * The document's Studio content applied to a materialised input: paint tags on role actors, then baked parked cars.
+ */
+export function studioConcreteInput(input: ScenarioInput, template_json: string): ScenarioInput;
 
 /**
  * `{templateId, paramsVersion}`: the replay-key identity of a template.
@@ -783,6 +793,7 @@ export interface InitOutput {
     readonly envsession_restore: (a: number, b: number, c: number) => [number, number, number];
     readonly envsession_signalBookJson: (a: number) => [number, number, number, number];
     readonly envsession_step: (a: number, b: number) => [number, number, number];
+    readonly executionRefinements: (a: number) => [number, number, number];
     readonly findSite: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly findSites: (a: number, b: number, c: number) => [number, number, number, number];
     readonly handoffActorRow: () => number;
@@ -922,6 +933,7 @@ export interface InitOutput {
     readonly site_toJson: (a: number) => [number, number, number, number];
     readonly solveSituation: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
     readonly stateVectorSize: () => number;
+    readonly studioConcreteInput: (a: number, b: number, c: number) => [number, number, number];
     readonly templateIdentityJson: (a: number, b: number) => [number, number, number, number];
     readonly trace_behaviorSummaryJson: (a: number, b: number, c: number) => [number, number, number, number];
     readonly trace_blindReviewPacketJson: (a: number, b: number, c: number) => [number, number, number, number];

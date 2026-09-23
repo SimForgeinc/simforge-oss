@@ -840,6 +840,23 @@ pub fn apply_situation_transaction_json(
     )?)?)
 }
 
+/* ------------------------------------------------------ studio refinements */
+
+/// The document's Studio content applied to a materialised input (paint tags
+/// on role actors, then baked parked cars). `template_json` is the document.
+pub fn studio_concrete_input(scenario: &Scenario, template_json: &str) -> Result<Scenario> {
+    let template: serde_json::Value = json_arg("scenario template", template_json)?;
+    let refined = simforge_compiler::studio_refinements::studio_concrete_input(scenario.input().clone(), &template)?;
+    Ok(Scenario::from_input(refined))
+}
+
+/// The refinements every executor applies to the input it runs (stable
+/// high-speed world routes, cruise restoration after bounded speed actions).
+pub fn execution_refinements(scenario: &Scenario) -> Result<Scenario> {
+    let refined = simforge_compiler::studio_refinements::execution_refinements(scenario.input().clone())?;
+    Ok(Scenario::from_input(refined))
+}
+
 /* --------------------------------------------------------------- ambient */
 
 /// The ambient turn-feasibility verdicts the process holds for `graph`'s

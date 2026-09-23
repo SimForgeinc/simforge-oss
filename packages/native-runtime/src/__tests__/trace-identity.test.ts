@@ -63,6 +63,8 @@ interface Build {
   materializeAmbientTraffic(input: Scenario, graph: unknown, profile: string, options?: string | null): [Scenario, string] | unknown[];
   compileTemplate(template: string, bundle: Bundle, site?: string | null, seed?: number | string | null, options?: string | null): { input: Scenario; manifestJson: string };
   ambientTurnVerdictsJson?(graph: unknown): string;
+  studioConcreteInput?(input: Scenario, templateJson: string): Scenario;
+  executionRefinements?(input: Scenario): Scenario;
 }
 interface Bundle { closureDigest?: string; graph: unknown; controlPlanJson(): string }
 interface Scenario { toJson(): string }
@@ -150,6 +152,33 @@ describe.skipIf(!existsSync(WASM) || selected.length === 0)('N-API and WASM buil
     return pair;
   };
 
+  it('both builds apply the Studio refinements to the same input', () => {
+    if (!addon.studioConcreteInput || !wasm.studioConcreteInput || !addon.executionRefinements || !wasm.executionRefinements) return;
+    const route = { kind: 'polyline', points: [{ x: 0, z: 0 }, { x: 200, z: 0 }] };
+    const document = JSON.stringify({
+      mapId: 'refinements', clipSeconds: 10, warmupSeconds: 0, dt: 0.02, seed: 'refinements',
+      actors: [
+        { id: 'ego', kind: 'car', initial: { pose: { x: 0, z: 0, headingRad: 0 }, speedMps: 30 }, behavior: { cruiseSpeedMps: 30, route }, tags: ['role:ego', 'studio:body-color:#000000'] },
+        { id: 'lead', kind: 'car', initial: { pose: { x: 40, z: 0, headingRad: 0 }, speedMps: 9 }, behavior: { cruiseSpeedMps: 9, route }, tags: ['role:lead'] },
+      ],
+      interactions: [
+        { id: 'r', actorId: 'ego', trigger: { kind: 'at', t: 1 }, verb: 'route', target: { kind: 'polyline', points: [{ x: 10, z: 0 }, { x: 120, z: 30 }] }, joinFromCurrentPose: true, bestEffortWorldPath: true },
+        { id: 's', actorId: 'lead', trigger: { kind: 'at', t: 1 }, window: { startS: 1, endS: 4 }, verb: 'speed', target: { mode: 'absolute', value: 3 }, dynamics: { shape: 'linear', constraint: 'rate', value: 2 } },
+      ],
+    });
+    const car = (id: string, x: number, h: number) => ({ id, stallId: id, catalogId: 'vehicle.sedan', x, y: 0, z: 12, headingRad: h, lengthM: 4.6, widthM: 1.85, heightM: 1.5 });
+    const template = JSON.stringify({
+      roles: [{ id: 'ego', extensions: { 'studio.presentation.bodyColor': 'rgb(12, 200, 7)' } }, { id: 'lead', extensions: { 'studio.presentation.bodyColor': '#AbC' } }],
+      extensions: { 'studio.ambientTraffic.parkedCars.v1': { baked: [car('parked:b', 30, 0.7), car('parked:a', 60, 2.1)] } },
+    });
+    const refine = (build: Build) => build.executionRefinements!(build.studioConcreteInput!(build.ScenarioInput.parse(document), template)).toJson();
+    const fromAddon = refine(addon);
+    expect(refine(wasm)).toBe(fromAddon);
+    expect(fromAddon).toContain('restore-cruise-s');
+    expect(fromAddon).toContain('parked:a');
+    expect(fromAddon).toContain('studio:body-color:#0cc807');
+  });
+
   it('both builds report one engine semantics version, the manifest\'s', () => {
     const semver = (build: Build) => build.engineSemVer?.() ?? build.engineVersion();
     expect(semver(wasm)).toBe(semver(addon));
@@ -220,6 +249,12 @@ describe.skipIf(!existsSync(WASM) || selected.length === 0)('N-API and WASM buil
         // The committed resolved input is what this build compiles today.
         expect(JSON.parse(fromAddon.split('\n')[0]!)).toEqual(JSON.parse(inputDocument(testCase)));
       }, 300_000);
+
+      it('applies the execution refinements identically in both builds', () => {
+        if (!addon.executionRefinements || !wasm.executionRefinements) return;
+        const refined = (build: Build) => build.executionRefinements!(build.ScenarioInput.parse(inputDocument(testCase))).toJson();
+        expect(refined(wasm)).toBe(refined(addon));
+      });
 
       it('simulates on the N-API addon to the manifest digest', () => {
         fromAddon = simulate(addon, bundlesFor(testCase).addon, inputDocument(testCase));

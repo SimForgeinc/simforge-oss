@@ -2,11 +2,10 @@
  * Studio body paint on concrete actors: the presentation-only tag the native
  * materializer emits for `studio.presentation.bodyColor` on a role.
  *
- * Fresh materialization stamps the tag itself. This helper reconciles the
- * authored paint onto an already-materialized input — an editor replaying a
- * stored base input while changing presentation metadata — and, like
- * `parked-cars.ts`, is dependency-free so the browser worker and the compiler
- * service share one implementation.
+ * Fresh materialization stamps the tag itself; reconciling authored paint onto
+ * an already-materialized input is native (`EngineRuntime.studioConcreteInput`,
+ * `simforge_compiler::studio_refinements`). This module keeps the authoring-side
+ * normalizer the editor uses to validate a paint before it is saved.
  */
 
 export const STUDIO_BODY_COLOR_TAG_PREFIX = "studio:body-color:";
@@ -31,40 +30,4 @@ export function normalizeStudioBodyColor(value: unknown): string | null {
     bytes.push(parsed);
   }
   return `#${bytes.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
-}
-
-interface TaggedActorsCarrier {
-  readonly actors: readonly { readonly tags: readonly string[] }[];
-}
-
-interface PaintedRolesCarrier {
-  readonly roles: readonly {
-    readonly id: string;
-    readonly extensions?: Readonly<Record<string, unknown>> | undefined;
-  }[];
-}
-
-/**
- * Reconcile authored Studio paint onto an already-materialized input: every
- * `role:<id>` actor carries exactly the tag its role's paint implies, and stale
- * paint tags are dropped. Returns the same object when nothing changes.
- */
-export function withStudioBodyColorTags<T extends TaggedActorsCarrier>(input: T, template: PaintedRolesCarrier): T {
-  const colors: Record<string, string> = {};
-  for (const role of template.roles) {
-    const color = normalizeStudioBodyColor(role.extensions?.[STUDIO_BODY_COLOR_EXTENSION_KEY]);
-    if (color) colors[role.id] = color;
-  }
-
-  let changed = false;
-  const actors = input.actors.map((actor) => {
-    const roleTag = actor.tags.find((tag) => tag.startsWith("role:"));
-    const color = roleTag ? colors[roleTag.slice("role:".length)] : undefined;
-    const tags = actor.tags.filter((tag) => !tag.startsWith(STUDIO_BODY_COLOR_TAG_PREFIX));
-    if (color) tags.push(`${STUDIO_BODY_COLOR_TAG_PREFIX}${color}`);
-    if (tags.length === actor.tags.length && tags.every((tag, index) => tag === actor.tags[index])) return actor;
-    changed = true;
-    return { ...actor, tags };
-  });
-  return changed ? { ...input, actors } : input;
 }
