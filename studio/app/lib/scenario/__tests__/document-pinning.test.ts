@@ -1,4 +1,6 @@
 import "../../models/__tests__/test-env";
+// The authoritative simulation stores its trace as a local object, signed with the supervised host's token.
+process.env.SIMFORGE_LOCAL_HOST_TOKEN ??= "document-pinning-test-token";
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -20,6 +22,8 @@ import { renderSeed } from "../render-intent-store";
 import { canonicalContentSha256 } from "../core";
 import { LEGACY_AMBIENT_PROFILE, pinStoredDocument } from "../document-pinning";
 import { CLOSURE_A, CLOSURE_B, seedPinnedMap, setMembers, SIMULATION_MEMBERS, simulationClosureSha256 } from "./pinning-fixtures";
+import { setSimulationExecutorForTests } from "../sim-result-store";
+import { fakeAuthoritativeSimulation } from "./sim-fixtures";
 
 const SIM_A = simulationClosureSha256(SIMULATION_MEMBERS);
 const SIM_B = simulationClosureSha256({ ...SIMULATION_MEMBERS, "topology-index.json.gz": "e".repeat(64) });
@@ -93,9 +97,15 @@ test("the render seed follows the pinned seed, not the content digest", () => {
 });
 
 test("drafts are stored pinned, revisions freeze the pin, and nothing re-resolves", async (t) => {
-  t.after(() => shutdownDatabase());
+  t.after(async () => {
+    setSimulationExecutorForTests(null);
+    await shutdownDatabase();
+  });
   await migrate();
   await seedPinnedMap();
+  // Committing resolves the draft's authoritative simulation first; the
+  // fixture map has no real closure, so a tiny real simulation stands in.
+  setSimulationExecutorForTests(async () => fakeAuthoritativeSimulation("pinning", { assetId: "map-pin", versionId: "usmapv_pin" }));
 
   // Create: content without a block is stored with its one-time pin, plus the map pin.
   const created = await createScenarioDocument(context, {

@@ -15,8 +15,11 @@ import { dirname } from 'node:path';
  * left the lock behind, which made a PID check call a stale lock "alive"
  * forever (usrj_0272cd18, attempt 3). A lock is stale when:
  *   - it was not refreshed for `staleAfterMs` (its holder is gone), or
- *   - it names this process's own token-less identity (host + pid) while this
- *     process holds no lock (a leftover from a previous container), or
+ *   - it comes from this same container (its `instance`: cgroup container id,
+ *     else hostname) and this process does not hold it, while its writer was
+ *     another process lifetime (`processStartedAt`) or this very PID. That
+ *     includes token-less locks from pre-refresh workers, which age alone
+ *     would otherwise keep for hours after a pid-51 container restart, or
  *   - `isJobActive` says its job is no longer running (checked at acquire).
  * Every exit path releases it: normal release, and a synchronous unlink on
  * process exit. A busy GPU is waited for (bounded), not failed. A lock
@@ -46,12 +49,39 @@ export interface GpuLockOptions {
 export interface GpuLockOwner {
   readonly pid?: number;
   readonly host?: string;
+  /** Container (or host) this process runs in; see `processInstance`. */
+  readonly instance?: string;
+  /** When the owning process started (epoch ms): tells two lifetimes of one PID apart. */
+  readonly processStartedAt?: number;
   readonly token?: string;
   readonly jobId?: string;
   readonly acquiredAt?: string;
 }
 
 const held = new Map<string, string>();
+
+/**
+ * The container this process runs in: its id from the cgroup path when there
+ * is one (Docker, containerd), else the hostname. Worker containers all run
+ * node as about pid 51, so a PID alone cannot tell a dead container's lock
+ * from a live one; instance plus process start time can.
+ */
+function processInstance(): string {
+  try {
+    const cgroup = readFileSync('/proc/self/cgroup', 'utf8');
+    const id = /([a-f0-9]{64})/.exec(cgroup)?.[1];
+    if (id) return `container:${id}`;
+  } catch { /* not Linux or no cgroup: fall back */ }
+  return `host:${hostname()}`;
+}
+
+const INSTANCE = processInstance();
+const PROCESS_STARTED_AT = Math.round(Date.now() - process.uptime() * 1000);
+
+/** For tests: the identity this process writes into a lock it takes. */
+export function gpuLockIdentity(): { instance: string; processStartedAt: number; pid: number; host: string } {
+  return { instance: INSTANCE, processStartedAt: PROCESS_STARTED_AT, pid: process.pid, host: hostname() };
+}
 let exitHookInstalled = false;
 
 function installExitHook(): void {
@@ -91,6 +121,18 @@ export async function staleGpuLockReason(
   if (owner.jobId && options.isJobActive && !(await options.isJobActive(owner.jobId))) {
     return `its job ${owner.jobId} is no longer active`;
   }
+  // A lock this process does not hold, written from this same container by a
+  // process that is not this one (a different lifetime, or this PID reused
+  // after a restart), has no live owner, whether or not it carries a token:
+  // containers have their own PID namespaces, so the PID alone proves nothing.
+  const oursNow = held.has(path) && owner.token === held.get(path);
+  const sameInstance = owner.instance !== undefined ? owner.instance === INSTANCE : owner.host === hostname();
+  if (!oursNow && sameInstance) {
+    if (owner.processStartedAt !== undefined && owner.processStartedAt !== PROCESS_STARTED_AT) {
+      return 'left by an earlier process in this container';
+    }
+    if (owner.pid === process.pid) return 'left by a previous process with this identity';
+  }
   if (!owner.token) {
     // A pre-refresh worker's lock (no token, never refreshed). Its PID may
     // belong to another container's namespace, so only age can prove it dead:
@@ -100,9 +142,6 @@ export async function staleGpuLockReason(
   }
   const staleAfterMs = options.staleAfterMs ?? 60_000;
   if (now - info.mtimeMs > staleAfterMs) return `not refreshed for ${Math.round((now - info.mtimeMs) / 1000)} s`;
-  if (owner.host === hostname() && owner.pid === process.pid && owner.token !== held.get(path)) {
-    return 'left by a previous process with this identity';
-  }
   return null;
 }
 
@@ -130,7 +169,10 @@ export async function acquireGpuJobLock(path: string, jobId: string, options: Gp
   for (;;) {
     try {
       const handle = await open(path, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 0o600);
-      await handle.writeFile(JSON.stringify({ pid: process.pid, host: hostname(), token, jobId, acquiredAt: new Date().toISOString() } satisfies GpuLockOwner));
+      await handle.writeFile(JSON.stringify({
+        pid: process.pid, host: hostname(), instance: INSTANCE, processStartedAt: PROCESS_STARTED_AT,
+        token, jobId, acquiredAt: new Date().toISOString(),
+      } satisfies GpuLockOwner));
       await handle.close();
       held.set(path, token);
       installExitHook();
