@@ -1,0 +1,47 @@
+diff --git a/packages/render/src/native/camera-schedule.ts b/packages/render/src/native/camera-schedule.ts
+index 04970915..e846a4df 100644
+--- a/packages/render/src/native/camera-schedule.ts
++++ b/packages/render/src/native/camera-schedule.ts
+@@ -17,6 +17,7 @@ export interface NativeSensorAttach {
+   /** Degrees, CARLA sense (clockwise from above); the service subtracts it. */
+   readonly yawDeg: number;
+   readonly pitchDeg: number;
++  readonly rollDeg: number;
+   /**
+    * Keep the host's own geometry in this view. A rigid rig mount sits inside
+    * the body shell and must not see it; the trailing chase camera exists to.
+@@ -91,6 +92,7 @@ function attachment(source: RenderSourceV3, actorId: string, pitchOffsetDeg = 0)
+     offsetM: [mount.x, -mount.z, mount.y],
+     yawDeg: -source.transform.rotation.yawRad * 180 / Math.PI,
+     pitchDeg: source.transform.rotation.pitchRad * 180 / Math.PI + pitchOffsetDeg,
++    rollDeg: -source.transform.rotation.rollRad * 180 / Math.PI,
+     hostVisible: source.sensorId === PRONTO_CHASE_CAMERA_SENSOR_ID,
+   };
+ }
+diff --git a/packages/render/src/native/camera-schedule.test.ts b/packages/render/src/native/camera-schedule.test.ts
+index 177de656..23da7dc7 100644
+--- a/packages/render/src/native/camera-schedule.test.ts
++++ b/packages/render/src/native/camera-schedule.test.ts
+@@ -53,4 +53,22 @@ describe('native ego-mounted camera schedule', () => {
+     expect(schedule[1]![0]!.target[2]).toBeCloseTo(-34);
+     expect(schedule[1]![0]!.eye).not.toEqual(schedule[0]![0]!.eye);
+   });
++
++  it('propagates the full authored mount rotation to the native attachment', () => {
++    const schedule = createNativeCameraSchedule(
++      [{
++        ...source,
++        transform: {
++          ...source.transform,
++          rotation: { yawRad: Math.PI / 6, pitchRad: Math.PI / 12, rollRad: Math.PI / 4 },
++        },
++      }],
++      [host],
++      [state(0, [10, 2, 20], 0)],
++    );
++
++    expect(schedule[0]![0]!.attach.yawDeg).toBeCloseTo(-30);
++    expect(schedule[0]![0]!.attach.pitchDeg).toBeCloseTo(15);
++    expect(schedule[0]![0]!.attach.rollDeg).toBeCloseTo(-45);
++  });
+ });
