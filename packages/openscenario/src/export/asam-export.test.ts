@@ -88,6 +88,7 @@ function fixture() {
         initial: { pose: { x: 10, z: -5, headingRad: 0.25 }, speedMps: 2 },
         behavior: {
           route: { kind: 'polyline', points: [{ x: 10, z: -5 }, { x: 80, z: -5 }] },
+          cruiseSpeedMps: 2,
         },
       },
     ],
@@ -195,6 +196,7 @@ function semanticActorXmlFixture() {
         initial: { pose: { x: index * 3, z: 0, headingRad: 0 }, speedMps: 1 },
         behavior: {
           route: { kind: 'polyline' as const, points: [{ x: index * 3, z: 0 }, { x: index * 3 + 20, z: 0 }] },
+          cruiseSpeedMps: 1,
         },
       })),
       {
@@ -204,6 +206,7 @@ function semanticActorXmlFixture() {
         initial: { pose: { x: 30, z: 0, headingRad: 0 }, speedMps: 0 },
         behavior: {
           route: { kind: 'polyline' as const, points: [{ x: 30, z: 0 }, { x: 31, z: 0 }] },
+          cruiseSpeedMps: 0,
         },
       },
     ],
@@ -222,6 +225,7 @@ function standardActionsXmlFixture() {
         initial: { pose: { x: 20, z: -5, headingRad: 0.25 }, speedMps: 2 },
         behavior: {
           route: { kind: 'polyline', points: [{ x: 20, z: -5 }, { x: 80, z: -5 }] },
+          cruiseSpeedMps: 2,
         },
       },
     ],
@@ -302,12 +306,12 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
           id: 'robot', kind: 'sidewalk_robot', dims: { l: 0.9, w: 0.7, h: 1.2 },
           tags: ['driver-profile:cautious'],
           initial: { pose: { x: 0, z: 0, headingRad: 0 }, speedMps: 0 },
-          behavior: { route: { kind: 'polyline', points: [{ x: 0, z: 0 }, { x: 2, z: 0 }] } },
+          behavior: { route: { kind: 'polyline', points: [{ x: 0, z: 0 }, { x: 2, z: 0 }] }, cruiseSpeedMps: 0 },
         },
         {
           id: 'drone', kind: 'drone', dims: { l: 0.8, w: 0.8, h: 0.3 },
           initial: { pose: { x: 0, z: 2, headingRad: 0 }, speedMps: 0 },
-          behavior: { route: { kind: 'polyline', points: [{ x: 0, z: 2 }, { x: 2, z: 2 }] } },
+          behavior: { route: { kind: 'polyline', points: [{ x: 0, z: 2 }, { x: 2, z: 2 }] }, cruiseSpeedMps: 0 },
         },
       ],
       interactions: [],
@@ -333,14 +337,14 @@ describe('ASAM OpenSCENARIO XML 1.4.0 export', () => {
     expect(result.content).toContain('uniscenarios.nearMiss.0.planHash');
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: 'near_miss_criterion_metadata' }));
   });
-  it('exports the runtime-clamped effective lane-change duration', () => {
+  it('exports the authored lane-change shape and duration, which the engine now executes as written', () => {
     const input = mappedLaneChangeFixture(1, 1);
     const simulation = engine().runSimulation(input, { graph: laneGraph });
     const planned = simulation.trace.events.find((event) => event.kind === 'lateral_maneuver_planned')!;
-    expect(planned.effectiveDurationS).toBeGreaterThan(1);
+    expect(planned.effectiveDurationS).toBe(1);
+    expect(simulation.issues.map((issue) => issue.code)).toContain('lateral_duration_clamped');
     const result = exportOpenScenarioXml14(input, { engine: engine(), graph: laneGraph, executionMode: 'actions' });
-    const exported = /LaneChangeActionDynamics dynamicsShape="cubic" dynamicsDimension="time" value="([^"]+)"/.exec(result.content);
-    expect(Number(exported?.[1])).toBeCloseTo(planned.effectiveDurationS, 9);
+    expect(result.content).toContain('<LaneChangeActionDynamics dynamicsShape="sinusoidal" dynamicsDimension="time" value="1"/>');
   });
 
   it('fails closed when a requested multi-lane target has no final neighbour', () => {
@@ -639,7 +643,7 @@ describe('XML 1.4 storyboard mapping of engine trigger semantics (docs/engineeri
     expect(replay).not.toContain('priority="overwrite"');
   });
 
-  it('labels engine body-gap measures as freespace and flags the euclidean circle approximation', () => {
+  it('labels engine body-gap measures as freespace', () => {
     const input = parseSimScenarioInput({
       ...twoActor(),
       interactions: [
@@ -652,8 +656,6 @@ describe('XML 1.4 storyboard mapping of engine trigger semantics (docs/engineeri
     const result = exportOpenScenarioXml14(input, { engine: engine(), graph, executionMode: 'actions' });
     expect(result.content).not.toContain('freespace="false"');
     expect(result.content.match(/freespace="true"/g)).toHaveLength(4);
-    expect(result.warnings.filter((warning) => warning.code === 'distance_metric_approximated').map((warning) => warning.path))
-      .toEqual(['interactions.euclid.trigger.condition']);
   });
 
   it('does not let exported conditions fire during the warm-up the engine never evaluates', () => {
@@ -791,23 +793,29 @@ describe('honest unsupported-feature failures', () => {
     }));
   });
 
-  it('reports exact paths instead of silently degrading controller semantics', () => {
+  it('treats the OSC default controller as portable and names every reactive rule it cannot reproduce', () => {
     const input = fixture();
-    const changed = parseSimScenarioInput({
+    const withRules = (rules: Record<string, unknown>, cruise: number | 'omit' = 2) => parseSimScenarioInput({
       ...input,
-      actors: input.actors.map((actor) => ({
+      actors: input.actors.map(({ behavior: { cruiseSpeedMps: _omitted, ...behavior }, ...actor }) => ({
         ...actor,
-        behavior: { ...actor.behavior, rules: { ...actor.behavior.rules, obeySignals: false } },
+        behavior: { ...behavior, ...(cruise === 'omit' ? {} : { cruiseSpeedMps: cruise }), rules: { ...behavior.rules, ...rules } },
       })),
     });
-    expect(() => exportOpenScenarioXml14(changed, { engine: engine(), graph })).toThrowError(AsamExportError);
-    try {
-      exportOpenScenarioXml14(changed, { engine: engine(), graph });
-    } catch (error) {
-      expect((error as AsamExportError).issues).toEqual([
-        expect.objectContaining({ code: 'unsupported_controller_rules', path: 'actors.0.behavior.rules' }),
-      ]);
-    }
+    // Keep lane, keep speed, react to nothing: exactly the OSC default.
+    const passive = exportOpenScenarioXml14(withRules({ obeySignals: false, yieldToVehicles: false, yieldToPedestrians: false, collisionAvoidance: false }), { engine: engine(), graph });
+    expect(passive.warnings.map((warning) => warning.code)).not.toContain('reactive_controller_not_portable');
+    // SimForge's reactive defaults export, but say which reactions an OSC player will not reproduce.
+    const reactive = exportOpenScenarioXml14(withRules({ obeySignals: false }), { engine: engine(), graph });
+    expect(reactive.warnings).toContainEqual(expect.objectContaining({
+      code: 'reactive_controller_not_portable',
+      path: 'actors.0.behavior.rules',
+      reason: expect.stringMatching(/^yieldToVehicles, yieldToPedestrians, collisionAvoidance are/),
+    }));
+    // Lane-limit cruising (no cruise target) changes motion from t=0: refused.
+    expect(() => exportOpenScenarioXml14(withRules({}, 'omit'), { engine: engine(), graph })).toThrowError(
+      expect.objectContaining({ issues: [expect.objectContaining({ code: 'unsupported_cruise_controller', path: 'actors.0.behavior.cruiseSpeedMps' })] }),
+    );
   });
 
   it('rejects DSL traffic-signal programs without concrete map group bindings', () => {
@@ -1111,7 +1119,7 @@ describe('honest unsupported-feature failures', () => {
     );
   });
 
-  it('rejects controller yield switches that XML cannot preserve', () => {
+  it('warns, not rejects, when only some reactive rules are switched off', () => {
     const base = fixture();
     const input = parseSimScenarioInput({
       ...base,
@@ -1123,16 +1131,10 @@ describe('honest unsupported-feature failures', () => {
         },
       })),
     });
-    try {
-      exportOpenScenarioXml14(input, { engine: engine(), graph });
-      throw new Error('expected export to fail');
-    } catch (error) {
-      expect(error).toBeInstanceOf(AsamExportError);
-      expect((error as AsamExportError).issues[0]).toEqual(expect.objectContaining({
-        code: 'unsupported_controller_rules',
-        reason: expect.stringContaining('yieldToPedestrians'),
-      }));
-    }
+    const result = exportOpenScenarioXml14(input, { engine: engine(), graph });
+    const warning = result.warnings.find((item) => item.code === 'reactive_controller_not_portable');
+    expect(warning?.reason).toContain('obeySignals, yieldToVehicles, collisionAvoidance');
+    expect(warning?.reason).not.toContain('yieldToPedestrians');
   });
 
   it('requires trajectory replay for reverse motion and rejects reverse DSL controller substitution', () => {

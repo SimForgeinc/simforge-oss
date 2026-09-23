@@ -100,6 +100,7 @@
   "expect": {
     "ours": "deviates",
     "finding": "F-09",
-    "esmini": "agrees"
+    "esmini": "agrees",
+    "note": "Decision D-14: SimForge's default controller avoids collisions (product behaviour); the OSC default does not. The actions export carries reactive_controller_not_portable. collision-condition-no-avoidance-rules is the same scenario with the OSC-default rules and conforms."
   }
 }

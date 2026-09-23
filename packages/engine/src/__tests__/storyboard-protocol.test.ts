@@ -215,15 +215,16 @@ describe('interaction lifecycle protocol (targeted)', () => {
     expect(byInteraction(trace, 'trigger_skipped', 'chained')).toHaveLength(1);
   });
 
-  // Known deviations, pinned so that fixing them is noticed (the `.fails`
-  // flips to a failure and must be removed). See the conformance doc, F-02/F-03.
-  it.fails('F-02: `after end` of a speed interaction fires once the target speed is reached (OSC completeState)', () => {
+  // Formerly pinned deviations F-02/F-03, fixed in ENGINE_SEM_VER 0.10.0.
+  it('F-02: `after end` of a speed interaction fires once the target speed is reached (OSC completeState)', () => {
     const input = scenario({
       clipSeconds: 6, warmupSeconds: 0, actors: [car('a')],
       interactions: [ramp('slow', 1, 10, 1), { ...ramp('then', 0, 15, 1), trigger: { kind: 'after', interactionId: 'slow', event: 'end', delayS: 0.5 } }],
     });
     const { trace } = runSimulation(input, { graph });
-    expect(byInteraction(trace, 'trigger_fired', 'then')).toHaveLength(1);
+    // slow: 15 -> 10 m/s linear over 1 s from t=1 completes at 2.0; then +0.5 s.
+    expect(byInteraction(trace, 'interaction_completed', 'slow').map((event) => event.t)).toEqual([2]);
+    expect(byInteraction(trace, 'trigger_fired', 'then').map((event) => event.t)).toEqual([2.5]);
   });
 
   const deadline = (window?: { startS: number; endS: number }): Interaction => ({
@@ -238,12 +239,44 @@ describe('interaction lifecycle protocol (targeted)', () => {
     expect(byInteraction(trace, 'trigger_fired', 'deadline').map((event) => event.t)).toEqual([2]);
   });
 
-  // simforge-compiler lowers every template `when` with a window ending at
-  // `byLatest` (materialize/builder.rs); the window gate then skips before the
-  // deadline can force-fire, so compiled Studio documents never fire.
-  it.fails('F-03: the compiled form (window end = byLatest) still fires at `byLatest`', () => {
+  // simforge-compiler no longer lowers `byLatest` into a window end (F-03); an
+  // explicit window that ends at the deadline still closes eligibility first.
+  it('F-03: an explicit window ending at the deadline skips instead of firing', () => {
     const input = scenario({ clipSeconds: 5, warmupSeconds: 0, actors: [car('a'), car('far', LANE_RIGHT, 390)], interactions: [deadline({ startS: 0, endS: 2 })] });
     const { trace } = runSimulation(input, { graph });
-    expect(byInteraction(trace, 'trigger_fired', 'deadline').map((event) => event.t)).toEqual([2]);
+    expect(byInteraction(trace, 'trigger_fired', 'deadline')).toEqual([]);
+    expect(byInteraction(trace, 'trigger_skipped', 'deadline')).toHaveLength(1);
+  });
+
+  it('a prescribed speed profile is exact, instantaneous for a step, and hands back without overshoot', () => {
+    const step = { ...ramp('step', 1, 5, 1), dynamics: { shape: 'step', constraint: 'time', value: 1 } } as Interaction;
+    const input = scenario({ clipSeconds: 4, warmupSeconds: 0, actors: [car('a')], interactions: [step] });
+    const { trace } = runSimulation(input, { graph });
+    const speed = trace.ticks.actors.a!.speedMps;
+    const at = (t: number) => speed[trace.ticks.t.findIndex((value) => Math.abs(value - t) < 1e-9)]!;
+    expect(at(1)).toBeCloseTo(15, 2);
+    expect(at(1.02)).toBeCloseTo(5, 9);
+    // After completion the cruise state holds the target: no ringing.
+    for (const t of [1.5, 2, 3, 4]) expect(Math.abs(at(t) - 5)).toBeLessThan(0.02);
+    expect(trace.events.some((event) => event.kind === 'prescribed_motion' && event.interactionId === 'step')).toBe(true);
+  });
+
+  it('exist(absent) shows from the tick after its trigger', () => {
+    const input = scenario({
+      clipSeconds: 3, warmupSeconds: 0, actors: [car('a')],
+      interactions: [{ id: 'gone', actorId: 'a', trigger: { kind: 'at', t: 1 }, verb: 'exist', target: { state: 'absent' } }],
+    });
+    const { trace } = runSimulation(input, { graph });
+    const present = trace.ticks.actors.a!.present;
+    const at = (t: number) => present[trace.ticks.t.findIndex((value) => Math.abs(value - t) < 1e-9)];
+    expect([at(0.98), at(1), at(1.02)]).toEqual([1, 1, 0]);
+  });
+
+  it('a newer speed command on the same axis ends the running one (stopTransition)', () => {
+    const input = scenario({ clipSeconds: 6, warmupSeconds: 0, actors: [car('a')], interactions: [ramp('slow', 1, 5, 4), ramp('fast', 2, 20, 2)] });
+    const { trace } = runSimulation(input, { graph });
+    expect(byInteraction(trace, 'interaction_aborted', 'slow')).toEqual([
+      expect.objectContaining({ t: 2, reason: 'preempted' }),
+    ]);
   });
 });

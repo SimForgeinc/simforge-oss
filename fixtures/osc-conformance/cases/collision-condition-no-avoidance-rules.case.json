@@ -103,12 +103,8 @@
     ]
   },
   "expect": {
-    "ours": "deviates",
-    "finding": "F-02",
-    "exportIssueCodes": [
-      "unsupported_controller_rules"
-    ],
-    "esmini": "not-run",
-    "note": "The actions exporter rejects the rule set that matches OSC default behaviour and accepts the reactive one (F-09)."
+    "ours": "conforms",
+    "esmini": "agrees",
+    "note": "The OSC default controller expressed in SimForge: reactive rules off, cruise target = initial speed. Exports without warnings."
   }
 }
