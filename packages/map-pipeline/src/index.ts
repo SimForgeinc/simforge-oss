@@ -17,7 +17,8 @@ import type { WebTierReport } from './web-tier.js';
 import type { Ktx2Options } from './ktx2.js';
 import { donorLibraryDigest, resolveMapSource, sceneSourceDigest, semanticSourceDigest } from './source.js';
 import { withStageLock } from './stage-lock.js';
-import { buildTextureTiers, TEXTURE_TIERS_REVISION } from '../scripts/texture-tiers.mjs';
+import { buildTextureTiers, TEXTURE_TIERS_REVISION, TEXTURE_VARIANTS } from '../scripts/texture-tiers.mjs';
+import { buildBrowserPacks, BROWSER_PACK_REVISION } from '../scripts/browser-packs.mjs';
 import { buildSumoDerivative, SUMO_DERIVATIVE_FINGERPRINT, SUMO_DERIVED_DIR } from '../scripts/sumo-network.mjs';
 import { composeNativeTextureClosure } from './native-texture-closure.js';
 import { buildGeometryLod, GEOMETRY_LOD_DIR, geometryLodFingerprint } from './geometry-lod/index.js';
@@ -43,6 +44,7 @@ export type { WebTierOptions, WebTierReport } from './web-tier.js';
 export { encodeKtx2, ktx2ToolFingerprint } from './ktx2.js';
 export type { Ktx2Options } from './ktx2.js';
 export { buildTextureTiers, TEXTURE_TIERS_REVISION } from '../scripts/texture-tiers.mjs';
+export { buildBrowserPacks, BROWSER_PACK_REVISION, BROWSER_PACK_SCHEMA } from '../scripts/browser-packs.mjs';
 export { buildSumoDerivative, inspectSumoDerivative, resolveSumoToolchain, sumoBuildKey, SumoBuildError, SUMO_DERIVATIVE_FINGERPRINT, SUMO_DERIVATIVE_REVISION, SUMO_VERSION } from '../scripts/sumo-network.mjs';
 export { clampPbrFactors } from './material-ranges.js';
 export type { MaterialRangeReport } from './material-ranges.js';
@@ -400,7 +402,7 @@ export async function webStage(master: MasterStageResult, options: DeriveClosure
   const decoderJs = require.resolve('three/examples/jsm/libs/basis/basis_transcoder.js');
   const decoderWasm = require.resolve('three/examples/jsm/libs/basis/basis_transcoder.wasm');
   const decoderDigest = sha256(`${(await hashFile(decoderJs)).sha256}\0${(await hashFile(decoderWasm)).sha256}`);
-  const toolFingerprint = sha256(`${webTierToolFingerprint(cellSize)}\0decoder=${decoderDigest}\0${TEXTURE_TIERS_REVISION}`);
+  const toolFingerprint = sha256(`${webTierToolFingerprint(cellSize)}\0decoder=${decoderDigest}\0${TEXTURE_TIERS_REVISION}\0tiers=${TEXTURE_VARIANTS.join(',')}\0${BROWSER_PACK_REVISION}`);
   // XODR, location catalogs, reports and map aliases cannot invalidate identical render cells.
   const members = Object.fromEntries(Object.entries(master.closure.members).filter(([file]) => (sceneMember(file) && file !== 'master-report.json') || file === 'env/sky.hdr'));
   const inputDigest = sha256(canonicalJson(members));
@@ -424,6 +426,9 @@ export async function webStage(master: MasterStageResult, options: DeriveClosure
     await cp(decoderJs, path.join(contentDir, '3d', 'runtime', 'basis_transcoder.js'));
     await cp(decoderWasm, path.join(contentDir, '3d', 'runtime', 'basis_transcoder.wasm'));
     await buildTextureTiers({ sourceRoot: contentDir, ...(options.ktxBinDir ? { ktxBin: path.join(options.ktxBinDir, 'ktx') } : {}) });
+    // One read per few megabytes instead of one per member: the browser's
+    // per-tier packs (streaming order, ingest albedo classification).
+    await buildBrowserPacks({ sourceRoot: contentDir });
     const stage = await finishStage('web', outputDir, 'web', keys, { toolFingerprint, viewerOnly: master.viewerOnly });
     return { ...stage, report };
   });
