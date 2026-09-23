@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { RenderSha256Schema } from '@simforge-oss/scenario';
 
+import { RenderSubstitutionSchema } from './render-input-error.js';
+
 export const ARTIFACT_MANIFEST_V1_SCHEMA = 'simforge.render-artifact-manifest/v1' as const;
 
 export const ArtifactRoleSchema = z.enum([
@@ -69,6 +71,11 @@ export const RenderArtifactManifestSchema = z.strictObject({
     code: z.string().min(1).max(128),
     message: z.string().min(1).max(4096),
   })).max(1024),
+  /**
+   * Substitutions the intent explicitly allowed and the engine made. Written
+   * only when the lease lists CONTROL_FEATURE_RENDER_SUBSTITUTIONS.
+   */
+  substitutions: z.array(RenderSubstitutionSchema).max(4096).optional(),
 }).check((ctx) => {
   const identities = new Set<string>();
   ctx.value.artifacts.forEach((artifact, index) => {

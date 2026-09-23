@@ -12,7 +12,8 @@
  * - TypeScript: `?? <literal>`, `|| <literal>`, an empty `catch {}`,
  *   `.catch(() => ...)`;
  * - Python: `except ...: pass`, `.get(key, default)`, `or <literal>`;
- * - in every language, the words fallback, placeholder and proxy.
+ * - in every language, the words fallback, placeholder and proxy in code
+ *   (identifiers, strings, log messages; comments are not scanned).
  *
  * A hit passes when either:
  * - the line, or the line above it, carries `fallback-ok: <reason>` (a
@@ -111,8 +112,8 @@ export function scan(root = ROOT) {
       const lines = scannable(lang, readFileSync(path, 'utf8'));
       lines.forEach((line, index) => {
         for (const rule of RULES[lang]) {
-          // Comments may say "fallback" when explaining its absence; code rules only.
-          if (rule === WORDS ? false : isComment(lang, line)) continue;
+          // Comments explain policy ("never a fallback"); only code counts.
+          if (isComment(lang, line)) continue;
           if (!rule.re.test(line)) continue;
           if (rule.next && !/pass\b/u.test(line) && !rule.next.test(lines[index + 1] ?? '')) continue;
           if (MARKER.test(line) || MARKER.test(lines[index - 1] ?? '')) continue;

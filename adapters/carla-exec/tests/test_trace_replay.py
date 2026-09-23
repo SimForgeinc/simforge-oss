@@ -140,6 +140,14 @@ class FakeWorld:
         self.ticks += 1
         return self.ticks
 
+    def get_spectator(self):
+        world = self
+
+        class Spectator:
+            def set_transform(self, transform):
+                world.spectator_transform = transform
+        return Spectator()
+
     def get_snapshot(self):
         world = self
 
@@ -334,7 +342,7 @@ def test_bound_timeline_maps_the_shared_sampler_binding_onto_plan_frames():
 
         def poses(self, t):
             return {"a": {"present": True, "x": 1.0, "y": 2.0, "z": 3.0, "headingRad": math.pi / 2,
-                          "pitchRad": 0.01, "rollRad": -0.02, "speedMps": 4.0}}
+                          "pitchRad": 0.01, "rollRad": -0.02, "speedMps": 4.0, "downed": False}}
 
         def signals_at(self, t): return {"7": "red"}
         def light_modes_at(self, actor_id, t): return {"brake": "on", "indicatorLeft": "flashing", "lowBeam": "off"}
@@ -500,14 +508,18 @@ def test_ground_diagnostic_reports_cooked_vs_timeline_and_the_residual():
     assert report["unresolvedSamples"] == 1
 
 
-def test_map_calibration_comes_from_the_registry_or_the_environment(monkeypatch):
+def test_map_calibration_comes_only_from_the_package_registry(monkeypatch):
+    """Formerly a worker env (SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON) could shift
+    every actor up to 2 m. Now the package registry is the only source and the
+    env fails the render."""
+    from simforge_oss_carla_exec.runtime import replay as replay_module
     sha = "c" * 64
     monkeypatch.delenv("SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON", raising=False)
     assert map_z_calibration(sha) == (0.0, "none")
+    monkeypatch.setattr(replay_module, "MAP_Z_CALIBRATION_M", {sha: -0.04})
+    assert map_z_calibration(sha) == (-0.04, "built-in")
     monkeypatch.setenv("SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON", json.dumps({sha: -0.04}))
-    assert map_z_calibration(sha) == (-0.04, "environment")
-    monkeypatch.setenv("SIMFORGE_CARLA_MAP_Z_OFFSETS_JSON", json.dumps({sha: 5}))
-    with pytest.raises(RuntimeError, match="within 2 m"):
+    with pytest.raises(ContractError, match=r"\[carla_forbidden_worker_config\]"):
         map_z_calibration(sha)
 
 
@@ -620,7 +632,11 @@ class _MapWorld:
         self.settings = settings
 
 
-def _map_backend(runtime_xodr: str, name: str = "Custom_Map"):
+def _map_backend(runtime_xodr: str, name: str = "Custom_Map", monkeypatch=None, package: bytes = b"<OpenDRIVE/>"):
+    if monkeypatch is not None:
+        # Register the package XODR as this cooked world.
+        cooked = {hashlib.sha256(package).hexdigest(): name}
+        monkeypatch.setattr(backend_module, "cooked_map_name_for_xodr", lambda sha: cooked.get(sha))
     backend = object.__new__(CarlaBackend)
     backend.map_load_timeout_s = 10.0
     world = _MapWorld(name, runtime_xodr)
@@ -635,7 +651,7 @@ def _map_backend(runtime_xodr: str, name: str = "Custom_Map"):
 
 def test_map_binding_accepts_a_byte_exact_runtime_opendrive(monkeypatch):
     monkeypatch.delenv("SIMFORGE_CARLA_MAP_BINDING", raising=False)
-    backend = _map_backend("<OpenDRIVE/>")
+    backend = _map_backend("<OpenDRIVE/>", monkeypatch=monkeypatch)
     backend.load_opendrive("Custom_Map", b"<OpenDRIVE/>", 0.02)
     assert backend.map_evidence["identityMode"] == "xodr-byte-exact"
     assert backend.map_evidence["binding"] == "exact"
@@ -645,8 +661,8 @@ def test_map_binding_accepts_a_byte_exact_runtime_opendrive(monkeypatch):
 def test_map_binding_rejects_a_different_road_network_loaded_by_name(monkeypatch):
     monkeypatch.delenv("SIMFORGE_CARLA_MAP_BINDING", raising=False)
     monkeypatch.delenv("SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON", raising=False)
-    backend = _map_backend("<OpenDRIVE other/>")
-    with pytest.raises(RuntimeError, match="not bound to the package XODR"):
+    backend = _map_backend("<OpenDRIVE other/>", monkeypatch=monkeypatch)
+    with pytest.raises(RuntimeError, match=r"\[carla_map_digest_mismatch\].*not bound to the package XODR"):
         backend.load_opendrive("Custom_Map", b"<OpenDRIVE/>", 0.02)
 
 
@@ -655,19 +671,38 @@ def test_map_binding_accepts_an_approved_cooked_reserialization(monkeypatch):
     monkeypatch.setenv("SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON", json.dumps({
         hashlib.sha256(package).hexdigest(): [hashlib.sha256(runtime.encode()).hexdigest()],
     }))
-    backend = _map_backend(runtime)
+    backend = _map_backend(runtime, monkeypatch=monkeypatch, package=package)
     backend.load_opendrive("Custom_Map", package, 0.02)
     assert backend.map_evidence["identityMode"] == "approved-cooked-digest"
     assert backend.map_evidence["exact"] is True
 
 
-def test_approximate_map_renders_only_when_allowed_and_is_labelled(monkeypatch):
+def test_an_approximate_map_binding_is_never_rendered(monkeypatch):
+    """Formerly SIMFORGE_CARLA_MAP_BINDING=allow-approximate rendered a
+    different road network, labelled only in evidence. The worker setting now
+    fails the render, and so does the unbound world without it."""
     monkeypatch.delenv("SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON", raising=False)
     monkeypatch.setenv("SIMFORGE_CARLA_MAP_BINDING", "allow-approximate")
-    backend = _map_backend("<OpenDRIVE other/>")
-    backend.load_opendrive("Custom_Map", b"<OpenDRIVE/>", 0.02)
-    assert backend.map_evidence["binding"] == "approximate"
-    assert backend.map_evidence["exact"] is False
+    backend = _map_backend("<OpenDRIVE other/>", monkeypatch=monkeypatch)
+    with pytest.raises(RuntimeError, match=r"\[carla_forbidden_worker_config\].*SIMFORGE_CARLA_MAP_BINDING"):
+        backend.load_opendrive("Custom_Map", b"<OpenDRIVE/>", 0.02)
+    monkeypatch.setenv("SIMFORGE_CARLA_MAP_BINDING", "exact")
+    with pytest.raises(RuntimeError, match=r"\[carla_map_digest_mismatch\]"):
+        _map_backend("<OpenDRIVE other/>", monkeypatch=monkeypatch).load_opendrive("Custom_Map", b"<OpenDRIVE/>", 0.02)
+
+
+def test_an_uncooked_map_is_refused_instead_of_generating_a_bare_opendrive_world(monkeypatch):
+    """Formerly SIMFORGE_CARLA_ALLOW_GENERATED_XODR=1 (set in the SimCloud
+    rtx3080 image) rendered any uncooked map as a generated road mesh with no
+    buildings, props or signals, and labelled it exact."""
+    monkeypatch.delenv("SIMFORGE_CARLA_ALLOW_GENERATED_XODR", raising=False)
+    backend = _map_backend("<OpenDRIVE/>", name="Some_Other_World")  # the runtime has no such cooked world
+    backend.client.generate_opendrive_world = lambda *_args: pytest.fail("must never generate a world")
+    with pytest.raises(RuntimeError, match=r"\[carla_map_not_cooked\]"):
+        backend.load_opendrive("Custom_Map", b"<OpenDRIVE/>", 0.02)
+    monkeypatch.setenv("SIMFORGE_CARLA_ALLOW_GENERATED_XODR", "1")
+    with pytest.raises(RuntimeError, match=r"\[carla_forbidden_worker_config\].*ALLOW_GENERATED_XODR"):
+        _map_backend("<OpenDRIVE/>", monkeypatch=monkeypatch).load_opendrive("Custom_Map", b"<OpenDRIVE/>", 0.02)
 
 
 def test_a_package_naming_another_world_than_its_xodr_binds_is_rejected(monkeypatch):
@@ -702,11 +737,15 @@ def _v3_spec(required=(), preferred=()):
     }
 
 
-def test_render_intents_replay_unless_they_opt_into_physics_validation():
+def test_render_intents_replay_unless_they_require_physics_validation():
+    """Formerly a *preferred* actor.native_controls silently turned the job into
+    a physics-validation run; only a required capability may now."""
     native, parsed, _ = local._render_spec_v3_to_native(_v3_spec())
     assert native["executionMode"] == parsed.execution_mode == "trace-replay"
-    _native, parsed, _ = local._render_spec_v3_to_native(_v3_spec(preferred=["actor.native_controls"]))
+    _native, parsed, _ = local._render_spec_v3_to_native(_v3_spec(required=["actor.native_controls"]))
     assert parsed.execution_mode == "native-physics"
+    with pytest.raises(ContractError, match=r"\[carla_capability_preference_unsupported\]"):
+        local._render_spec_v3_to_native(_v3_spec(preferred=["actor.native_controls"]))
 
 
 def test_run_intent_refuses_to_publish_a_render_that_failed_parity(monkeypatch, tmp_path):

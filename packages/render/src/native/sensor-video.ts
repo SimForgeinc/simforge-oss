@@ -8,6 +8,8 @@
  * fixed-step clock.
  */
 
+import { RenderInputError } from '../render-input-error.js';
+
 export interface LidarScan {
   readonly count: number;
   /** Sensor-frame metres, interleaved xyz: x forward, y up, z left. */
@@ -25,50 +27,85 @@ export interface RadarScan {
   readonly velocityMps: Float32Array;
 }
 
-/** Parse the service's `encode_lidar_ply` output (ASCII, x y z intensity instance_id per row). */
-export function parseLidarPly(bytes: Buffer): LidarScan {
+function invalidPayload(sensor: string, message: string): RenderInputError {
+  return new RenderInputError('native_sensor_payload_invalid', `${sensor} frame ${message}`);
+}
+
+/** The exact header `renderer/sensors` `encode_lidar_ply` writes, after its `element vertex` line. */
+const LIDAR_PLY_PROPERTIES = [
+  'property float x', 'property float y', 'property float z', 'property float intensity', 'property uint instance_id',
+] as const;
+
+function finiteField(text: string, sensor: string, row: number, name: string): number {
+  // `Number('')` is 0: an empty field is malformed, not the origin.
+  const value = text.length === 0 ? Number.NaN : Number(text);
+  if (!Number.isFinite(value)) throw invalidPayload(sensor, `row ${row} has a non-finite ${name} "${text}"`);
+  return value;
+}
+
+/**
+ * Parse the service's `encode_lidar_ply` output (ASCII, `x y z intensity
+ * instance_id` per row). Strict: the header must be the service's exact
+ * layout, every row must carry five finite fields, and the row count must
+ * match `element vertex`; anything else fails the job
+ * (`native_sensor_payload_invalid`) rather than dropping points.
+ */
+export function parseLidarPly(bytes: Buffer, sensor = 'lidar'): LidarScan {
   const text = bytes.toString('latin1');
   const headerEnd = text.indexOf('end_header\n');
-  if (headerEnd < 0) throw new Error('lidar frame is not an ASCII PLY document');
-  const vertexMatch = /element vertex (\d+)/.exec(text.slice(0, headerEnd));
-  if (!vertexMatch) throw new Error('lidar PLY header has no vertex element');
+  if (headerEnd < 0) throw invalidPayload(sensor, 'is not an ASCII PLY document');
+  const header = text.slice(0, headerEnd).split('\n').filter((line) => line.length > 0);
+  const vertexMatch = /^element vertex (\d+)$/.exec(String(header[2]));
+  if (header[0] !== 'ply' || header[1] !== 'format ascii 1.0' || !vertexMatch
+    || header.length !== 3 + LIDAR_PLY_PROPERTIES.length
+    || LIDAR_PLY_PROPERTIES.some((property, index) => header[3 + index] !== property)) {
+    throw invalidPayload(sensor, `has an unexpected PLY header: ${header.join(' | ')}`);
+  }
   const count = Number(vertexMatch[1]);
   const xyz = new Float32Array(count * 3);
   const intensity = new Float32Array(count);
   let cursor = headerEnd + 'end_header\n'.length;
   for (let index = 0; index < count; index += 1) {
     const lineEnd = text.indexOf('\n', cursor);
-    const line = text.slice(cursor, lineEnd < 0 ? text.length : lineEnd);
-    cursor = lineEnd < 0 ? text.length : lineEnd + 1;
-    const a = line.indexOf(' ');
-    const b = line.indexOf(' ', a + 1);
-    const c = line.indexOf(' ', b + 1);
-    const d = line.indexOf(' ', c + 1);
-    if (a < 0 || b < 0 || c < 0) throw new Error(`lidar PLY row ${index} is malformed: ${line}`);
-    xyz[index * 3] = Number(line.slice(0, a));
-    xyz[index * 3 + 1] = Number(line.slice(a + 1, b));
-    xyz[index * 3 + 2] = Number(line.slice(b + 1, c));
-    intensity[index] = Number(line.slice(c + 1, d < 0 ? line.length : d));
+    if (lineEnd < 0) throw invalidPayload(sensor, `declares ${count} points but ends after ${index}`);
+    const fields = text.slice(cursor, lineEnd).split(' ');
+    cursor = lineEnd + 1;
+    if (fields.length !== 5) throw invalidPayload(sensor, `row ${index} has ${fields.length} fields, expected 5`);
+    xyz[index * 3] = finiteField(fields[0]!, sensor, index, 'x');
+    xyz[index * 3 + 1] = finiteField(fields[1]!, sensor, index, 'y');
+    xyz[index * 3 + 2] = finiteField(fields[2]!, sensor, index, 'z');
+    intensity[index] = finiteField(fields[3]!, sensor, index, 'intensity');
+    if (!/^\d+$/.test(fields[4]!)) throw invalidPayload(sensor, `row ${index} has a malformed instance_id "${fields[4]}"`);
   }
+  if (cursor !== text.length) throw invalidPayload(sensor, `carries data after its ${count} declared points`);
   return { count, xyz, intensity };
 }
 
-/** Parse the service's `encode_radar_csv` output (`depth_m,azimuth_rad,altitude_rad,velocity_mps`). */
-export function parseRadarCsv(bytes: Buffer): RadarScan {
-  const lines = bytes.toString('latin1').split('\n');
-  if (!lines[0]?.startsWith('depth_m,')) throw new Error('radar frame is not the service CSV layout');
-  const rows = lines.slice(1).filter((line) => line.length > 0);
+/** The exact header `renderer/sensors` `encode_radar_csv` writes. */
+const RADAR_CSV_HEADER = 'depth_m,azimuth_rad,altitude_rad,velocity_mps';
+
+/**
+ * Parse the service's `encode_radar_csv` output. Strict like
+ * {@link parseLidarPly}: the exact header and four finite fields per row.
+ */
+export function parseRadarCsv(bytes: Buffer, sensor = 'radar'): RadarScan {
+  const text = bytes.toString('latin1');
+  if (!text.endsWith('\n')) throw invalidPayload(sensor, 'is not newline-terminated CSV');
+  const lines = text.slice(0, -1).split('\n');
+  if (lines[0] !== RADAR_CSV_HEADER) throw invalidPayload(sensor, `has an unexpected CSV header: ${JSON.stringify(lines[0])}`);
+  const rows = lines.slice(1);
   const count = rows.length;
   const depthM = new Float32Array(count);
   const azimuthRad = new Float32Array(count);
   const altitudeRad = new Float32Array(count);
   const velocityMps = new Float32Array(count);
   rows.forEach((row, index) => {
-    const [depth, azimuth, altitude, velocity] = row.split(',');
-    depthM[index] = Number(depth);
-    azimuthRad[index] = Number(azimuth);
-    altitudeRad[index] = Number(altitude);
-    velocityMps[index] = Number(velocity);
+    const fields = row.split(',');
+    if (fields.length !== 4) throw invalidPayload(sensor, `row ${index} has ${fields.length} fields, expected 4`);
+    depthM[index] = finiteField(fields[0]!, sensor, index, 'depth_m');
+    azimuthRad[index] = finiteField(fields[1]!, sensor, index, 'azimuth_rad');
+    altitudeRad[index] = finiteField(fields[2]!, sensor, index, 'altitude_rad');
+    velocityMps[index] = finiteField(fields[3]!, sensor, index, 'velocity_mps');
   });
   return { count, depthM, azimuthRad, altitudeRad, velocityMps };
 }

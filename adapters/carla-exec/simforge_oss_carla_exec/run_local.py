@@ -41,7 +41,9 @@ def video_format(width: int | None = None, height: int | None = None,
     if fps:
         resolved["fps"] = int(fps)
     return resolved
-ENVIRONMENT = {"weather": "clear", "timeOfDay": "noon", "sunAzimuthDeg": 180,
+# No sunAzimuthDeg: the scenario schema makes it corridor-relative, and a
+# render intent carries no corridor heading to resolve it (CARLA refuses it).
+ENVIRONMENT = {"weather": "clear", "timeOfDay": "noon",
                "sunElevationDeg": 60, "surfacePatches": []}
 CAPABILITY_INTENT = {
     "required": ["sensor.rgb", "sensor.lidar", "sensor.radar"],
@@ -294,7 +296,8 @@ def _lower_source(actor_id: str, template: dict[str, Any],
                                 "rangeM": template.get("rangeM", 200),
                                 "pointsPerSecond": 100000,
                                 "rotationFrequencyHz": 10,
-                                "upperFovDeg": _q(half_fov), "lowerFovDeg": _q(-half_fov)}
+                                "upperFovDeg": _q(half_fov), "lowerFovDeg": _q(-half_fov),
+                                "horizontalFovDeg": 360}
     else:
         source["attributes"] = {"horizontalFovDeg": 30, "verticalFovDeg": 30,
                                 "rangeM": 100, "pointsPerSecond": 1500}
@@ -382,6 +385,9 @@ def build_intent(scenario_bytes: bytes, xodr_path: Path, catalog_path: Path,
              "sizeBytes": catalog_path.stat().st_size},
         ],
         "seed": seed if seed is not None else random.randrange(2**32),
+        # The developer CLI renders a raw OpenSCENARIO file: that is the
+        # explicit legacy replay, not a fallback from a missing timeline.
+        "motionSource": "original-xosc",
     }
 
 

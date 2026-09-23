@@ -7,6 +7,10 @@ export async function withBoundedRetry<T>(
   config: RenderWorkerConfig['retries'],
   signal: AbortSignal,
   invoke: () => Promise<T>,
+  options: {
+    /** False for an error that retrying cannot change (it is rethrown as-is at once). */
+    retryable?: (error: unknown) => boolean;
+  } = {},
 ): Promise<T> {
   let delayMs = config.initialDelayMs;
   let lastError: unknown;
@@ -16,6 +20,7 @@ export async function withBoundedRetry<T>(
       return await invoke();
     } catch (error) {
       if (signal.aborted) throw error;
+      if (options.retryable && !options.retryable(error)) throw error;
       lastError = error;
       if (attempt < config.maxAttempts) {
         await abortableDelay(delayMs, signal);

@@ -126,8 +126,9 @@ class _Vec:
 
 
 class _Rot:
-    def __init__(self, yaw=0.0):
-        self.yaw = yaw
+    # carla.Rotation takes pitch, yaw and roll (the spectator is pitched down).
+    def __init__(self, pitch=0.0, yaw=0.0, roll=0.0):
+        self.pitch, self.yaw, self.roll = pitch, yaw, roll
 
 
 class _Transform:
@@ -231,6 +232,11 @@ class _World:
                 body._transform = _Transform(_Vec(location.x, location.y, self.ground), body.get_transform().rotation)
         self.ticks += 1
         return self.ticks
+
+    def get_spectator(self):
+        # The streaming anchor follows a body every tick; a failure to move
+        # the spectator now fails the render instead of being swallowed.
+        return type("Spectator", (), {"set_transform": lambda _self, _transform: None})()
 
 
 def _backend(world):

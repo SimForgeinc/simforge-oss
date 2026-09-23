@@ -27,6 +27,9 @@ import {
   type NativeRunDiagnostics,
 } from "@simforge-oss/render/native";
 import { RENDER_INTENT_V1_SCHEMA, hashRenderIntent, parseRenderIntent } from "@simforge-oss/scenario";
+import { CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_SCENE_SOURCE } from "@simforge-oss/render";
+import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
+import { nativeEvidencePolicyFailure, renderSubstitutionsVerdict } from "@simforge-oss/studio-shared";
 import { simforgeEnv } from "@/lib/simforge-env";
 import { canonicalJsonSha256, sha256, scenarioId } from "../core";
 import {
@@ -689,10 +692,12 @@ export async function completeLocalNativeRender(
   const diagnosticsReservation = reservations.find((item) => item.artifact_role === "diagnostics");
   if (!manifestReservation || !diagnosticsReservation) throw new Error("native_artifact_evidence_incomplete");
   const parsedDiagnostics = parseNativeRunDiagnosticsForHost(await readReservedJson(diagnosticsReservation));
-  const parsedManifest = parseNativeRenderManifestForHost(await readReservedJson(manifestReservation));
+  const rawManifest = await readReservedJson(manifestReservation);
+  const parsedManifest = parseNativeRenderManifestForHost(rawManifest);
   const ignored = [...parsedDiagnostics.ignoredFields.map((field) => `diagnostics.${field}`), ...parsedManifest.ignoredFields.map((field) => `manifest.${field}`)];
   if (ignored.length > 0) console.warn(`[local-native-render] accepted native evidence with fields this host does not know: ${ignored.join(", ")}`);
   const diagnostics = parsedDiagnostics.value;
+  const intent = parseRenderIntent(intentValue);
   const failure = nativeEvidenceFailure(
     reservations.map((item) => ({
       role: item.artifact_role,
@@ -704,12 +709,29 @@ export async function completeLocalNativeRender(
     })),
     parsedManifest.value,
     diagnostics,
-    nativeRunExpectations(parseRenderIntent(intentValue), {
+    nativeRunExpectations(intent, {
       intentSha256: input.intentSha256,
       executionPackageControlSha256: owner.execution_package_control_sha256,
     }),
   );
   if (failure) throw new Error(failure);
+  // The no-silent-fallbacks acceptance the render-worker control plane applies
+  // (docs/engineering/no-silent-fallbacks.md): a declared timeline must have
+  // been rendered and its poses graded, and every recorded substitution must
+  // be one the intent allowed. This lane's claim does not negotiate features
+  // (its worker may be another build), so only the render-affecting ones,
+  // which every current local worker writes, are required here.
+  const rejection = nativeEvidencePolicyFailure({
+    manifest: parsedManifest.value,
+    diagnostics,
+    features: new Set([CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY]),
+    timelineSha256: intent.assets.find((asset) => asset.assetId === RENDER_TIMELINE_INPUT_ID)?.sha256 ?? null,
+    motionSource: intent.motionSource,
+  }) ?? renderSubstitutionsVerdict(
+    (rawManifest as Record<string, unknown> | null)?.substitutions,
+    intent.allowSubstitutions ?? [],
+  ).rejection ?? null;
+  if (rejection) throw new Error(`${rejection.code}: ${rejection.message}`);
   const attestation = {
     schema: "simforge.native-render-attestation/v1",
     intentSha256: input.intentSha256,

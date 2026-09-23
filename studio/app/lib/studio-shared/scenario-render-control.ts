@@ -90,9 +90,16 @@ export const ScenarioParityEvidenceV1Schema = z
     }),
     execution: z.strictObject({
       mode: z.enum(SCENARIO_CARLA_EXECUTION_MODES),
-      purpose: z.enum(["scenario-render", "physics-validation"]).optional(),
+      // Required: a run that does not say what it was for is never accepted as
+      // the scenario's render (docs/engineering/no-silent-fallbacks.md).
+      purpose: z.enum(["scenario-render", "physics-validation"]),
       fixedTimestepS: z.literal(0.02),
-      mapBinding: z.enum(["exact", "approximate"]).nullable().optional(),
+      // How the CARLA world is bound to the package XODR. Required; null means
+      // the worker had no runtime map evidence. Any value but `exact` (for
+      // example `approximate`, or a generated bare-OpenDRIVE world) is
+      // rejected by `scenarioParityEvidencePolicyFailure`, so an unknown value
+      // is carried to that check instead of failing as a schema error.
+      mapBinding: z.string().trim().min(1).max(64).nullable(),
     }),
     semantics: z.strictObject({
       verdict: ComparisonVerdictSchema,
@@ -107,8 +114,9 @@ export const ScenarioParityEvidenceV1Schema = z
       failedActorIds: z.array(z.string().trim().min(1)).max(10_000),
       // Grounded-spawn placement evidence from the CARLA worker: actors the
       // runtime dropped (unplaceable) or nudged onto valid ground before
-      // execution. Diagnostic identity data; absent from browser evidence.
-      droppedActorIds: z.array(z.string().trim().min(1)).max(10_000).optional(),
+      // execution. `droppedActorIds` is required so a missing list can never
+      // read as "nothing dropped"; a non-empty list of either is rejected.
+      droppedActorIds: z.array(z.string().trim().min(1)).max(10_000),
       nudgedActorIds: z.array(z.string().trim().min(1)).max(10_000).optional(),
       postContactFailedActorIds: z.array(z.string().trim().min(1)).max(10_000).optional(),
       postContactClassification: z.enum(["blocking", "expected-carla-physics", "not-applicable"]).optional(),
@@ -184,19 +192,106 @@ export type ScenarioParityEvidenceV1 = z.infer<
   typeof ScenarioParityEvidenceV1Schema
 >;
 
-export function isScenarioParityEvidenceAccepted(
-  evidence: ScenarioParityEvidenceV1,
-): boolean {
-  return evidence.execution.mode !== "diagnostic-replay" && evidence.verdict === "pass";
+/**
+ * A render the control plane refuses to accept, with a machine code that
+ * names the degradation (`carla_*`, `native_*` or `render_*`, reported to the
+ * job as `render.<code>`) and a message that names the actor, field or value
+ * involved. See docs/engineering/no-silent-fallbacks.md.
+ */
+export type RenderEvidenceRejection = {
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+};
+
+/**
+ * Whether a CARLA run is the scenario's render: kinematic trace replay whose
+ * declared purpose is the scenario render. A physics-validation run (CARLA
+ * physics drives the vehicles) is never presented as the render of the
+ * scenario; it would have to be an explicitly requested job type of its own,
+ * and no such job type exists.
+ */
+export function isScenarioRenderEvidence(evidence: ScenarioParityEvidenceV1): boolean {
+  return evidence.execution.mode === "trace-replay" && evidence.execution.purpose === "scenario-render";
+}
+
+/** Divergence classes that record a degraded render; only `informational` notes are acceptable. */
+const BLOCKING_DIVERGENCE_CLASSIFICATIONS = new Set([
+  "expected-carla-physics",
+  "unclassified",
+  "spawn-placement-drop",
+  "spawn-placement-nudge",
+  "approximate-map",
+]);
+
+function listed(values: readonly string[], limit = 20): string {
+  const head = values.slice(0, limit).join(", ");
+  return values.length > limit ? `${head} (+${values.length - limit} more)` : head;
 }
 
 /**
- * Whether a CARLA run is the scenario's render. A physics-validation run can
- * be accepted as a valid validation result, but it must never be presented as
- * the render of the scenario.
+ * The degradations recorded in CARLA parity evidence that must never become
+ * a succeeded render, whatever the worker's own verdict says. Mirrored by
+ * `simforge.render_evidence_accepted` in SimCloud (migration
+ * 20260922200000_render_evidence_no_silent_degradation.sql).
  */
-export function isScenarioRenderEvidence(evidence: ScenarioParityEvidenceV1): boolean {
-  return evidence.execution.mode === "trace-replay";
+export function scenarioParityEvidencePolicyFailure(
+  evidence: ScenarioParityEvidenceV1,
+): RenderEvidenceRejection | null {
+  const { execution, trajectory } = evidence;
+  if (!isScenarioRenderEvidence(evidence)) {
+    return {
+      code: "carla_run_not_scenario_render",
+      message: `CARLA ran in ${execution.mode} mode with purpose ${execution.purpose}; only trace replay with purpose scenario-render is accepted as the scenario's render (a physics-validation or diagnostic run is never accepted as a render)`,
+      details: { mode: execution.mode, purpose: execution.purpose },
+    };
+  }
+  if (execution.mapBinding !== "exact") {
+    return {
+      code: "carla_map_binding_not_exact",
+      message: execution.mapBinding === null
+        ? "CARLA parity evidence has no map binding: the worker recorded no runtime map evidence, so the rendered world is not known to be the package XODR"
+        : `CARLA rendered a world whose binding to the package XODR is ${execution.mapBinding}, not exact`,
+      details: { mapBinding: execution.mapBinding },
+    };
+  }
+  if (trajectory.droppedActorIds.length > 0) {
+    return {
+      code: "carla_actors_dropped",
+      message: `CARLA dropped ${trajectory.droppedActorIds.length} actor(s) it could not spawn, so they are missing from the render: ${listed(trajectory.droppedActorIds)}`,
+      details: { droppedActorIds: trajectory.droppedActorIds },
+    };
+  }
+  const nudged = trajectory.nudgedActorIds ?? [];
+  if (nudged.length > 0) {
+    return {
+      code: "carla_actors_nudged",
+      message: `CARLA moved ${nudged.length} actor(s) away from their authored spawn pose: ${listed(nudged)}`,
+      details: { nudgedActorIds: nudged },
+    };
+  }
+  const blocking = evidence.divergences.filter((item) => BLOCKING_DIVERGENCE_CLASSIFICATIONS.has(item.classification));
+  if (blocking.length > 0) {
+    return {
+      code: "carla_render_divergence",
+      message: `CARLA evidence records ${blocking.length} divergence(s) from the scenario: ${listed(blocking.map((item) => `${item.code} (${item.classification})`))}`,
+      details: { divergences: blocking.slice(0, 50) },
+    };
+  }
+  return null;
+}
+
+/**
+ * Whether CARLA evidence is an accepted scenario render: the worker's verdict
+ * (itself re-derived by the schema) passes and no recorded degradation is
+ * present (`scenarioParityEvidencePolicyFailure`).
+ */
+export function isScenarioParityEvidenceAccepted(
+  evidence: ScenarioParityEvidenceV1,
+): boolean {
+  return evidence.execution.mode !== "diagnostic-replay"
+    && evidence.verdict === "pass"
+    && scenarioParityEvidencePolicyFailure(evidence) === null;
 }
 
 export const SIMFORGE_RTX3080_HARDWARE_PROFILE = "rtx3080-10gb-v1" as const;
