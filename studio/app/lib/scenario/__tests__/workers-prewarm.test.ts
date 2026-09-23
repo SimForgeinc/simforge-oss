@@ -434,6 +434,25 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
     } as Parameters<typeof createRenderIntentJob>[1],
   ), /geometry_lod_member_unavailable/);
   await execute(`UPDATE simforge.native_map_asset_blobs SET verification_state = 'verified' WHERE id = 'usnblob_lod_bin'`);
+  // A native worker's lease carries the declared derivative members with their paths.
+  const nativeEngine = await loadBuiltinRenderEngine("native", { engineVersion: SOURCE_REVISION, binary: "/nonexistent/native-render-service" });
+  const nativeCapability = ScenarioRendererCapabilitySchema.parse(nativeEngine.capabilities);
+  const NATIVE_LABELS = { imageDigest: IMAGE_DIGEST, hardwareProfile: "rtx3080-10gb-v1", gpuModel: "NVIDIA GeForce RTX 3080", gpuMemoryMiB: "10240" };
+  await approveRenderWorker("simforge-render-prewarm-native", { engine: nativeCapability, labels: { ...NATIVE_LABELS }, reason: "geometry-lod lease test" });
+  const nativeRegistration = await registerRenderWorkerV2({
+    workerId: "simforge-render-prewarm-native", instanceId: "prewarm-native-1", engine: nativeCapability,
+    labels: { ...NATIVE_LABELS, inputUrls: "batch-v1", controlFeatures: "v1" },
+  });
+  const nativeLease = await claimResponseV2(nativeRegistration.registrationId, "simforge-render-prewarm-native");
+  if (nativeLease.type === "job.leased") {
+    assert.equal(nativeLease.jobId, nativeJob.id);
+    const leased = new Map((nativeLease.inputs as Array<{ inputId: string; relativePath?: string; sha256: string }>).map((input) => [input.inputId, input]));
+    assert.equal(leased.get(`map.resource.${sha256("derived/geometry-lod/lod.bin")}`)?.relativePath, "derived/geometry-lod/lod.bin");
+    assert.equal(leased.get(`map.resource.${sha256("derived/geometry-lod/manifest.json")}`)?.sha256, lodManifestSha);
+    await execute(`UPDATE simforge.worker_leases SET lease_state = 'released' WHERE render_job_id = :id`, { id: nativeJob.id });
+  } else {
+    assert.fail(`the native worker should lease the geometry-lod job, got ${nativeLease.type}`);
+  }
   await execute(`UPDATE simforge.render_jobs SET job_state = 'cancelled' WHERE id = :id`, { id: nativeJob.id });
   await execute(`UPDATE simforge.map_versions SET descriptor = descriptor - 'geometryLod' WHERE id = 'usmapv_prewarm'`);
   await execute(`UPDATE simforge.worker_nodes SET renderer_engine = 'carla' WHERE id = :id`, { id: WORKER_NODE_ID });
