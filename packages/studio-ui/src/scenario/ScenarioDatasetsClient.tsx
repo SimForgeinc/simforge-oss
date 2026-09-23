@@ -46,7 +46,7 @@ import {
 } from "./list/scenarioViewState";
 import { runDatasetMorph } from "./list/datasetMorph";
 import { driveHref } from "./drive-route";
-import { hairline } from "../stylex/recipes.stylex";
+import { hairline, scroll } from "../stylex/recipes.stylex";
 
 /** Shared width key for the floating dataset/scenario sidebar. */
 const SCENARIO_LIST_WIDTH_KEY = "uniscenario.scenario-list-width.v2";
@@ -648,7 +648,7 @@ export function ScenarioDatasetsClient({
   return (
     <ScenarioSessionProvider session={scenarioSession}>
     <section
-      {...stylex.props(styles.scenarioDatasetIndex)}
+      {...stylex.props(scroll.clip, styles.scenarioDatasetIndex)}
       data-testid="scenario-dataset-index"
       data-workspace-mode={openDocumentId ? "editor" : datasetRightPaneMode}
     >
@@ -681,7 +681,7 @@ export function ScenarioDatasetsClient({
           activePane={activePane}
           onActivePaneChange={setActivePane}
           rail={
-          <div {...stylex.props(styles.panelGrid)}>
+          <div {...stylex.props(scroll.clip, styles.panelGrid)}>
             <DatasetStrip
               datasets={orderedDatasets}
               cloudHome={cloudHome}

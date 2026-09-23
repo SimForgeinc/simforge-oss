@@ -1,5 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./layout.stylex";
+import { scroll } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 import { Suspense, type ReactNode } from "react";
 import { AppTopBar } from "@/app/components/AppTopBar";
 import { AppTopBarFrame } from "@/app/components/AppTopBarFrame";
@@ -15,13 +16,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     <StudioHostBoundary>
       <TopBarSlotProvider>
         <CloudLoadingHost>
-          <div {...stylex.props(styles.divFlex)}>
+          <div {...stylex.props(scroll.clip, styles.divFlex)}>
             {/* AppTopBar reads usePathname(); Suspense lets the static shell
                 prerender the frame, which already carries the window drag region. */}
             <Suspense fallback={<AppTopBarFrame />}>
               <AppTopBar />
             </Suspense>
-            <main {...stylex.props(styles.main)}>
+            <main {...stylex.props(scroll.clip, styles.main)}>
               <div {...stylex.props(styles.div)}>
                 <Suspense fallback={<DashboardLoading />}>
                   <OnboardingGate>

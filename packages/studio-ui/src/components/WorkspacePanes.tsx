@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { ResizablePanel } from "../scenario/ResizablePanel";
 import { layout } from "../stylex/tokens.stylex";
+import { scroll } from "../stylex/recipes.stylex";
 import { styles } from "./WorkspacePanes.stylex";
 
 export type WorkspacePane = "list" | "detail" | "inspector";
@@ -38,16 +39,16 @@ export function WorkspacePanes({ rail, stage, inspector, mode = "auto", activePa
       root.current.querySelector<HTMLButtonElement>(`button[data-pane="${current}"]`)?.focus();
     }
   }, [narrow, current]);
-  return <div ref={root} {...stylex.props(styles.root, xstyle)} data-workspace-mode={narrow ? "narrow" : "wide"}>
+  return <div ref={root} {...stylex.props(scroll.clip, styles.root, xstyle)} data-workspace-mode={narrow ? "narrow" : "wide"}>
     {narrow ? <nav aria-label="Workspace panes" {...stylex.props(styles.switcher)}>
       {(["list", "detail", ...(inspector != null ? ["inspector"] : [])] as WorkspacePane[]).map(pane => <button key={pane} type="button" data-pane={pane} aria-pressed={current === pane} {...stylex.props(styles.switchButton, current === pane && styles.selected)} onClick={() => { setSelected(pane); onActivePaneChange?.(pane); }}>{pane === "list" ? "List" : pane === "detail" ? "Detail" : "Inspector"}</button>)}
     </nav> : null}
-    <div {...stylex.props(styles.panes)}>
+    <div {...stylex.props(scroll.clip, styles.panes)}>
       <ResizablePanel storageKey={storageKey} label={railLabel} variant={railVariant} collapsed={!narrow && railCollapsed} resizable={!narrow} xstyle={narrow && current !== "list" ? styles.hidden : undefined} inert={narrow && current !== "list"}>
         {rail}
       </ResizablePanel>
-      <section aria-label="Detail" inert={narrow && current !== "detail"} {...stylex.props(styles.stage, narrow && current !== "detail" && styles.hidden)}>{stage}</section>
-      {inspector != null ? <aside aria-label="Inspector" inert={narrow && current !== "inspector"} {...stylex.props(styles.inspector, narrow && styles.narrowInspector, narrow && current !== "inspector" && styles.hidden)}>{inspector}</aside> : null}
+      <section aria-label="Detail" inert={narrow && current !== "detail"} {...stylex.props(scroll.clip, styles.stage, narrow && current !== "detail" && styles.hidden)}>{stage}</section>
+      {inspector != null ? <aside aria-label="Inspector" inert={narrow && current !== "inspector"} {...stylex.props(scroll.clip, styles.inspector, narrow && styles.narrowInspector, narrow && current !== "inspector" && styles.hidden)}>{inspector}</aside> : null}
     </div>
   </div>;
 }

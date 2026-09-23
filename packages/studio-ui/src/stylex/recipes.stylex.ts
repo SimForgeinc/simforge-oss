@@ -328,3 +328,24 @@ export const textLayout = stylex.create({
   truncate: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   clamp2: { display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden" },
 });
+
+/**
+ * Which boxes scroll. A box in the app shell either scrolls on purpose or can never scroll.
+ *
+ *  - `clip`: clips its overflow and is never a scroll container. `overflow: hidden` still is one:
+ *    `focus()`, `scrollIntoView()` and the router's scroll restoration all scroll it, and on the
+ *    scenario page that slid the whole page up under the top bar and left an empty band under the
+ *    map until a reload. Every shell box between the viewport and a scroller takes this.
+ *  - `y`: the scroller itself. Its scroll chain stops at its own edges, so reaching the end of a list
+ *    never moves what is around it, and a thin themed scrollbar says it scrolls.
+ */
+export const scroll = stylex.create({
+  clip: { overflow: "clip" },
+  y: {
+    overflowX: "hidden",
+    overflowY: "auto",
+    overscrollBehavior: "contain",
+    scrollbarWidth: "thin",
+    scrollbarColor: `${colors.inkGhost} transparent`,
+  },
+});

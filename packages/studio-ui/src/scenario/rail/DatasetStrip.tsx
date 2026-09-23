@@ -2,7 +2,7 @@
 
 import * as stylex from "@stylexjs/stylex";
 import { styles } from "./DatasetStrip.stylex";
-import { useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { ChevronDown, ClipboardCheck, Cloud, Plus } from "lucide-react";
 import { CloudActivityIndicator } from "../../components/CloudLoadingSurface";
@@ -25,7 +25,9 @@ import {
 } from "../../components/ui/tooltip";
 import { menu } from "../scenario-controls.stylex";
 import { datasetMonogram } from "../../lib/monogram";
-import { a11y, typography } from "../../stylex/recipes.stylex";
+import { a11y, scroll, typography } from "../../stylex/recipes.stylex";
+import { revealInScroller } from "../../lib/reveal-in-scroller";
+import { useScrollEdges } from "../../lib/use-scroll-edges";
 
 /** Datasets the workspace owns can be edited; shared and system-managed ones are read-only (§6.5). */
 export function isDatasetEditable(dataset: ScenarioDatasetDto): boolean {
@@ -44,6 +46,39 @@ const SIMCLOUD_HREF = "/dashboard/simcloud";
  * sends the user to the panel that lists them properly.
  */
 const CLOUD_TILE_LIMIT = 24;
+
+/** The strip's tiles, local and cloud, in the order they are drawn. */
+const TILE_SELECTOR =
+  '[data-testid="scenario-dataset-icon"], [data-testid="scenario-cloud-dataset-icon"]';
+
+/**
+ * Up/Down (and Home/End) move focus between tiles, as in a toolbar, and the focused tile is kept in
+ * view by scrolling the tile column only: never the page around it, so the scenario column and the
+ * top bar stay where they are. The first and last tiles take the column to its ends, so the section
+ * heading above the first tile comes back into view with it.
+ */
+function moveTileFocus(event: KeyboardEvent<HTMLUListElement>): void {
+  const offsets: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
+  if (!(event.key in offsets) && event.key !== "Home" && event.key !== "End") return;
+  const list = event.currentTarget;
+  const tiles = Array.from(list.querySelectorAll<HTMLElement>(TILE_SELECTOR)).filter(
+    (tile) => !(tile instanceof HTMLButtonElement && tile.disabled),
+  );
+  const from = tiles.findIndex((tile) => tile === document.activeElement);
+  if (from < 0 || tiles.length === 0) return;
+  const to =
+    event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? tiles.length - 1
+        : Math.min(tiles.length - 1, Math.max(0, from + (offsets[event.key] ?? 0)));
+  event.preventDefault();
+  const tile = tiles[to]!;
+  tile.focus({ preventScroll: true });
+  if (to === 0) list.scrollTop = 0;
+  else if (to === tiles.length - 1) list.scrollTop = list.scrollHeight;
+  else revealInScroller(tile.closest("li") ?? tile, list);
+}
 
 /**
  * The dataset strip: one square per dataset down the far left, in the manner of Slack's workspace
@@ -104,6 +139,8 @@ export function DatasetStrip({
   const workspaceName = cloudHome.state === "managed" ? cloudHome.workspaceName : "Workspace";
   const [hoveredDatasetId, setHoveredDatasetId] = useState<string | null>(null);
   const [menuDatasetId, setMenuDatasetId] = useState<string | null>(null);
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const more = useScrollEdges(listRef);
   const owned = datasets.filter(isDatasetEditable);
   const shared = datasets.filter((dataset) => !isDatasetEditable(dataset));
 
@@ -387,11 +424,28 @@ export function DatasetStrip({
   return (
     <TooltipProvider delayDuration={150}>
       <nav
-        {...stylex.props(styles.strip)}
+        {...stylex.props(scroll.clip, styles.strip)}
         aria-label="Datasets by home"
         data-testid="scenario-dataset-rail"
       >
-        <ul {...stylex.props(styles.list)}>
+        <ul
+          ref={listRef}
+          {...stylex.props(
+            scroll.y,
+            styles.list,
+            more.above && more.below
+              ? styles.moreBothWays
+              : more.above
+                ? styles.moreAbove
+                : more.below
+                  ? styles.moreBelow
+                  : null,
+          )}
+          onKeyDown={moveTileFocus}
+          data-testid="scenario-dataset-rail-list"
+          data-more-above={more.above ? "true" : undefined}
+          data-more-below={more.below ? "true" : undefined}
+        >
           {managed
             ? renderSectionLabel(workspaceName, `Datasets stored in ${workspaceName}`)
             : renderSectionLabel("On this computer", "Datasets stored on this computer")}
