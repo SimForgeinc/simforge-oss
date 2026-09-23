@@ -16,7 +16,7 @@ import {
   WeatherSchema,
   type Environment,
 } from './schema/v2/environment.js';
-import { CameraProfileSchema, CameraProfileSourceSchema, SensorMountSchema, cameraProfileCapabilities } from './schema/v2/sensors.js';
+import { CameraProfileSchema, CameraProfileSourceSchema, SensorMountSchema, cameraProfileCapabilities, markCameraProfileSourceResolved, withCameraProfileSource } from './schema/v2/sensors.js';
 
 export const RENDER_SPEC_V3_SCHEMA = 'simforge.render-spec/v3' as const;
 
@@ -171,13 +171,8 @@ const RenderCameraAttributesObjectSchema = z.strictObject({
   }
 });
 export const RenderCameraAttributesSchema = z.preprocess(
-  (value) => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
-    const record = value as Record<string, unknown>;
-    if (record.profileSource !== undefined) return value;
-    return { ...record, profileSource: Object.hasOwn(record, 'cameraProfile') ? 'authored' : 'default' };
-  },
-  RenderCameraAttributesObjectSchema,
+  (value) => withCameraProfileSource(value, 'cameraProfile'),
+  RenderCameraAttributesObjectSchema.transform((value) => markCameraProfileSourceResolved(value, 'cameraProfile')),
 );
 
 export const RenderLidarAttributesSchema = z.strictObject({

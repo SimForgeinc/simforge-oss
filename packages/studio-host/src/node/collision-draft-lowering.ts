@@ -41,7 +41,8 @@ import {
   PRONTO_CHASE_CAMERA_SENSOR_ID,
   RENDER_DEFAULTS_EXTENSION_KEY,
   RENDER_SPEC_V3_SCHEMA,
-  cameraProfileCapabilities,
+  markCameraProfileSourceResolved,
+  mergeCameraProfileCapabilityIntent,
   parseRenderSpecV3,
   parseTemplate,
   type ActorSensor,
@@ -966,7 +967,7 @@ function renderDefaultsFor(template: ScenarioTemplateV2, captures: readonly Capt
     return {
       ...common,
       modality: capture.modality,
-      attributes: {
+      attributes: markCameraProfileSourceResolved({
         width: capture.width,
         height: capture.height,
         fps: capture.fps,
@@ -975,7 +976,7 @@ function renderDefaultsFor(template: ScenarioTemplateV2, captures: readonly Capt
         farM: sensor.camera.farM,
         cameraProfile: sensor.profile,
         profileSource: sensor.profileSource,
-      },
+      }, "cameraProfile"),
     };
   });
   const cameraIndex = captures.findIndex((capture) => capture.presentation);
@@ -1002,21 +1003,12 @@ function renderDefaultsFor(template: ScenarioTemplateV2, captures: readonly Capt
   const required = [
     ...new Set([
       ...sources.map((source) => `sensor.${source.modality}`),
-      ...sources.flatMap((source) =>
-        source.modality !== "lidar" && source.modality !== "radar" && source.attributes.profileSource === "authored"
-          ? cameraProfileCapabilities(source.attributes.cameraProfile)
-          : []),
       ...artifacts.map((artifact) => (artifact === "sensorArchive" ? "artifact.sensor_archive" : `artifact.${artifact}`)),
       "environment.authored",
       "timing.fixed_step",
     ]),
   ];
-  const preferred = [
-    ...new Set(sources.flatMap((source) =>
-      source.modality !== "lidar" && source.modality !== "radar" && source.attributes.profileSource === "default"
-        ? cameraProfileCapabilities(source.attributes.cameraProfile)
-        : [])),
-  ];
+  const capabilityIntent = mergeCameraProfileCapabilityIntent(required, sources as RenderSpecV3["sources"]);
   return parseRenderSpecV3({
     schema: RENDER_SPEC_V3_SCHEMA,
     sources,
@@ -1024,8 +1016,8 @@ function renderDefaultsFor(template: ScenarioTemplateV2, captures: readonly Capt
     ...(video ? { video } : {}),
     artifacts,
     capabilityIntent: {
-      required,
-      preferred,
+      required: capabilityIntent.required,
+      preferred: capabilityIntent.preferred,
       fidelity: captures.some((capture) => !capture.presentation) ? "dataset" : "review",
     },
     authoredEnvironment: template.environment,

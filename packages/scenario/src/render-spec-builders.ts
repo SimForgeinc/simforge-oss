@@ -3,6 +3,7 @@ import {
   PRONTO_CHASE_CAMERA_SENSOR_ID,
   cameraProfileCapabilities,
   hasTrailingChaseCamera,
+  markCameraProfileSourceResolved,
   RENDER_SPEC_V3_SCHEMA,
   parseRenderSpecV3,
   renderDefaultSource,
@@ -44,6 +45,27 @@ export type CanonicalRenderSpecInput = {
   /** Render-time environment override; the draft's authored environment when absent. */
   environment?: Environment;
 };
+
+export function mergeCameraProfileCapabilityIntent(
+  required: readonly string[],
+  sources: RenderSpecV3['sources'],
+): { required: string[]; preferred: string[] } {
+  const mergedRequired = [...new Set([
+    ...required,
+    ...sources.flatMap((source) =>
+      source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.profileSource === 'authored'
+        ? cameraProfileCapabilities(source.attributes.cameraProfile)
+        : []),
+  ])];
+  const requiredSet = new Set(mergedRequired);
+  return {
+    required: mergedRequired,
+    preferred: [...new Set(sources.flatMap((source) =>
+      source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.profileSource === 'default'
+        ? cameraProfileCapabilities(source.attributes.cameraProfile)
+        : []).filter((capability) => !requiredSet.has(capability)))],
+  };
+}
 
 export const RENDER_MODALITY_ORDER: readonly RenderModality[] = [
   "rgb",
@@ -156,7 +178,7 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
           return {
             ...common,
             modality,
-            attributes: {
+            attributes: markCameraProfileSourceResolved({
               width: input.video?.width ?? capture?.width ?? 1280,
               height: input.video?.height ?? capture?.height ?? 720,
               fps: input.video?.fps ?? capture?.fps ?? 24,
@@ -165,7 +187,7 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
               farM: sensor.camera.farM,
               cameraProfile: sensor.profile,
               profileSource: sensor.profileSource,
-            },
+            }, 'cameraProfile'),
           };
         }
         if (sensor.type === "lidar") {
@@ -203,10 +225,6 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
   const artifacts = [...new Set(["manifest" as const, ...input.artifacts])];
   const required = [
     ...sources.map((source) => `sensor.${source.modality}`),
-    ...sources.flatMap((source) =>
-      source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.profileSource === 'authored'
-        ? cameraProfileCapabilities(source.attributes.cameraProfile)
-        : []),
     ...artifacts.map((artifact) => artifact === "sensorArchive" ? "artifact.sensor_archive" : `artifact.${artifact}`),
     "environment.authored",
     "timing.fixed_step",
@@ -215,10 +233,7 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
       ? ["map.static_semantics"]
       : []),
   ];
-  const preferred = sources.flatMap((source) =>
-    source.modality !== 'lidar' && source.modality !== 'radar' && source.attributes.profileSource === 'default'
-      ? cameraProfileCapabilities(source.attributes.cameraProfile)
-      : []);
+  const capabilityIntent = mergeCameraProfileCapabilityIntent(required, sources as RenderSpecV3['sources']);
   return parseRenderSpecV3({
     schema: RENDER_SPEC_V3_SCHEMA,
     sources,
@@ -226,8 +241,8 @@ export function buildCanonicalRenderSpec(input: CanonicalRenderSpecInput): Rende
     ...(input.video ? { video: input.video } : {}),
     artifacts,
     capabilityIntent: {
-      required: [...new Set(required)],
-      preferred: [...new Set(preferred)],
+      required: capabilityIntent.required,
+      preferred: capabilityIntent.preferred,
       fidelity: input.fidelity,
     },
     authoredEnvironment: input.environment ?? input.content.environment,

@@ -97,11 +97,29 @@ export const CameraProfileSchema = z.strictObject({
 
 export const GENERIC_CAMERA_PROFILE = Object.freeze(CameraProfileSchema.parse({}));
 
+const RESOLVED_CAMERA_PROFILE_SOURCE = Symbol('resolved-camera-profile-source');
+
 export function withCameraProfileSource(value: unknown, profileKey: string): unknown {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
-  const record = value as Record<string, unknown>;
-  if (record.profileSource !== undefined) return value;
+  const record = value as Record<PropertyKey, unknown>;
+  if (record[RESOLVED_CAMERA_PROFILE_SOURCE] === true) return value;
   return { ...record, profileSource: Object.hasOwn(record, profileKey) ? 'authored' : 'default' };
+}
+
+export function markCameraProfileSourceResolved<T extends { profileSource: CameraProfileSource }>(
+  value: T,
+  profileKey: string,
+): T {
+  Object.defineProperty(value, RESOLVED_CAMERA_PROFILE_SOURCE, { value: true });
+  if (value.profileSource === 'default') {
+    Object.defineProperty(value, profileKey, {
+      value: (value as Record<string, unknown>)[profileKey],
+      configurable: true,
+      enumerable: false,
+      writable: true,
+    });
+  }
+  return value;
 }
 
 export function cameraProfileCapabilities(profile: CameraProfile): string[] {
@@ -172,7 +190,7 @@ export const DashCameraSensorObjectSchema = z.strictObject({
 });
 export const DashCameraSensorSchema = z.preprocess(
   (value) => withCameraProfileSource(value, 'profile'),
-  DashCameraSensorObjectSchema,
+  DashCameraSensorObjectSchema.transform((value) => markCameraProfileSourceResolved(value, 'profile')),
 );
 
 /** Angular/range envelope for the active modalities. */

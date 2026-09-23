@@ -39,7 +39,6 @@ describe('actor-attached sensors', () => {
 
     const first = parseTemplate(input);
     const second = parseTemplate(JSON.parse(serializeTemplate(first)));
-    expect(second.roles[0]?.actor.sensors).toEqual(first.roles[0]?.actor.sensors);
     expect(firstEnabledDashCamera(second.roles[0]!.actor)?.id).toBe('front-dash-camera');
     expect(firstEnabledDashCamera(second.roles[0]!.actor)?.profile).toMatchObject({
       profileId: 'generic-rgb@1',
@@ -48,11 +47,12 @@ describe('actor-attached sensors', () => {
       outputStage: 'linear',
       encoding: { transfer: 'srgb', bitDepth: 8 },
     });
+    expect(firstEnabledDashCamera(first.roles[0]!.actor)?.profileSource).toBe('default');
     expect(firstEnabledDashCamera(second.roles[0]!.actor)?.profileSource).toBe('default');
 
     const spec = buildCanonicalRenderSpec({
-      content: second,
-      selections: [{ actorId: second.roles[0]!.id, sensorId: camera.id, modalities: ['rgb'] }],
+      content: first,
+      selections: [{ actorId: first.roles[0]!.id, sensorId: camera.id, modalities: ['rgb'] }],
       clip: { startSeconds: 0, endSeconds: 1 },
       video: null,
       artifacts: [],
@@ -79,6 +79,7 @@ describe('actor-attached sensors', () => {
       profileSource: 'default',
     });
     const explicitProfile = JSON.parse(JSON.stringify(spec));
+    explicitProfile.sources[0].attributes.cameraProfile = CameraProfileSchema.parse({});
     delete explicitProfile.sources[0].attributes.profileSource;
     expect(parseRenderSpecV3(explicitProfile).sources[0]?.attributes).toMatchObject({
       cameraProfile: { profileId: 'generic-rgb@1' },
@@ -90,9 +91,14 @@ describe('actor-attached sensors', () => {
     delete sensorWithoutSource.profileSource;
     expect(ActorSensorSchema.parse(sensorWithoutSource)).toMatchObject({ profileSource: 'authored' });
 
+    expect(ActorSensorSchema.parse({
+      ...sensorWithoutSource,
+      profileSource: 'default',
+    })).toMatchObject({ profileSource: 'authored' });
+
     const depthSpec = buildCanonicalRenderSpec({
-      content: second,
-      selections: [{ actorId: second.roles[0]!.id, sensorId: camera.id, modalities: ['depth'] }],
+      content: first,
+      selections: [{ actorId: first.roles[0]!.id, sensorId: camera.id, modalities: ['depth'] }],
       clip: { startSeconds: 0, endSeconds: 1 },
       video: null,
       artifacts: [],
@@ -101,8 +107,10 @@ describe('actor-attached sensors', () => {
     });
     expect(depthSpec.capabilityIntent.preferred).toContain('camera.output.linear_rgb');
 
+    const resolvedCamera = firstEnabledDashCamera(second.roles[0]!.actor)!;
     const authoredCamera = {
-      ...firstEnabledDashCamera(second.roles[0]!.actor)!,
+      ...resolvedCamera,
+      profile: resolvedCamera.profile,
       profileSource: 'authored' as const,
     };
     const authoredTemplate = parseTemplate({
@@ -123,6 +131,41 @@ describe('actor-attached sensors', () => {
     expect(authoredSpec.sources[0]?.attributes).toMatchObject({ profileSource: 'authored' });
     expect(authoredSpec.capabilityIntent.required).toContain('camera.output.linear_rgb');
     expect(authoredSpec.capabilityIntent.preferred).not.toContain('camera.output.linear_rgb');
+  });
+
+  it('keeps mixed-rig preferred capabilities disjoint from authored requirements', () => {
+    const input = ltapTemplateInput();
+    const materialized = defaultDashCamera(
+      { class: 'car', dims: { length: 4.4, width: 1.8, height: 1.6 } },
+      'default-camera',
+    );
+    const { profile, profileSource: _profileSource, ...withoutProfile } = materialized;
+    input.roles![0]!.actor.sensors = [
+      withoutProfile,
+      { ...withoutProfile, id: 'authored-camera', profile },
+    ];
+    const template = parseTemplate(input);
+    const cameras = template.roles[0]!.actor.sensors;
+    expect(cameras.map((sensor) => sensor.type === 'dash_camera' ? sensor.profileSource : null))
+      .toEqual(['default', 'authored']);
+
+    const spec = buildCanonicalRenderSpec({
+      content: template,
+      selections: cameras.map((sensor) => ({ actorId: template.roles[0]!.id, sensorId: sensor.id, modalities: ['rgb'] })),
+      clip: { startSeconds: 0, endSeconds: 1 },
+      video: null,
+      artifacts: [],
+      staticSemantics: false,
+      fidelity: 'dataset',
+    });
+    expect(spec.capabilityIntent.required).toEqual(expect.arrayContaining([
+      'camera.projection.pinhole',
+      'camera.shutter.global',
+      'camera.output.linear_rgb',
+    ]));
+    for (const required of spec.capabilityIntent.required) {
+      expect(spec.capabilityIntent.preferred).not.toContain(required);
+    }
   });
 
   it('requires rolling-shutter profiles to declare their readout span', () => {

@@ -22,8 +22,7 @@ export function cameraIntent(profileSource: 'default' | 'authored' = 'default'):
         transform: { position: { x: 0, y: 1, z: 0 }, rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 } },
         attributes: {
           width: 320, height: 180, fps: 24, horizontalFovDeg: 90, nearM: 0.1, farM: 100,
-          cameraProfile: CameraProfileSchema.parse({}),
-          profileSource,
+          ...(profileSource === 'authored' ? { cameraProfile: CameraProfileSchema.parse({}) } : {}),
         },
       }],
       clip: { startSeconds: 0, endSeconds: 1 },

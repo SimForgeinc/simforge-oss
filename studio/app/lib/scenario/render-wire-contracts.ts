@@ -1,4 +1,10 @@
 import { RENDER_INTENT_V1_SCHEMA, RenderSpecV3Schema, type RenderSpecV3 } from "@simforge-oss/scenario";
+import {
+  EngineCapabilityApproximationSchema,
+  EngineCapabilitySchema,
+  type EngineCapability,
+  type EngineCapabilityDeclaration,
+} from "@simforge-oss/render";
 import { z } from "zod";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -94,27 +100,20 @@ export const SubmitScenarioRenderIntentSchema = z.strictObject({
 });
 export type SubmitScenarioRenderIntent = z.infer<typeof SubmitScenarioRenderIntentSchema>;
 
-const UniqueCapabilitiesSchema = z.array(z.enum([
-  "openscenario.1_4",
-  "timing.fixed_step",
-  "environment.authored",
-  "artifact.video",
-  "artifact.frames",
-  "artifact.sensor_archive",
-  "artifact.sensor_video",
-  "artifact.manifest",
-  "artifact.trace",
-  "artifact.annotations",
-  "map.static_semantics",
-  "control.native",
-  "divergence.classified",
-  "sensor.rgb",
-  "sensor.depth",
-  "sensor.semantic",
-  "sensor.instance",
-  "sensor.lidar",
-  "sensor.radar",
-])).min(1).max(32).refine((items) => new Set(items).size === items.length, "Capabilities must be unique.");
+type EngineCapabilityApproximation = NonNullable<EngineCapabilityDeclaration["approximations"]>[number];
+
+const LocalEngineCapabilitySchema = z.custom<EngineCapability>(
+  (value) => EngineCapabilitySchema.safeParse(value).success,
+  { message: "Unknown render engine capability." },
+);
+const LocalEngineCapabilityApproximationSchema = z.custom<EngineCapabilityApproximation>(
+  (value) => EngineCapabilityApproximationSchema.safeParse(value).success,
+  { message: "Invalid render engine capability approximation." },
+);
+const UniqueCapabilitiesSchema = z.array(LocalEngineCapabilitySchema)
+  .min(1)
+  .max(32)
+  .refine((items) => new Set(items).size === items.length, "Capabilities must be unique.");
 
 const UniqueModalitiesSchema = z.array(ArtifactModalitySchema)
   .min(1)
@@ -128,6 +127,7 @@ export const ScenarioRendererCapabilitySchema = z.strictObject({
   backend: ScenarioRendererEngineSchema,
   protocolVersion: z.literal(1),
   capabilities: UniqueCapabilitiesSchema,
+  approximations: z.array(LocalEngineCapabilityApproximationSchema).max(32).optional(),
   modalities: UniqueModalitiesSchema,
   limits: z.strictObject({
     maxSimultaneousSensors: z.number().int().min(1).max(1024),

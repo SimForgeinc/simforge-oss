@@ -13,6 +13,7 @@ import {
   SensorMountSchema,
   SensorRigMountSchema,
   newSensorId,
+  markCameraProfileSourceResolved,
   withCameraProfileSource,
   type ActorSensor,
   type DashCameraSensor,
@@ -30,7 +31,7 @@ const SensorRigCameraTemplateObjectSchema = DashCameraSensorObjectSchema
   .extend({ mount: SensorRigMountSchema });
 export const SensorRigCameraTemplateSchema = z.preprocess(
   (value) => withCameraProfileSource(value, 'profile'),
-  SensorRigCameraTemplateObjectSchema,
+  SensorRigCameraTemplateObjectSchema.transform((value) => markCameraProfileSourceResolved(value, 'profile')),
 );
 export const SensorRigLidarTemplateSchema = LidarSensorSchema
   .omit({ mount: true })
