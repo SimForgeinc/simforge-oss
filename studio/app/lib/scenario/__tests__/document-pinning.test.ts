@@ -19,7 +19,10 @@ import { EMPTY_AMBIENT_CONFIG_SHA256, EMPTY_AMBIENT_RESULT_SHA256, UpdateScenari
 import { renderSeed } from "../render-intent-store";
 import { canonicalContentSha256 } from "../core";
 import { LEGACY_AMBIENT_PROFILE, pinStoredDocument } from "../document-pinning";
-import { CLOSURE_A, CLOSURE_B, seedPinnedMap } from "./pinning-fixtures";
+import { CLOSURE_A, CLOSURE_B, seedPinnedMap, setMembers, SIMULATION_MEMBERS, simulationClosureSha256 } from "./pinning-fixtures";
+
+const SIM_A = simulationClosureSha256(SIMULATION_MEMBERS);
+const SIM_B = simulationClosureSha256({ ...SIMULATION_MEMBERS, "topology-index.json.gz": "e".repeat(64) });
 import {
   createScenarioDocument,
   createScenarioRevision,
@@ -105,7 +108,7 @@ test("drafts are stored pinned, revisions freeze the pin, and nothing re-resolve
   });
   const seedValue = legacyTemplateSeed(parseTemplate(legacyContent()));
   assert.deepEqual(created.content.simulation, { seed: seedValue, dtS: 0.02 });
-  assert.equal(created.mapClosureSha256, CLOSURE_A);
+  assert.equal(created.mapClosureSha256, SIM_A);
   assert.equal(created.assetCatalogVersionId, "usacv_pin");
 
   // Rename + save content WITHOUT the block: the stored block survives, so the seed does not move.
@@ -127,7 +130,7 @@ test("drafts are stored pinned, revisions freeze the pin, and nothing re-resolve
     { id: created.id },
   );
   assert.deepEqual({ ...revision, revision_number: Number(revision?.revision_number) }, {
-    revision_number: 1, map_version_id: "usmapv_pin", map_closure_sha256: CLOSURE_A, asset_catalog_version_id: "usacv_pin",
+    revision_number: 1, map_version_id: "usmapv_pin", map_closure_sha256: SIM_A, asset_catalog_version_id: "usacv_pin",
   });
 
   // Two commits of the same draft version serialize on the draft lock: one revision, not a unique-key failure.
@@ -146,21 +149,58 @@ test("drafts are stored pinned, revisions freeze the pin, and nothing re-resolve
   });
   assert.equal(edited.kind, "updated");
   if (edited.kind !== "updated") return;
-  await execute(`UPDATE simforge.browser_asset_sets SET closure_sha256 = :closure WHERE id = 'usbas_pin'`, { closure: CLOSURE_B });
+  // A republication that only adds derived members (a SUMO network, an ambient
+  // turn-verdict table) keeps the simulation members: the pin still holds.
+  await execute(
+    `INSERT INTO simforge.browser_asset_sets (id, workspace_id, map_version_id, closure_sha256, object_count, byte_length, asset_set_state)
+     VALUES ('usbas_pin_derived', :workspace_id, 'usmapv_pin', :closure, 1, 1, 'available')`,
+    { workspace_id: LOCAL_WORKSPACE_ID, closure: CLOSURE_B },
+  );
+  await setMembers("usbas_pin_derived", { ...SIMULATION_MEMBERS, "derived/ambient/turn-verdicts.json.gz": "9".repeat(64) });
+  await execute(`UPDATE simforge.browser_asset_sets SET asset_set_state = 'retired' WHERE id = 'usbas_pin'`);
+  await execute(`UPDATE simforge.map_versions SET browser_asset_set_id = 'usbas_pin_derived' WHERE id = 'usmapv_pin'`);
+  const derivedOnly = await createScenarioRevision(context, created.id, { expectedVersion: edited.document.draftVersion, ambient: disabledAmbient });
+  assert.equal(derivedOnly.kind, "created");
+  // A pin written as the browser-closure digest (before pins covered only the
+  // simulation members) is honoured while those members are unchanged.
+  await execute(`UPDATE simforge.drafts SET map_closure_sha256 = :closure WHERE document_id = :id`, { closure: CLOSURE_A, id: created.id });
+  const legacyEdit = await updateScenarioDocument(context, created.id, {
+    expectedVersion: edited.document.draftVersion,
+    content: { ...edited.document.content, meta: { ...edited.document.content.meta, description: "legacy pin" } },
+  });
+  assert.equal(legacyEdit.kind, "updated");
+  if (legacyEdit.kind !== "updated") return;
+  assert.equal(legacyEdit.document.mapClosureSha256, CLOSURE_A);
+  const legacyPinned = await createScenarioRevision(context, created.id, { expectedVersion: legacyEdit.document.draftVersion, ambient: disabledAmbient });
+  assert.equal(legacyPinned.kind, "created");
+  const legacyRevision = await queryOne<{ map_closure_sha256: string }>(
+    `SELECT map_closure_sha256 FROM simforge.revisions WHERE document_id = :id ORDER BY revision_number DESC LIMIT 1`,
+    { id: created.id },
+  );
+  assert.equal(legacyRevision?.map_closure_sha256, SIM_A);
+
+  // A simulation member changes underneath the pin: an explicit error, never a silent substitution.
+  await setMembers("usbas_pin_derived", { "topology-index.json.gz": "e".repeat(64) });
+  const afterChange = await updateScenarioDocument(context, created.id, {
+    expectedVersion: legacyEdit.document.draftVersion,
+    content: { ...legacyEdit.document.content, meta: { ...legacyEdit.document.content.meta, description: "after change" } },
+  });
+  assert.equal(afterChange.kind, "updated");
+  if (afterChange.kind !== "updated") return;
   await assert.rejects(
-    createScenarioRevision(context, created.id, { expectedVersion: edited.document.draftVersion, ambient: disabledAmbient }),
+    createScenarioRevision(context, created.id, { expectedVersion: afterChange.document.draftVersion, ambient: disabledAmbient }),
     (error: unknown) => error instanceof ScenarioMapResolutionError && error.code === "scenario_map_pin_mismatch",
   );
 
   // An ordinary save keeps the stale pin; only an explicit re-pin adopts the version's current closure.
-  const saved = await updateScenarioDocument(context, created.id, { expectedVersion: edited.document.draftVersion, title: "Saved" });
+  const saved = await updateScenarioDocument(context, created.id, { expectedVersion: afterChange.document.draftVersion, title: "Saved" });
   assert.equal(saved.kind, "updated");
   if (saved.kind !== "updated") return;
-  assert.equal(saved.document.mapClosureSha256, CLOSURE_A);
+  assert.equal(saved.document.mapClosureSha256, CLOSURE_A);  // the legacy pin set above
   const repinned = await updateScenarioDocument(context, created.id, { expectedVersion: saved.document.draftVersion, mapVersionId: "usmapv_pin" });
   assert.equal(repinned.kind, "updated");
   if (repinned.kind !== "updated") return;
-  assert.equal(repinned.document.mapClosureSha256, CLOSURE_B);
+  assert.equal(repinned.document.mapClosureSha256, SIM_B);
   assert.equal(repinned.document.draftVersion, saved.document.draftVersion + 1);
   const recommitted = await createScenarioRevision(context, created.id, { expectedVersion: repinned.document.draftVersion, ambient: disabledAmbient });
   assert.equal(recommitted.kind, "created");
@@ -203,4 +243,18 @@ test("drafts are stored pinned, revisions freeze the pin, and nothing re-resolve
   assert.equal(pinnedLegacy?.contentSha256, canonicalContentSha256(pinnedLegacy!.content));
   const rerun = await pinScenarioDocuments({ apply: true });
   assert.equal(rerun.pinned, 0);
+
+  // Migration 20260922180000 rewrites a browser-closure pin of the version's
+  // current publication to its simulation-member digest, and nothing else.
+  const current = await queryOne<{ closure_sha256: string }>(
+    `SELECT bs.closure_sha256 FROM simforge.map_versions mv JOIN simforge.browser_asset_sets bs ON bs.id = mv.browser_asset_set_id WHERE mv.id = 'usmapv_pin'`,
+  );
+  await execute(`UPDATE simforge.drafts SET map_closure_sha256 = :closure WHERE document_id = :id`, { closure: current!.closure_sha256, id: legacyId });
+  await execute(`UPDATE simforge.drafts SET map_closure_sha256 = :closure WHERE document_id = :id`, { closure: "f".repeat(64), id: created.id });
+  const migration = readFileSync(new URL("../../../../migrations/20260922180000_scenario_pin_simulation_closure.sql", import.meta.url), "utf8");
+  await execute(migration.slice(migration.indexOf("UPDATE simforge.drafts"), migration.indexOf("COMMIT;")).trim().replace(/;$/, ""));
+  const rewritten = await queryOne<{ map_closure_sha256: string }>(`SELECT map_closure_sha256 FROM simforge.drafts WHERE document_id = :id`, { id: legacyId });
+  assert.equal(rewritten?.map_closure_sha256, SIM_B);
+  const untouched = await queryOne<{ map_closure_sha256: string }>(`SELECT map_closure_sha256 FROM simforge.drafts WHERE document_id = :id`, { id: created.id });
+  assert.equal(untouched?.map_closure_sha256, "f".repeat(64));
 });

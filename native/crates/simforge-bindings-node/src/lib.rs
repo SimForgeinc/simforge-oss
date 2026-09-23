@@ -814,6 +814,12 @@ pub fn ambient_turn_verdicts_json(graph: &JsLaneGraph) -> String {
     rt::ambient_turn_verdicts_json(&graph.inner)
 }
 
+/// Probe every transition of a map for every steered class and return the complete verdict table (with `closureDigest`); what a map publish ships.
+#[napi]
+pub fn build_ambient_turn_verdicts(bundle: &JsMapBundle) -> Result<String> {
+    rt::build_ambient_turn_verdicts_json(&bundle.inner).js()
+}
+
 /// Load persisted ambient turn verdicts into this process; returns the count. Refuses another ENGINE_SEM_VER.
 #[napi]
 pub fn load_ambient_turn_verdicts(json: String) -> Result<u32> {

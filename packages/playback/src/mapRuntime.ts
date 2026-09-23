@@ -18,7 +18,16 @@ export interface MapGraphSources {
   readonly locations: string;
   readonly xodr: string;
   readonly signals: string;
+  /**
+   * The closure's published ambient turn-verdict table
+   * (`derived/ambient/turn-verdicts.json.gz`), when the map version ships one.
+   * Optional: a missing or unreadable table only costs the probes.
+   */
+  readonly ambientTurnVerdicts?: string | null;
 }
+
+/** Closure member holding the published ambient turn-verdict table. */
+export const AMBIENT_TURN_VERDICTS_PATH = 'derived/ambient/turn-verdicts.json.gz';
 
 /** Pinned per-artifact digests, when the caller has them. */
 export interface MapGraphDigests {
@@ -46,6 +55,8 @@ export interface MapGraph<Derived = unknown, Locations = unknown> {
    * this map (see `mapClosureDigest`). Part of the simulation key.
    */
   readonly closureDigest: string;
+  /** The shipped turn-verdict table text, when the closure carries one (see `loadShippedAmbientTurnVerdicts`). */
+  readonly ambientTurnVerdicts: string | null;
 }
 
 /** Decoded bytes of every file a simulated map is built from (gzip already removed). */
@@ -58,6 +69,27 @@ export interface MapClosureFiles {
   readonly signals: Uint8Array;
   /** The published static-collider files; a simulated map without them does not exist. */
   readonly colliders: StaticColliderArtifactSources;
+  /** `derived/ambient/turn-verdicts.json.gz` (decompressed), when the closure ships it. */
+  readonly ambientTurnVerdicts?: Uint8Array | null;
+}
+
+/**
+ * Load the closure's shipped turn-verdict table into the engine when it was
+ * built for exactly this closure and this engine's semantics; otherwise
+ * ignore it (a stale table would only be refused). Returns the verdicts
+ * loaded. The generated population is identical either way; this only skips
+ * the probes the first ambient generation on a map would run.
+ */
+export function loadShippedAmbientTurnVerdicts(module: NativeModule, graph: Pick<MapGraph, 'ambientTurnVerdicts' | 'closureDigest'>): number {
+  if (!graph.ambientTurnVerdicts || !module.loadAmbientTurnVerdicts) return 0;
+  try {
+    const table = JSON.parse(graph.ambientTurnVerdicts) as { engineSemVer?: string; closureDigest?: string };
+    const engineSemVer = module.engineSemVer?.() ?? module.engineVersion();
+    if (table.engineSemVer !== engineSemVer || table.closureDigest !== graph.closureDigest) return 0;
+    return module.loadAmbientTurnVerdicts(graph.ambientTurnVerdicts);
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -89,13 +121,16 @@ export async function buildSimulationMapClosure<Derived = unknown, Locations = u
 ): Promise<MapGraph<Derived, Locations>> {
   const collision = requireReadyStaticColliderBundle(await verifyStaticColliderArtifact(files.colliders));
   onCollisionLoaded?.(collision);
-  return assembleMapGraph<Derived, Locations>(module, files, collision);
+  const graph = assembleMapGraph<Derived, Locations>(module, files, collision, files.ambientTurnVerdicts ? new TextDecoder().decode(files.ambientTurnVerdicts) : null);
+  loadShippedAmbientTurnVerdicts(module, graph);
+  return graph;
 }
 
 function assembleMapGraph<Derived, Locations>(
   module: NativeModule,
-  files: Omit<MapClosureFiles, 'colliders'>,
+  files: Omit<MapClosureFiles, 'colliders' | 'ambientTurnVerdicts'>,
   collision: StaticColliderBundle,
+  ambientTurnVerdicts: string | null,
 ): MapGraph<Derived, Locations> {
   const decoder = new TextDecoder();
   const derivedIndex = JSON.parse(decoder.decode(files.derivedTopology)) as Derived;
@@ -117,6 +152,7 @@ function assembleMapGraph<Derived, Locations>(
     locations: locationCatalog,
     xodr: xodrText,
     closureDigest: bundle.closureDigest ?? '',
+    ambientTurnVerdicts,
   };
 }
 
@@ -165,14 +201,26 @@ export async function loadMapGraph<Derived = unknown, Locations = unknown>(optio
   ]);
   const collision = requireReadyStaticColliderBundle(await loadStaticMapColliders(sources.manifest, fetcher));
   options.onCollisionLoaded?.(collision);
-  return assembleMapGraph<Derived, Locations>(options.module, {
+  const verdicts = sources.ambientTurnVerdicts ? await optionalMember(sources.ambientTurnVerdicts, fetcher) : null;
+  const graph = assembleMapGraph<Derived, Locations>(options.module, {
     mapId: sources.mapId,
     topology,
     derivedTopology: derived,
     locations,
     xodr,
     signals,
-  }, collision);
+  }, collision, verdicts);
+  loadShippedAmbientTurnVerdicts(options.module, graph);
+  return graph;
+}
+
+/** An optional (possibly gzipped) closure member as text: any failure is "not shipped". */
+async function optionalMember(url: string, fetcher: typeof fetch): Promise<string | null> {
+  try {
+    return new TextDecoder().decode(await mapArtifactBytes(url, fetcher));
+  } catch {
+    return null;
+  }
 }
 
 export interface MapRuntimeIdentity {

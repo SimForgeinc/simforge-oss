@@ -9,7 +9,7 @@ import path from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { resolveAmbientTrafficProfile, parseSimScenarioInput } from '@simforge-oss/engine';
+import { ambientTurnVerdictCount, parseSimScenarioInput, resolveAmbientTrafficProfile, type AmbientTurnVerdictTable } from '@simforge-oss/engine';
 import { engine } from '@simforge-oss/engine/node';
 import {
   ambientTurnVerdictCachePath,
@@ -41,10 +41,10 @@ describe.skipIf(!haveAddon)('ambient turn-verdict disk cache', () => {
     });
     engine().materializeAmbientTraffic(base, bundle.graph, resolveAmbientTrafficProfile({ version: 1, preset: 'city', seed: 'ambient-1' }));
     await persistAmbientTurnVerdictsToDisk(bundle);
-    const table = JSON.parse(readFileSync(file, 'utf8')) as { schema: string; engineSemVer: string; verdicts: unknown[] };
+    const table = JSON.parse(readFileSync(file, 'utf8')) as AmbientTurnVerdictTable;
     expect(table.schema).toBe('simforge.ambient-turn-verdicts/v1');
     expect(table.engineSemVer).toBe(engine().version().engineSemVer);
     expect(table.verdicts.length).toBeGreaterThan(0);
-    expect(engine().loadAmbientTurnVerdicts(readFileSync(file, 'utf8'))).toBe(table.verdicts.length);
+    expect(engine().loadAmbientTurnVerdicts(readFileSync(file, 'utf8'))).toBe(ambientTurnVerdictCount(table));
   }, 120_000);
 });

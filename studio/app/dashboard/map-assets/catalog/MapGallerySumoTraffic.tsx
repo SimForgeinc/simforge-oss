@@ -130,5 +130,6 @@ export function gallerySumoMapEntry(map: ScenarioMapDescriptorDto): MapEntry {
     sumoManifest: map.sumoNetworkSha256
       ? asset("derived/sumo/sumo-network-manifest.json")
       : null,
+    ambientTurnVerdicts: map.ambientTurnVerdicts ? asset("derived/ambient/turn-verdicts.json.gz") : null,
   };
 }

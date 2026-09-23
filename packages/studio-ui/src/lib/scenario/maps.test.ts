@@ -34,8 +34,16 @@ describe('SimCloud playback map adapter', () => {
       locations: '/api/simforge/maps/usmv_1/browser-assets/derived/locations.json.gz',
       signals: '/api/simforge/maps/usmv_1/browser-assets/signals.geojson.gz',
       sumoManifest: '/api/simforge/maps/usmv_1/browser-assets/derived/sumo/sumo-network-manifest.json',
+      ambientTurnVerdicts: null,
     });
     expect(map.id).not.toBe(map.sourceMapId);
+  });
+
+  it('points at the shipped ambient turn-verdict table only when the version publishes one', () => {
+    const map = playbackMapEntry(descriptor({
+      ambientTurnVerdicts: { engineSemVer: '0.9.0', closureDigest: 'c'.repeat(64), sha256: 'd'.repeat(64) },
+    } as never));
+    expect(map.ambientTurnVerdicts).toBe('/api/simforge/maps/usmv_1/browser-assets/derived/ambient/turn-verdicts.json.gz');
   });
 
   it('rejects an inferred or mismatched manifest/root contract', () => {
