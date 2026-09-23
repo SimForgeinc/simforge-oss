@@ -7,7 +7,6 @@ import {
 } from "./lifecycle-lock";
 
 type LocalArtifactOperation =
-  | "openscenario_import"
   | "materialize_traffic"
   | "browser_simulation_preview"
   | "browser_threejs_recording"
@@ -15,7 +14,7 @@ type LocalArtifactOperation =
 
 /** SQL list of every single-artifact `postprocess_kind` this store admits and finalizes. */
 const LOCAL_ARTIFACT_OPERATIONS_SQL =
-  "'openscenario_import', 'materialize_traffic', 'browser_simulation_preview', 'simcloud_artifact_import'";
+  "'materialize_traffic', 'browser_simulation_preview', 'simcloud_artifact_import'";
 
 type LocalArtifactProducerInput = {
   workspaceId: string;

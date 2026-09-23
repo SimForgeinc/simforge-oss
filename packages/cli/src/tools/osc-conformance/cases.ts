@@ -13,8 +13,8 @@
  *   case → our XML 1.4 trajectory-replay export → esmini ⟶ vs our trace (exporter check)
  *
  * `xosc` probes are hand-written files for constructs SimForge cannot
- * express; they check that the live importer says so loudly, and record
- * whether esmini follows the spec.
+ * express. SimForge does not import OpenSCENARIO, so a probe has no SimForge
+ * side; it only records whether esmini follows the spec (evidence only).
  */
 
 import type { CaseOracle } from './oracle.js';
@@ -26,7 +26,10 @@ export type OurVerdict =
   | 'conforms'
   /** It does not; `finding` names the bug or documented deviation. */
   | 'deviates'
-  /** The OSC construct has no SimForge equivalent (xosc probes); import must say so. */
+  /**
+   * The OSC construct is outside SimForge's vocabulary (xosc probes): there is
+   * no SimForge side, only recorded esmini evidence.
+   */
   | 'not-expressible';
 
 /** How esmini relates to the same oracle. Evidence only, never the reference. */
@@ -72,21 +75,6 @@ export interface CaseActor {
   readonly overrides?: Record<string, unknown>;
 }
 
-export interface ImportExpectation {
-  /** Actors the live importer (analyzeOpenScenarioImport) must translate. */
-  readonly actors: number;
-  /** Diagnostic codes it must report (subset match), proving loss is loud. */
-  readonly diagnostics: readonly string[];
-  /** Or: the import must fail with this OpenScenarioImportError code. */
-  readonly errorCode?: string;
-  /**
-   * Expected scene-frame poses of the translated actors, in order. The scene
-   * frame is y-up with `z = -y_osc` (packages/engine/src/frames.ts); heading
-   * is frame-invariant.
-   */
-  readonly scenePoses?: readonly { readonly x: number; readonly z: number; readonly headingRad: number }[];
-}
-
 export interface ConformanceCase {
   readonly id: string;
   /**
@@ -123,7 +111,6 @@ export interface ConformanceCase {
     readonly esminiNote?: string;
     /** Whether esmini replaying our trajectory-replay export must match our trace. */
     readonly roundTrip?: 'match' | 'deviation' | 'skip';
-    readonly import?: ImportExpectation;
     readonly note?: string;
   };
 }

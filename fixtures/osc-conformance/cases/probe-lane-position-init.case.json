@@ -28,13 +28,6 @@
   },
   "expect": {
     "ours": "not-expressible",
-    "finding": "F-13",
-    "esmini": "agrees",
-    "import": {
-      "actors": 0,
-      "diagnostics": [
-        "actor_position_unsupported"
-      ]
-    }
+    "esmini": "agrees"
   }
 }
