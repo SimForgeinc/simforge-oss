@@ -16,5 +16,6 @@ export {
   type GroundReport,
   type GroundRoadDisagreement,
   type GroundStatus,
+  type GroundFlag,
   type GroundValidation,
 } from './build.js';

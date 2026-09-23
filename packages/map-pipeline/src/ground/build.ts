@@ -41,6 +41,15 @@ export const GROUND_GATES = {
   roadFlagP95M: 0.05,
   /** Lane samples every this many metres of road s. */
   sampleStepM: 0.5,
+  /**
+   * Beyond each driving-lane edge the rendered surface must continue this
+   * far: overhanging wheels of long and wide vehicles (a truck's U-turn
+   * sweep) stand there. Uncovered points are reported as holes and flag the
+   * map; a body whose wheels reach one fails in the engine.
+   */
+  laneBufferM: 2.5,
+  /** Holes are clustered on this grid for the report. */
+  holeClusterM: 5,
 } as const;
 
 function sha256(bytes: Uint8Array | string): string {
@@ -57,7 +66,9 @@ export const GROUND_FINGERPRINT = sha256(canonicalJson({
   gates: GROUND_GATES,
 }));
 
-export type GroundStatus = 'ok' | 'xodr-disagrees' | 'no-xodr';
+export type GroundStatus = 'ok' | 'flagged' | 'no-xodr';
+/** Why a map is flagged: OpenDRIVE elevation disagrees with the rendered road, or the rendered surface has holes where vehicles reach. */
+export type GroundFlag = 'xodr-disagrees' | 'surface-holes';
 
 export interface GroundRoadDisagreement {
   road: string;
@@ -85,12 +96,19 @@ export interface GroundValidation {
   flaggedRoads: GroundRoadDisagreement[];
   /** Driving-lane samples with no surface (first 200), and their count. */
   holes: { count: number; first: { road: string; lane: number; s: number; x: number; y: number }[] };
+  /**
+   * Points within {@link GROUND_GATES.laneBufferM} beyond a driving lane's
+   * edges with no rendered surface, clustered: where an overhanging wheel
+   * would stand over nothing. Largest clusters first.
+   */
+  bufferHoles: { points: number; clusters: { x: number; y: number; points: number; roads: string[] }[] };
 }
 
 export interface GroundReport {
   schema: 'simforge.map-ground-report.v1';
   mapId: string;
   status: GroundStatus;
+  flags: GroundFlag[];
   warnings: string[];
   mesh: {
     vertices: number;
@@ -116,6 +134,7 @@ export interface GroundManifest {
     xodr: { path: string; sha256: string } | null;
   };
   status: GroundStatus;
+  flags: GroundFlag[];
   /** One line per problem the map descriptor must show. */
   warnings: string[];
   mesh: { path: string; sha256: string; bytes: number; vertices: number; triangles: number };
@@ -182,6 +201,26 @@ export function validateGround(query: GroundQuery, samples: readonly LaneSurface
       road.worst = { s: round(sample.s, 2), lane: sample.lane, x: round(sample.x, 6), y: round(sample.y, 6), xodrZ: round(sample.z), meshZ: round(hit.z), dzM: round(dz) };
     }
   }
+  // The overhang buffer beyond each driving-lane edge.
+  const bufferClusters = new Map<string, { x: number; y: number; points: number; roads: Set<string> }>();
+  let bufferPoints = 0;
+  for (const sample of drivable) {
+    if (sample.laneType !== 'driving') continue;
+    for (const side of [1, -1]) {
+      for (const beyond of [GROUND_GATES.laneBufferM / 2, GROUND_GATES.laneBufferM]) {
+        const offset = side * (sample.halfWidth + beyond);
+        const x = sample.x + sample.leftX * offset;
+        const y = sample.y + sample.leftY * offset;
+        if (query.surfacesAt(x, y).length > 0) continue;
+        bufferPoints += 1;
+        const cell = GROUND_GATES.holeClusterM;
+        const key = `${Math.floor(x / cell)},${Math.floor(y / cell)}`;
+        const cluster = bufferClusters.get(key) ?? { x: 0, y: 0, points: 0, roads: new Set<string>() };
+        cluster.x += x; cluster.y += y; cluster.points += 1; cluster.roads.add(sample.road);
+        bufferClusters.set(key, cluster);
+      }
+    }
+  }
   const sortedAbs = Float64Array.from(abs).sort();
   const flaggedRoads: GroundRoadDisagreement[] = [];
   for (const [road, stats] of perRoad) {
@@ -210,6 +249,13 @@ export function validateGround(query: GroundQuery, samples: readonly LaneSurface
     overToleranceShare: round(abs.filter((v) => v > GROUND_GATES.agreementToleranceM).length / Math.max(1, abs.length), 4),
     flaggedRoads,
     holes: { count: holeCount, first: holes },
+    bufferHoles: {
+      points: bufferPoints,
+      clusters: [...bufferClusters.values()]
+        .map((c) => ({ x: round(c.x / c.points, 2), y: round(c.y / c.points, 2), points: c.points, roads: [...c.roads].sort((a, b) => a.localeCompare(b)) }))
+        .sort((a, b) => b.points - a.points || a.x - b.x || a.y - b.y)
+        .slice(0, 500),
+    },
   };
 }
 
@@ -275,14 +321,22 @@ export async function buildGroundDerivative(options: BuildGroundDerivativeOption
       const worst = validation.flaggedRoads.slice(0, 8).map((road) => `${road.road} (${road.worst.dzM > 0 ? '+' : ''}${Math.round(road.worst.dzM * 100)} cm)`).join(', ');
       warnings.push(`OpenDRIVE elevation disagrees with the rendered road mesh on ${validation.flaggedRoads.length} road(s) (p95 |dz| ${Math.round(validation.dzAbsM.p95 * 100)} cm, max ${Math.round(validation.dzAbsM.max * 100)} cm; worst: ${worst}). Bodies follow the rendered mesh; OpenDRIVE-derived grades are unreliable until the map is re-exported.`);
     }
+    if (validation.bufferHoles.clusters.length > 0) {
+      const where = validation.bufferHoles.clusters.slice(0, 6).map((c) => `(${c.x}, ${c.y}) near road ${c.roads.join('/')}`).join(', ');
+      warnings.push(`The rendered surface has ${validation.bufferHoles.clusters.length} hole(s) within ${GROUND_GATES.laneBufferM} m of driving lanes, where overhanging wheels stand (${where}). A vehicle whose wheels reach one fails simulation.`);
+    }
   } else {
     warnings.push('No OpenDRIVE: the ground surface is unvalidated.');
   }
-  const status: GroundStatus = !validation ? 'no-xodr' : validation.flaggedRoads.length > 0 ? 'xodr-disagrees' : 'ok';
+  const flags: GroundFlag[] = [];
+  if (validation && validation.flaggedRoads.length > 0) flags.push('xodr-disagrees');
+  if (validation && validation.bufferHoles.clusters.length > 0) flags.push('surface-holes');
+  const status: GroundStatus = !validation ? 'no-xodr' : flags.length > 0 ? 'flagged' : 'ok';
   const report: GroundReport = {
     schema: 'simforge.map-ground-report.v1',
     mapId: options.mapId,
     status,
+    flags,
     warnings,
     mesh: {
       vertices: surface.vertices.length / 3,
@@ -312,6 +366,7 @@ export async function buildGroundDerivative(options: BuildGroundDerivativeOption
     mapId: options.mapId,
     source,
     status,
+    flags,
     warnings,
     mesh: { path: GROUND_MESH_FILE, sha256: sha256(meshBytes), bytes: meshBytes.length, vertices: report.mesh.vertices, triangles: report.mesh.triangles },
     report: { path: GROUND_REPORT_FILE, sha256: sha256(reportText) },
