@@ -157,6 +157,12 @@ describe('render timeline → native scene states', () => {
     const flat = wasm.RenderTimeline.buildFlat(gunzipSync(gz), 0, undefined);
     const bytes = flat.toCanonicalJson();
     expect(createHash('sha256').update(bytes).digest('hex')).toBe(flat.sha256);
+    // The host keys and checks stored timelines by this constant: it must be
+    // the sampler the engine actually runs.
+    const { TIMELINE_SAMPLER_VERSION } = await import('../timeline/index.js');
+    const opened = await openRenderTimeline(bytes);
+    expect(opened.samplerVersion).toBe(TIMELINE_SAMPLER_VERSION);
+    opened.free();
     flat.free();
     expect(typeof buildRenderTimeline).toBe('function');
   });

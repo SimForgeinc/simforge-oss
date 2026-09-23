@@ -784,29 +784,88 @@ fn actor_contact(
             }
         }
         (ContactOrigin::Synthetic | ContactOrigin::LegacyXodrElevation, _) => {
+            let resolve = |i: usize, k: usize, continuity_z: Option<f64>| {
+                let (px, py) = geometry.probes(src.x[i], src.y[i], src.heading_rad[i])[k];
+                height.elevation(
+                    px,
+                    py,
+                    HeightQuery {
+                        preferred_road: lane_road(&src.lane_rsl[i]),
+                        label: Some(id),
+                        continuity_z,
+                    },
+                )
+            };
+            let fail = |tick: usize, error: HeightError| TimelineError::Height {
+                actor_id: id.to_owned(),
+                tick,
+                error,
+            };
+            // Pass 1: every probe on its own. Overlapping lanes that tie are
+            // held back (`Err(Ambiguous)`); any other miss is fatal.
+            let mut z: Vec<[Result<f64, HeightError>; 4]> = Vec::with_capacity(n);
+            for i in 0..n {
+                let mut row: [Result<f64, HeightError>; 4] = std::array::from_fn(|_| Ok(0.0));
+                if src.present[i] == 1 {
+                    for (k, slot) in row.iter_mut().enumerate() {
+                        *slot = match resolve(i, k, None) {
+                            Ok(v) => Ok(v),
+                            Err(error @ HeightError::Ambiguous { .. }) => Err(error),
+                            Err(error) => return Err(fail(i, error)),
+                        };
+                    }
+                }
+                z.push(row);
+            }
+            // Pass 2: a tie takes the surface nearest the same probe's
+            // elevation on the neighbouring resolved tick of the same
+            // presence run: the previous one, else (a run that starts on the
+            // overlap) the next one. A run with no resolved tick stays
+            // ambiguous and fails.
+            let mut start = 0;
+            while start < n {
+                if src.present[start] != 1 {
+                    start += 1;
+                    continue;
+                }
+                let end = (start..n).find(|&i| src.present[i] != 1).unwrap_or(n);
+                for k in 0..4 {
+                    let mut last: Option<f64> = None;
+                    for i in start..end {
+                        match (&z[i][k], last) {
+                            (Ok(v), _) => last = Some(*v),
+                            (Err(_), Some(hint)) => {
+                                let v = resolve(i, k, Some(hint)).map_err(|e| fail(i, e))?;
+                                z[i][k] = Ok(v);
+                                last = Some(v);
+                            }
+                            (Err(_), None) => {}
+                        }
+                    }
+                    let mut next: Option<f64> = None;
+                    for i in (start..end).rev() {
+                        match (&z[i][k], next) {
+                            (Ok(v), _) => next = Some(*v),
+                            (Err(_), Some(hint)) => {
+                                let v = resolve(i, k, Some(hint)).map_err(|e| fail(i, e))?;
+                                z[i][k] = Ok(v);
+                                next = Some(v);
+                            }
+                            (Err(error), None) => return Err(fail(i, error.clone())),
+                        }
+                    }
+                }
+                start = end;
+            }
             for (i, frame) in out.iter_mut().enumerate() {
                 if src.present[i] != 1 {
                     continue;
                 }
-                let probes = geometry.probes(src.x[i], src.y[i], src.heading_rad[i]);
-                let mut z = [0.0; 4];
-                for (k, (px, py)) in probes.iter().enumerate() {
-                    z[k] = height
-                        .elevation(
-                            *px,
-                            *py,
-                            HeightQuery {
-                                preferred_road: lane_road(&src.lane_rsl[i]),
-                                label: Some(id),
-                            },
-                        )
-                        .map_err(|error| TimelineError::Height {
-                            actor_id: id.to_owned(),
-                            tick: i,
-                            error,
-                        })?;
+                let mut probe_z = [0.0; 4];
+                for (k, slot) in probe_z.iter_mut().enumerate() {
+                    *slot = z[i][k].clone().map_err(|e| fail(i, e))?;
                 }
-                *frame = fit(geometry, &z);
+                *frame = fit(geometry, &probe_z);
             }
         }
         (ContactOrigin::DerivedAtTimelineBuild, _) => {
@@ -1193,6 +1252,7 @@ pub fn build_render_timeline(
                 HeightQuery {
                     preferred_road: None,
                     label: Some(id),
+                    continuity_z: None,
                 },
             )
             .map_err(|error| TimelineError::PropHeight {
