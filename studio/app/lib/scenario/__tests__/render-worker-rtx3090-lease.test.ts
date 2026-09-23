@@ -340,11 +340,24 @@ test("an RTX 3090 CARLA worker registers and leases a queued render job", async 
   assert.ok(stored && stored.text.length > 97 * 3, "the fixture intent must span several slices");
   assert.equal(sliced, stored.text);
   assert.equal(await readRenderIntentText(queryRows, "usrj_missing"), null);
+  // A CARLA lease claims exactly the intent's input identities: the scenario
+  // as `scenario.xosc` plus every declared asset by its assetId. The worker
+  // and the CARLA engine reject anything else (legacy package-role names such
+  // as `openscenario`/`map`/`catalog`/`execution-package` failed every lease).
+  const leased = lease as unknown as { intent: { assets: { assetId: string }[] }; inputs: { inputId: string }[] };
+  assert.deepEqual(
+    leased.inputs.map((input) => input.inputId).sort(),
+    ["scenario.xosc", ...leased.intent.assets.map((asset) => asset.assetId)].sort(),
+  );
+  assert.deepEqual(leased.intent.assets.map((asset) => asset.assetId).sort(), ["usart_catalog", "usart_xodr"]);
   const refreshRequest = {
     jobId: job.id, leaseId: lease.lease.leaseId, fenceToken: lease.lease.fenceToken,
-    workerNodeId: WORKER_NODE_ID, inputId: "openscenario",
+    workerNodeId: WORKER_NODE_ID, inputId: "scenario.xosc",
   };
-  for (const inputId of ["openscenario", "map", "catalog", "execution-package", "usart_xodr"]) {
+  for (const legacy of ["openscenario", "map", "catalog", "execution-package"]) {
+    assert.equal(await refreshRenderInputV2({ ...refreshRequest, inputId: legacy }), null, `legacy input ${legacy} is not declared`);
+  }
+  for (const inputId of ["scenario.xosc", "usart_xodr", "usart_catalog"]) {
     const refreshed = await refreshRenderInputV2({ ...refreshRequest, inputId });
     assert.ok(refreshed && Date.parse(refreshed.expiresAt) > Date.now() + 800_000);
   }

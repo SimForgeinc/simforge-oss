@@ -18,6 +18,7 @@ import {
   nativeRunExpectations,
   type NativeRunDiagnostics,
 } from "@simforge-oss/render/native";
+import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { RENDER_INTENT_V1_SCHEMA, RenderSpecV3Schema, captureScheduleFps, fixedStepFrameCount, hashRenderIntent, parseRenderIntent as parseRenderIntentDocument } from "@simforge-oss/scenario";
 import {
   isScenarioParityEvidenceAccepted,
@@ -540,9 +541,13 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
           WHERE id = :job_id`,
         { attempt, job_id: row.id },
       );
-      let inputs: ClaimedInput[];
-      if (worker.renderer_engine === "native") {
-        inputs = await tx.queryRows<StoredInput>(
+      // Every engine claims the intent's own input identities: the scenario as
+      // `scenario.xosc` and each declared asset under its `assetId` (the XODR
+      // and asset-catalog artifact ids). The worker admits exactly that set
+      // (`validateClaimedInputs`) and the CARLA engine requires it
+      // (`local.py` `_intent_lease`), so legacy package-role names such as
+      // `openscenario`/`map`/`catalog`/`execution-package` would fail every lease.
+      const inputs: ClaimedInput[] = await tx.queryRows<StoredInput>(
           `SELECT input_id AS "inputId", sha256, size_bytes AS "sizeBytes",
                   storage_bucket AS bucket, storage_key AS key
              FROM (
@@ -565,6 +570,26 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
              ) input_rows`,
           { package_id: row.execution_package_id },
         );
+      // The authoritative render timeline, when the revision's simulation has
+      // one: canonical JSON bytes whose sha256 is the intent's timelineSha256.
+      // Both engines prefer it; jobs without it fall back to the xosc.
+      const timelineAsset = intent.assets.find((asset) => asset.assetId === RENDER_TIMELINE_INPUT_ID);
+      if (timelineAsset) {
+        const timeline = (await renderTimelineObject(
+          (sql, params) => tx.queryRows(sql, params), row.id,
+        ));
+        if (!timeline || timeline.sha256 !== timelineAsset.sha256 || timeline.sizeBytes !== timelineAsset.sizeBytes) {
+          throw new Error("render_timeline_unavailable");
+        }
+        inputs.push({
+          inputId: RENDER_TIMELINE_INPUT_ID,
+          sha256: timeline.sha256,
+          sizeBytes: timeline.sizeBytes,
+          bucket: timeline.bucket,
+          key: timeline.key,
+        });
+      }
+      if (worker.renderer_engine === "native") {
         const nativeMembers = await tx.queryRows<{
           relative_path: string;
           sha256: string;
@@ -630,31 +655,16 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
           throw new Error("native_render_input_declaration_mismatch");
         }
       } else {
-        inputs = await tx.queryRows<StoredInput>(
-          `SELECT input_id AS "inputId", sha256, size_bytes AS "sizeBytes",
-                  storage_bucket AS bucket, storage_key AS key
-             FROM (
-               SELECT 'openscenario'::text AS input_id, a.sha256, a.byte_length AS size_bytes,
-                      a.storage_bucket, a.storage_key
-                 FROM simforge.execution_packages ep JOIN simforge.artifacts a ON a.id = ep.xosc_artifact_id
-                WHERE ep.id = :package_id
-               UNION ALL
-               SELECT 'map', a.sha256, a.byte_length, a.storage_bucket, a.storage_key
-                 FROM simforge.execution_packages ep JOIN simforge.artifacts a ON a.id = ep.xodr_artifact_id
-                WHERE ep.id = :package_id
-               UNION ALL
-               SELECT 'catalog', a.sha256, a.byte_length, a.storage_bucket, a.storage_key
-                 FROM simforge.execution_packages ep
-                 JOIN simforge.asset_catalog_versions c ON c.id = ep.asset_catalog_version_id
-                 JOIN simforge.artifacts a ON a.id = c.manifest_artifact_id
-                WHERE ep.id = :package_id
-               UNION ALL
-               SELECT 'execution-package', a.sha256, a.byte_length, a.storage_bucket, a.storage_key
-                 FROM simforge.execution_packages ep JOIN simforge.artifacts a ON a.id = ep.package_artifact_id
-                WHERE ep.id = :package_id
-             ) input_rows`,
-          { package_id: row.execution_package_id },
-        );
+        const byInputId = new Map(inputs.map((input) => [input.inputId, input]));
+        if (byInputId.size !== inputs.length
+          || inputs.length !== intent.assets.length + 1
+          || !byInputId.has("scenario.xosc")
+          || intent.assets.some((asset) => {
+            const declared = byInputId.get(asset.assetId);
+            return !declared || declared.sha256 !== asset.sha256 || Number(declared.sizeBytes) !== asset.sizeBytes;
+          })) {
+          throw new Error("carla_render_input_declaration_mismatch");
+        }
       }
       return {
         jobId: row.id,
@@ -777,6 +787,25 @@ async function activeLease(
   return { ...lease, render_intent: renderIntent } satisfies ActiveLease;
 }
 
+/** The stored render timeline of a job's authoritative simulation result. */
+async function renderTimelineObject(
+  query: <T>(sql: string, params: SqlParams) => Promise<T[]>,
+  jobId: string,
+): Promise<{ sha256: string; sizeBytes: number; bucket: string; key: string } | null> {
+  const rows = await query<{
+    storage_bucket: string; timeline_storage_key: string | null; timeline_sha256: string | null; timeline_byte_length: number | string | null;
+  }>(
+    `SELECT s.storage_bucket, s.timeline_storage_key, s.timeline_sha256, s.timeline_byte_length
+       FROM simforge.sim_results s
+       JOIN simforge.render_jobs j ON j.workspace_id = s.workspace_id AND j.sim_key = s.sim_key
+      WHERE j.id = :job_id`,
+    { job_id: jobId },
+  );
+  const row = rows[0];
+  if (!row?.timeline_storage_key || !row.timeline_sha256 || row.timeline_byte_length === null) return null;
+  return { sha256: row.timeline_sha256, sizeBytes: Number(row.timeline_byte_length), bucket: row.storage_bucket, key: row.timeline_storage_key };
+}
+
 /** Re-authorize each refresh against the live lease and immutable input digest; no URL/session state is stored. */
 export async function refreshRenderInputV2(input: {
   jobId: string; leaseId: string; fenceToken: string; workerNodeId: string; inputId: string;
@@ -785,18 +814,20 @@ export async function refreshRenderInputV2(input: {
   if (!lease || lease.cancel_requested_at) return null;
   const intent = parseRenderIntent(lease.render_intent);
   const declared = intent.assets.find((asset) => asset.assetId === input.inputId);
-  const scenarioInput = input.inputId === (lease.renderer_engine === "native" ? "scenario.xosc" : "openscenario");
-  const packageInput = scenarioInput || (lease.renderer_engine !== "native" && ["map", "catalog", "execution-package"].includes(input.inputId));
-  if (!declared && !packageInput) return null;
-  const rows = packageInput
+  const scenarioInput = input.inputId === "scenario.xosc";
+  if (!declared && !scenarioInput) return null;
+  if (declared && input.inputId === RENDER_TIMELINE_INPUT_ID) {
+    const timeline = await renderTimelineObject(queryRows, lease.job_id);
+    if (!timeline || timeline.sha256 !== declared.sha256 || timeline.sizeBytes !== declared.sizeBytes) return null;
+    const url = await getPresignedGetUrl(timeline.key, timeline.bucket, LEASE_SECONDS);
+    return { url, headers: {}, expiresAt: new Date(Date.now() + LEASE_SECONDS * 1000).toISOString() };
+  }
+  const rows = scenarioInput
     ? await queryRows<{ storage_bucket: string; storage_key: string }>(
       `SELECT a.storage_bucket, a.storage_key FROM simforge.execution_packages ep
-       JOIN simforge.asset_catalog_versions c ON c.id = ep.asset_catalog_version_id
-       JOIN simforge.artifacts a ON a.id = CASE :input_id
-         WHEN 'map' THEN ep.xodr_artifact_id WHEN 'catalog' THEN c.manifest_artifact_id
-         WHEN 'execution-package' THEN ep.package_artifact_id ELSE ep.xosc_artifact_id END
+       JOIN simforge.artifacts a ON a.id = ep.xosc_artifact_id
        WHERE ep.id = :package_id`,
-      { package_id: lease.execution_package_id, input_id: input.inputId },
+      { package_id: lease.execution_package_id },
     )
     : await queryRows<{ storage_bucket: string; storage_key: string }>(
       `SELECT storage_bucket, storage_key FROM simforge.artifacts
