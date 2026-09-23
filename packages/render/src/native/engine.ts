@@ -18,7 +18,7 @@ import {
 } from '../index.js';
 import {
   CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_SCENE_SOURCE,
-  CONTROL_FEATURE_NATIVE_STAGE_TIMINGS,
+  CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_VRAM_DETECTED,
 } from '../worker-control.js';
 import { RenderInputError } from '../render-input-error.js';
 import { parseRenderIntent, type RenderIntentV1, type RenderSourceV3 } from '@simforge-oss/scenario';
@@ -98,8 +98,38 @@ export interface NativeRenderEngineOptions {
   readonly bundleLookahead?: number;
 }
 
+/**
+ * Capacity for the texture-profile check: the intent's (fleet) capacity,
+ * lowered to the job's measured device when the worker reported one.
+ */
+export function nativeVramCapacity(intentCapacity: number | undefined, detectedTotal: number | undefined): {
+  capacityBytes: number | undefined; detected: boolean; intentCapacity: number | undefined;
+} {
+  if (detectedTotal === undefined || !Number.isSafeInteger(detectedTotal) || detectedTotal <= 0) {
+    return { capacityBytes: intentCapacity, detected: false, intentCapacity };
+  }
+  if (intentCapacity !== undefined && intentCapacity <= detectedTotal) return { capacityBytes: intentCapacity, detected: false, intentCapacity };
+  return { capacityBytes: detectedTotal, detected: true, intentCapacity };
+}
+
+/**
+ * The staged profile as evidence. A detected capacity is reported as such
+ * only to a plane that lists native-evidence.vram-detected; an older plane
+ * gets the baseline shape (the intent's capacity, `assumed`).
+ */
+export function nativeTextureEvidence<T extends { capacityBytes: number; capacitySource: 'assumed' | 'explicit' }>(
+  staged: T,
+  vram: { detected: boolean; intentCapacity: number | undefined },
+  explicitBudget: boolean,
+  features: ReadonlySet<string>,
+): Omit<T, 'capacitySource'> & { capacitySource: 'assumed' | 'explicit' | 'detected' } {
+  if (explicitBudget || !vram.detected) return staged;
+  if (features.has(CONTROL_FEATURE_NATIVE_VRAM_DETECTED)) return { ...staged, capacitySource: 'detected' };
+  return vram.intentCapacity === undefined ? staged : { ...staged, capacityBytes: vram.intentCapacity, capacitySource: 'assumed' };
+}
+
 /** Anti-aliasing of the pinned (default) capture clock. */
-export const NATIVE_DEFAULT_ANTI_ALIAS = 'smaa-high';
+export const NATIVE_DEFAULT_ANTI_ALIAS = 'smaa-ultra';
 export const NATIVE_DEFAULT_TAA_SAMPLES = 4;
 const ANTI_ALIAS_MODES = new Set(['none', 'fxaa', 'smaa-low', 'smaa-medium', 'smaa-high', 'smaa-ultra', 'taa']);
 
@@ -332,17 +362,6 @@ function videoEncoderPreference(options: NativeRenderEngineOptions): NativeVideo
   return requested;
 }
 
-/**
- * Where the service caches static sensor scenes (content-addressed, see
- * `renderer/service`): the worker's persistent cache directory.
- */
-function nativeSensorCacheDir(options: NativeRenderEngineOptions): string | undefined {
-  const root = process.env.SIMFORGE_NATIVE_SENSOR_CACHE_DIR
-    ?? (process.env.SIMFORGE_CACHE_DIR ? path.join(process.env.SIMFORGE_CACHE_DIR, 'native-sensor-scenes') : undefined)
-    ?? (options.nativeCacheDirectory ? path.join(path.dirname(options.nativeCacheDirectory), 'native-sensor-scenes') : undefined);
-  return root && root.length > 0 ? root : undefined;
-}
-
 /** Ticks whose raw RGBA frames are dumped for offline comparison (`SIMFORGE_NATIVE_DUMP_TICKS=0,24,95`). */
 function dumpTicks(): ReadonlySet<number> {
   const raw = process.env.SIMFORGE_NATIVE_DUMP_TICKS ?? '';
@@ -427,11 +446,15 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       if (!intent.renderTextures) throw new Error('native_render_texture_profile_missing');
       if (!intent.nativeVramBudgetBytes && !intent.nativeVramCapacityBytes) throw new Error('native_vram_capacity_missing');
       const sensorVideo = nativeSensorVideoFormat(intent);
+      // The intent's capacity is the fleet's largest device (or 16 GiB); the
+      // device this job holds is measured by the worker. Check against the
+      // smaller of the two.
+      const vram = nativeVramCapacity(intent.nativeVramCapacityBytes, context.gpuMemory?.totalBytes);
       const textureProfile = await stageNativeTextureProfile({
         closure,
         renderTextures: intent.renderTextures,
         budgetBytes: intent.nativeVramBudgetBytes,
-        capacityBytes: intent.nativeVramCapacityBytes,
+        capacityBytes: vram.capacityBytes,
         framePixels: sources.reduce((sum, source) => sum + (source.modality === 'rgb' ? source.attributes.width * source.attributes.height : sensorVideo.width * sensorVideo.height), 0),
         cacheDirectory: options.nativeCacheDirectory,
       });
@@ -444,7 +467,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       phase('textureProfile');
       const masterPath = textureProfile.masterPath;
       await writeJson(path.join(context.workspace, 'native-texture-profile.json'), textureProfile);
-      const { masterPath: _stagedPath, ...textureEvidence } = textureProfile;
+      const { masterPath: _stagedPath, ...stagedEvidence } = textureProfile;
+      const textureEvidence = nativeTextureEvidence(stagedEvidence, vram, intent.nativeVramBudgetBytes !== undefined, context.controlFeatures ?? new Set());
       // Actor appearance is part of the render contract: the intent declares
       // the actor closure as `actors.native-closure`, the worker delivers its
       // bytes, and the closure's members must verify before any frame is
@@ -550,9 +574,6 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         pedestrianModels: actorAssets.directory,
         captureClock: capture.clock,
         taaSamples: capture.samplesPerFrame,
-        ...(sensorRigs.lidars.length + sensorRigs.radars.length > 0 && nativeSensorCacheDir(options)
-          ? { sensorCacheDir: nativeSensorCacheDir(options) }
-          : {}),
       });
       // Scene load is the longest silent stretch of a large-map job: report
       // it as `preparing` seconds against a budget that scales with the scene.
@@ -646,6 +667,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         const tickDetails: Record<string, unknown>[] = [];
         type TickItem = { readonly frame: NativeFrameRecord; readonly payload: Buffer };
         const consumeTick = async (tick: number, items: readonly TickItem[], timing: Record<string, number>): Promise<void> => {
+          // Start after the tick loop has issued its next request.
+          await Promise.resolve();
           const writes: Promise<void>[] = [];
           for (const { frame, payload } of items) {
             const encoder = encoders.get(frame.sensorId)!;

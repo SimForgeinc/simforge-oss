@@ -43,7 +43,8 @@ const NativeRunLineageSchema = z.strictObject({
     estimatedBytes: z.number().int().nonnegative(),
     budgetBytes: z.number().int().positive(),
     capacityBytes: z.number().int().positive(),
-    capacitySource: z.enum(['assumed', 'explicit']),
+    /** `detected` (gated by native-evidence.vram-detected): the job's own device, measured on the worker. */
+    capacitySource: z.enum(['assumed', 'explicit', 'detected']),
     cacheKey: Sha256Schema,
   }).optional(),
 });

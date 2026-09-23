@@ -1037,7 +1037,6 @@ pub enum CaptureTicket {
 
 pub struct PendingCapture {
     identity: FrameIdentity,
-    slot: usize,
     keys: Vec<String>,
     stats: CaptureStats,
 }
@@ -1972,41 +1971,94 @@ impl GroundField {
         instances: impl IntoIterator<Item = (&'a Mesh3d, &'a GlobalTransform)>,
         cell_m: f32,
     ) -> GroundField {
-        let mut field = GroundField { cell_m, min_y: HashMap::new(), median: None };
-        for (mesh, gt) in instances {
-            let Some(mesh) = meshes.get(&mesh.0) else { continue };
-            let Some(pos) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { continue };
-            let bevy::mesh::VertexAttributeValues::Float32x3(values) = pos else { continue };
-            let gt = gt.to_matrix();
-            let positions: Vec<Vec3> = values.iter()
-                .map(|v| gt.transform_point3(Vec3::from(*v)))
+        // A large map is hundreds of millions of triangles: split the
+        // instances into contiguous chunks, build each chunk's field on its
+        // own thread, and fold the chunk fields in order. Every cell is a
+        // running `min`, and folding chunk minima in instance order applies
+        // the same tie rule as the serial loop, so the field (and its
+        // median) is bit-identical to `from_meshes_serial`.
+        let items: Vec<(&Mesh, Mat4)> = instances
+            .into_iter()
+            .filter_map(|(mesh, gt)| Some((meshes.get(&mesh.0)?, gt.to_matrix())))
+            .collect();
+        let threads = std::thread::available_parallelism().map_or(1, |n| n.get()).clamp(1, 16);
+        let chunk = items.len().div_ceil(threads).max(1);
+        let parts: Vec<GroundField> = std::thread::scope(|scope| {
+            let handles: Vec<_> = items
+                .chunks(chunk)
+                .map(|part| {
+                    scope.spawn(move || {
+                        let mut field = GroundField { cell_m, min_y: HashMap::new(), median: None };
+                        for (mesh, matrix) in part {
+                            field.add_mesh(mesh, matrix);
+                        }
+                        field
+                    })
+                })
                 .collect();
-            for p in &positions {
-                let key = (
-                    (p.x / cell_m).floor() as i64,
-                    (p.z / cell_m).floor() as i64,
-                );
-                field
-                    .min_y
-                    .entry(key)
-                    .and_modify(|y| *y = y.min(p.y))
-                    .or_insert(p.y);
+            handles.into_iter().map(|handle| handle.join().expect("ground field thread panicked")).collect()
+        });
+        let mut field = GroundField { cell_m, min_y: HashMap::new(), median: None };
+        for part in parts {
+            if field.min_y.is_empty() {
+                field.min_y = part.min_y;
+                continue;
             }
-            if mesh.primitive_topology() == bevy::render::render_resource::PrimitiveTopology::TriangleList {
-                if let Some(indices) = mesh.indices() {
-                    let mut indices = indices.iter();
-                    while let (Some(a), Some(b), Some(c)) = (indices.next(), indices.next(), indices.next()) {
-                        field.rasterize_triangle(positions[a], positions[b], positions[c]);
-                    }
-                } else {
-                    for triangle in positions.chunks_exact(3) {
-                        field.rasterize_triangle(triangle[0], triangle[1], triangle[2]);
-                    }
-                }
+            for (cell, y) in part.min_y {
+                field.min_y.entry(cell).and_modify(|height| *height = height.min(y)).or_insert(y);
             }
         }
         field.median = field.median_y();
         field
+    }
+
+    /// The single-threaded reference [`Self::from_meshes`] must reproduce.
+    #[cfg(test)]
+    pub(crate) fn from_meshes_serial<'a>(
+        meshes: &Assets<Mesh>,
+        instances: impl IntoIterator<Item = (&'a Mesh3d, &'a GlobalTransform)>,
+        cell_m: f32,
+    ) -> GroundField {
+        let mut field = GroundField { cell_m, min_y: HashMap::new(), median: None };
+        for (mesh, gt) in instances {
+            let Some(mesh) = meshes.get(&mesh.0) else { continue };
+            field.add_mesh(mesh, &gt.to_matrix());
+        }
+        field.median = field.median_y();
+        field
+    }
+
+    /// Fold one mesh instance into the field: every vertex's cell and every
+    /// triangle's covered cell centres keep their minimum height.
+    fn add_mesh(&mut self, mesh: &Mesh, gt: &Mat4) {
+        let cell_m = self.cell_m;
+        let Some(pos) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { return };
+        let bevy::mesh::VertexAttributeValues::Float32x3(values) = pos else { return };
+        let positions: Vec<Vec3> = values.iter()
+            .map(|v| gt.transform_point3(Vec3::from(*v)))
+            .collect();
+        for p in &positions {
+            let key = (
+                (p.x / cell_m).floor() as i64,
+                (p.z / cell_m).floor() as i64,
+            );
+            self.min_y
+                .entry(key)
+                .and_modify(|y| *y = y.min(p.y))
+                .or_insert(p.y);
+        }
+        if mesh.primitive_topology() == bevy::render::render_resource::PrimitiveTopology::TriangleList {
+            if let Some(indices) = mesh.indices() {
+                let mut indices = indices.iter();
+                while let (Some(a), Some(b), Some(c)) = (indices.next(), indices.next(), indices.next()) {
+                    self.rasterize_triangle(positions[a], positions[b], positions[c]);
+                }
+            } else {
+                for triangle in positions.chunks_exact(3) {
+                    self.rasterize_triangle(triangle[0], triangle[1], triangle[2]);
+                }
+            }
+        }
     }
 
     fn rasterize_triangle(&mut self, a: Vec3, b: Vec3, c: Vec3) {
@@ -2093,6 +2145,43 @@ impl GroundField {
 // SceneApp
 // ---------------------------------------------------------------------------
 
+/// Bevy's default task pools, except that the IO pool (where the glTF
+/// loader decodes and transcodes every map texture) gets a thread per core
+/// instead of at most 4. The other pools keep their default sizes: the total
+/// grows by exactly the extra IO threads, which sit idle after the map has
+/// loaded. On Belmont's 2,305 UASTC textures the transcode is ~125 s of
+/// CPU: 61 s on 4 threads, 13 s on 24 (measured by `ktx2_transcode_probe`).
+fn map_load_task_pools() -> bevy::app::TaskPoolOptions {
+    use bevy::app::{TaskPoolOptions, TaskPoolThreadAssignmentPolicy};
+    let defaults = TaskPoolOptions::default();
+    let cores = bevy::tasks::available_parallelism().max(1);
+    // Bevy's own assignment (`TaskPoolThreadAssignmentPolicy::get_number_of_threads`).
+    let share = |policy: &TaskPoolThreadAssignmentPolicy, remaining: usize| -> usize {
+        let proportion = cores as f32 * policy.percent;
+        let mut desired = proportion as usize;
+        if proportion - desired as f32 >= 0.5 {
+            desired += 1;
+        }
+        desired.min(remaining).clamp(policy.min_threads, policy.max_threads)
+    };
+    let default_io = share(&defaults.io, cores);
+    let async_compute = share(&defaults.async_compute, cores.saturating_sub(default_io));
+    let compute = share(&defaults.compute, cores.saturating_sub(default_io + async_compute));
+    let fixed = |policy: &TaskPoolThreadAssignmentPolicy, threads: usize| TaskPoolThreadAssignmentPolicy {
+        min_threads: threads,
+        max_threads: threads,
+        ..policy.clone()
+    };
+    let total = cores + async_compute + compute;
+    TaskPoolOptions {
+        min_total_threads: total,
+        max_total_threads: total,
+        io: fixed(&defaults.io, cores),
+        async_compute: fixed(&defaults.async_compute, async_compute),
+        compute: fixed(&defaults.compute, compute),
+    }
+}
+
 /// Host-driven headless renderer over a resident tile scene.
 ///
 /// The Bevy `App` is never `run()`; every [`Self::capture`] performs one
@@ -2127,8 +2216,8 @@ pub struct SceneApp {
     pinned_sample: PinnedSample,
     /// Deferred readbacks the render world started ([`Self::capture_begin`]).
     deferred_maps: DeferredMaps,
-    /// Staging slot of the next capture.
-    next_slot: usize,
+    /// Bevy's GPU clustering setting before a pinned clock disabled it.
+    gpu_clustering_default: Option<Option<bevy::light::cluster::GlobalClusterGpuSettings>>,
     /// Scene-state actors: id -> (cuboid entity, allocated instance id).
     actors: HashMap<String, (Entity, u32)>,
     /// Dynamic actor id -> (loaded catalog GLB root, authored scale, mesh count).
@@ -2250,6 +2339,7 @@ impl SceneApp {
             .init_resource::<HostLayerUnion>()
             .add_plugins((
                 DefaultPlugins
+                    .set(bevy::app::TaskPoolPlugin { task_pool_options: map_load_task_pools() })
                     .set(crate::platform::asset_plugin())
                     // Device creation on the backend this OS is qualified
                     // for (Vulkan / Metal / DX12); the resident engine keeps
@@ -2436,7 +2526,7 @@ impl SceneApp {
             capture_clock: CaptureClock::Free,
             pinned_sample,
             deferred_maps,
-            next_slot: 0,
+            gpu_clustering_default: None,
             actors: HashMap::new(),
             actor_models: HashMap::new(),
             actor_id_clones: HashMap::new(),
@@ -5038,7 +5128,6 @@ impl SceneApp {
                 rig_revision: self.rig_revision,
                 generation,
             },
-            slot,
             keys: keys.to_vec(),
             stats,
         };
@@ -5326,6 +5415,20 @@ impl SceneApp {
     /// [`CaptureClock`]).
     pub fn set_capture_clock(&mut self, clock: CaptureClock) {
         self.capture_clock = clock;
+        // Clustered lights: Bevy's GPU clustering fills each cluster's light
+        // list through atomics, so the order lights are summed in (and the
+        // low bits of the result) varies run to run, and an overflowing list
+        // is resized with "a few incorrect frames". CPU clustering orders the
+        // lists deterministically; a pinned capture uses it.
+        if let Some(mut settings) = self.app.world_mut().get_resource_mut::<bevy::light::cluster::GlobalClusterSettings>() {
+            if self.gpu_clustering_default.is_none() {
+                self.gpu_clustering_default = Some(settings.gpu_clustering);
+            }
+            settings.gpu_clustering = match clock {
+                CaptureClock::Free => self.gpu_clustering_default.flatten(),
+                CaptureClock::Pinned { .. } => None,
+            };
+        }
         match clock {
             CaptureClock::Free => {
                 self.pinned_sample.set(None);
@@ -5883,6 +5986,107 @@ mod tests {
     }
 
     #[test]
+    fn parallel_ground_field_is_bit_identical_to_the_serial_build() {
+        // Many overlapping instances with equal heights (signed zeros too):
+        // the chunked build must keep exactly the serial tie winners.
+        let mut meshes = Assets::<Mesh>::default();
+        let mut state = 0x2545_f491_4f6c_dd1du64;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            ((state >> 40) as f32) / (1u64 << 24) as f32
+        };
+        let mut instances = Vec::new();
+        for i in 0..200 {
+            let mut positions = Vec::new();
+            for _ in 0..30 {
+                let y = match i % 4 { 0 => 0.0, 1 => -0.0, _ => (next() * 4.0).floor() * 0.5 };
+                positions.push([next() * 60.0, y, next() * 60.0]);
+            }
+            let indices: Vec<u32> = (0..30).collect();
+            let mesh = Mesh::new(bevy::render::render_resource::PrimitiveTopology::TriangleList, RenderAssetUsages::MAIN_WORLD)
+                .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+                .with_inserted_indices(bevy::mesh::Indices::U32(indices));
+            let transform = GlobalTransform::from(Transform::from_xyz(next() * 5.0, 0.0, next() * 5.0));
+            instances.push((Mesh3d(meshes.add(mesh)), transform));
+        }
+        let pairs: Vec<(&Mesh3d, &GlobalTransform)> = instances.iter().map(|(m, t)| (m, t)).collect();
+        let parallel = GroundField::from_meshes(&meshes, pairs.iter().copied(), 2.0);
+        let serial = GroundField::from_meshes_serial(&meshes, pairs.iter().copied(), 2.0);
+        assert_eq!(parallel.min_y.len(), serial.min_y.len());
+        for (cell, y) in &serial.min_y {
+            assert_eq!(parallel.min_y[cell].to_bits(), y.to_bits(), "cell {cell:?}");
+        }
+        assert_eq!(parallel.median.map(f32::to_bits), serial.median.map(f32::to_bits));
+    }
+
+    #[test]
+    fn map_load_pools_give_io_every_core_and_keep_the_other_pools() {
+        let cores = bevy::tasks::available_parallelism().max(1);
+        let options = map_load_task_pools();
+        assert_eq!((options.io.min_threads, options.io.max_threads), (cores, cores));
+        let others = options.async_compute.max_threads + options.compute.max_threads;
+        assert_eq!(options.min_total_threads, cores + others);
+        assert_eq!(options.max_total_threads, options.min_total_threads);
+        // What Bevy's defaults leave the async and compute pools on this host.
+        let default_io = if cores >= 16 { 4 } else { ((cores as f32 * 0.25).round() as usize).clamp(1, 4) };
+        assert_eq!(others, cores - default_io, "async + compute keep Bevy's default share");
+    }
+
+    /// Measurement probe (not a gate): CPU cost of turning a staged map's
+    /// KTX2 textures into GPU images, as Bevy's glTF loader does, on the
+    /// IO pool's thread count and on every core.
+    /// `SIMFORGE_KTX2_PROBE_DIR=<staged closure> cargo test --release -p render-core ktx2_transcode_probe -- --ignored --nocapture`
+    #[test]
+    #[ignore = "measurement probe over a staged map closure"]
+    fn ktx2_transcode_probe() {
+        let dir = std::env::var("SIMFORGE_KTX2_PROBE_DIR").expect("SIMFORGE_KTX2_PROBE_DIR");
+        let mut files = Vec::new();
+        let mut stack = vec![std::path::PathBuf::from(dir)];
+        while let Some(path) = stack.pop() {
+            for entry in std::fs::read_dir(&path).unwrap() {
+                let entry = entry.unwrap().path();
+                if entry.is_dir() {
+                    stack.push(entry);
+                } else if entry.extension().is_some_and(|ext| ext == "ktx2") {
+                    files.push(entry);
+                }
+            }
+        }
+        files.sort();
+        let read = Instant::now();
+        let buffers: Vec<Vec<u8>> = files.iter().map(|path| std::fs::read(path).unwrap()).collect();
+        let bytes: usize = buffers.iter().map(Vec::len).sum();
+        eprintln!("{} ktx2 files, {:.2} GB on disk, read in {:.1} s", files.len(), bytes as f64 / 1e9, read.elapsed().as_secs_f64());
+        let formats = bevy::image::CompressedImageFormats::BC;
+        for threads in [1usize, 4, std::thread::available_parallelism().map_or(4, |n| n.get())] {
+            let started = Instant::now();
+            let next = std::sync::atomic::AtomicUsize::new(0);
+            let gpu_bytes = std::sync::atomic::AtomicUsize::new(0);
+            let limit = if threads == 1 { buffers.len().min(200) } else { buffers.len() };
+            std::thread::scope(|scope| {
+                for _ in 0..threads {
+                    scope.spawn(|| loop {
+                        let index = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        if index >= limit {
+                            break;
+                        }
+                        let image = bevy::image::ktx2_buffer_to_image(&buffers[index], formats, true).expect("transcode");
+                        gpu_bytes.fetch_add(image.data.as_ref().map_or(0, Vec::len), std::sync::atomic::Ordering::Relaxed);
+                    });
+                }
+            });
+            let seconds = started.elapsed().as_secs_f64();
+            eprintln!(
+                "{threads:>2} threads: {limit} textures -> {:.2} GB GPU data in {seconds:.1} s{}",
+                gpu_bytes.load(std::sync::atomic::Ordering::Relaxed) as f64 / 1e9,
+                if limit < buffers.len() { format!(" (x{:.0} extrapolated: {:.0} s)", buffers.len() as f64 / limit as f64, seconds * buffers.len() as f64 / limit as f64) } else { String::new() }
+            );
+        }
+    }
+
+    #[test]
     fn one_meter_exposes_twilight_between_noon_and_night() {
         let at = |elev: f32| {
             let lighting = Lighting {
@@ -6321,13 +6525,16 @@ mod tests {
     /// warmup, retries, relights) must not change a single byte, for SMAA
     /// and for explicit N-sample TAA; the free (rc.73) clock is expected to
     /// drift with them, which is the determinism bug the pinned clock fixes.
-    fn pinned_scene(aa: crate::profiles::AntiAlias) -> SceneApp {
+    fn pinned_scene(aa: crate::profiles::AntiAlias, clock: CaptureClock) -> SceneApp {
         let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
         let lighting = Lighting { atmosphere: true, cloud_cover: Some(0.6), ..Lighting::default() };
         let mut config = RenderProfileConfig::default();
         config.cinematic.aa = aa;
         let mut app = SceneApp::new_with_profile_config(&lighting, config).unwrap();
+        // As the service does: the clock (and with it the light-clustering
+        // mode) is chosen before the scene loads.
+        app.set_capture_clock(clock);
         app.apply_lighting(&lighting, config).unwrap();
         app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
         let mut spec = test_camera("cam", 160, 96);
@@ -6335,6 +6542,7 @@ mod tests {
         app.add_camera(spec, Profile::Cinematic);
         app.wait_until_ready().unwrap();
         app.set_pose("cam", &[6.0, 1.8, 6.0], &[0.0, 0.8, 0.0]).unwrap();
+        app.wait_for_capture_ready().unwrap();
         app
     }
 
@@ -6349,8 +6557,7 @@ mod tests {
     fn pinned_capture_does_not_depend_on_frames_drawn_before_it() {
         use crate::profiles::AntiAlias;
         for (aa, samples) in [(AntiAlias::SmaaHigh, 1), (AntiAlias::Taa, 4)] {
-            let mut app = pinned_scene(aa);
-            app.set_capture_clock(CaptureClock::Pinned { samples });
+            let mut app = pinned_scene(aa, CaptureClock::Pinned { samples });
             let first = capture_after(&mut app, 0, 12.5);
             let after_three = capture_after(&mut app, 3, 12.5);
             let after_eleven = capture_after(&mut app, 11, 12.5);
@@ -6363,10 +6570,47 @@ mod tests {
             std::mem::forget(app);
         }
         // The rc.73 clock drifts with every drawn frame (TAA history, jitter, clouds).
-        let mut app = pinned_scene(AntiAlias::Taa);
+        let mut app = pinned_scene(AntiAlias::Taa, CaptureClock::Free);
         let first = capture_after(&mut app, 0, 12.5);
         let after_three = capture_after(&mut app, 3, 12.5);
         assert!(first != after_three, "free clock unexpectedly stable");
+        std::mem::forget(app);
+    }
+
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn deferred_captures_return_the_frames_blocking_captures_return() {
+        use crate::profiles::AntiAlias;
+        let keys = vec!["cam:rgb".to_string()];
+        let poses = [([6.0, 1.8, 6.0], [0.0, 0.8, 0.0]), ([-6.0, 1.8, 6.0], [0.0, 0.8, 0.0]), ([0.0, 2.5, 8.0], [0.0, 0.5, 0.0])];
+        let mut app = pinned_scene(AntiAlias::SmaaHigh, CaptureClock::Pinned { samples: 1 });
+        let blocking: Vec<Vec<u8>> = poses
+            .iter()
+            .enumerate()
+            .map(|(tick, (eye, target))| {
+                app.set_pose("cam", eye, target).unwrap();
+                app.set_sim_time(tick as f64);
+                app.capture(tick as u64, &keys).unwrap().passes["cam:rgb"].bytes.clone()
+            })
+            .collect();
+        // Pipelined order: begin N+1 before finishing N.
+        let mut frames = Vec::new();
+        let mut pending: Option<CaptureTicket> = None;
+        for (tick, (eye, target)) in poses.iter().enumerate() {
+            app.set_pose("cam", eye, target).unwrap();
+            app.set_sim_time(tick as f64);
+            let ticket = app.capture_begin(tick as u64, &keys).unwrap();
+            if let Some(previous) = pending.replace(ticket) {
+                frames.push(app.capture_finish(previous).unwrap());
+            }
+        }
+        frames.push(app.capture_finish(pending.take().unwrap()).unwrap());
+        assert_eq!(frames.len(), blocking.len());
+        for (tick, (frame, expected)) in frames.iter().zip(&blocking).enumerate() {
+            assert_eq!(frame.identity.sim_tick, tick as u64);
+            assert!(frame.passes["cam:rgb"].bytes == *expected, "deferred frame {tick} differs from the blocking capture");
+        }
+        assert!(blocking[0] != blocking[1], "fixture poses must differ");
         std::mem::forget(app);
     }
 

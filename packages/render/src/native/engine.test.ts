@@ -2,7 +2,8 @@ import type { RenderSourceV3 } from '@simforge-oss/scenario';
 import { describe, expect, it } from 'vitest';
 
 import {
-  assertNativeSourcesSupported, assertNativeVideoProfileSupported, createRenderEngine, nativeCameraClipPlanes, nativeEncoderVersion, resolveBinary, resolveNativeEncoder,
+  assertNativeSourcesSupported, assertNativeVideoProfileSupported, createRenderEngine, nativeCameraClipPlanes, nativeEncoderVersion,
+  nativeTextureEvidence, nativeVramCapacity, resolveBinary, resolveNativeEncoder,
 } from './engine.js';
 import { stripRgbaPadding } from './service-client.js';
 
@@ -38,6 +39,25 @@ describe('native retained engine adapter', () => {
     expect(packed).toHaveLength(width * height * 4);
     expect([...packed.subarray(0, width * 4)]).toEqual(new Array(width * 4).fill(1));
     expect([...packed.subarray(width * 4)]).toEqual(new Array(width * 4).fill(2));
+  });
+});
+
+describe('native VRAM capacity', () => {
+  const staged = { capacityBytes: 10 * 2 ** 30, capacitySource: 'assumed' as const, estimatedBytes: 6 * 2 ** 30 };
+  it('checks against the measured device when it is smaller than the intent assumption', () => {
+    expect(nativeVramCapacity(16 * 2 ** 30, 10 * 2 ** 30)).toEqual({ capacityBytes: 10 * 2 ** 30, detected: true, intentCapacity: 16 * 2 ** 30 });
+    expect(nativeVramCapacity(8 * 2 ** 30, 10 * 2 ** 30)).toEqual({ capacityBytes: 8 * 2 ** 30, detected: false, intentCapacity: 8 * 2 ** 30 });
+    expect(nativeVramCapacity(16 * 2 ** 30, undefined)).toEqual({ capacityBytes: 16 * 2 ** 30, detected: false, intentCapacity: 16 * 2 ** 30 });
+  });
+
+  it('reports a detected capacity only to a plane that accepts it', () => {
+    const vram = nativeVramCapacity(16 * 2 ** 30, 10 * 2 ** 30);
+    expect(nativeTextureEvidence(staged, vram, false, new Set(['native-evidence.vram-detected'])))
+      .toMatchObject({ capacityBytes: 10 * 2 ** 30, capacitySource: 'detected' });
+    // An older plane parses the enum strictly: it sees the baseline evidence.
+    expect(nativeTextureEvidence(staged, vram, false, new Set()))
+      .toMatchObject({ capacityBytes: 16 * 2 ** 30, capacitySource: 'assumed' });
+    expect(nativeTextureEvidence({ ...staged, capacitySource: 'explicit' as const }, vram, true, new Set(['native-evidence.vram-detected'])).capacitySource).toBe('explicit');
   });
 });
 

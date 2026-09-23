@@ -81,9 +81,11 @@ export const CONTROL_FEATURE_RENDER_SUBSTITUTIONS = 'render-evidence.substitutio
  * video's codec and encoder arguments.
  */
 export const CONTROL_FEATURE_NATIVE_ENCODER = 'native-evidence.encoder' as const;
+/** `textureProfile.capacitySource: "detected"`: the capacity is the job's measured device, not the intent's assumption. */
+export const CONTROL_FEATURE_NATIVE_VRAM_DETECTED = 'native-evidence.vram-detected' as const;
 export const CONTROL_FEATURES_V1 = [
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK,
-  CONTROL_FEATURE_RENDER_SUBSTITUTIONS, CONTROL_FEATURE_NATIVE_ENCODER,
+  CONTROL_FEATURE_RENDER_SUBSTITUTIONS, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_VRAM_DETECTED,
 ] as const;
 
 export const JobInputTransferSchema = z.strictObject({

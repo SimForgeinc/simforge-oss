@@ -63,8 +63,8 @@ describe('native video encoders', () => {
 });
 
 describe('native capture settings', () => {
-  it('defaults to the pinned clock with single-sample SMAA', () => {
-    expect(nativeCaptureSettings({}, {})).toEqual({ clock: 'pinned', antiAlias: 'smaa-high', samplesPerFrame: 1 });
+  it('defaults to the pinned clock with single-render SMAA (ultra)', () => {
+    expect(nativeCaptureSettings({}, {})).toEqual({ clock: 'pinned', antiAlias: 'smaa-ultra', samplesPerFrame: 1 });
   });
 
   it('counts explicit TAA samples only on the pinned clock and keeps the free clock byte-identical to rc.73', () => {

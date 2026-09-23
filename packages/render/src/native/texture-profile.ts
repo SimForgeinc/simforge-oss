@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { homedir } from 'node:os';
@@ -194,27 +194,6 @@ export async function stageNativeTextureProfile(input: {
   });
   const selected = new Map<string, RenderInputFile>([...plan.members].map((uri) => [uri, input.closure.members.get(uri)!]));
   const variantDigest = plan.variantDigest;
-  let textureBytes = 0;
-  const seenImages = new Set<string>();
-  for (const [index, uri] of plan.images) {
-    const image = document.images![index]!;
-    if (plan.variant) {
-      image.uri = uri;
-      image.mimeType = 'image/ktx2';
-    }
-    const member = selected.get(uri)!;
-    if (seenImages.has(uri)) continue;
-    seenImages.add(uri);
-    textureBytes += ktx2VramBytes(await readKtx2Header(member.path), uri, plan.variant);
-  }
-  let geometryBytes = 0;
-  for (const buffer of document.buffers ?? []) geometryBytes += buffer.byteLength;
-  // Admission ESTIMATE: geometry upload + CPU/GPU expansion allowance, frame
-  // attachments/readback, and a 512 MiB actor/lighting/driver reserve. This is
-  // not a GPU allocator limit and cannot guarantee aggregate parallel VRAM.
-  const estimatedBytes = textureBytes + geometryBytes * 2 + input.framePixels * 64 + NATIVE_SCENE_RESERVE_BYTES;
-  if (estimatedBytes > capacityBytes!) throw new NativeTextureCapacityError(estimatedBytes, capacityBytes!, capacitySource);
-  const budgetBytes = input.budgetBytes ?? estimatedBytes;
   const identity = createHash('sha256').update(JSON.stringify([masterInput.sha256, input.renderTextures, variantDigest, [...selected].map(([uri, member]) => [uri, member.sha256])])).digest('hex');
   // Default beside the worker's blob cache (SIMFORGE_CACHE_DIR) so the staged
   // tree is hard links on the same filesystem: no copy, and it survives restarts.
@@ -222,8 +201,44 @@ export async function stageNativeTextureProfile(input: {
     ?? (process.env.SIMFORGE_CACHE_DIR ? path.join(process.env.SIMFORGE_CACHE_DIR, 'native-textures') : undefined)
     ?? path.join(process.env.XDG_CACHE_HOME ?? path.join(homedir(), '.cache'), 'simforge', 'native-textures');
   const directory = path.join(cacheRoot, identity);
+  const masterPath = path.join(directory, 'master.gltf');
+  // A tree staged before (same identity: master, tier, variant and every
+  // member digest) is complete once its marker exists; its measured bytes
+  // ride in the marker, so a later job skips the per-file header reads and
+  // links (thousands of files on a large map).
+  const staged = await readStagedMarker(directory, identity);
+  let textureBytes: number;
+  let geometryBytes: number;
+  if (staged) {
+    ({ textureBytes, geometryBytes } = staged);
+  } else {
+    const headers = new Map<string, number>();
+    const uniqueImages = [...new Set(plan.images.values())];
+    await forEachConcurrent(uniqueImages, 32, async (uri) => {
+      headers.set(uri, ktx2VramBytes(await readKtx2Header(selected.get(uri)!.path), uri, plan.variant));
+    });
+    textureBytes = 0;
+    for (const uri of uniqueImages) textureBytes += headers.get(uri)!;
+    for (const [index, uri] of plan.images) {
+      const image = document.images![index]!;
+      if (plan.variant) {
+        image.uri = uri;
+        image.mimeType = 'image/ktx2';
+      }
+    }
+    geometryBytes = 0;
+    for (const buffer of document.buffers ?? []) geometryBytes += buffer.byteLength;
+  }
+  // Admission ESTIMATE: geometry upload + CPU/GPU expansion allowance, frame
+  // attachments/readback, and a 512 MiB actor/lighting/driver reserve. This is
+  // not a GPU allocator limit and cannot guarantee aggregate parallel VRAM.
+  const estimatedBytes = textureBytes + geometryBytes * 2 + input.framePixels * 64 + NATIVE_SCENE_RESERVE_BYTES;
+  if (estimatedBytes > capacityBytes!) throw new NativeTextureCapacityError(estimatedBytes, capacityBytes!, capacitySource);
+  const budgetBytes = input.budgetBytes ?? estimatedBytes;
+  const profile = { masterPath, renderTextures: input.renderTextures, memberCount: selected.size + 1, textureBytes, geometryBytes, estimatedBytes, budgetBytes, capacityBytes: capacityBytes!, capacitySource, cacheKey: identity };
+  if (staged) return profile;
   await fs.mkdir(directory, { recursive: true });
-  for (const [uri, member] of selected) {
+  await forEachConcurrent([...selected], 32, async ([uri, member]) => {
     const target = path.join(directory, uri);
     await fs.mkdir(path.dirname(target), { recursive: true });
     try { await fs.link(member.path, target); }
@@ -231,8 +246,8 @@ export async function stageNativeTextureProfile(input: {
       const code = (error as NodeJS.ErrnoException).code;
       if (code === 'EEXIST') {
         // Already staged as a link to this very blob: nothing to prove again.
-        const [staged, source] = await Promise.all([fs.stat(target), fs.stat(member.path)]);
-        if (staged.ino === source.ino && staged.dev === source.dev) continue;
+        const [linked, source] = await Promise.all([fs.stat(target), fs.stat(member.path)]);
+        if (linked.ino === source.ino && linked.dev === source.dev) return;
         const digest = await hashFile(target);
         if (digest.sha256 !== member.sha256 || digest.sizeBytes !== member.sizeBytes) throw new Error(`native_texture_cache_digest_mismatch: ${uri}`);
       } else if (code === 'EXDEV' || code === 'EPERM') {
@@ -246,9 +261,8 @@ export async function stageNativeTextureProfile(input: {
         } finally { await fs.rm(temporary, { recursive: true, force: true }); }
       } else throw error;
     }
-  }
+  });
   // Never modify the read-only installed master or a hardlink to it.
-  const masterPath = path.join(directory, 'master.gltf');
   const content = JSON.stringify(document);
   const temporary = await fs.mkdtemp(path.join(directory, '.master-'));
   try {
@@ -256,5 +270,43 @@ export async function stageNativeTextureProfile(input: {
     await fs.writeFile(candidate, content);
     await fs.rename(candidate, masterPath);
   } finally { await fs.rm(temporary, { recursive: true, force: true }); }
-  return { masterPath, renderTextures: input.renderTextures, memberCount: selected.size + 1, textureBytes, geometryBytes, estimatedBytes, budgetBytes, capacityBytes: capacityBytes!, capacitySource, cacheKey: identity };
+  await writeStagedMarker(directory, { identity, textureBytes, geometryBytes });
+  return profile;
+}
+
+const STAGED_MARKER = '.staged.json';
+
+interface StagedMarker {
+  readonly identity: string;
+  readonly textureBytes: number;
+  readonly geometryBytes: number;
+}
+
+async function readStagedMarker(directory: string, identity: string): Promise<StagedMarker | null> {
+  try {
+    const marker = JSON.parse(await fs.readFile(path.join(directory, STAGED_MARKER), 'utf8')) as StagedMarker;
+    if (marker.identity !== identity || !Number.isSafeInteger(marker.textureBytes) || !Number.isSafeInteger(marker.geometryBytes)) return null;
+    await fs.access(path.join(directory, 'master.gltf'));
+    return marker;
+  } catch {
+    return null;
+  }
+}
+
+/** Written last (temp + rename): its presence means every member and the master are staged. */
+async function writeStagedMarker(directory: string, marker: StagedMarker): Promise<void> {
+  const temporary = path.join(directory, `${STAGED_MARKER}.${process.pid}.${randomUUID()}.tmp`);
+  await fs.writeFile(temporary, JSON.stringify(marker));
+  await fs.rename(temporary, path.join(directory, STAGED_MARKER));
+}
+
+async function forEachConcurrent<T>(items: readonly T[], limit: number, work: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next]!;
+      next += 1;
+      await work(item);
+    }
+  }));
 }

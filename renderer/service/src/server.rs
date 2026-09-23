@@ -75,10 +75,6 @@ pub struct SceneSpec {
     /// printing a white sky). Off, the incident meter alone sets exposure.
     #[serde(default = "default_true")]
     pub auto_meter: bool,
-    /// Directory for the content-addressed static sensor BVH cache (the
-    /// first lidar/radar request on a map builds it; later services load it).
-    #[serde(default)]
-    pub sensor_cache_dir: Option<String>,
     /// `free` (default; rc.73 semantics: captures depend on how many frames
     /// were drawn) or `pinned` (a capture is a function of its scene and
     /// simulation time; see `render_core::engine::CaptureClock`).
@@ -505,11 +501,6 @@ pub struct ServiceState {
     actor_model_bindings: HashMap<String, (PathBuf, Option<String>)>,
     /// [`SceneSpec::allow_primitive_actors`].
     allow_primitive_actors: bool,
-    /// Whether caching the built scenes waits for the write (the one-shot
-    /// `--build-sensor-cache` mode) or leaves it to a background thread.
-    pub sync_sensor_cache_writes: bool,
-    /// Content-addressed cache of the static map scenes (see [`SceneSpec::sensor_cache_dir`]).
-    sensor_cache_dir: Option<PathBuf>,
     /// Static legend id -> sensor class, built with the sensor scenes.
     static_sensor_classes: Option<std::sync::Arc<HashMap<u32, sensors::taxonomy::SemanticClass>>>,
     /// Something that can queue new pipelines or materials (a camera, a
@@ -537,10 +528,7 @@ pub struct ServiceState {
 }
 
 /// What [`ServiceState::ensure_sensor_scenes_outcome`] did.
-pub struct SensorScenesOutcome {
-    /// Content key of a cached scene (the static layer is no longer cached).
-    pub key: Option<String>,
-    /// Already built before this call.
+pub struct SensorScenesOutcome {    /// Already built before this call.
     pub loaded: bool,
     /// Logical (instanced) static triangles.
     pub triangles: usize,
@@ -581,7 +569,6 @@ impl ServiceState {
     pub fn ensure_sensor_scenes_outcome(&mut self) -> Result<SensorScenesOutcome, String> {
         if let Some(scenes) = &self.sensor_scenes {
             return Ok(SensorScenesOutcome {
-                key: None,
                 loaded: true,
                 triangles: scenes.static_scene.tri_count(),
                 unique_triangles: scenes.static_scene.unique_tri_count(),
@@ -622,11 +609,7 @@ impl ServiceState {
             },
             started.elapsed().as_secs_f64() - built_s,
         );
-        if self.sensor_cache_dir.is_some() {
-            eprintln!("sensor-scenes: sensorCacheDir is not used any more (the instanced static scene builds in seconds)");
-        }
         let outcome = SensorScenesOutcome {
-            key: None,
             loaded: false,
             triangles: scenes.static_scene.tri_count(),
             unique_triangles: scenes.static_scene.unique_tri_count(),
@@ -714,18 +697,12 @@ impl ServiceState {
             lidars: Vec::new(),
             radars: Vec::new(),
             sensor_scenes: None,
-            sync_sensor_cache_writes: false,
             actor_blas: ActorBlasCache::default(),
             spawned_actors: HashMap::new(),
             actor_model_bindings: HashMap::new(),
             allow_primitive_actors: spec.allow_primitive_actors,
             static_sensor_classes: None,
             needs_settle: true,
-            sensor_cache_dir: spec
-                .sensor_cache_dir
-                .clone()
-                .or_else(|| std::env::var("SIMFORGE_NATIVE_SENSOR_CACHE_DIR").ok().filter(|dir| !dir.is_empty())) // fallback-ok: optional cache location from the environment
-                .map(PathBuf::from),
             lidar_backend: spec.lidar_backend()?,
             overlap_sensors: std::env::var("SIMFORGE_NATIVE_SERIAL_SENSORS").map_or(true, |value| value.is_empty() || value == "0"),
             vehicle_models,
