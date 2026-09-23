@@ -206,3 +206,34 @@ it('uastc-full uploads the ingest-built GPU blocks when the closure has them, an
   expect(hit.textureBytes).toBe(miss.textureBytes);
   expect(hit.cacheKey).not.toBe(miss.cacheKey);
 });
+
+it('finds the GPU variant in derived/textures-full-bc7/ (backfilled onto an immutable closure) before 3d/variants', async () => {
+  const value = await fixture();
+  const members = [...value.closure.members.values()];
+  const manifest = value.closure.members.get('3d/manifest.json')!;
+  const add = async (relativePath: string, bytes: Buffer | string) => {
+    const file = path.join(value.directory, relativePath);
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, bytes);
+    const input = { inputId: nativeMapMemberInputId(relativePath), relativePath, path: file, sha256: createHash('sha256').update(bytes).digest('hex'), sizeBytes: Buffer.byteLength(bytes) };
+    members.push(input);
+    return input;
+  };
+  const header = Buffer.alloc(80);
+  Buffer.from([0xab,0x4b,0x54,0x58,0x20,0x32,0x30,0xbb,0x0d,0x0a,0x1a,0x0a]).copy(header);
+  header.writeUInt32LE(145, 12); header.writeUInt32LE(1024, 20); header.writeUInt32LE(1024, 24); header.writeUInt32LE(1, 36); header.writeUInt32LE(1, 40);
+  const gpu = await add('derived/textures-full-bc7/objects/abc.ktx2', header);
+  const index = await add('derived/textures-full-bc7/index-1.json', JSON.stringify({
+    schemaVersion: 1, id: 'textures-full-bc7', sourceManifestSha256: manifest.sha256,
+    images: { '../images/full.ktx2': { file: 'objects/abc.ktx2', outputSha256: gpu.sha256, width: 1024, height: 1024, codec: 'bc7' } },
+  }));
+  await add('derived/textures-full-bc7/manifest.json', JSON.stringify({
+    schema: 'simforge.map-texture-variant.v1', sourceManifestSha256: manifest.sha256,
+    variants: { 'textures-full-bc7': { file: 'index-1.json', outputSha256: index.sha256, sourceManifestSha256: manifest.sha256 } },
+  }));
+  const closure = collectNativeMapMembers(members);
+  const staged = await stageNativeTextureProfile({ ...value, closure, renderTextures: 'uastc-full', framePixels: 0, capacityBytes: 16 * 1024 ** 3 });
+  expect(staged.transcodeAtLoad).toBeUndefined();
+  expect(JSON.parse(await fs.readFile(staged.masterPath, 'utf8')).images[1].uri).toBe('derived/textures-full-bc7/objects/abc.ktx2');
+  expect(await fs.readFile(path.join(path.dirname(staged.masterPath), 'derived/textures-full-bc7/objects/abc.ktx2'))).toEqual(header);
+});

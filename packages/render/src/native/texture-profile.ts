@@ -115,17 +115,25 @@ export async function planNativeTextureMembers(
     variantDigest = indexSha256;
   }
   // uastc-full: prefer the pre-transcoded blocks when ingest built them.
+  // The variant's envelope lives in derived/textures-full-bc7/ (new builds
+  // and backfills of immutable published closures alike), else in the
+  // closure's own 3d/variants/manifest.json; index and image files resolve
+  // against the envelope's base directory.
   let fullVariant: Variant | undefined;
+  let fullVariantBase = '';
   let transcodeAtLoad: string | undefined;
   if (renderTextures === 'uastc-full') {
     const manifestSha256 = source.sha256('3d/manifest.json');
-    const variantsSha256 = source.sha256('3d/variants/manifest.json');
-    if (!manifestSha256 || !variantsSha256) {
+    const envelope = [
+      { uri: `derived/${NATIVE_FULL_GPU_VARIANT_ID}/manifest.json`, base: `derived/${NATIVE_FULL_GPU_VARIANT_ID}/`, indexBase: `derived/${NATIVE_FULL_GPU_VARIANT_ID}/` },
+      { uri: '3d/variants/manifest.json', base: '3d/', indexBase: '3d/variants/' },
+    ].find((candidate) => source.sha256(candidate.uri));
+    if (!manifestSha256 || !envelope) {
       transcodeAtLoad = 'closure has no texture variants';
     } else {
-      const manifest = JSON.parse(await source.readText('3d/variants/manifest.json')) as { sourceManifestSha256: string; variants?: Record<string, { file: string; outputSha256: string; sourceManifestSha256: string }> };
+      const manifest = JSON.parse(await source.readText(envelope.uri)) as { sourceManifestSha256: string; variants?: Record<string, { file: string; outputSha256: string; sourceManifestSha256: string }> };
       const entry = manifest.variants?.[NATIVE_FULL_GPU_VARIANT_ID];
-      const indexUri = entry ? `3d/variants/${entry.file}` : undefined;
+      const indexUri = entry ? `${envelope.indexBase}${entry.file}` : undefined;
       if (!entry || !indexUri) transcodeAtLoad = `closure has no ${NATIVE_FULL_GPU_VARIANT_ID} variant`;
       else if (manifest.sourceManifestSha256 !== manifestSha256 || entry.sourceManifestSha256 !== manifestSha256) transcodeAtLoad = `${NATIVE_FULL_GPU_VARIANT_ID} is bound to another manifest`;
       else if (source.sha256(indexUri) !== entry.outputSha256) transcodeAtLoad = `${NATIVE_FULL_GPU_VARIANT_ID} index is missing or its digest differs`;
@@ -135,8 +143,9 @@ export async function planNativeTextureMembers(
           transcodeAtLoad = `${NATIVE_FULL_GPU_VARIANT_ID} index is invalid`;
         } else {
           fullVariant = index;
+          fullVariantBase = envelope.base;
           members.add('3d/manifest.json');
-          members.add('3d/variants/manifest.json');
+          members.add(envelope.uri);
           members.add(assertIndexUri(indexUri));
           variantDigest = entry.outputSha256;
         }
@@ -164,7 +173,7 @@ export async function planNativeTextureMembers(
     const gpu = fullVariant?.images[`../${image.uri}`];
     if (gpu) {
       if (!FULL_GPU_VARIANT_CODECS.includes(gpu.codec)) throw new Error(`native_texture_variant_codec_invalid: ${gpu.codec} for ${image.uri}`);
-      uri = `3d/${gpu.file}`;
+      uri = `${fullVariantBase}${gpu.file}`;
       if (requireMember(uri) !== gpu.outputSha256) throw new Error(`native_texture_variant_digest_mismatch: ${uri}`);
     }
     requireMember(uri);
