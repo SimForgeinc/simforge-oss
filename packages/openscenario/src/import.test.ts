@@ -21,7 +21,7 @@ describe('OpenSCENARIO intake', () => {
 
   it('reports capabilities, resolves embedded identity, and preserves source bytes', () => {
     const analysis = analyzeOpenScenarioImport(bytes(valid), 'cut-in.xosc');
-    expect(analysis.actors[0]).toMatchObject({ id: 'Ego', x: 1, y: 3, z: 2, speedKph: 36 });
+    expect(analysis.actors[0]).toMatchObject({ id: 'Ego', x: 1, y: 3, z: -2, speedKph: 36 });
     expect(resolveOpenScenarioMap(analysis, [MAP_A])).toMatchObject({ status: 'resolved', source: 'embedded-identity', diagnostic: null });
     const document = translateOpenScenarioImport(analysis, { artifactId: 'usart-source', sha256: analysis.source.sha256, byteLength: analysis.source.byteLength, mediaType: 'application/xml' }, MAP_A, '2026-08-05T00:00:00.000Z');
     expect(document.roles[0]).toMatchObject({ kind: 'scene_absolute', initialSpeedKph: 36 });
@@ -117,5 +117,52 @@ describe('OpenSCENARIO intake', () => {
     expect(() => analyzeOpenScenarioImport(bytes(xml))).toThrowError(
       expect.objectContaining({ code: 'map_identity_conflict' }),
     );
+  });
+});
+
+describe('OpenSCENARIO intake: frames and entity forms (docs/engineering/openscenario-conformance.md F-01, F-12)', () => {
+  const scene = (entities: string, privates: string) =>
+    `<?xml version="1.0"?><OpenSCENARIO><FileHeader revMajor="1" revMinor="4" description="probe"/><RoadNetwork><LogicFile filepath="road.xodr"/></RoadNetwork><Entities>${entities}</Entities><Storyboard><Init><Actions>${privates}</Actions></Init></Storyboard></OpenSCENARIO>`;
+  const teleport = (entity: string, position: string, extra = '') =>
+    `<Private entityRef="${entity}"><PrivateAction><TeleportAction><Position>${position}</Position></TeleportAction></PrivateAction>${extra}</Private>`;
+
+  it('maps OSC world (x east, y north, z up) to the y-up scene frame the compiler reads back as map y = -z', () => {
+    const xml = scene('<ScenarioObject name="a"><Vehicle name="c" vehicleCategory="car"/></ScenarioObject>', teleport('a', '<WorldPosition x="50" y="-5.25" z="0.5" h="0.3"/>'));
+    const [actor] = analyzeOpenScenarioImport(bytes(xml)).actors;
+    // A right-hand lane south of the reference line stays south: scene z = +5.25.
+    expect(actor).toMatchObject({ x: 50, y: 0.5, z: 5.25, heading: 0.3 });
+    // Round trip with the XML 1.4 exporter's `y = -pose.z`.
+    expect(0 - actor!.z).toBe(-5.25);
+  });
+
+  it('takes the spawn pose from the TeleportAction, never from another WorldPosition in the Private', () => {
+    const route = '<PrivateAction><RoutingAction><AssignRouteAction><Route name="r" closed="false"><Waypoint routeStrategy="shortest"><Position><WorldPosition x="999" y="999"/></Position></Waypoint><Waypoint routeStrategy="shortest"><Position><WorldPosition x="1000" y="999"/></Position></Waypoint></Route></AssignRouteAction></RoutingAction></PrivateAction>';
+    const xml = scene('<ScenarioObject name="a"><Vehicle name="c" vehicleCategory="car"/></ScenarioObject>',
+      `<Private entityRef="a">${route}<PrivateAction><TeleportAction><Position><WorldPosition x="10" y="-2"/></Position></TeleportAction></PrivateAction></Private>`);
+    expect(analyzeOpenScenarioImport(bytes(xml)).actors[0]).toMatchObject({ x: 10, z: 2 });
+    const lane = scene('<ScenarioObject name="a"><Vehicle name="c" vehicleCategory="car"/></ScenarioObject>',
+      `<Private entityRef="a">${route}<PrivateAction><TeleportAction><Position><LanePosition roadId="1" laneId="-1" s="10" offset="0"/></Position></TeleportAction></PrivateAction></Private>`);
+    const analysis = analyzeOpenScenarioImport(bytes(lane));
+    expect(analysis.actors).toHaveLength(0);
+    expect(analysis.diagnostics).toContainEqual(expect.objectContaining({ code: 'actor_position_unsupported', disposition: 'unsupported' }));
+  });
+
+  it('keeps catalog-referenced entities and reports the unresolved catalog instead of dropping them', () => {
+    const xml = scene(
+      '<ScenarioObject name="car"><CatalogReference catalogName="VehicleCatalog" entryName="car_white"/></ScenarioObject><ScenarioObject name="walker"><CatalogReference catalogName="PedestrianCatalog" entryName="pedestrian_adult"/></ScenarioObject>',
+      teleport('car', '<WorldPosition x="1" y="0"/>') + teleport('walker', '<WorldPosition x="2" y="3"/>'),
+    );
+    const analysis = analyzeOpenScenarioImport(bytes(xml));
+    expect(analysis.actors.map((actor) => [actor.id, actor.kind, actor.catalogId])).toEqual([['car', 'car', 'car_white'], ['walker', 'pedestrian', 'pedestrian_adult']]);
+    expect(analysis.diagnostics.filter((diagnostic) => diagnostic.code === 'catalog_reference_unresolved')).toHaveLength(2);
+    expect(analysis.diagnostics.some((diagnostic) => diagnostic.code === 'entity_type_unsupported')).toBe(false);
+  });
+
+  it('flags an Init speed transition that is imported as an instantaneous initial speed', () => {
+    const speed = '<PrivateAction><LongitudinalAction><SpeedAction><SpeedActionDynamics dynamicsShape="linear" dynamicsDimension="time" value="3"/><SpeedActionTarget><AbsoluteTargetSpeed value="10"/></SpeedActionTarget></SpeedAction></LongitudinalAction></PrivateAction>';
+    const xml = scene('<ScenarioObject name="a"><Vehicle name="c" vehicleCategory="car"/></ScenarioObject>', teleport('a', '<WorldPosition x="0" y="0"/>', speed));
+    const analysis = analyzeOpenScenarioImport(bytes(xml));
+    expect(analysis.actors[0]!.speedKph).toBe(36);
+    expect(analysis.diagnostics).toContainEqual(expect.objectContaining({ code: 'initial_speed_transition_approximated', disposition: 'approximated' }));
   });
 });
