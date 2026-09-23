@@ -75,9 +75,15 @@ def validate(manifest: Mapping[str, Any]) -> None:
                 raise ValueError(f"{entry['sourceFolder']}: a bindable entry needs carlaWorld and cookedXodrSha256")
             if status == "exact" and entry["cookedXodrSha256"] != sha:
                 raise ValueError(f"{entry['sourceFolder']}: exact entry whose cooked digest differs")
-            if world in bound_worlds:
-                raise ValueError(f"world {world} is bound by {bound_worlds[world]} and {entry['sourceFolder']}")
-            bound_worlds[world] = entry["sourceFolder"]
+            if entry.get("derivedFrom"):
+                # A refit binds its original's world; the original must bind it too.
+                origin = next((e for e in manifest.get("maps", []) if (e.get("xodr") or {}).get("sha256") == entry["derivedFrom"]), None)
+                if origin is None or origin.get("carlaWorld") != world or origin.get("cookedXodrSha256") != entry["cookedXodrSha256"]:
+                    raise ValueError(f"{entry['sourceFolder']}: a derived source must bind its original's world")
+            else:
+                if world in bound_worlds:
+                    raise ValueError(f"world {world} is bound by {bound_worlds[world]} and {entry['sourceFolder']}")
+                bound_worlds[world] = entry["sourceFolder"]
             signal_map = entry.get("signalIdMap", {})
             if len(set(signal_map.values())) != len(signal_map):
                 raise ValueError(f"{entry['sourceFolder']}: signal id map is not one-to-one")

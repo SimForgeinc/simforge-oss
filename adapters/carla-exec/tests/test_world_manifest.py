@@ -438,3 +438,41 @@ def test_ridden_two_wheelers_are_recorded_as_a_static_rider_pose_in_trace_replay
     rider = [item for item in items if item["id"] == "rider-pose-static"][0]
     assert rider["code"] == "carla_rider_pose_static" and rider["actorIds"] == ["bike"]
     assert all(item["id"] != "rider-pose-static" for item in executor._approximations(executor.EXECUTION_MODE_TRACE_REPLAY, {}, []))
+
+
+def _with_derived(tmp_path, body_transform):
+    inputs = _inputs(tmp_path)
+    original = (inputs / "nas" / "Renumbered" / "Renumbered.xodr").read_bytes()
+    refit = body_transform(original)
+    (inputs / "nas-derived" / "Renumbered").mkdir(parents=True)
+    (inputs / "nas-derived" / "Renumbered" / "Renumbered.xodr").write_bytes(refit)
+    report = {"schema": "simforge.xodr-elevation-refit.v1", "source": {"xodrSha256": hashlib.sha256(original).hexdigest()},
+              "structuralDiff": {"forbidden": 0}, "totals": {"maxElevationChangeM": 0.5}, "tool": {"gitSha": "x"}}
+    (inputs / "nas-derived" / "Renumbered" / "refit-report.json").write_text(json.dumps(report))
+    files = [{"path": f"Renumbered/{n}", "folder": "Renumbered", "name": n, "bytes": 1, "mtime": "t",
+              "sha256": hashlib.sha256((inputs / "nas-derived" / "Renumbered" / n).read_bytes()).hexdigest()}
+             for n in ("Renumbered.xodr", "refit-report.json")]
+    (inputs / "nas-derived.json").write_text(json.dumps({"root": "/corrected", "files": files}))
+    return inputs
+
+
+def test_an_elevation_only_refit_binds_its_originals_world_once_accepted(tmp_path):
+    raise_z = lambda body: body.replace(b'<elevation s="0" a="10"', b'<elevation s="0" a="10.5"')
+    inputs = _with_derived(tmp_path, raise_z)
+    entry = {e["sourceFolder"]: e for e in generate.generate(inputs, {})["maps"]}["derived/Renumbered"]
+    assert entry["status"] == "needs-decision" and entry["geometryEqualsOriginal"] is True
+    assert entry["elevationChange"]["maxM"] == 0.5 and entry["signalIdMap"] == {}
+    item = entry["decisionRequired"][0]
+    manifest = generate.generate(inputs, {"derived/Renumbered": {"acceptDecisionItems": [item], "decidedBy": "t", "date": "d"}})
+    world_manifest.validate(manifest)
+    accepted = {e["sourceFolder"]: e for e in manifest["maps"]}["derived/Renumbered"]
+    assert accepted["status"] == "approved-equivalent" and accepted["carlaWorld"] == "World_Renumbered"
+    assert accepted["signalIdMap"] == {"100": "900"}
+    binding = world_manifest.bindings(manifest)[accepted["xodr"]["sha256"]]
+    assert binding.world == "World_Renumbered"
+
+
+def test_a_derived_export_that_moves_roads_is_a_new_network(tmp_path):
+    move = lambda body: body.replace(b'x="50" y="0"', b'x="50" y="0.5"')
+    entry = {e["sourceFolder"]: e for e in generate.generate(_with_derived(tmp_path, move), {})["maps"]}["derived/Renumbered"]
+    assert entry["status"] == "needs-recook" and entry["geometryEqualsOriginal"] is False
