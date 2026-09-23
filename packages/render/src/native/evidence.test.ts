@@ -3,11 +3,17 @@ import { describe, expect, it } from 'vitest';
 
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, PINNED_ACTOR_ASSETS_DIGEST, PINNED_ACTOR_ASSETS_SIZE_BYTES } from './actor-assets.js';
 import {
+  CAMERA_PROFILE_EVIDENCE_ABSENT_PRE_V2,
+  CAMERA_PROFILE_EVIDENCE_PRESENT_V2,
+  NATIVE_RENDER_MANIFEST_V1_SCHEMA,
   NativeRenderManifestSchema,
+  NativeRenderManifestV2Schema,
   NativeRunDiagnosticsSchema,
+  cameraProfileConfigHash,
+  cameraProfileVersion,
   nativeEvidenceFailure,
   nativeRunExpectations,
-  type NativeRenderManifest,
+  type NativeRenderManifestV2,
   type NativeReservedArtifact,
   type NativeRunDiagnostics,
 } from './evidence.js';
@@ -74,7 +80,23 @@ const reservations: NativeReservedArtifact[] = [
   { role: 'diagnostics', actorId: null, sensorId: null, mediaType: 'application/json', sha256: HEX('6'), sizeBytes: 512 },
 ];
 
-function evidence(overrides: { slowFrames?: number; actorAssetsSha256?: string } = {}): { manifest: NativeRenderManifest; diagnostics: NativeRunDiagnostics } {
+function profileEvidence(source: RenderSourceV3): NativeRenderManifestV2['cameraProfiles'][number][] {
+  if (source.modality !== 'rgb') return [];
+  return [{
+    actorId: source.actorId,
+    sensorId: source.sensorId,
+    outputName: source.outputName,
+    profileSource: source.attributes.profileSource,
+    profileVersion: cameraProfileVersion(source.attributes.cameraProfile),
+    configHash: cameraProfileConfigHash(source.attributes.cameraProfile),
+    requested: source.attributes.cameraProfile,
+    effective: source.attributes.cameraProfile,
+    approximations: [],
+    differences: [],
+  }];
+}
+
+function evidence(overrides: { slowFrames?: number; actorAssetsSha256?: string } = {}): { manifest: NativeRenderManifestV2; diagnostics: NativeRunDiagnostics } {
   const slowFrames = overrides.slowFrames ?? 24;
   const lineage = {
     ...lease,
@@ -85,10 +107,12 @@ function evidence(overrides: { slowFrames?: number; actorAssetsSha256?: string }
   };
   return {
     manifest: {
-      schema: 'simforge.native-render-manifest/v1',
+      schema: 'simforge.native-render-manifest/v2',
       ...lineage,
-      look: { profile: 'cinematic', lighting: {}, profileConfig: {}, autoMeter: true, provenance: {} },
-      cameraProfiles: [],
+      look: { profile: 'sensor', lighting: {}, profileConfig: {}, autoMeter: false, provenance: {} },
+      cameraProfileEvidence: CAMERA_PROFILE_EVIDENCE_PRESENT_V2,
+      fidelityMode: 'dataset',
+      cameraProfiles: intent.renderSpec.sources.flatMap(profileEvidence),
       warnings: [],
       videos: [
         { actorId: 'ego', sensorId: 'fast', relativePath: 'video/ego-fast.mp4', width: 320, height: 180, framesPerSecond: 24, frameCount: 48, sha256: HEX('2'), sizeBytes: 256 },
@@ -118,8 +142,12 @@ describe('native run expectations', () => {
     const parsed = NativeRenderManifestSchema.parse({
       ...evidence().manifest,
       fidelityMode: 'review',
+      look: { profile: 'cinematic', lighting: {}, profileConfig: {}, autoMeter: true, provenance: {} },
       cameraProfiles: [{
         actorId: 'ego', sensorId: 'slow', outputName: 'ego-slow',
+        profileSource: 'default',
+        profileVersion: cameraProfileVersion(profile),
+        configHash: cameraProfileConfigHash(profile),
         requested: profile, effective: null,
         approximations: [],
         differences: ['cameraProfile: not applied by cinematic review capture'],
@@ -146,6 +174,9 @@ describe('native run expectations', () => {
       look: { profile: 'sensor', lighting: {}, profileConfig: {}, autoMeter: false, provenance: {} },
       cameraProfiles: [{
         actorId: 'ego', sensorId: 'slow', outputName: 'ego-slow',
+        profileSource: 'default',
+        profileVersion: cameraProfileVersion(profile),
+        configHash: cameraProfileConfigHash(profile),
         requested: profile, effective: profile,
         approximations: [],
         differences: [],
@@ -154,6 +185,51 @@ describe('native run expectations', () => {
 
     expect(parsed.look).toMatchObject({ profile: 'sensor', autoMeter: false });
     expect(parsed.cameraProfiles[0]).toMatchObject({ requested: profile, effective: profile, differences: [] });
+  });
+
+  it('classifies v1 manifests as pre-v2 camera-profile evidence absence', () => {
+    const { cameraProfileEvidence: _classification, fidelityMode: _fidelityMode, ...manifest } = evidence().manifest;
+    const parsed = NativeRenderManifestSchema.parse({
+      ...manifest,
+      schema: NATIVE_RENDER_MANIFEST_V1_SCHEMA,
+      cameraProfiles: [],
+    });
+    expect(parsed.cameraProfileEvidence).toBe(CAMERA_PROFILE_EVIDENCE_ABSENT_PRE_V2);
+  });
+
+  it('rejects v2 manifests without mandatory camera-profile evidence', () => {
+    const { cameraProfiles: _cameraProfiles, ...manifest } = evidence().manifest;
+    expect(NativeRenderManifestV2Schema.safeParse(manifest).success).toBe(false);
+  });
+
+  it('rejects inconsistent v2 profile versions and configuration hashes', () => {
+    const manifest = evidence().manifest;
+    const profile = manifest.cameraProfiles[0]!;
+    for (const inconsistent of [
+      { ...profile, profileVersion: profile.profileVersion + 1 },
+      { ...profile, configHash: HEX('0') },
+    ]) {
+      expect(NativeRenderManifestV2Schema.safeParse({
+        ...manifest,
+        cameraProfiles: [inconsistent, ...manifest.cameraProfiles.slice(1)],
+      }).success).toBe(false);
+    }
+  });
+
+  it('rejects camera-profile application inconsistent with the fidelity mode', () => {
+    const manifest = evidence().manifest;
+    for (const effective of [
+      null,
+      CameraProfileSchema.parse({ profileId: 'other-camera@1', fidelity: 'device-fitted' }),
+    ]) {
+      expect(NativeRenderManifestV2Schema.safeParse({
+        ...manifest,
+        cameraProfiles: manifest.cameraProfiles.map((profile) => ({
+          ...profile,
+          effective,
+        })),
+      }).success).toBe(false);
+    }
   });
 
   it('derives each source schedule, the union tick count and the pinned actor closure from the intent', () => {
@@ -189,11 +265,44 @@ describe('native evidence acceptance', () => {
       .toBe('native_diagnostics_evidence_mismatch');
   });
 
+  it('rejects camera-profile evidence inconsistent with the render intent', () => {
+    const { manifest, diagnostics } = evidence();
+    const inconsistent = {
+      ...manifest,
+      cameraProfiles: manifest.cameraProfiles.map((profile, index) =>
+        index === 0 ? { ...profile, profileSource: 'authored' as const } : profile),
+    };
+    expect(nativeEvidenceFailure(reservations, inconsistent, diagnostics, nativeRunExpectations(intent, lease)))
+      .toBe('native_diagnostics_evidence_mismatch');
+  });
+
+  it('rejects duplicate camera-profile evidence that omits another camera', () => {
+    const { manifest, diagnostics } = evidence();
+    const duplicate = {
+      ...manifest,
+      cameraProfiles: [manifest.cameraProfiles[0]!, manifest.cameraProfiles[0]!],
+    };
+    expect(nativeEvidenceFailure(reservations, duplicate, diagnostics, nativeRunExpectations(intent, lease)))
+      .toBe('native_diagnostics_evidence_mismatch');
+  });
+
   it('rejects an incomplete artifact set before comparing evidence', () => {
     const { manifest, diagnostics } = evidence();
     const withoutTrace = reservations.filter((item) => item.role !== 'trace');
     expect(nativeEvidenceFailure(withoutTrace, manifest, diagnostics, nativeRunExpectations(intent, lease)))
       .toBe('native_artifact_evidence_incomplete');
+  });
+
+  it('does not accept a readable v1 manifest as complete camera-profile evidence', () => {
+    const { manifest, diagnostics } = evidence();
+    const { cameraProfileEvidence: _classification, fidelityMode: _fidelityMode, ...legacy } = manifest;
+    const parsed = NativeRenderManifestSchema.parse({
+      ...legacy,
+      schema: NATIVE_RENDER_MANIFEST_V1_SCHEMA,
+      cameraProfiles: [],
+    });
+    expect(nativeEvidenceFailure(reservations, parsed, diagnostics, nativeRunExpectations(intent, lease)))
+      .toBe('native_camera_profile_evidence_absent');
   });
 
   it('only parses diagnostics that speak the protocol this client speaks', () => {

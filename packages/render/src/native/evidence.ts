@@ -1,6 +1,8 @@
+import { createHash } from 'node:crypto';
+
 import { z } from 'zod';
 
-import { CameraProfileSchema, type RenderIntentV1 } from '@simforge-oss/scenario';
+import { CameraProfileSchema, GENERIC_CAMERA_PROFILE, canonicalize, type CameraProfile, type RenderIntentV1 } from '@simforge-oss/scenario';
 
 import { EngineCapabilityApproximationSchema } from '../capabilities.js';
 import { createFixedSchedules, unionFrameMicros, type FixedSchedule } from '../schedule.js';
@@ -16,10 +18,36 @@ import { NATIVE_SERVICE_PROTOCOL } from './service-client.js';
  */
 
 export const NATIVE_RENDER_MANIFEST_V1_SCHEMA = 'simforge.native-render-manifest/v1' as const;
+export const NATIVE_RENDER_MANIFEST_V2_SCHEMA = 'simforge.native-render-manifest/v2' as const;
 export const NATIVE_RUN_DIAGNOSTICS_V1_SCHEMA = 'simforge.native-run-diagnostics/v1' as const;
+export const CAMERA_PROFILE_EVIDENCE_PRESENT_V2 = 'camera-profile-evidence: present (v2)' as const;
+export const CAMERA_PROFILE_EVIDENCE_ABSENT_PRE_V2 = 'camera-profile-evidence: absent (pre-v2)' as const;
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const IdentifierSchema = z.string().trim().min(1);
+
+export function cameraProfileConfigHash(profile: CameraProfile): string {
+  return createHash('sha256').update(JSON.stringify(canonicalize(profile))).digest('hex');
+}
+
+export function cameraProfileVersion(profile: CameraProfile): number {
+  return Number(profile.profileId.slice(profile.profileId.lastIndexOf('@') + 1));
+}
+
+export function resolveEffectiveCameraProfile(
+  requested: CameraProfile,
+  captureProfile: 'cinematic' | 'sensor',
+): { effective: CameraProfile | null; differences: string[] } {
+  if (captureProfile === 'cinematic') {
+    return { effective: null, differences: ['cameraProfile: not applied by cinematic review capture'] };
+  }
+  return {
+    effective: GENERIC_CAMERA_PROFILE,
+    differences: cameraProfileConfigHash(requested) === cameraProfileConfigHash(GENERIC_CAMERA_PROFILE)
+      ? []
+      : ['cameraProfile: generic-rgb@1 sensor profile used instead of requested profile'],
+  };
+}
 
 /** Lineage every evidence document binds to the lease it was produced under. */
 const NativeRunLineageSchema = z.strictObject({
@@ -33,41 +61,102 @@ const NativeRunLineageSchema = z.strictObject({
   frameCount: z.number().int().positive(),
 });
 
-export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
-  schema: z.literal(NATIVE_RENDER_MANIFEST_V1_SCHEMA),
-  look: z.strictObject({
-    profile: z.enum(['sensor', 'cinematic']),
-    lighting: z.record(z.string(), z.unknown()),
-    profileConfig: z.record(z.string(), z.unknown()),
-    autoMeter: z.boolean(),
-    provenance: z.record(z.string(), z.unknown()),
-  }),
-  fidelityMode: z.enum(['review', 'dataset']).optional(),
-  cameraProfiles: z.array(z.strictObject({
-    actorId: IdentifierSchema,
-    sensorId: IdentifierSchema,
-    outputName: IdentifierSchema,
-    requested: CameraProfileSchema,
-    effective: CameraProfileSchema.nullable(),
-    approximations: z.array(EngineCapabilityApproximationSchema).default([]),
-    differences: z.array(z.string()),
-  })).default([]),
-  warnings: z.array(z.string()).default([]),
-  videos: z.array(z.strictObject({
-    actorId: IdentifierSchema,
-    sensorId: IdentifierSchema,
-    relativePath: IdentifierSchema,
-    width: z.number().int().positive(),
-    height: z.number().int().positive(),
-    framesPerSecond: z.number().finite().positive(),
-    /** Frames encoded for this source: its own schedule, not the union. */
-    frameCount: z.number().int().positive(),
-    sha256: Sha256Schema,
-    sizeBytes: z.number().int().positive(),
-  })).min(1),
+const NativeLookSchema = z.strictObject({
+  profile: z.enum(['sensor', 'cinematic']),
+  lighting: z.record(z.string(), z.unknown()),
+  profileConfig: z.record(z.string(), z.unknown()),
+  autoMeter: z.boolean(),
+  provenance: z.record(z.string(), z.unknown()),
 });
 
+const NativeVideoEvidenceSchema = z.strictObject({
+  actorId: IdentifierSchema,
+  sensorId: IdentifierSchema,
+  relativePath: IdentifierSchema,
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  framesPerSecond: z.number().finite().positive(),
+  /** Frames encoded for this source: its own schedule, not the union. */
+  frameCount: z.number().int().positive(),
+  sha256: Sha256Schema,
+  sizeBytes: z.number().int().positive(),
+});
+
+const NativeCameraProfileV1Schema = z.strictObject({
+  actorId: IdentifierSchema,
+  sensorId: IdentifierSchema,
+  outputName: IdentifierSchema,
+  requested: CameraProfileSchema,
+  effective: CameraProfileSchema.nullable(),
+  approximations: z.array(EngineCapabilityApproximationSchema).default([]),
+  differences: z.array(z.string()),
+});
+
+const NativeCameraProfileV2Schema = NativeCameraProfileV1Schema.extend({
+  profileSource: z.enum(['default', 'authored']),
+  profileVersion: z.number().int().positive(),
+  configHash: Sha256Schema,
+}).check((ctx) => {
+  if (ctx.value.profileVersion !== cameraProfileVersion(ctx.value.requested)) {
+    ctx.issues.push({ code: 'custom', path: ['profileVersion'], message: 'profileVersion must match requested.profileId', input: ctx.value.profileVersion });
+  }
+  if (ctx.value.configHash !== cameraProfileConfigHash(ctx.value.requested)) {
+    ctx.issues.push({ code: 'custom', path: ['configHash'], message: 'configHash must match the requested camera profile', input: ctx.value.configHash });
+  }
+});
+
+const NativeRenderManifestBaseSchema = NativeRunLineageSchema.extend({
+  look: z.strictObject({
+    ...NativeLookSchema.shape,
+  }),
+  videos: z.array(NativeVideoEvidenceSchema).min(1),
+});
+
+export const NativeRenderManifestV1Schema = NativeRenderManifestBaseSchema.extend({
+  schema: z.literal(NATIVE_RENDER_MANIFEST_V1_SCHEMA),
+  fidelityMode: z.enum(['review', 'dataset']).optional(),
+  cameraProfiles: z.array(NativeCameraProfileV1Schema).default([]),
+  warnings: z.array(z.string()).default([]),
+}).transform((manifest) => ({
+  ...manifest,
+  cameraProfileEvidence: CAMERA_PROFILE_EVIDENCE_ABSENT_PRE_V2,
+}));
+
+export const NativeRenderManifestV2Schema = NativeRenderManifestBaseSchema.extend({
+  schema: z.literal(NATIVE_RENDER_MANIFEST_V2_SCHEMA),
+  cameraProfileEvidence: z.literal(CAMERA_PROFILE_EVIDENCE_PRESENT_V2),
+  fidelityMode: z.enum(['review', 'dataset']),
+  cameraProfiles: z.array(NativeCameraProfileV2Schema).min(1),
+  warnings: z.array(z.string()),
+}).check((ctx) => {
+  const expectedLook = ctx.value.fidelityMode === 'dataset' ? 'sensor' : 'cinematic';
+  if (ctx.value.look.profile !== expectedLook) {
+    ctx.issues.push({ code: 'custom', path: ['look', 'profile'], message: `fidelityMode ${ctx.value.fidelityMode} requires ${expectedLook} capture`, input: ctx.value.look.profile });
+  }
+  const keys = new Set<string>();
+  for (let index = 0; index < ctx.value.cameraProfiles.length; index += 1) {
+    const profile = ctx.value.cameraProfiles[index]!;
+    const key = `${profile.actorId}\0${profile.sensorId}`;
+    if (keys.has(key)) {
+      ctx.issues.push({ code: 'custom', path: ['cameraProfiles', index], message: 'camera profile evidence must be unique per actor and sensor', input: key });
+    }
+    keys.add(key);
+    const expected = resolveEffectiveCameraProfile(profile.requested, expectedLook);
+    const effectiveMatches = profile.effective === null
+      ? expected.effective === null
+      : expected.effective !== null && cameraProfileConfigHash(profile.effective) === cameraProfileConfigHash(expected.effective);
+    if (!effectiveMatches) {
+      ctx.issues.push({ code: 'custom', path: ['cameraProfiles', index, 'effective'], message: `${ctx.value.fidelityMode} effective camera profile is inconsistent`, input: profile.effective });
+    }
+    if (JSON.stringify(profile.differences) !== JSON.stringify(expected.differences)) {
+      ctx.issues.push({ code: 'custom', path: ['cameraProfiles', index, 'differences'], message: `${ctx.value.fidelityMode} camera profile differences are inconsistent`, input: profile.differences });
+    }
+  }
+});
+
+export const NativeRenderManifestSchema = z.union([NativeRenderManifestV2Schema, NativeRenderManifestV1Schema]);
 export type NativeRenderManifest = z.infer<typeof NativeRenderManifestSchema>;
+export type NativeRenderManifestV2 = z.infer<typeof NativeRenderManifestV2Schema>;
 
 export const NativeRunDiagnosticsSchema = NativeRunLineageSchema.extend({
   schema: z.literal(NATIVE_RUN_DIAGNOSTICS_V1_SCHEMA),
@@ -128,9 +217,19 @@ export interface NativeRunExpectations {
   readonly frameCount: number;
   /** Per RGB source, keyed by `${actorId}\0${sensorId}`. */
   readonly videos: ReadonlyMap<string, { width: number; height: number; framesPerSecond: number; frameCount: number }>;
+  readonly cameraProfiles: ReadonlyMap<string, {
+    outputName: string;
+    profileSource: 'default' | 'authored';
+    requested: CameraProfile;
+    effective: CameraProfile | null;
+    differences: string[];
+  }>;
 }
 
-export type NativeEvidenceFailure = 'native_artifact_evidence_incomplete' | 'native_diagnostics_evidence_mismatch';
+export type NativeEvidenceFailure =
+  | 'native_artifact_evidence_incomplete'
+  | 'native_camera_profile_evidence_absent'
+  | 'native_diagnostics_evidence_mismatch';
 
 function videoKey(video: { actorId: string | null; sensorId: string | null }): string {
   return `${video.actorId}\0${video.sensorId}`;
@@ -172,6 +271,13 @@ export function nativeRunExpectations(
   const scheduleBySource = new Map(createFixedSchedules(intent).map((schedule) => [schedule.sourceId, schedule]));
   const schedules: FixedSchedule[] = [];
   const videos = new Map<string, { width: number; height: number; framesPerSecond: number; frameCount: number }>();
+  const cameraProfiles = new Map<string, {
+    outputName: string;
+    profileSource: 'default' | 'authored';
+    requested: CameraProfile;
+    effective: CameraProfile | null;
+    differences: string[];
+  }>();
   const sensorVideo = intent.renderSpec.sources.some((source) => source.modality === 'lidar' || source.modality === 'radar')
     ? nativeSensorVideoFormat(intent)
     : null;
@@ -190,6 +296,15 @@ export function nativeRunExpectations(
       framesPerSecond: schedule.framesPerSecond,
       frameCount: schedule.frameCount,
     });
+    cameraProfiles.set(videoKey(source), {
+      outputName: source.outputName,
+      profileSource: source.attributes.profileSource,
+      requested: source.attributes.cameraProfile,
+      ...resolveEffectiveCameraProfile(
+        source.attributes.cameraProfile,
+        intent.renderSpec.capabilityIntent.fidelity === 'dataset' ? 'sensor' : 'cinematic',
+      ),
+    });
   }
   return {
     intentSha256: lease.intentSha256,
@@ -198,6 +313,7 @@ export function nativeRunExpectations(
     actorAssetsSha256: actorAssets.sha256,
     frameCount: unionFrameMicros(schedules).length,
     videos,
+    cameraProfiles,
   };
 }
 
@@ -216,6 +332,9 @@ export function nativeEvidenceFailure(
   diagnostics: NativeRunDiagnostics,
   expectations: NativeRunExpectations,
 ): NativeEvidenceFailure | null {
+  if (manifest.cameraProfileEvidence === CAMERA_PROFILE_EVIDENCE_ABSENT_PRE_V2) {
+    return 'native_camera_profile_evidence_absent';
+  }
   const roleCount = (role: string): number => reservations.filter((item) => item.role === role).length;
   const trace = reservations.find((item) => item.role === 'trace');
   const videos = reservations.filter((item) => item.role === 'video');
@@ -245,6 +364,23 @@ export function nativeEvidenceFailure(
     || videos.length !== expectations.videos.size
     || manifest.videos.length !== videos.length
     || diagnostics.videos.length !== videos.length
+    || manifest.cameraProfiles.length !== expectations.cameraProfiles.size
+    || new Set(manifest.cameraProfiles.map(videoKey)).size !== manifest.cameraProfiles.length
+    || [...expectations.cameraProfiles.keys()].some((key) => !manifest.cameraProfiles.some((profile) => videoKey(profile) === key))
+    || manifest.cameraProfiles.some((profile) => {
+      const expected = expectations.cameraProfiles.get(videoKey(profile));
+      const effectiveMatches = profile.effective === null
+        ? expected?.effective === null
+        : expected?.effective !== null
+          && expected?.effective !== undefined
+          && cameraProfileConfigHash(profile.effective) === cameraProfileConfigHash(expected.effective);
+      return !expected
+        || profile.outputName !== expected.outputName
+        || profile.profileSource !== expected.profileSource
+        || profile.configHash !== cameraProfileConfigHash(expected.requested)
+        || !effectiveMatches
+        || JSON.stringify(profile.differences) !== JSON.stringify(expected.differences);
+    })
     || manifest.videos.some((video) => {
       const reserved = reservedVideos.get(videoKey(video));
       const expected = expectations.videos.get(videoKey(video));

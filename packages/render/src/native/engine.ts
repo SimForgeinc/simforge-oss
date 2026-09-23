@@ -18,9 +18,7 @@ import {
   type RenderInputFile,
 } from '../index.js';
 import {
-  GENERIC_CAMERA_PROFILE,
   parseRenderIntent,
-  type CameraProfile,
   type RenderSourceV3,
 } from '@simforge-oss/scenario';
 import { assertEngineSupportsIntent } from '../capabilities.js';
@@ -32,7 +30,15 @@ import { StreamingZipWriter, HashedArtifactSink } from '../web/artifacts.js';
 import { stripRgbaPadding, type NativeFrameIdentity } from './service-client.js';
 import { startNativeRenderService, terminateProcess } from './service-process.js';
 import { NATIVE_ACTOR_ASSETS_INPUT_ID, assertActorAppearanceGrounded, ensureActorAssets, linkOrCopy } from './actor-assets.js';
-import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema, nativeSensorVideoFormat } from './evidence.js';
+import {
+  CAMERA_PROFILE_EVIDENCE_PRESENT_V2,
+  NativeRenderManifestV2Schema,
+  NativeRunDiagnosticsSchema,
+  cameraProfileConfigHash,
+  cameraProfileVersion,
+  nativeSensorVideoFormat,
+  resolveEffectiveCameraProfile,
+} from './evidence.js';
 import { resolveActorAssets, resolveEncoder, resolveNativeRenderService } from './local-runtime.js';
 import { resolveNativeLighting } from './lighting.js';
 import { NATIVE_MAP_MASTER_PATH, collectNativeMapMembers, type NativeMapClosure } from './map-closure.js';
@@ -69,20 +75,7 @@ export function resolveNativeCaptureProfile(
   };
 }
 
-export function resolveEffectiveCameraProfile(
-  requested: CameraProfile,
-  captureProfile: 'cinematic' | 'sensor',
-): { effective: CameraProfile | null; differences: string[] } {
-  if (captureProfile === 'cinematic') {
-    return { effective: null, differences: ['cameraProfile: not applied by cinematic review capture'] };
-  }
-  return {
-    effective: GENERIC_CAMERA_PROFILE,
-    differences: JSON.stringify(requested) === JSON.stringify(GENERIC_CAMERA_PROFILE)
-      ? []
-      : ['cameraProfile: generic-rgb@1 sensor profile used instead of requested profile'],
-  };
-}
+export { resolveEffectiveCameraProfile };
 
 const CAPABILITIES: EngineCapabilityDeclaration = {
   schema: ENGINE_CAPABILITIES_V1_SCHEMA,
@@ -482,8 +475,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
 
       const nativeManifestRelative = 'manifest/native-render.json';
       const nativeManifestPath = path.join(context.workspace, nativeManifestRelative);
-      await writeJson(nativeManifestPath, NativeRenderManifestSchema.parse({
-        schema: 'simforge.native-render-manifest/v1',
+      await writeJson(nativeManifestPath, NativeRenderManifestV2Schema.parse({
+        schema: 'simforge.native-render-manifest/v2',
         intentSha256: context.intentSha256,
         executionPackageControlSha256: context.executionPackageControlSha256,
         sourceXoscSha256: xoscInput.sha256,
@@ -497,11 +490,15 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           autoMeter: captureProfile.autoMeter,
           provenance: look.provenance,
         },
+        cameraProfileEvidence: CAMERA_PROFILE_EVIDENCE_PRESENT_V2,
         fidelityMode: intent.renderSpec.capabilityIntent.fidelity,
         cameraProfiles: sources.flatMap((source) => source.modality === 'rgb' ? [{
           actorId: source.actorId,
           sensorId: source.sensorId,
           outputName: source.outputName,
+          profileSource: source.attributes.profileSource,
+          profileVersion: cameraProfileVersion(source.attributes.cameraProfile),
+          configHash: cameraProfileConfigHash(source.attributes.cameraProfile),
           requested: source.attributes.cameraProfile,
           ...resolveEffectiveCameraProfile(source.attributes.cameraProfile, captureProfile.profile),
         }] : []),
