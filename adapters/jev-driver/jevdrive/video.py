@@ -84,7 +84,7 @@ def main():
     panel = DecisionPanel(args.focus)
     history = deque(maxlen=30)
     for i, row in enumerate(ticks):
-        source = run / "frames" / f"frame-{i:04d}.rgb.png"
+        source = run / "frames" / "chase" / f"{i:08d}.rgb.png"
         image = Image.open(source).convert("RGB")
         if image.size != (960, 540):
             raise ValueError(f"render must remain unscaled 960x540, got {image.size}")

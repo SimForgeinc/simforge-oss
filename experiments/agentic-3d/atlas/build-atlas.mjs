@@ -3,14 +3,15 @@
 //
 // Enumerate spawn poses along every driving lane of a map, render the TRUE
 // world model (corpus tiles + vegetation layer) at each pose from two views
-// (ego-height forward + top-down), as ONE native-render-job with a schedule of
-// camera poses (single scene load, hundreds of shots).
+// (ego-height compass views + top-down), as ONE `simforge-render job` whose
+// scene-state stream carries one site per tick (single scene load, hundreds
+// of shots).
 //
 // Ground elevation comes from the rendered road mesh itself (road.glb vertex
 // grid), NOT from the lane topology — its polylines are planar (2D), which is
 // itself an audit finding recorded per site as `meshY`.
 //
-// Output: experiments/agentic-3d/atlas/<map>/{sites.json,render-job.json,renders/}
+// Output: experiments/agentic-3d/atlas/<map>/{sites.json,render-job.json,render-scene-state.json,renders/}
 // Usage: node build-atlas.mjs [--map yale-street] [--stride 40] [--dedupe 25]
 
 import { spawnSync } from 'node:child_process';
@@ -145,52 +146,81 @@ const outDir = path.join(ROOT, 'experiments/agentic-3d/atlas', MAP);
 const rendersDir = path.join(outDir, 'renders');
 fs.mkdirSync(rendersDir, { recursive: true });
 
-// Shared sensor ids across all entries: run_job registers one camera group
-// per distinct sensorId; outputs stay unique via frame-{frameIndex} filenames.
-// (Pose-lag fixed at source in run_job via a settle frame; no sentinel needed.)
-// v2: FOUR ego-height compass views per site (fwd/left/back/right) + top-down —
-// site retrieval reviews the actual imagery instead of trusting text cards.
-const schedule = sites.map((site, i) => {
+// One `simforge-render job` (simforge.render-job/v2): a job's rig is fixed,
+// so each site is one tick of a scene-state stream that moves an anchor
+// actor (`atlas-site`) to the site pose, and every camera rides it as a
+// rigid attach. v2: FOUR ego-height compass views per site (fwd/left/back/
+// right) + top-down — site retrieval reviews the actual imagery instead of
+// trusting text cards. The anchor is a 5 cm primitive; an attached camera
+// never draws its host, so no view shows it. Renders land as
+// renders/<sensorId>/<siteIndex:08>.rgb.png.
+const ANCHOR = 'atlas-site';
+const eyeHeight = EGO_EYE_M;
+// Old eye/target geometry as mount angles: compass views aim 12 m out at
+// 0.9 x eye height; the top view looks from TOP_EYE_M at a point 2 m ahead.
+const compassPitchDeg = -Math.atan2(EGO_EYE_M * 0.1, 12) * 180 / Math.PI;
+const topPitchDeg = -Math.atan2(TOP_EYE_M, 2) * 180 / Math.PI;
+const compass = (sensorId, yawDeg) => ({
+  sensorId, width: 736, height: 416, fovDeg: 58, eye: [0, 0, 0], target: [0, 0, 1],
+  attach: { actorId: ANCHOR, offsetM: [0, 0, eyeHeight], yawDeg, pitchDeg: compassPitchDeg },
+});
+const cameras = [
+  compass('atlas_fwd', 0),
+  compass('atlas_left', -90), // positive mount yaw turns toward the right
+  compass('atlas_back', 180),
+  compass('atlas_right', 90),
+  { sensorId: 'atlas_top', width: 512, height: 512, fovDeg: 55, eye: [0, 0, 0], target: [0, 0, 1],
+    attach: { actorId: ANCHOR, offsetM: [0, 0, TOP_EYE_M], pitchDeg: topPitchDeg } },
+];
+const TICK_HZ = 1;
+const stream = sites.map((site, i) => {
   const { x, z, headingRad } = site.pose;
-  const fwd = [Math.cos(headingRad), 0, -Math.sin(headingRad)];
-  const left = [fwd[2], 0, -fwd[0]];
   const gy = site.xodrY ?? site.meshY; // xodr wins: p50 agreement 2 cm; mesh-grid outliers catch elevated decks
-  const eye = [x, gy + EGO_EYE_M, z];
-  const at = (d) => [x + d[0] * 12, gy + EGO_EYE_M * 0.9, z + d[2] * 12];
   return {
-    frameIndex: i,
-    cameras: [
-      { sensorId: 'atlas_fwd', width: 736, height: 416, fovDeg: 58, eye, target: at(fwd) },
-      { sensorId: 'atlas_left', width: 736, height: 416, fovDeg: 58, eye, target: at(left) },
-      { sensorId: 'atlas_back', width: 736, height: 416, fovDeg: 58, eye, target: at([-fwd[0], 0, -fwd[2]]) },
-      { sensorId: 'atlas_right', width: 736, height: 416, fovDeg: 58, eye, target: at([-left[0], 0, -left[2]]) },
-      { sensorId: 'atlas_top', width: 512, height: 512, fovDeg: 55,
-        eye: [x, gy + TOP_EYE_M, z], target: [x + fwd[0] * 2, gy, z + fwd[2] * 2] },
-    ],
+    version: 'simforge.scene-state.v1', mapId: MAP, tick: i, tickHz: TICK_HZ,
+    groundY: 0, // the anchor's height is the site's; never resampled
+    actors: [{
+      id: ANCHOR, kind: i === 0 ? 'spawn' : 'update', actorClass: 'prop',
+      dims: { l: 0.05, w: 0.05, h: 0.05 },
+      transform: { position: [x, gy, z], rotation: [0, Math.sin(headingRad / 2), 0, Math.cos(headingRad / 2)] },
+      velocity: [0, 0, 0],
+    }],
   };
 });
+const sceneStatePath = path.join(outDir, 'render-scene-state.json');
+fs.writeFileSync(sceneStatePath, JSON.stringify(stream));
 
 const job = {
-  schema: 'uniscenario.native-render-job/v1',
-  profile: 'sensor',
-  glbs, vegGlbs,
-  warmupFrames: 20,
-  passes: { rgb: true, id: false, depth: false },
-  schedule,
+  schema: 'simforge.render-job/v2',
+  scene: {
+    glbs, vegGlbs,
+    lighting: { sun_elev_deg: 38, sun_azim_deg: 145, sun_lux: 28000, ambient: 0.6 },
+    render: { preset: 'training' },
+    warmupFrames: 20,
+    allowPrimitiveActors: true, // the anchor has no catalog model by design
+  },
+  sceneState: sceneStatePath,
+  rig: { cameras },
+  ticks: { start: 0, count: stream.length },
+  passes: ['rgb'],
   outDir: rendersDir,
 };
 const jobPath = path.join(outDir, 'render-job.json');
 fs.writeFileSync(jobPath, JSON.stringify(job));
-fs.writeFileSync(path.join(outDir, 'sites.json'), JSON.stringify({ mapId: MAP, strideM: STRIDE_M, dedupeM: DEDUPE_M, frameOffset: 0, posesOffMesh: noGround, sites }, null, 1));
+fs.writeFileSync(path.join(outDir, 'sites.json'), JSON.stringify({
+  mapId: MAP, strideM: STRIDE_M, dedupeM: DEDUPE_M, frameOffset: 0,
+  renderLayout: 'renders/<sensorId>/<siteIndex:08>.rgb.png', posesOffMesh: noGround, sites,
+}, null, 1));
 
-console.log(`[atlas] rendering ${schedule.length} sites x 5 cameras (${glbs.length} tiles, ${vegGlbs.length} veg layers)...`);
+console.log(`[atlas] rendering ${stream.length} sites x ${cameras.length} cameras (${glbs.length} tiles, ${vegGlbs.length} veg layers)...`);
 const t0 = Date.now();
-const r = spawnSync(path.join(ROOT, 'renderer/target/release/native-render-job'), ['--job', jobPath], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+const renderBin = process.env.SIMFORGE_RENDER_BIN ?? path.join(ROOT, 'renderer/target/release/simforge-render');
+const r = spawnSync(renderBin, ['job', '--job', jobPath], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
 const wall = ((Date.now() - t0) / 1000).toFixed(1);
 if (r.status !== 0) {
   console.error(`[atlas] render job FAILED (${wall}s):`, (r.stderr ?? '').split('\n').filter((l) => !/TEXCOORD|Unknown vertex/.test(l)).slice(-8).join('\n'));
   process.exit(1);
 }
-const produced = fs.readdirSync(rendersDir).filter((f) => f.endsWith('.png')).length;
+const produced = cameras.reduce((n, c) => n + fs.readdirSync(path.join(rendersDir, c.sensorId)).filter((f) => f.endsWith('.rgb.png')).length, 0);
 console.log(`[atlas] done in ${wall}s — ${produced} renders in ${path.relative(ROOT, rendersDir)}`);
-// frameOffset retained for schema stability; 0 after the run_job settle fix.
+// frameOffset retained for schema stability (site index == render tick).

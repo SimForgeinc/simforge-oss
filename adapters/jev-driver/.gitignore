@@ -5,10 +5,15 @@ __pycache__/
 
 # Renderer inputs and outputs rebuilt by render.sh:
 #   map-glbs/  decompressed map tiles (gltf-transform dequantize, ~600 MB per map)
-#   frames/    scen-play PNG output
+#   render-job.json, render-scene-state.json  the simforge-render job and its scene-state stream
+#   frames/    simforge-render job output (frames/chase/<tick:08>.rgb.png, results.json)
 #   composite/ sidebar-composited frames
 map-glbs/
 */map-glbs/
+render-job.json
+*/render-job.json
+render-scene-state.json
+*/render-scene-state.json
 frames/
 */frames/
 composite/

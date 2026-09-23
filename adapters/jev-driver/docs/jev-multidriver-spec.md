@@ -22,20 +22,24 @@ Current package: `adapters/jev-driver/jevdrive/`. The original prototype lived i
   `velocity = [v*cos(yaw), 0, -v*sin(yaw)]`, plus `acceleration`. Catalog ids come from
   `CATALOG_BY_KIND` in `packages/engine/src/scene-state/helpers.ts` (`pedestrian.adult`, not
   `pedestrian.adult_walking`).
-- Renderer: build from source (`cargo build --release --locked --offline -p render-core --bin scen-play`);
-  the prebuilt `target-glibc235` binary lacks `KHR_texture_basisu`. Map tiles need
-  meshopt/quantization stripped once (`gltf-transform dequantize`). `--glbs` needs ABSOLUTE paths.
-  NEVER pass `--ground-y` with real tiles (it disables the terrain raycast and actors float).
-  `--pedestrian-models` aborts the render (skinned-mesh bind-group bug) — vehicles only.
+- Renderer: build from source (`cd renderer && cargo build --release --locked --offline -p simforge-render`);
+  `render.sh` runs `simforge-render job --job RUN/render-job.json` (override the binary with
+  `SIMFORGE_RENDER_BIN`). Map tiles need meshopt/quantization stripped once (`gltf-transform
+  dequantize`). The job's `scene.glbs` need ABSOLUTE paths. The adapter lowers
+  `scenestate.json` (a scene-state.v1 document) into the service's per-tick stream
+  (`RUN/render-scene-state.json`) and never sets `groundY`, so zero-height actors snap to the
+  map ground. Only `vehicleModels` is passed; the service refuses (never substitutes) an actor
+  whose catalog model is missing.
 
 ### Current native render path
 
 `render.sh RUN [TICKS]` uses `${PYTHON:-python3}` with this adapter at the front
 of `PYTHONPATH`. Select an interpreter with the adapter's dependencies installed.
-It always requests `scen-play --quality high` for atmosphere, IBL, sun/shadows,
-GTAO, AgX and SMAA; the native CLI's historical `sensor` shading is not the
-human-facing video default. Sensor capture requires an explicit separate
-`scen-play --quality sensor` invocation.
+It always renders with the `showcase` render preset (`scene.render.preset`) for
+atmosphere, IBL, sun/shadows, AO and AA; the `training` preset is the cheaper
+capture look. The rig is one chase camera (960x540, vertical FOV 70) attached to
+`ego` (else the first actor of frame 0), 18 m behind and 12 m above it, aimed at
+the ground 8 m ahead; frames land in `frames/chase/<tick:08>.rgb.png`.
 
 Texture representation is independent of shading: the adapter explicitly selects
 `textures-512-bc7`. It verifies `3d/variants/manifest.json`, the referenced index
