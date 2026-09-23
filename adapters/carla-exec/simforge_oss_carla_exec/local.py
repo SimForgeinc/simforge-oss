@@ -1356,6 +1356,10 @@ def main() -> None:
                        help="camera/video height (default 720)")
     local.add_argument("--fps", type=int, default=None,
                        help="camera/video frame rate (default 24)")
+    local.add_argument("--host-actor", default=None,
+                       help="scenario actor id to carry the sensor rig; defaults to the "
+                            "authored ego, which in a collision scenario is often a "
+                            "bystander rather than a participant")
     args = parser.parse_args()
     if args.command == "run-local":
         from .run_local import run_local_command

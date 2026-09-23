@@ -12,7 +12,7 @@ import zipfile
 import tempfile
 import time
 import xml.etree.ElementTree as ET
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
@@ -1914,9 +1914,25 @@ def execute_lease(
                 accumulator.configure_spawn_placement(dropped_actor_ids, static_planar_offsets)
             else:
                 spawn_placement = None
+            mount_adjustments: list[Mapping[str, object]] = []
             if lease.job_mode == "full_render":
                 backend.configure_sensors(lease.render_spec, output_dir, MAX_OUTPUT_BYTES, abort=lambda: backend_fence("configure_sensors"))
                 check_abort("configure_sensors")
+                # A rig pose authored for a narrower reference vehicle would
+                # otherwise film the cabin interior. The correction travels in
+                # the run's attestation, because the progress stream forwards
+                # only a fixed set of events and the working directory is not
+                # what the caller keeps.
+                mount_adjustments = list(getattr(backend, "sensor_mount_adjustments", ()) or ())
+                if mount_adjustments:
+                    emit("warning", {
+                        "code": "render.sensor_mount_adjusted",
+                        "message": (
+                            "moved "
+                            + ", ".join(str(m["sensorId"]) for m in mount_adjustments)
+                            + " out of the host body to keep it out of frame"
+                        ),
+                    })
             stability = backend.prepare_scenario(plan.frames[0], abort=lambda: backend_fence("prepare_scenario"))
             check_abort("prepare_scenario")
             # Fail closed before t=0 on an actor that is displaced from its
@@ -2222,6 +2238,8 @@ def execute_lease(
             attestation["nativeStability"] = stability
         if spawn_placement:
             attestation["spawnPlacement"] = dict(spawn_placement)
+        if mount_adjustments:
+            attestation["sensorMountAdjustments"] = mount_adjustments
         if replay:
             parity_evidence = _replay_parity_evidence(
                 lease, plan, replay_report, runtime_evidence, artifacts,

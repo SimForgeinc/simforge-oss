@@ -67,6 +67,49 @@ def test_sensor_frame_timeout_defaults_to_cold_start_safe_window(monkeypatch: py
     assert backend.sensor_timeout_s == 60.0
 
 
+def test_side_mount_inside_a_wider_host_body_is_pushed_to_its_flank(monkeypatch) -> None:
+    """A side camera authored at a 1.9 m-wide reference vehicle's skin ends up
+    inside a 2.15 m-wide substitute and films the cabin; it must move out,
+    while a forward camera behind the windscreen must be left alone."""
+    class FakeClient:
+        def __init__(self, _host: str, _port: int) -> None: ...
+        def set_timeout(self, _timeout: float) -> None: ...
+
+    monkeypatch.setitem(sys.modules, "carla", SimpleNamespace(Client=FakeClient))
+    backend = CarlaBackend()
+    host = SimpleNamespace(bounding_box=SimpleNamespace(
+        extent=SimpleNamespace(x=2.7955, y=1.0735, z=1.0295),
+        location=SimpleNamespace(x=0.0, y=0.0, z=0.0),
+    ))
+    requested = SimpleNamespace(sensor_id="camera_right_side", actor_id="ego")
+
+    # Authored 12 cm inside the flank, looking right: pushed just clear.
+    x, y, z = backend._clear_of_body(host, requested, {"x": 0.2, "y": 0.95, "z": 1.35, "yaw": 90})
+    assert y > 1.0735 and (x, z) == (0.2, 1.35)
+    assert backend.sensor_mount_adjustments[-1]["authored"]["y"] == 0.95
+
+    # Sign is preserved: the left camera leaves through the left flank.
+    _, left_y, _ = backend._clear_of_body(host, requested, {"x": 0.2, "y": -0.95, "z": 1.35, "yaw": -90})
+    assert left_y < -1.0735
+
+    # A forward camera is inside the box too, and is the normal placement.
+    before = len(backend.sensor_mount_adjustments)
+    assert backend._clear_of_body(host, requested, {"x": 2.1, "y": 0.0, "z": 1.45, "yaw": 0}) == (2.1, 0.0, 1.45)
+    # A rear corner camera at 140 deg is not looking out through the windscreen:
+    # inside the shell it films the cabin, so it leaves along its line of sight
+    # (the QA finding behind FORWARD_CAMERA_COS_YAW).
+    rear_x, rear_y, rear_z = backend._clear_of_body(host, requested, {"x": -1.0, "y": 0.38, "z": 1.33, "yaw": 140})
+    assert rear_z == 1.33 and (rear_x < -2.7955 or rear_y > 1.0735)
+    assert backend.sensor_mount_adjustments[-1]["authored"]["y"] == 0.38
+    before = len(backend.sensor_mount_adjustments)
+    # And a mount already outside the flank keeps the rig's exact pose.
+    assert backend._clear_of_body(host, requested, {"x": 0.2, "y": 1.4, "z": 1.35, "yaw": 90})[1] == 1.4
+    assert len(backend.sensor_mount_adjustments) == before
+
+    # No parent (a free chase camera) is never rewritten.
+    assert backend._clear_of_body(None, requested, {"x": -9.0, "y": 3.4, "z": 0.0, "yaw": 0}) == (-9.0, 3.4, 0.0)
+
+
 def artifact_bytes(body: bytes | Path) -> bytes:
     return body.read_bytes() if isinstance(body, Path) else body
 

@@ -75,14 +75,19 @@ def _q(value: float) -> int | float:
 
 def _mount(x_mm: float, right_mm: float, up_mm: float, yaw_deg: float = 0.0,
            pitch_deg: float = 0.0, roll_deg: float = 0.0) -> dict[str, Any]:
-    """Pronto's pod-relative sheet: x runs back from the pod front datum."""
+    """Pronto's pod-relative sheet: x runs back from the pod front datum.
+
+    Sheet yaw is measured to the right, like `right_mm`, so it is negated into
+    the canonical frame for the same reason the lateral offset is: otherwise a
+    camera is placed on one flank and aimed at the other.
+    """
     return {
         "position": {
             "x": _q(POD_FRONT_DATUM_M + x_mm / 1000.0),
             "y": _q(POD_PLATE_HEIGHT_M + up_mm / 1000.0),
             "z": _q(-right_mm / 1000.0),
         },
-        "rotation": {"yawRad": _q(_angle_rad(yaw_deg)), "pitchRad": _q(_angle_rad(pitch_deg)),
+        "rotation": {"yawRad": _q(_angle_rad(-yaw_deg)), "pitchRad": _q(_angle_rad(pitch_deg)),
                      "rollRad": _q(_angle_rad(roll_deg))},
     }
 
@@ -226,10 +231,16 @@ def _vehicle_mount(x_m: float, lateral_right_m: float, up_m: float,
     canonical left-handed `z`; this mirrors that conversion so a preset's
     numbers can be transcribed without reinterpretation. Unlike `_mount` there
     is no pod datum: these poses are already vehicle-local.
+
+    Yaw is measured the same way as `lateral_right_m` — positive to the right —
+    so it is negated into the canonical frame too. Negating the offset alone
+    put every flank camera on one side of the car and aimed it at the other:
+    `camera_right_side` sat outside the right doors and filmed them, and the
+    corner cameras were mirrored left for right.
     """
     return {
         "position": {"x": _q(x_m), "y": _q(up_m), "z": _q(-lateral_right_m)},
-        "rotation": {"yawRad": _q(_angle_rad(yaw_deg)),
+        "rotation": {"yawRad": _q(_angle_rad(-yaw_deg)),
                      "pitchRad": _q(_angle_rad(pitch_deg)), "rollRad": 0},
     }
 
@@ -307,11 +318,21 @@ def _lower_source(actor_id: str, template: dict[str, Any],
 VEHICLE_KINDS = {"vehicle", "car", "truck", "bus", "van", "motorcycle"}
 
 
-def _host_actor(root: ET.Element) -> str:
+def _host_actor(root: ET.Element, requested: str | None = None) -> str:
     actors = _entities(root, lambda: None)
     vehicles = [actor_id for actor_id, binding in actors.items() if binding.kind in VEHICLE_KINDS]
     if not vehicles:
         raise ContractError("OpenSCENARIO contains no vehicle to host the sensor rig")
+    if requested is not None:
+        # Which vehicle carries the rig decides what the footage is *of*: the
+        # default below is only a stable guess, and in a scenario authored
+        # around a collision the interesting vehicle is rarely the first one.
+        if requested not in vehicles:
+            raise ContractError(
+                f"requested sensor host {requested!r} is not a vehicle in this scenario; "
+                f"choose from {sorted(vehicles)}"
+            )
+        return requested
     # The authored ego leads: its id is the one vehicle ids sort under the same prefix.
     return min(vehicles, key=lambda actor_id: (not actor_id.startswith("vehicle"), actor_id))
 
@@ -322,11 +343,12 @@ def build_intent(scenario_bytes: bytes, xodr_path: Path, catalog_path: Path,
                  sdg_modalities: list[str] | None = None,
                  annotations: bool = False,
                  rig: str = "pronto-port-e",
+                 host_actor: str | None = None,
                  video: dict[str, Any] | None = None) -> dict[str, Any]:
     xodr_bytes = xodr_path.read_bytes()
     scenario_sha = hashlib.sha256(scenario_bytes).hexdigest()
     root = ET.fromstring(scenario_bytes)
-    actor_id = _host_actor(root)
+    actor_id = _host_actor(root, host_actor)
     if rig not in SENSOR_RIGS:
         raise ContractError(f"unknown sensor rig {rig!r}; choose from {sorted(SENSOR_RIGS)}")
     fmt = video or dict(VIDEO)
@@ -416,6 +438,7 @@ def run_local_command(args: argparse.Namespace) -> dict[str, object]:
         seed=args.seed, sdg_modalities=sdg_modalities,
         annotations=bool(getattr(args, "annotations", False)),
         rig=getattr(args, "rig", None) or "pronto-port-e",
+        host_actor=getattr(args, "host_actor", None),
         video=video_format(
             getattr(args, "camera_width", None),
             getattr(args, "camera_height", None),

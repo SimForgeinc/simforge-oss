@@ -113,8 +113,17 @@ describe('render-spec/v3 parsing', () => {
     expect(() => parseRenderSpecV3(baseSpec(sources))).toThrow(/Too big/);
   });
 
-  it('accepts only the simforge namespace tag', () => {
-    expect(() => parseRenderSpecV3({ ...(baseSpec() as Record<string, unknown>), schema: 'uniscenario.render-spec/v3' }))
+  it('accepts the pre-rename namespace tag but nothing else', () => {
+    // The control plane stores and serves specs under `uniscenario.`, and the
+    // render intent digest that authorizes a job is taken over those exact
+    // bytes: rejecting the tag makes every real lease unrenderable, and
+    // rewriting it changes the digest. Anything that is not one of the two
+    // spellings is still refused.
+    const legacy = { ...(baseSpec() as Record<string, unknown>), schema: 'uniscenario.render-spec/v3' };
+    expect(parseRenderSpecV3(legacy).schema).toBe('uniscenario.render-spec/v3');
+    expect(() => parseRenderSpecV3({ ...(baseSpec() as Record<string, unknown>), schema: 'simforge.render-spec/v2' }))
+      .toThrow();
+    expect(() => parseRenderSpecV3({ ...(baseSpec() as Record<string, unknown>), schema: 'other.render-spec/v3' }))
       .toThrow();
   });
 
