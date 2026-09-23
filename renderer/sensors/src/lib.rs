@@ -13,6 +13,7 @@
 //!   `sensor-capture` drives it).
 
 pub mod bvh;
+pub mod gpu_rays;
 pub mod capture;
 pub mod formats;
 pub mod imu_gnss;

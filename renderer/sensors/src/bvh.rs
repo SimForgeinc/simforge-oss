@@ -412,13 +412,37 @@ fn ray_aabb(origin: Vec3, inv_dir: Vec3, t_max: f32, min: Vec3, max: Vec3) -> bo
     tmax >= 0.0 && tmin <= t_max
 }
 
+/// Minimum |cos(incidence)| of an accepted hit (incidence measured from the
+/// triangle normal): rays within ~2.9 degrees of grazing are misses.
+///
+/// Near grazing, f32 Möller–Trumbore in world coordinates cancels
+/// catastrophically: the barycentrics of a ray that misses the triangle by
+/// metres can land inside [0, 1] and produce a ghost return (the parity
+/// test for the hardware backend found them at ~0.1% of adversarial rays).
+/// Bounding the incidence bounds the positional error of every accepted
+/// hit by about `eps * |coord| / cos`, a few millimetres at map scale,
+/// which is what lets both the CPU trees ([`Blas`] slack) and the hardware
+/// backend (triangle inflation) be provably conservative. Real returns at
+/// such incidence are negligible (the intensity proxy is already at its
+/// floor) and a physical lidar does not report them either.
+pub const MIN_INCIDENCE_COS: f32 = 0.05;
+const MIN_INCIDENCE_COS2: f32 = MIN_INCIDENCE_COS * MIN_INCIDENCE_COS;
+
 /// Möller–Trumbore. Distance is along the unnormalized `dir`.
+///
+/// The operation order is part of the contract: `crate::gpu_rays` re-runs
+/// exactly these IEEE f32 operations on the GPU to stay bit-identical.
 fn ray_tri_distance(origin: Vec3, dir: Vec3, tri: &Tri) -> Option<f32> {
     let e1 = tri.b - tri.a;
     let e2 = tri.c - tri.a;
     let pvec = dir.cross(e2);
     let det = e1.dot(pvec);
     if det.abs() < EPS {
+        return None;
+    }
+    // |det| = |e1 x e2| |dir| |cos|: compare squares, no square roots.
+    let normal = e1.cross(e2);
+    if det * det < MIN_INCIDENCE_COS2 * (normal.dot(normal) * dir.dot(dir)) {
         return None;
     }
     let inv_det = 1.0 / det;
@@ -494,7 +518,10 @@ impl Blas {
         // Roundoff allowance is a property of the bounds, not work to repeat
         // for every node visited by every beam.
         for node in &mut mesh.nodes {
-            let slack = node.min.abs().max(node.max.abs()) * 1e-5 + Vec3::splat(1e-3);
+            // Covers the ray's local-space rounding and the positional error
+            // an accepted hit can have (see MIN_INCIDENCE_COS): a tree must
+            // never cull a triangle the exact leaf test would accept.
+            let slack = node.min.abs().max(node.max.abs()) * 1e-5 + Vec3::splat(5e-2);
             node.min -= slack;
             node.max += slack;
         }
@@ -524,6 +551,30 @@ impl InstancedScene {
 
     pub(crate) fn gpu_instances(&self) -> impl Iterator<Item = (usize, Mat4, u32)> + '_ {
         self.instances.iter().map(|instance| (instance.mesh, instance.world, instance.instance_id))
+    }
+
+    /// Every instance in the order [`Self::cast`] indexes them (after
+    /// [`Self::build`]): `(mesh, world, instance_id, order)`. The hardware
+    /// ray backend (`crate::gpu_rays`) mirrors exactly this table.
+    pub(crate) fn instance_records(&self) -> impl Iterator<Item = (usize, Mat4, u32, u32)> + '_ {
+        self.instances
+            .iter()
+            .map(|instance| (instance.mesh, instance.world, instance.instance_id, instance.order))
+    }
+
+    /// The hit [`Self::cast`] reports for triangle `triangle_index` of
+    /// instance `instance_index` at distance `t` along `origin + t * dir`:
+    /// one constructor shared by the CPU walk and the hardware ray backend,
+    /// so normals and points are the same bytes whichever found the winner.
+    pub fn hit_from(&self, instance_index: usize, triangle_index: usize, origin: Vec3, dir: Vec3, t: f32) -> Hit {
+        let instance = &self.instances[instance_index];
+        let tri = transformed_triangle(&self.meshes[instance.mesh].tris[triangle_index], instance);
+        Hit {
+            distance: t,
+            point: origin + dir * t,
+            instance_id: instance.instance_id,
+            normal: (tri.b - tri.a).cross(tri.c - tri.a).normalize(),
+        }
     }
 
     pub(crate) fn gpu_hit_triangle(&self, instance: usize, primitive: usize) -> Tri {
@@ -610,6 +661,31 @@ impl InstancedScene {
     }
 
     pub fn cast(&self, origin: Vec3, dir: Vec3, t_max: f32) -> Option<Hit> {
+        self.cast_indexed(origin, dir, t_max)
+            .map(|(instance_index, triangle_index, t)| self.hit_from(instance_index, triangle_index, origin, dir, t))
+    }
+
+    /// Local bounds of mesh `mesh` (its tree's root, slack included).
+    pub(crate) fn mesh_bounds(&self, mesh: usize) -> (Vec3, Vec3) {
+        self.meshes[mesh].nodes.first().map_or((Vec3::ZERO, Vec3::ZERO), |root| (root.min, root.max))
+    }
+
+    /// Test/diagnostic view of [`Self::instance_records`].
+    #[doc(hidden)]
+    pub fn instance_records_pub(&self) -> impl Iterator<Item = (usize, Mat4, u32, u32)> + '_ {
+        self.instance_records()
+    }
+
+    /// Test/diagnostic: the local triangle `triangle_index` of the mesh of
+    /// instance `instance_index`.
+    #[doc(hidden)]
+    pub fn mesh_triangle_pub(&self, instance_index: usize, triangle_index: usize) -> Tri {
+        self.meshes[self.instances[instance_index].mesh].tris[triangle_index]
+    }
+
+    /// [`Self::cast`]'s winner as `(instance index, triangle index, t)`
+    /// (indices as [`Self::hit_from`] takes them).
+    pub fn cast_indexed(&self, origin: Vec3, dir: Vec3, t_max: f32) -> Option<(usize, usize, f32)> {
         if self.nodes.is_empty() {
             return None;
         }
@@ -673,16 +749,7 @@ impl InstancedScene {
                 }
             }
         }
-        best.map(|(instance_index, triangle_index)| {
-            let instance = &self.instances[instance_index];
-            let tri = transformed_triangle(&self.meshes[instance.mesh].tris[triangle_index], instance);
-            Hit {
-                distance: best_t,
-                point: origin + dir * best_t,
-                instance_id: instance.instance_id,
-                normal: (tri.b - tri.a).cross(tri.c - tri.a).normalize(),
-            }
-        })
+        best.map(|(instance_index, triangle_index)| (instance_index, triangle_index, best_t))
     }
 }
 
