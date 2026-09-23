@@ -252,15 +252,17 @@ impl ActorKind {
                 w: 2.0,
                 h: 2.2,
             },
+            // Rider included (engine 0.11.0): the ridden catalog bodies
+            // `vehicle.motorcycle` and `vehicle.bicycle`.
             Self::Motorcycle => Dims {
-                l: 2.2,
-                w: 0.8,
-                h: 1.5,
+                l: 2.1,
+                w: 0.75,
+                h: 1.51,
             },
             Self::Bicycle => Dims {
-                l: 1.8,
-                w: 0.6,
-                h: 1.7,
+                l: 1.75,
+                w: 0.62,
+                h: 1.76,
             },
             Self::Pedestrian => Dims {
                 l: 0.6,

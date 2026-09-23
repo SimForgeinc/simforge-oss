@@ -69,6 +69,8 @@ export interface ScenarioWorkerMap {
   signals: string;
   /** The closure's published ambient turn-verdict table (optional; loaded only when built for this engine and closure). */
   ambientTurnVerdicts?: string;
+  /** `derived/ground/ground-mesh.bin` when the version carries it (engine 0.11 ground contact). */
+  ground?: string;
   /** Published digests of the served bytes, so the page cache admits each file under its exact identity. */
   digests?: {
     readonly topology: string;
@@ -76,6 +78,7 @@ export interface ScenarioWorkerMap {
     readonly locations: string;
     readonly xodr: string;
     readonly signals: string;
+    readonly ground?: string;
   };
 }
 
@@ -551,6 +554,7 @@ async function getMapRuntime(engine: EngineRuntime, map: ScenarioWorkerMap, requ
         xodr: map.xodr,
         signals: map.signals,
         ...(map.ambientTurnVerdicts ? { ambientTurnVerdicts: map.ambientTurnVerdicts } : {}),
+        ...(map.ground ? { ground: map.ground } : {}),
       },
       digests: map.digests,
     });

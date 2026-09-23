@@ -297,7 +297,7 @@ fn pose<'py>(
 /// `.xodr` + topology sidecar; `flat_z` replaces the map with a constant
 /// surface (tests / maps without elevation). Returns the timeline JSON text.
 #[pyfunction]
-#[pyo3(signature = (trace, xodr=None, topology=None, catalog_digest=None, flat_z=None, plane=None))]
+#[pyo3(signature = (trace, xodr=None, topology=None, catalog_digest=None, flat_z=None, plane=None, ground_mesh=None))]
 fn build_timeline(
     trace: &Bound<'_, PyAny>,
     xodr: Option<&Bound<'_, PyAny>>,
@@ -305,10 +305,23 @@ fn build_timeline(
     catalog_digest: Option<String>,
     flat_z: Option<f64>,
     plane: Option<(f64, f64, f64)>,
+    ground_mesh: Option<&Bound<'_, PyAny>>,
 ) -> PyResult<String> {
     let trace_bytes = gunzip(bytes_of(trace)?)?;
     let trace = SimTrace::from_json_slice(&trace_bytes).map_err(value_err)?;
     let height = match (xodr, topology, flat_z, plane) {
+        // The map ground surface (`derived/ground/ground-mesh.bin`),
+        // ground-contact/v1; xodr + topology give spawn deck hints.
+        (Some(x), Some(t), None, None) if ground_mesh.is_some() => {
+            let topology = simforge_core::map::TopologyIndex::decode(&bytes_of(t)?)
+                .map_err(|e| PyValueError::new_err(format!("topology: {e}")))?;
+            let ground = simforge_core::engine::GroundContext::from_bytes(
+                &bytes_of(ground_mesh.expect("checked"))?,
+                Some((&bytes_of(x)?, &topology)),
+            )
+            .map_err(PyValueError::new_err)?;
+            HeightField::ground(std::sync::Arc::new(ground))
+        }
         (Some(x), Some(t), None, None) => {
             HeightField::from_xodr(&bytes_of(x)?, &bytes_of(t)?).map_err(value_err)?
         }

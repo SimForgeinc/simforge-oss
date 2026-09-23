@@ -71,6 +71,22 @@ pub struct ActorTick {
     #[serde(rename = "yawRad")]
     pub yaw_rad: f64,
     pub velocity: [f64; 3],
+    /// sampler/2 channels (simforge-core `scene_state::ActorTick`).
+    #[serde(rename = "wheelSpinRad", default, skip_serializing_if = "Option::is_none")]
+    pub wheel_spin_rad: Option<f64>,
+    #[serde(rename = "bodyAttitude", default, skip_serializing_if = "Option::is_none")]
+    pub body_attitude: Option<BodyAttitude>,
+    #[serde(rename = "wheelDropM", default, skip_serializing_if = "Option::is_none")]
+    pub wheel_drop_m: Option<[f64; 4]>,
+}
+
+/// Body-node attitude (OpenSCENARIO signs).
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct BodyAttitude {
+    #[serde(rename = "pitchRad")]
+    pub pitch_rad: f64,
+    #[serde(rename = "rollRad")]
+    pub roll_rad: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

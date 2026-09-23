@@ -425,6 +425,20 @@ export type ScenarioMapDescriptorDto = {
    * semantics and simulation closure it was built for. Absent from older servers.
    */
   ambientTurnVerdicts?: { engineSemVer: string; closureDigest: string; sha256: string } | null;
+  /**
+   * The ground derivative (`derived/ground/ground-mesh.bin`, engine 0.11
+   * contact), when this version carries it: the member digest, and the
+   * ingest validation the map descriptor must show (`status: 'flagged'` with
+   * `flags` `xodr-disagrees` / `surface-holes`; `warnings` are display text).
+   * `status: 'unreported'` when the publish recorded no validation. Absent
+   * from versions published before the derivative existed.
+   */
+  ground?: {
+    sha256: string;
+    status: 'ok' | 'flagged' | 'no-xodr' | 'unreported';
+    flags: string[];
+    warnings: string[];
+  } | null;
   topologyArtifactUrl: string;
   /** Presigned gzipped derived topology; null when the map version has no available artifact. */
   derivedTopologyUrl: string | null;

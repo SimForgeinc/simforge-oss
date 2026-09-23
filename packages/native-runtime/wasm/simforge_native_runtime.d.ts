@@ -121,6 +121,12 @@ export class MapBundle {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
+    /**
+     * Attach the map's ground surface (`derived/ground/ground-mesh.bin`):
+     * worlds built from this bundle afterwards ground every body on it
+     * (engine 0.11 contact, trace v5). Returns the surface digest.
+     */
+    attachGround(ground_mesh: Uint8Array): string;
     controlPlanJson(): string;
     /**
      * Bundle from in-memory sources: `sourcesJson = {mapId, derived?, locations?, searchIndex?, xodr?, signalsGeojson?}` plus the topology sidecar bytes.
@@ -145,6 +151,10 @@ export class MapBundle {
     readonly closureDigest: string;
     readonly digest: string;
     readonly graph: LaneGraph;
+    /**
+     * Digest of the attached ground surface, or `undefined`.
+     */
+    readonly groundDigest: string | undefined;
     readonly mapId: string;
 }
 
@@ -196,14 +206,26 @@ export class RenderTimeline {
      */
     static buildFlat(trace: Uint8Array, z: number, catalog_digest?: string | null): RenderTimeline;
     /**
+     * Build a timeline on the map's ground surface (`ground-contact/v1`):
+     * `groundMesh` is `derived/ground/ground-mesh.bin`; the `.xodr` +
+     * topology supply spawn deck hints for traces recorded without contact.
+     * `build` (no ground) is the labelled legacy path for map versions
+     * published before the ground derivative.
+     */
+    static buildOnGround(trace: Uint8Array, ground_mesh: Uint8Array, xodr: Uint8Array, topology: Uint8Array, catalog_digest?: string | null, recorded_trace_sha256?: string | null): RenderTimeline;
+    /**
      * Same as `build` on a synthetic plane `z = z0 + gx*x + gy*y` (tests).
      */
     static buildPlane(trace: Uint8Array, z0: number, gx: number, gy: number, catalog_digest?: string | null): RenderTimeline;
     /**
-     * Build a timeline from a trace (JSON bytes, gzip ok) and the map's
-     * `.xodr` + topology sidecar bytes.
+     * Build a timeline from a trace (JSON bytes, gzip ok; any released
+     * trace format, upgraded in memory) and the map's `.xodr` + topology
+     * sidecar bytes. `recorded_trace_sha256` binds the identity recorded
+     * next to a stored trace (verified by the caller against the stored
+     * bytes): a current-format trace must recompute to it, an upgraded one
+     * adopts it.
      */
-    static build(trace: Uint8Array, xodr: Uint8Array, topology: Uint8Array, catalog_digest?: string | null): RenderTimeline;
+    static build(trace: Uint8Array, xodr: Uint8Array, topology: Uint8Array, catalog_digest?: string | null, recorded_trace_sha256?: string | null): RenderTimeline;
     /**
      * Grade observed per-frame transforms (JSONL) against the sampler.
      * `profile` is `"bevy"`, `"carla"` or a profile JSON object; returns the
@@ -219,6 +241,12 @@ export class RenderTimeline {
      * document without per-tick channels).
      */
     headerJson(): string;
+    /**
+     * Parse a stored timeline of any sampler version, for inspection only
+     * (motion comparison across sampler versions). Never render it: a
+     * timeline from another sampler is re-derived from its trace.
+     */
+    static inspect(bytes: Uint8Array): RenderTimeline;
     /**
      * Resolved light states at `t`, as JSON.
      */
@@ -239,8 +267,11 @@ export class RenderTimeline {
     posesArray(t: number): Float64Array;
     /**
      * Scene-yup (Bevy / scene-state.v1) projection of every actor at each of
-     * `times`: `times.length × actorIds.length × 12` floats
-     * `[present, px, py, pz, qx, qy, qz, qw, vx, vy, vz, speed]` with
+     * `times`: `times.length × actorIds.length × 19` floats
+     * `[present, px, py, pz, qx, qy, qz, qw, vx, vy, vz, speed, wheelSpin,
+     * bodyPitch, bodyRoll, dropFL, dropFR, dropRL, dropRR]` (NaN where the
+     * actor has no such channel: wheel spin for wheeled actors; body attitude
+     * and wheel drop for four-wheelers, and not in yaw-only frames) with
      * `position = [x, z, -y]`, the quaternion from `sampler::scene_yup`
      * (`yawOnly` drops pitch/roll) and `velocity = [vx, vz, -vy]`.
      */
@@ -262,6 +293,11 @@ export class RenderTimeline {
     readonly actorIds: string[];
     readonly catalogDigest: string | undefined;
     readonly clipEndS: number;
+    /**
+     * Where z and road attitude came from: `trace`,
+     * `derived-at-timeline-build`, `legacy-xodr-elevation` or `synthetic`.
+     */
+    readonly contactOrigin: string;
     readonly heightFieldDigest: string;
     /**
      * `timelineKey = H(traceSha256, heightFieldDigest, catalogDigest, samplerVersion)`.
@@ -429,6 +465,11 @@ export class Trace {
     static parse(data: Uint8Array): Trace;
     sceneStateJson(): string;
     toJson(): string;
+    /**
+     * `simforge.trace-upgrade/v1` JSON when the stored trace was an older
+     * format upgraded in memory; `undefined` for a current-format trace.
+     */
+    upgradeJson(): string | undefined;
 }
 
 /**
@@ -828,12 +869,14 @@ export interface InitOutput {
     readonly lanegraph_successors: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly lanegraph_turnRelationOf: (a: number, b: number, c: number) => [number, number, number, number];
     readonly loadAmbientTurnVerdicts: (a: number, b: number) => [number, number, number];
+    readonly mapbundle_attachGround: (a: number, b: number, c: number) => [number, number, number, number];
     readonly mapbundle_closureDigest: (a: number) => [number, number];
     readonly mapbundle_controlPlanJson: (a: number) => [number, number, number, number];
     readonly mapbundle_digest: (a: number) => [number, number];
     readonly mapbundle_fromSources: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly mapbundle_fromTopology: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly mapbundle_graph: (a: number) => number;
+    readonly mapbundle_groundDigest: (a: number) => [number, number];
     readonly mapbundle_indexJson: (a: number) => [number, number, number, number];
     readonly mapbundle_load: (a: number, b: number) => [number, number, number];
     readonly mapbundle_mapId: (a: number) => [number, number];
@@ -858,15 +901,18 @@ export interface InitOutput {
     readonly rehearseSituation: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly rendertimeline_actorIds: (a: number) => [number, number];
     readonly rendertimeline_actorsJson: (a: number) => [number, number, number, number];
-    readonly rendertimeline_build: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number];
+    readonly rendertimeline_build: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => [number, number, number];
     readonly rendertimeline_buildFlat: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+    readonly rendertimeline_buildOnGround: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];
     readonly rendertimeline_buildPlane: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];
     readonly rendertimeline_catalogDigest: (a: number) => [number, number];
     readonly rendertimeline_clipEndS: (a: number) => number;
     readonly rendertimeline_compareObservedJson: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+    readonly rendertimeline_contactOrigin: (a: number) => [number, number];
     readonly rendertimeline_fromBytes: (a: number, b: number) => [number, number, number];
     readonly rendertimeline_headerJson: (a: number) => [number, number, number, number];
     readonly rendertimeline_heightFieldDigest: (a: number) => [number, number];
+    readonly rendertimeline_inspect: (a: number, b: number) => [number, number, number];
     readonly rendertimeline_key: (a: number) => [number, number];
     readonly rendertimeline_lightsAtJson: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly rendertimeline_poseArray: (a: number, b: number, c: number, d: number) => [number, number, number];
@@ -957,6 +1003,7 @@ export interface InitOutput {
     readonly trace_parse: (a: number, b: number) => [number, number, number];
     readonly trace_sceneStateJson: (a: number) => [number, number, number, number];
     readonly trace_toJson: (a: number) => [number, number, number, number];
+    readonly trace_upgradeJson: (a: number) => [number, number, number, number];
     readonly traffichandoff_bodies: (a: number) => any;
     readonly traffichandoff_bodyCount: (a: number) => number;
     readonly traffichandoff_bodyIds: (a: number) => [number, number];

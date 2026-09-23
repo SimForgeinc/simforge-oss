@@ -96,7 +96,7 @@ import {
   buildBicycle,
   buildCyclist,
   buildMobilityScooter,
-  buildMotorcycle,
+  buildMotorcyclist,
 } from './builders/vehicles-micro';
 import {
   buildBus,
@@ -240,7 +240,7 @@ const BUILDERS: Builders = {
   'vehicle.box_truck': buildBoxTruck,
   'vehicle.semi_truck': buildSemiTruck,
   'vehicle.bus': buildBus,
-  'vehicle.motorcycle': buildMotorcycle,
+  'vehicle.motorcycle': buildMotorcyclist,
   'vehicle.bicycle': buildCyclist,
   'vehicle.ambulance': buildAmbulance,
   'vehicle.tram': buildTram,

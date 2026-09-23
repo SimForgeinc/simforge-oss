@@ -22,7 +22,7 @@ use crate::types::ControlIndication;
 
 use super::perception::{MapDivergenceTrack, SensorTrack};
 use super::{
-    ActorPhysicsTrack, ActorTrack, EpisodeMetrics, SemanticLedger, SignalTrack, SimEvent, SimTrace,
+    ActorContactTrack, ActorPhysicsTrack, ActorTrack, EpisodeMetrics, SemanticLedger, SignalTrack, SimEvent, SimTrace,
     TraceError, TraceHeader, TraceTicks, TRACE_FORMAT_VERSION,
 };
 
@@ -58,9 +58,21 @@ pub struct ActorFrame<'a> {
     pub present: bool,
     /// Required for every actor registered with physics channels.
     pub physics: Option<PhysicsFrame>,
+    /// Required for every actor when the recorder records contact.
+    pub contact: Option<ContactFrame>,
     /// Identity of the route the actor currently follows (`route:<hash>`),
     /// feeding the semantic ledger's `routeRef` channel.
     pub route_ref: &'a str,
+}
+
+/// Ground contact of one body on one tick (see `ActorContactTrack`).
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContactFrame {
+    pub z: f64,
+    pub pitch_rad: f64,
+    pub roll_rad: f64,
+    pub wheel_drop_m: [f64; 4],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,6 +103,8 @@ pub struct LatestActorFrame {
     pub s: f64,
     pub present: bool,
     pub physics: Option<PhysicsFrame>,
+    #[serde(default)]
+    pub contact: Option<ContactFrame>,
     pub route_ref: String,
 }
 
@@ -107,6 +121,7 @@ impl LatestActorFrame {
             s: 0.0,
             present: false,
             physics: None,
+            contact: None,
             route_ref: String::new(),
         };
         out.update(frame);
@@ -135,6 +150,7 @@ impl LatestActorFrame {
         self.s = frame.s;
         self.present = frame.present;
         self.physics = frame.physics;
+        self.contact = frame.contact;
         if self.route_ref != frame.route_ref {
             self.route_ref.clear();
             self.route_ref.push_str(frame.route_ref);
@@ -162,6 +178,10 @@ pub struct TraceRecorder {
     actor_ids: Vec<String>,
     /// Parallel to `actor_ids`: whether the actor records physics channels.
     physics: Vec<bool>,
+    /// Every actor records ground-contact channels (the simulation runs on a
+    /// ground surface).
+    #[serde(default)]
+    contact: bool,
     signal_ids: Vec<String>,
     /// `Some` in full capture.
     ticks: Option<RecordedTicks>,
@@ -214,11 +234,30 @@ impl TraceRecorder {
             latest_signals: vec![None; signal_ids.len()],
             actor_ids,
             physics,
+            contact: false,
             signal_ids,
             ticks,
             latest_t: None,
             len: 0,
         }
+    }
+
+    /// Record ground-contact channels for every actor (registered now or
+    /// later). Must be called before the first tick.
+    pub fn with_contact(mut self) -> Self {
+        assert_eq!(self.len, 0, "contact channels must be enabled before recording");
+        self.contact = true;
+        if let Some(ticks) = &mut self.ticks {
+            let capacity = ticks.t.capacity();
+            for track in &mut ticks.actors {
+                track.contact = Some(ActorContactTrack::with_capacity(capacity));
+            }
+        }
+        self
+    }
+
+    pub fn records_contact(&self) -> bool {
+        self.contact
     }
 
     pub fn capture(&self) -> TraceCapture {
@@ -272,6 +311,13 @@ impl TraceRecorder {
                     push_physics(p, &PhysicsFrame::default());
                 }
             }
+            if self.contact {
+                let mut contact = ActorContactTrack::with_capacity(n);
+                for _ in 0..n {
+                    push_contact(&mut contact, &ContactFrame::default());
+                }
+                track.contact = Some(contact);
+            }
             ticks.actors.push(track);
             ticks.route_refs.push(vec![String::new(); n]);
         }
@@ -307,6 +353,12 @@ impl TraceRecorder {
                     tick,
                 });
             }
+            if self.contact && frame.contact.is_none() {
+                return Err(TraceError::MissingContactFrame {
+                    actor_id: self.actor_ids[i].clone(),
+                    tick,
+                });
+            }
             if !frame.lateral_offset_m.is_finite() {
                 return Err(TraceError::NonFiniteLateral {
                     actor_id: self.actor_ids[i].clone(),
@@ -329,6 +381,9 @@ impl TraceRecorder {
                 track.present.push(u8::from(frame.present));
                 if let (Some(p), Some(physics)) = (&mut track.physics, &frame.physics) {
                     push_physics(p, physics);
+                }
+                if let (Some(c), Some(contact)) = (&mut track.contact, &frame.contact) {
+                    push_contact(c, contact);
                 }
                 ticks.route_refs[i].push(frame.route_ref.to_owned());
             }
@@ -441,6 +496,13 @@ impl TraceRecorder {
     }
 }
 
+fn push_contact(track: &mut ActorContactTrack, frame: &ContactFrame) {
+    track.z.push(frame.z);
+    track.pitch_rad.push(frame.pitch_rad);
+    track.roll_rad.push(frame.roll_rad);
+    track.wheel_drop_m.push(frame.wheel_drop_m);
+}
+
 fn push_physics(track: &mut ActorPhysicsTrack, frame: &PhysicsFrame) {
     track.vx_body_mps.push(frame.vx_body_mps);
     track.vy_body_mps.push(frame.vy_body_mps);
@@ -472,6 +534,7 @@ mod tests {
             s: 0.0,
             present: true,
             physics,
+            contact: None,
             route_ref: "route:x",
         }
     }

@@ -947,6 +947,12 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
                         let asset_rotation=rotation*Quat::from_rotation_y(model.yaw_offset_rad);
                         state.app.set_actor_asset_pose(&actor.id,asset_position,asset_rotation)
                             .map_err(|error|format!("catalog pose: {error:#}"))?;
+                        state.app.set_actor_articulation(
+                            &actor.id,
+                            actor.body_attitude.map(|a| (a.pitch_rad, a.roll_rad)),
+                            actor.wheel_drop_m,
+                        )
+                        .map_err(|error|format!("catalog articulation: {error:#}"))?;
                     }
                 }
             }
@@ -2012,6 +2018,9 @@ mod tests {
             },
             dims: None,
             velocity: [0.0; 3],
+            wheel_spin_rad: None,
+            body_attitude: None,
+            wheel_drop_m: None,
         };
         let red = actor_color(&actor(Some("#8f2f2f")), "car").unwrap();
         assert_eq!(red, [143.0 / 255.0, 47.0 / 255.0, 47.0 / 255.0]);

@@ -19,6 +19,13 @@ export interface MapGraphSources {
   readonly xodr: string;
   readonly signals: string;
   /**
+   * `derived/ground/ground-mesh.bin`: the map's ground surface (engine 0.11
+   * contact). Present on every map version published with the ground
+   * derivative; versions published before it simulate without contact and
+   * their renders are labelled `legacy-xodr-elevation`.
+   */
+  readonly ground?: string | null;
+  /**
    * The closure's published ambient turn-verdict table
    * (`derived/ambient/turn-verdicts.json.gz`), when the map version ships one.
    * Optional: a missing or unreadable table only costs the probes.
@@ -36,6 +43,7 @@ export interface MapGraphDigests {
   readonly locations?: string;
   readonly xodr?: string;
   readonly signals?: string;
+  readonly ground?: string;
 }
 
 /**
@@ -57,6 +65,8 @@ export interface MapGraph<Derived = unknown, Locations = unknown> {
   readonly closureDigest: string;
   /** The shipped turn-verdict table text, when the closure carries one (see `loadShippedAmbientTurnVerdicts`). */
   readonly ambientTurnVerdicts: string | null;
+  /** `derived/ground/ground-mesh.bin` when the map version carries it (engine 0.11 contact; the timeline's height source). */
+  readonly ground: Uint8Array | null;
 }
 
 /** Decoded bytes of every file a simulated map is built from (gzip already removed). */
@@ -71,6 +81,8 @@ export interface MapClosureFiles {
   readonly colliders: StaticColliderArtifactSources;
   /** `derived/ambient/turn-verdicts.json.gz` (decompressed), when the closure ships it. */
   readonly ambientTurnVerdicts?: Uint8Array | null;
+  /** `derived/ground/ground-mesh.bin`, when the map version carries it (see `MapGraphSources.ground`). */
+  readonly ground?: Uint8Array | null;
 }
 
 /**
@@ -144,6 +156,12 @@ function assembleMapGraph<Derived, Locations>(
     signalsGeojson: JSON.parse(decoder.decode(files.signals)) as unknown,
     staticColliders: collision.colliders,
   }), files.topology);
+  if (files.ground) {
+    // Before `bundle.graph` is read: the graph handle carries the ground into
+    // every world built on it, and the closure digest includes it.
+    if (!bundle.attachGround) throw new Error('This native runtime predates ground contact (engine 0.11.0); rebuild @simforge-oss/native-runtime');
+    bundle.attachGround(files.ground);
+  }
   return {
     bundle,
     graph: bundle.graph,
@@ -153,6 +171,7 @@ function assembleMapGraph<Derived, Locations>(
     xodr: xodrText,
     closureDigest: bundle.closureDigest ?? '',
     ambientTurnVerdicts,
+    ground: files.ground ?? null,
   };
 }
 
@@ -202,6 +221,9 @@ export async function loadMapGraph<Derived = unknown, Locations = unknown>(optio
   const collision = requireReadyStaticColliderBundle(await loadStaticMapColliders(sources.manifest, fetcher));
   options.onCollisionLoaded?.(collision);
   const verdicts = sources.ambientTurnVerdicts ? await optionalMember(sources.ambientTurnVerdicts, fetcher) : null;
+  // A declared ground member is required: a map version that ships it must
+  // not silently simulate without contact.
+  const ground = sources.ground ? await mapArtifactBytes(sources.ground, fetcher, digests?.ground) : null;
   const graph = assembleMapGraph<Derived, Locations>(options.module, {
     mapId: sources.mapId,
     topology,
@@ -209,6 +231,7 @@ export async function loadMapGraph<Derived = unknown, Locations = unknown>(optio
     locations,
     xodr,
     signals,
+    ground,
   }, collision, verdicts);
   loadShippedAmbientTurnVerdicts(options.module, graph);
   return graph;

@@ -6,7 +6,8 @@
 //! same `t` give bit-identical poses everywhere. Only IEEE-exact arithmetic
 //! and the core's portable trig (`crate::math`) are used.
 //!
-//! Rules (`simforge.timeline-sampler/1`):
+//! Rules (`simforge.timeline-sampler/2`; the sampling rules are unchanged
+//! from /1, the derivation rules changed: see `render-timeline.md`):
 //! - `t` is clip-relative seconds on `[0, clipEndS]` (±1e-9, clamped).
 //! - Tick `i` is the last tick with `t[i] <= t`; `f = (t - t[i]) / (t[i+1] - t[i])`.
 //! - Absent strictly before the spawn tick and at or after the despawn tick:
@@ -68,6 +69,9 @@ pub struct TimelinePose {
     pub wheel_steer_rad: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wheel_spin_rad: Option<f64>,
+    /// Four-wheelers: per-wheel drop `[FL, FR, RL, RR]` (suspension travel).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wheel_drop_m: Option<[f64; 4]>,
     /// Knocked off its feet at or before this tick (`downedSinceTick`).
     pub downed: bool,
 }
@@ -95,6 +99,7 @@ impl TimelinePose {
             body_roll_rad: 0.0,
             wheel_steer_rad: None,
             wheel_spin_rad: None,
+            wheel_drop_m: None,
             downed: false,
         }
     }
@@ -222,6 +227,10 @@ pub fn sample_actor(
         body_roll_rad: ch(&tr.body_roll_rad),
         wheel_steer_rad: tr.wheel_steer_rad.as_ref().map(ch),
         wheel_spin_rad: tr.wheel_spin_rad.as_ref().map(ch),
+        wheel_drop_m: tr
+            .wheel_drop_m
+            .as_ref()
+            .map(|d| std::array::from_fn(|k| lerp(d[i][k], d[j][k], f))),
         downed: actor.downed_since_tick.is_some_and(|d| i >= d as usize),
     })
 }
@@ -380,6 +389,7 @@ pub fn scene_state_document(
                 (false, true) => ActorTickKind::Despawn,
             };
             let (position, rotation) = scene_yup(&pose, yaw_only);
+            let four_wheeled = pose.wheel_drop_m.is_some();
             actors.push(ActorTick {
                 id: actor.id.clone(),
                 kind,
@@ -388,6 +398,17 @@ pub fn scene_state_document(
                 yaw_rad: pose.heading_rad,
                 velocity: [pose.velocity[0], 0.0, -pose.velocity[1]],
                 acceleration: [pose.acceleration[0], 0.0, -pose.acceleration[1]],
+                wheel_spin_rad: pose.wheel_spin_rad,
+                // Four-wheelers only: the sprung body's attitude over its
+                // wheels, applied to the model's `body` node (never to the
+                // actor transform, which keeps the wheels on the ground).
+                body_attitude: (four_wheeled && !yaw_only).then_some(
+                    super::super::scene_state::BodyAttitude {
+                        pitch_rad: pose.body_pitch_rad,
+                        roll_rad: pose.body_roll_rad,
+                    },
+                ),
+                wheel_drop_m: if yaw_only { None } else { pose.wheel_drop_m },
             });
         }
         frames.push(SceneFrame {

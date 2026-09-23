@@ -192,7 +192,7 @@ export async function simulateClaim(claim: SimulationJobClaim, hostUrl: URL, fet
   });
   let timeline: SimulationTimeline | null = null;
   try {
-    timeline = await buildRenderTimeline({ trace: simulation.trace, xodr: closure.xodr, topology: closure.topology, catalogDigest: null });
+    timeline = await buildRenderTimeline({ trace: simulation.trace, xodr: closure.xodr, topology: closure.topology, ground: closure.ground, catalogDigest: null });
   } catch (error) {
     process.stderr.write(`${JSON.stringify({ component: "simforge-local-simulator", event: "timeline.unavailable", simKey: simulation.simKey, error: error instanceof Error ? error.message : String(error) })}\n`);
   }

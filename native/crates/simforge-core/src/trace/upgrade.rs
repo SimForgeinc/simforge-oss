@@ -35,7 +35,8 @@
 //! | `v1`             | 1              | TS engine, ≤ Aug 20    | no `header.physics`, `lateralOffsetM`, `metrics.criticalitySamples`, ledger or `ego` |
 //! | `v3`             | 3              | TS engine, Aug 9–30    | no `lateralOffsetM` on some actors, no ledger, no `ego` |
 //! | `v4-pre-ledger`  | 4              | TS/native, Aug 20–Sep 5| no `header.ego`, no `semanticLedger`                   |
-//! | `v4`             | 4              | native, current        | none                                                   |
+//! | `v4`             | 4              | native, ≤ engine 0.10  | no ground contact (`header.groundDigest`, `contact`)   |
+//! | `v5`             | 5              | native, engine 0.11+   | none (current)                                         |
 
 use serde::de::IgnoredAny;
 use serde::{Deserialize, Serialize};
@@ -187,7 +188,9 @@ pub fn upgrade_to_current(mut doc: Value) -> Result<(Value, TraceUpgrade), Trace
     if version <= 4 {
         v4_pre_ledger_to_v4(&mut doc, &mut report)?;
     }
-    // Future formats: `if version <= 4 { v4_to_v5(&mut doc, &mut report)?; }`
+    if version <= 4 {
+        v4_to_v5(&mut doc, &mut report)?;
+    }
     set_version(&mut doc, TRACE_FORMAT_VERSION)?;
     report.unrecorded.sort();
     report.unrecorded.dedup();
@@ -346,6 +349,16 @@ fn v3_to_v4(doc: &mut Value, report: &mut Report) -> Result<(), TraceError> {
 /// v4 (pre-ledger) → v4: the ego provenance block and the semantic ledger
 /// were added without a version bump. Neither is recoverable from the
 /// recorded channels, so both stay unrecorded.
+/// v4 -> v5. v5 only adds the optional ground-contact channels
+/// (`header.groundDigest`, `ticks.actors.*.contact`). A v4 trace has none and
+/// none are invented: it upgrades with them absent, and a consumer that needs
+/// contact derives it from the map ground surface explicitly (render timeline
+/// `contactOrigin: derived-at-timeline-build`).
+fn v4_to_v5(_doc: &mut Value, report: &mut Report) -> Result<(), TraceError> {
+    report.step("v4_to_v5");
+    Ok(())
+}
+
 fn v4_pre_ledger_to_v4(doc: &mut Value, report: &mut Report) -> Result<(), TraceError> {
     let header = child(doc, "header", "trace")?;
     let missing_ego = !header.contains_key("ego");
