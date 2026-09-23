@@ -4,6 +4,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import * as stylex from "@stylexjs/stylex";
 import type { RefObject } from "react";
+import type { SwitcherInlineView } from "@/app/lib/dashboard-nav";
 import { AppSwitcherPanel } from "@/app/components/AppSwitcherPanel";
 import { SkyCloudBackdrop } from "@simforge-oss/studio-ui/components/SkyCloudBackdrop";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
@@ -20,11 +21,16 @@ export function AppSwitcherOverlay({
   onOpenChange,
   pathname,
   triggerRef,
+  initialView = null,
+  firstRun = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   pathname: string;
   triggerRef: RefObject<HTMLButtonElement | null>;
+  /** Open on an inline view instead of the app tabs (a first sign-in opens Map Downloads). */
+  initialView?: SwitcherInlineView | null;
+  firstRun?: boolean;
 }) {
   const close = () => onOpenChange(false);
 
@@ -59,7 +65,7 @@ export function AppSwitcherOverlay({
             <X {...stylex.props(styles.closeIcon)} aria-hidden="true" />
           </DialogPrimitive.Close>
 
-          <AppSwitcherPanel pathname={pathname} onNavigate={close} />
+          <AppSwitcherPanel pathname={pathname} initialView={initialView} firstRun={firstRun} onNavigate={close} />
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

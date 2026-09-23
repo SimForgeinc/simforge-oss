@@ -9,7 +9,7 @@ export const styles = stylex.create({
   clouds: { pointerEvents: "none", position: "absolute", left: "-8%", right: "-8%", top: "-100%", bottom: "-100%" },
   // Respect desktop window controls without reserving space in a browser.
   row: { position: "relative", zIndex: layers.raised, display: "flex", height: "100%", minWidth: 0, marginLeft: "env(titlebar-area-x, 0px)", width: "env(titlebar-area-width, 100%)", alignItems: "center", gap: space.s3, paddingInline: space.s3 },
-  trigger: { [logoTransform.value]: { default: "none", ":hover": "scale(1.18)", ":focus-visible": "scale(1.18)" }, display: "flex", width: "44px", height: "44px", flexShrink: 0, alignItems: "center", justifyContent: "center", color: colors.accent, backgroundColor: "transparent", outlineColor: colors.ring },
+  trigger: { [logoTransform.value]: { default: "none", ":hover": "scale(1.18)", ":focus-visible": "scale(1.18)" }, position: "relative", display: "flex", width: "44px", height: "44px", flexShrink: 0, alignItems: "center", justifyContent: "center", color: colors.accent, backgroundColor: "transparent", outlineColor: colors.ring },
   logo: { display: "flex", alignItems: "center", justifyContent: "center", transform: logoTransform.value, transitionProperty: { default: "transform", [layout.reducedMotion]: "none" }, transitionDuration: motion.durBase },
   content: { display: "flex", minWidth: 0, flex: 1, alignItems: "center", gap: space.s2 },
   titleRow: { display: "flex", minWidth: 0, alignItems: "baseline", gap: space.s2, overflow: "hidden", whiteSpace: "nowrap", color: colors.ink },

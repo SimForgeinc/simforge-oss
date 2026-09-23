@@ -10,6 +10,7 @@ import { availableStorageBytes as estimateAvailableStorageBytes } from "./bounde
 import {
   MAP_ASSET_CACHE_DEFAULT_BUDGET_BYTES,
   MapAssetGateway,
+  maxSelectableMapCacheCeiling,
   type MapAssetDownloadUrlResolver,
 } from "./map-asset-gateway";
 
@@ -37,10 +38,37 @@ const CONTENT_PREFIX = "/api/simforge/map-cache/sha256/";
 /** The v4 layout kept one unbounded bucket and a combined index. */
 const LEGACY_CACHE_NAMES = ["simforge-map-assets-v4"] as const;
 const LEGACY_INDEX_KEYS = ["simforge-map-assets-index-v4"] as const;
-/** An explicit library install may use this share of the origin's quota. */
-const BULK_INSTALL_QUOTA_SHARE = 0.8;
+/** The person's chosen cache size: a byte budget, or "max" (the quota share). */
+const BUDGET_SETTING_KEY = "simforge.map-cache.budget.v1";
 
 export { MAP_ASSET_CACHE_DEFAULT_BUDGET_BYTES };
+
+/**
+ * The cache size a person chose. `max` follows the quota share (and so grows
+ * when a persistence grant raises the quota); `bytes` is a fixed preset. The
+ * enforced ceiling is always clamped to the quota share either way.
+ */
+export type MapAssetCacheBudgetSetting = { kind: "bytes"; bytes: number } | { kind: "max" };
+
+const MAX_BUDGET_SENTINEL = Number.MAX_SAFE_INTEGER;
+
+export function readMapAssetCacheBudgetSetting(storage?: Pick<Storage, "getItem"> | null): MapAssetCacheBudgetSetting {
+  try {
+    const source = storage === undefined ? (typeof window === "undefined" ? null : window.localStorage) : storage;
+    const parsed = JSON.parse(source?.getItem(BUDGET_SETTING_KEY) ?? "null") as Partial<{ kind: string; bytes: number }> | null;
+    if (parsed?.kind === "max") return { kind: "max" };
+    if (parsed?.kind === "bytes" && Number.isSafeInteger(parsed.bytes) && parsed.bytes! > 0) {
+      return { kind: "bytes", bytes: parsed.bytes! };
+    }
+  } catch {
+    // Unreadable or malformed: the default applies.
+  }
+  return { kind: "bytes", bytes: MAP_ASSET_CACHE_DEFAULT_BUDGET_BYTES };
+}
+
+function configuredBudgetFor(setting: MapAssetCacheBudgetSetting): number {
+  return setting.kind === "max" ? MAX_BUDGET_SENTINEL : setting.bytes;
+}
 
 export type MapAssetCacheBackend = "browser" | "filesystem";
 
@@ -60,6 +88,12 @@ export type MapAssetCacheStatus =
       mapBytes: number;
       /** Ceiling on map bytes; least recently used entries go past it. */
       budgetBytes: number;
+      /** The size the person chose (or the default), before the quota clamp. */
+      budgetSetting: MapAssetCacheBudgetSetting;
+      /** The origin's whole storage quota, as the browser reports it; null when unknown. */
+      quotaBytes: number | null;
+      /** The largest ceiling that may be chosen (the quota share); null when the quota is unknown. */
+      maxBudgetBytes: number | null;
       entryCount: number;
       /**
        * Why this browser cannot cache map bytes at all, or null when it can.
@@ -138,7 +172,7 @@ function browserCache(): MapAssetGateway | null {
       indexKey: INDEX_KEY,
       aliasKey: ALIAS_KEY,
       legacyCacheNames: LEGACY_CACHE_NAMES,
-      budgetBytes: MAP_ASSET_CACHE_DEFAULT_BUDGET_BYTES,
+      budgetBytes: configuredBudgetFor(readMapAssetCacheBudgetSetting()),
       contentPrefix: CONTENT_PREFIX,
       origin: window.location.origin,
       caches: liveCacheStorage,
@@ -338,23 +372,56 @@ export function installMapAssetFetchGateway() {
 }
 
 /**
- * Explicit bulk install (local library preparation): ask for eviction-safe
- * storage and let the budget grow to the room the origin actually has, so the
- * install does not evict its own earlier members. Browser backend only; disk
- * storage is durable by construction.
+ * Explicit bulk install: ask for eviction-safe storage, which can also raise
+ * the origin quota (Firefox), and let the ceiling follow the new quota. The
+ * ceiling stays the person's chosen size clamped to the quota share: a bulk
+ * install never raises it on its own. Browser backend only; disk storage is
+ * durable by construction. Call it only from a control the person pressed.
  */
 export async function prepareMapAssetCache() {
   if (desktopMapCacheBridge()) return true;
   const active = browserCache();
-  const estimate = await navigator.storage?.estimate?.().catch(() => undefined);
-  if (active && estimate?.quota) {
-    active.setBudgetBytes(Math.max(active.budgetBytes, Math.floor(estimate.quota * BULK_INSTALL_QUOTA_SHARE)));
-  }
+  if (active) return active.requestPersistentStorage();
   if (navigator.storage?.persist) {
     const alreadyPersistent = await navigator.storage.persisted?.().catch(() => false) ?? false;
     return alreadyPersistent || await navigator.storage.persist().catch(() => false);
   }
   return false;
+}
+
+/**
+ * Choose the cache size. Persists the choice for this browser and applies it
+ * now; the enforced ceiling is still clamped to the quota share. Lowering it
+ * evicts on the next store, not immediately.
+ */
+export function setMapAssetCacheBudget(setting: MapAssetCacheBudgetSetting): void {
+  try {
+    window.localStorage.setItem(BUDGET_SETTING_KEY, JSON.stringify(setting));
+  } catch {
+    // The choice still applies to this page.
+  }
+  browserCache()?.setBudgetBytes(configuredBudgetFor(setting));
+}
+
+/**
+ * Forget exactly these content digests (an explicit per-map delete). Browser
+ * backend only; returns the bytes freed.
+ */
+export async function deleteMapAssetDigests(digests: readonly string[]): Promise<number> {
+  const bridge = desktopMapCacheBridge();
+  if (bridge) throw new Error("Deleting one map from the desktop cache is done from the map library.");
+  return await browserCache()?.deleteDigests(digests) ?? 0;
+}
+
+/**
+ * Whether the browser cache's byte index holds `sha256`, without a Cache
+ * Storage round trip. `null` when there is no browser cache to ask (the
+ * desktop backend, an insecure page), so a caller falls back to
+ * {@link hasCachedMapAsset}.
+ */
+export function mapAssetDigestResident(sha256: string, url?: string): boolean | null {
+  const active = browserCache();
+  return active ? active.holdsDigest(sha256, url) : null;
 }
 
 /** Explicit user action: discard every cached map asset of the active backend. */
@@ -383,6 +450,7 @@ export async function mapAssetCacheStatus(): Promise<MapAssetCacheStatus> {
   const originFree = status?.quotaBytes != null
     ? Math.max(0, status.quotaBytes - (status.originUsageBytes ?? 0))
     : null;
+  const budgetSetting = readMapAssetCacheBudgetSetting();
   const budgetBytes = status?.budgetBytes ?? MAP_ASSET_CACHE_DEFAULT_BUDGET_BYTES;
   const mapBytes = status?.usedBytes ?? 0;
   const headroom = Math.max(0, budgetBytes - mapBytes);
@@ -394,6 +462,9 @@ export async function mapAssetCacheStatus(): Promise<MapAssetCacheStatus> {
     availableBytes: unavailable ? null : originFree === null ? headroom : Math.min(originFree, headroom),
     mapBytes,
     budgetBytes,
+    budgetSetting,
+    quotaBytes: status?.quotaBytes ?? null,
+    maxBudgetBytes: maxSelectableMapCacheCeiling(status?.quotaBytes),
     entryCount: status?.entryCount ?? 0,
     unavailable,
   };

@@ -4,8 +4,10 @@ import Link from "next/link";
 import * as stylex from "@stylexjs/stylex";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
+import { MapDownloadIndicator } from "@simforge-oss/studio-ui/map-downloads";
 import { AppSwitcherArt } from "@/app/components/AppSwitcherArt";
-import { RenderSettingsSurface } from "@/app/host";
+import { MapDownloadsSurface, RenderSettingsSurface } from "@/app/host";
+import { useMapDownloadsFirstRun } from "@/app/lib/map-downloads-first-run";
 import { SwitcherAccount } from "@/app/components/SwitcherAccount";
 import { useDashboardNav, type NavItem, type SwitcherInlineView } from "@/app/lib/dashboard-nav";
 import { styles } from "@/app/components/AppSwitcherOverlay.stylex";
@@ -19,38 +21,69 @@ import { focus, hairline, typography } from "@simforge-oss/studio-ui/stylex/reci
  * `/dashboard/apps`: choosing what to do costs nothing, whereas landing inside
  * an app means waiting for a map.
  *
- * A utility marked `inlineView` (Render Settings) does not navigate: the tabs
- * are replaced by that view in the same column, with a way back. `/dashboard/
- * apps?view=render-settings` opens the page already on it.
+ * A utility marked `inlineView` (Render Settings, Map Downloads) does not
+ * navigate: the tabs are replaced by that view in the same column, with a way
+ * back. `/dashboard/apps?view=render-settings` (or `map-downloads`) opens the
+ * page already on it.
+ *
+ * A person's first sign-in opens it on Map Downloads, once: the record is
+ * written the moment the view is shown (`useMapDownloadsFirstRun`).
  */
 export function AppSwitcherPanel({
   pathname,
   initialView = null,
+  firstRun = false,
   onNavigate,
 }: {
   pathname: string;
   initialView?: SwitcherInlineView | null;
+  /** The caller opened the switcher for a first sign-in (the top-bar overlay does). */
+  firstRun?: boolean;
   /** Called when a tab or utility is chosen; the overlay closes itself here. */
   onNavigate: () => void;
 }) {
   const { apps, utilities, accountItems, capabilities } = useDashboardNav(pathname);
   const [view, setView] = useState<SwitcherInlineView | null>(initialView);
+  const [welcome, setWelcome] = useState(firstRun);
   useEffect(() => setView(initialView), [initialView]);
+  useEffect(() => setWelcome(firstRun), [firstRun]);
+  const firstSignIn = useMapDownloadsFirstRun(capabilities);
+  useEffect(() => {
+    if (!firstSignIn.pending || initialView !== null || firstRun) return;
+    setView("map-downloads");
+    setWelcome(true);
+    firstSignIn.markSeen();
+  }, [firstSignIn.pending, firstSignIn.markSeen, initialView, firstRun]);
+  const close = () => {
+    setView(null);
+    setWelcome(false);
+  };
 
   return (
-    <div {...stylex.props(styles.container)}>
-      {view === "render-settings" ? (
-        <section {...stylex.props(styles.inlineView)} aria-label="Render Settings" data-testid="app-switcher-inline-view" data-view={view}>
+    <div {...stylex.props(styles.container, view === "map-downloads" && styles.containerFill)}>
+      {view !== null ? (
+        <section
+          {...stylex.props(styles.inlineView)}
+          aria-label={view === "render-settings" ? "Render Settings" : "Map Downloads"}
+          data-testid="app-switcher-inline-view"
+          data-view={view}
+        >
           <div {...stylex.props(styles.inlineHead)}>
-            <button {...stylex.props([typography.caps, focus.ring, hairline.all, styles.inlineBack])} type="button" onClick={() => setView(null)}>
+            <button {...stylex.props([typography.caps, focus.ring, hairline.all, styles.inlineBack])} type="button" onClick={close}>
               <ArrowLeft {...stylex.props(styles.inlineBackIcon)} aria-hidden="true" />
               All apps
             </button>
-            <button {...stylex.props([typography.caps, focus.ring, hairline.all, styles.inlineBack])} type="button" onClick={() => setView(null)}>
-              Done
+            <button {...stylex.props([typography.caps, focus.ring, hairline.all, styles.inlineBack])} type="button" onClick={close} data-testid="app-switcher-inline-done">
+              {welcome ? "Not now" : "Done"}
             </button>
           </div>
-          <RenderSettingsSurface onDone={() => setView(null)} />
+          <div {...stylex.props(styles.inlineBody)}>
+            {view === "render-settings" ? (
+              <RenderSettingsSurface onDone={close} />
+            ) : (
+              <MapDownloadsSurface onDone={close} firstRun={welcome} />
+            )}
+          </div>
         </section>
       ) : (
         <nav
@@ -179,9 +212,10 @@ function UtilityLink({
   if (item.inlineView) {
     const view = item.inlineView;
     return (
-      <button aria-pressed={active} {...utilityProps} type="button" onClick={() => onInline(view)}>
+      <button aria-pressed={active} {...utilityProps} type="button" onClick={() => onInline(view)} data-testid={`app-switcher-utility-${view}`}>
         <Icon {...stylex.props(styles.utilityIcon)} aria-hidden="true" />
         <span>{item.label}</span>
+        {view === "map-downloads" ? <MapDownloadIndicator inline /> : null}
       </button>
     );
   }

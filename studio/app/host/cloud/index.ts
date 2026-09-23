@@ -1,6 +1,6 @@
-import type { HostSurface, MapInstallPanelProps, RenderSettingsSurfaceType, WorkspaceChipProps } from "@/app/host/contract";
+import type { HostSurface, MapDownloadsSurfaceType, MapInstallPanelProps, RenderSettingsSurfaceType, WorkspaceChipProps } from "@/app/host/contract";
 import { RenderSettings } from "./RenderSettings";
-import { MapLibrarySurface as MapLibrary } from "./MapLibrarySurface";
+import { MapDownloads } from "./MapDownloads";
 import { WorkspaceChip as CloudWorkspaceChip } from "./WorkspaceChip";
 import type { ReactNode } from "react";
 
@@ -15,6 +15,10 @@ import type { ReactNode } from "react";
  * `notFound()` and their modules never enter this build, because this barrel
  * never imports `../local/*`.
  *
+ * Map Downloads survives the same way: there is no disk to install closures
+ * on, but there is this browser's map cache, so it downloads maps there at the
+ * chosen render setting instead.
+ *
  * Render Settings survives with its meaning changed: choosing a graphics level
  * is a preference of THIS BROWSER, not a profile prepared on a machine, so the
  * cloud version keeps the quality choice and the browser's own cache readout
@@ -23,8 +27,11 @@ import type { ReactNode } from "react";
 
 export const RenderSettingsSurface: RenderSettingsSurfaceType = RenderSettings;
 export const SettingsSurface: HostSurface = null;
-/** The catalog survives; residency on a disk does not. See the module. */
-export const MapLibrarySurface: HostSurface = MapLibrary;
+/**
+ * The catalog survives, and gains a residency of its own: this browser's map
+ * cache. Shown inline in the app switcher; see the module.
+ */
+export const MapDownloadsSurface: MapDownloadsSurfaceType = MapDownloads;
 export const ModelsSurface: HostSurface = null;
 export const SimCloudSurface: HostSurface = null;
 export const OnboardingGateSurface: HostSurface<{ children: ReactNode }> = null;

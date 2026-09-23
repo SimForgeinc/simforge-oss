@@ -1,7 +1,7 @@
-import type { HostSurface, MapInstallPanelProps, RenderSettingsSurfaceType, WorkspaceChipProps } from "@/app/host/contract";
+import type { HostSurface, MapDownloadsSurfaceType, MapInstallPanelProps, RenderSettingsSurfaceType, WorkspaceChipProps } from "@/app/host/contract";
 import { RenderSettings } from "./RenderSettings";
 import { SettingsSurface as Settings } from "./SettingsSurface";
-import { MapLibrarySurface as MapLibrary } from "./MapLibrarySurface";
+import { MapDownloads } from "./MapDownloads";
 import { ModelsSurface as Models } from "./ModelsSurface";
 import { SimCloudSurface as SimCloud } from "./SimCloudSurface";
 import { OnboardingWelcomeSurface as OnboardingWelcome } from "./OnboardingWelcomeSurface";
@@ -26,7 +26,8 @@ import { OnboardingGate } from "./OnboardingGate";
 
 export const RenderSettingsSurface: RenderSettingsSurfaceType = RenderSettings;
 export const SettingsSurface: HostSurface = Settings;
-export const MapLibrarySurface: HostSurface = MapLibrary;
+/** The map library, shown inline in the app switcher as Map Downloads. */
+export const MapDownloadsSurface: MapDownloadsSurfaceType = MapDownloads;
 export const ModelsSurface: HostSurface = Models;
 export const SimCloudSurface: HostSurface = SimCloud;
 export const OnboardingGateSurface: HostSurface<{ children: ReactNode }> = OnboardingGate;

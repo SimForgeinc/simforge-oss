@@ -103,7 +103,7 @@ export type ProfileMapCacheResult = {
   completedMapVersionIds: string[];
 };
 
-async function mapWithConcurrency<T, R>(
+export async function mapWithConcurrency<T, R>(
   values: readonly T[],
   concurrency: number,
   worker: (value: T, index: number) => Promise<R>,
@@ -149,7 +149,7 @@ function batchDownloadRequest(asset: ProfileMapAsset) {
   };
 }
 
-async function resolveBatchDownloadUrls(
+export async function resolveBatchDownloadUrls(
   assets: readonly ProfileMapAsset[],
   signal: AbortSignal,
 ): Promise<Map<string, string>> {
@@ -195,12 +195,12 @@ async function resolveBatchDownloadUrls(
   }
 }
 
-function attemptTimeoutMs(bytes: number | null) {
+export function attemptTimeoutMs(bytes: number | null) {
   return PROFILE_MAP_ASSET_ATTEMPT_TIMEOUT_MS
     + Math.ceil(((bytes ?? 0) / MIN_ASSET_TRANSFER_BYTES_PER_SECOND) * 1000);
 }
 
-async function withAssetAttemptDeadline<T>(
+export async function withAssetAttemptDeadline<T>(
   signal: AbortSignal,
   timeoutMs: number,
   worker: (attemptSignal: AbortSignal) => Promise<T>,
