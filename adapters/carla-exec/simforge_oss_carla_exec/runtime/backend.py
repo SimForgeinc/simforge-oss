@@ -577,10 +577,34 @@ class _OwnedSignalSnapshot:
     red_time: float
 
 
+#: A ``uniscenario.asset-catalog/v1`` manifest seeded by the control plane
+#: (studio/scripts/seed.ts) carries no ``catalogVersionId``: its version is
+#: content-addressed as ``catalog_local_<sha256 of the manifest bytes>``. Only
+#: that exact derivation is accepted; any other unversioned manifest is refused.
+LOCAL_CATALOG_VERSION_PREFIX = "catalog_local_"
+
+
+def asset_catalog_version_id(manifest: Any, manifest_sha256: str | None) -> str | None:
+    """The catalog version a manifest declares, or its content-addressed local id."""
+    if not isinstance(manifest, Mapping):
+        return None
+    declared = manifest.get("catalogVersionId")
+    if isinstance(declared, str) and declared:
+        return declared
+    if (
+        "catalogVersionId" not in manifest
+        and manifest.get("contractVersion") == "uniscenario.asset-catalog/v1"
+        and _is_sha256(manifest_sha256)
+    ):
+        return LOCAL_CATALOG_VERSION_PREFIX + str(manifest_sha256)
+    return None
+
+
 def runtime_asset_bindings(
     manifest: Any,
     *,
     expected_catalog_version_id: str,
+    manifest_sha256: str | None = None,
     abort: Callable[[], None] | None = None,
 ) -> dict[str, Mapping[str, object]]:
     """Validate a signed asset catalog and index CARLA bindings plus fallback semantics."""
@@ -590,7 +614,7 @@ def runtime_asset_bindings(
         raise ContractError("asset catalog manifest must be a JSON object")
     if manifest.get("contractVersion") not in {ASSET_CATALOG_SCHEMA, "uniscenario.asset-catalog/v1"}:
         raise ContractError(f"asset catalog manifest contractVersion must equal {ASSET_CATALOG_SCHEMA}")
-    if manifest.get("catalogVersionId") != expected_catalog_version_id:
+    if asset_catalog_version_id(manifest, manifest_sha256) != expected_catalog_version_id:
         raise ContractError("asset catalog manifest version does not match the execution package")
     entries = manifest.get("entries")
     if not isinstance(entries, list):

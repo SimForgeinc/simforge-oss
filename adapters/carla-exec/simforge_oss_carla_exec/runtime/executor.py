@@ -1585,6 +1585,7 @@ def execute_lease(
     catalog = runtime_asset_bindings(
         catalog_manifest,
         expected_catalog_version_id=package.asset_catalog.catalog_version_id,
+        manifest_sha256=hashlib.sha256(catalog_bytes).hexdigest(),
         abort=lambda: check_abort("index_asset_catalog"),
     )
     for catalog_id, binding in (runtime_asset_overrides or {}).items():
