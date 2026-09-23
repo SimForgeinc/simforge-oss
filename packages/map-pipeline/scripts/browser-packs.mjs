@@ -103,14 +103,16 @@ function boxDistance(bounds, point) {
 
 /**
  * Streaming order of scene files: the road layer, then city cells by
- * distance from the focus, then vegetation cells by distance. Ties break on
+ * distance from the focus, then vegetation cells, coarsest level first. Ties break on
  * the file name so the order, and therefore every chunk digest, is stable.
  */
 export function streamingOrder(manifest) {
   const focus = initialFocus(manifest);
+  // Coarse levels first everywhere, then each finer level nearest-first: a
+  // cell's coarse vegetation can be on screen before any full plant is read.
   const byDistance = (tiles) => tiles
     .flatMap((tile) => (tile.lods ?? []).map((lod) => ({ file: lod.file, distance: boxDistance(tile.bounds, focus), level: lod.level ?? 0 })))
-    .sort((a, b) => a.distance - b.distance || a.level - b.level || a.file.localeCompare(b.file))
+    .sort((a, b) => b.level - a.level || a.distance - b.distance || a.file.localeCompare(b.file))
     .map((entry) => entry.file);
   return {
     focus,
