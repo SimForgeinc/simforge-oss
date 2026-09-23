@@ -555,6 +555,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         const tickDetails: Record<string, unknown>[] = [];
         type TickItem = { readonly frame: NativeFrameRecord; readonly payload: Buffer };
         const consumeTick = async (tick: number, items: readonly TickItem[], timing: Record<string, number>): Promise<void> => {
+          // Start after the tick loop has issued its next request.
+          await Promise.resolve();
           const writes: Promise<void>[] = [];
           for (const { frame, payload } of items) {
             const encoder = encoders.get(frame.sensorId)!;
