@@ -39,7 +39,8 @@ pub struct SceneSpec {
     /// Vegetation prototype GLBs with sibling instance sidecars.
     #[serde(default)]
     pub veg_glbs: Vec<String>,
-    #[serde(default)]
+    /// Required: an absent lighting block would render the calibration
+    /// defaults (a fixed dawn), not the scene's.
     pub lighting: Lighting,
     pub profile: Profile,
     /// Advanced cinematic settings; ignored by sensor cameras.
@@ -789,17 +790,17 @@ impl ServiceState {
 /// left the metering camera to the service and the heading, field or aspect
 /// moved since the last reading. An in-place advance (see
 /// `SceneApp::advance_lighting`): ~25 ms by day, and the TAA history is kept.
-fn auto_meter(state: &mut ServiceState, cam: &ServiceCamera, eye: &[f32; 3], target: &[f32; 3]) {
+fn auto_meter(state: &mut ServiceState, cam: &ServiceCamera, eye: &[f32; 3], target: &[f32; 3]) -> Result<(), String> {
     if !state.auto_meter
         || !state.lighting_authored.atmosphere
         || state.lighting_authored.meter_view.is_some()
     {
-        return;
+        return Ok(());
     }
     let forward = [target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]];
     let len = (forward[0] * forward[0] + forward[1] * forward[1] + forward[2] * forward[2]).sqrt();
     if len <= 1.0e-6 {
-        return;
+        return Err(format!("[native_camera_config_invalid] camera {} eye and target coincide", cam.sensor_id));
     }
     let view = render_core::atmosphere::MeterView {
         forward: [forward[0] / len, forward[1] / len, forward[2] / len],
@@ -815,18 +816,20 @@ fn auto_meter(state: &mut ServiceState, cam: &ServiceCamera, eye: &[f32; 3], tar
             && (previous.fov_y_deg - view.fov_y_deg).abs() < 1.0e-3
             && (previous.aspect - view.aspect).abs() < 1.0e-3
         {
-            return;
+            return Ok(());
         }
     }
     let mut lighting = state.lighting_authored.clone();
     lighting.meter_view = Some(view);
-    match state.app.advance_lighting(&lighting, state.profile_config) {
-        Ok(_) => {
-            state.auto_meter_view = Some(view);
-            state.cache.clear();
-        }
-        Err(error) => eprintln!("auto meter: {error:#}"),
-    }
+    // A failed re-meter would leave this view at another heading's
+    // exposure: the tick fails instead.
+    state
+        .app
+        .advance_lighting(&lighting, state.profile_config)
+        .map_err(|error| format!("[native_auto_meter_failed] camera {}: {error:#}", cam.sensor_id))?;
+    state.auto_meter_view = Some(view);
+    state.cache.clear();
+    Ok(())
 }
 
 /// Readiness record written to `--ready-file` once the endpoint is bound:
@@ -1826,7 +1829,7 @@ fn sync_rig(state: &mut ServiceState, cameras: &[ServiceCamera]) -> Result<(), S
             .set_pose(&cam.sensor_id, &eye, &target)
             .map_err(|error| format!("set pose: {error:#}"))?;
         if index == 0 {
-            auto_meter(state, cam, &eye, &target);
+            auto_meter(state, cam, &eye, &target)?;
         }
     }
     Ok(())
@@ -2051,7 +2054,11 @@ fn render_tick(
     }
     let server_ms = t0.elapsed().as_secs_f64() * 1000.0;
     if let Some(dir) = export_dir {
-        std::fs::create_dir_all(&dir).ok();
+        if let Err(error) = std::fs::create_dir_all(&dir) {
+            return WireResponse::error(i, format!("export_dir {dir}: {error}"));
+        }
+        // Debug PNG mirror of frames already published in the ring (the
+        // Python `render(export_dir=...)` aid); write errors are logged.
         std::thread::spawn(move || {
             async_export_pngs(&dir, tick_id, &export_payloads);
         });
@@ -2075,6 +2082,11 @@ fn encode_jpeg_op(state: &mut ServiceState, i: u64, items: Vec<JpegItem>) -> Wir
     let mut tick_id = 0;
     for item in &items {
         let key = format!("{}:{}", item.sensor_id, item.pass);
+        if item.pass != "rgb" {
+            return WireResponse::error(i, format!(
+                "[native_jpeg_pass_unsupported] {key}: only rgb passes encode as JPEG (id/depth/semantic bytes are not colour)"
+            ));
+        }
         let Some(cached) = state.cache.get(&key) else {
             return WireResponse::error(i, format!("no cached pass {key} (render first)"));
         };
