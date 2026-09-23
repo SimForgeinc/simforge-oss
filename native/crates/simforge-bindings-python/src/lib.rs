@@ -366,6 +366,18 @@ impl PyMapBundle {
             inner: MapAsset::from_sources(sources_json, topology).py()?,
         })
     }
+    /// A copy of this bundle with the map's ground surface
+    /// (``derived/ground/ground-mesh.bin``) attached: worlds built from it
+    /// ground every body (engine 0.11 contact).
+    fn with_ground(&self, ground_mesh: &[u8]) -> PyResult<Self> {
+        let mut inner = self.inner.clone();
+        inner.attach_ground(ground_mesh).py()?;
+        Ok(Self { inner })
+    }
+    #[getter]
+    fn ground_digest(&self) -> Option<String> {
+        self.inner.ground_digest().map(str::to_owned)
+    }
     fn topology_json(&self) -> PyResult<String> {
         self.inner.topology_json().py()
     }
@@ -1568,6 +1580,11 @@ impl PyTrace {
     }
     fn digest(&self) -> PyResult<String> {
         self.inner.digest().py()
+    }
+    /// `simforge.trace-upgrade/v1` JSON when the stored trace was an older
+    /// format upgraded in memory; `None` for a current-format trace.
+    fn upgrade_json(&self) -> PyResult<Option<String>> {
+        self.inner.upgrade_json().py()
     }
     fn to_json(&self) -> PyResult<String> {
         self.inner.to_json().py()

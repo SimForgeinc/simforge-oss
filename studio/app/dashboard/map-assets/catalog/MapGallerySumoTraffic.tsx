@@ -131,5 +131,7 @@ export function gallerySumoMapEntry(map: ScenarioMapDescriptorDto): MapEntry {
       ? asset("derived/sumo/sumo-network-manifest.json")
       : null,
     ambientTurnVerdicts: map.ambientTurnVerdicts ? asset("derived/ambient/turn-verdicts.json.gz") : null,
+    ground: map.ground ? asset("derived/ground/ground-mesh.bin") : null,
+    groundStatus: map.ground ?? null,
   };
 }

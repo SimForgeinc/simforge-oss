@@ -120,6 +120,9 @@ export function analyzeEsminiCompatibility(
 
 /** Known 1.4-only trajectory additions are removed structurally, never relabelled. */
 function lowerXml14OutputTo13(xml: string): string {
+  if (xml.split('revMajor="1" revMinor="4"').length !== 2) {
+    throw new AsamExportError([{ code: 'unexpected_source_version', path: 'FileHeader', reason: 'the 1.3 lowering accepts exactly one ASAM OpenSCENARIO XML 1.4 FileHeader' }]);
+  }
   return xml
     .replace('revMajor="1" revMinor="4"', 'revMajor="1" revMinor="3"')
     .replaceAll('vehicleCategory="other"', 'vehicleCategory="car"')

@@ -521,37 +521,51 @@ export function resolveScenario(
   return { input, actors, interactions, actorNames, interactionNames, warnings };
 }
 
-export function assertDefaultControllerRules(
-  input: SimScenarioInput,
-  allowCollisionAvoidance: boolean,
-): void {
+/**
+ * OpenSCENARIO's default controller keeps lane and current speed and reacts to
+ * nothing (ASAM OSC XML 1.4.0 §7.4.1.1). A SimForge actor exports with the
+ * same meaning only when it does the same:
+ *
+ * - its free-flow cruise target is its initial speed (an omitted
+ *   `cruiseSpeedMps` cruises at the lane limit, a different motion from t=0):
+ *   otherwise the export is refused;
+ * - its reactive rules (signals, yielding, collision avoidance) are off:
+ *   otherwise the export proceeds with a `reactive_controller_not_portable`
+ *   warning, because an OpenSCENARIO player will not reproduce the reactions
+ *   whenever they would have fired.
+ *
+ * `aggression` and `speedFactor` only act through those reactions and the
+ * cruise target, so they need no separate check.
+ */
+export function assertDefaultControllerRules(input: SimScenarioInput): AsamExportWarning[] {
   const issues: AsamExportIssue[] = [];
+  const warnings: AsamExportWarning[] = [];
   for (const [i, actor] of input.actors.entries()) {
+    if (actor.static) continue;
     const rules = actor.behavior.rules;
-    const changed: string[] = [];
-    if (!rules.obeySignals) changed.push('obeySignals');
-    if (!rules.yieldToVehicles) changed.push('yieldToVehicles');
-    if (!rules.yieldToPedestrians) changed.push('yieldToPedestrians');
-    if (rules.aggression !== 0.5) changed.push('aggression');
-    if (rules.speedFactor !== 1) changed.push('speedFactor');
-    if (!allowCollisionAvoidance && !rules.collisionAvoidance) changed.push('collisionAvoidance');
-    if (changed.length > 0) {
-      issues.push({
-        code: 'unsupported_controller_rules',
+    const reactive: string[] = [];
+    if (rules.obeySignals) reactive.push('obeySignals');
+    if (rules.yieldToVehicles) reactive.push('yieldToVehicles');
+    if (rules.yieldToPedestrians) reactive.push('yieldToPedestrians');
+    if (rules.collisionAvoidance) reactive.push('collisionAvoidance');
+    if (reactive.length > 0) {
+      warnings.push({
+        code: 'reactive_controller_not_portable',
         path: `actors.${i}.behavior.rules`,
-        reason: `no standard behavior preserves non-default ${changed.join(', ')}`,
+        reason: `${reactive.join(', ')} ${reactive.length === 1 ? 'is' : 'are'} SimForge controller reactions; the OpenSCENARIO default controller keeps lane and speed and will not reproduce them`,
       });
     }
-    if (
-      actor.behavior.cruiseSpeedMps !== undefined &&
-      Math.abs(actor.behavior.cruiseSpeedMps - actor.initial.speedMps) > 1e-9
-    ) {
+    const cruise = actor.behavior.cruiseSpeedMps;
+    if (cruise === undefined || Math.abs(cruise - actor.initial.speedMps) > 1e-9) {
       issues.push({
         code: 'unsupported_cruise_controller',
         path: `actors.${i}.behavior.cruiseSpeedMps`,
-        reason: 'a cruise target different from initial speed needs an implementation-specific controller',
+        reason: cruise === undefined
+          ? 'an omitted cruise target makes the actor cruise at the lane speed limit; the OpenSCENARIO default controller keeps the initial speed'
+          : 'a cruise target different from the initial speed needs an implementation-specific controller',
       });
     }
   }
   if (issues.length > 0) throw new AsamExportError(issues);
+  return warnings;
 }

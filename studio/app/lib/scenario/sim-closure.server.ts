@@ -4,7 +4,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import {
+  GROUND_MESH_MEMBER,
   loadSimulationMapClosure,
+  simulationMemberSources,
   stagedSumoRuntime,
   SUMO_RUNTIME_OBJECT_PREFIX,
   type SimulationMapClosure,
@@ -46,19 +48,23 @@ export type SimulationMapIdentity = {
   browserClosureSha256: string;
   /** `map_versions.sumo_network_sha256`: the SUMO network a SUMO document's traffic runs on. */
   sumoNetworkSha256: string | null;
+  /** The published closure carries `derived/ground/ground-mesh.bin` (engine 0.11 ground contact). */
+  hasGround: boolean;
 };
 
 /** The immutable identity a closure is built from; readable without loading the closure. */
 export async function readSimulationMapIdentity(mapVersionId: string): Promise<SimulationMapIdentity> {
-  const row = await queryOne<{ id: string; source_map_asset_id: string | null; closure_sha256: string | null; sumo_network_sha256: string | null }>(
-    `SELECT mv.id, mv.source_map_asset_id, bs.closure_sha256, mv.sumo_network_sha256
+  const row = await queryOne<{ id: string; source_map_asset_id: string | null; closure_sha256: string | null; sumo_network_sha256: string | null; has_ground: boolean | null }>(
+    `SELECT mv.id, mv.source_map_asset_id, bs.closure_sha256, mv.sumo_network_sha256,
+            EXISTS (SELECT 1 FROM simforge.browser_asset_members gm
+                     WHERE gm.asset_set_id = bs.id AND gm.relative_path = :ground_member) AS has_ground
        FROM simforge.map_versions mv
        LEFT JOIN simforge.browser_asset_sets bs
          ON bs.id = mv.browser_asset_set_id AND bs.map_version_id = mv.id
         AND bs.asset_set_state = 'available'
       WHERE mv.id = :map_version_id
       LIMIT 1`,
-    { map_version_id: mapVersionId },
+    { map_version_id: mapVersionId, ground_member: GROUND_MESH_MEMBER },
   );
   if (!row?.source_map_asset_id) {
     throw new SimulationClosureUnavailableError("map_version_missing", `map version ${mapVersionId} is not published`);
@@ -74,6 +80,7 @@ export async function readSimulationMapIdentity(mapVersionId: string): Promise<S
     mapAssetId: row.source_map_asset_id,
     browserClosureSha256: row.closure_sha256,
     sumoNetworkSha256: row.sumo_network_sha256,
+    hasGround: row.has_ground === true,
   };
 }
 
@@ -94,16 +101,8 @@ export function mapMemberFetcher(origin: string, serve = serveLocalMapAsset): ty
   }) as typeof fetch;
 }
 
-function memberSources(mapVersionId: string) {
-  const root = `/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets`;
-  return {
-    manifest: `${root}/3d/manifest.json`,
-    topology: `${root}/topology-index.json.gz`,
-    derivedTopology: `${root}/derived/topology-derived.json.gz`,
-    locations: `${root}/derived/locations.json.gz`,
-    xodr: `${root}/map.xodr`,
-    signals: `${root}/signals.geojson.gz`,
-  };
+function memberSources(mapVersionId: string, ground: boolean) {
+  return simulationMemberSources(`/api/simforge/maps/${encodeURIComponent(mapVersionId)}/browser-assets`, { ground });
 }
 
 export async function loadServerSimulationClosure(identity: SimulationMapIdentity): Promise<SimulationMapClosure> {
@@ -114,7 +113,7 @@ export async function loadServerSimulationClosure(identity: SimulationMapIdentit
     mapVersionId: identity.mapVersionId,
     mapAssetId: identity.mapAssetId,
     browserClosureSha256: identity.browserClosureSha256,
-    sources: memberSources(identity.mapVersionId),
+    sources: memberSources(identity.mapVersionId, identity.hasGround),
     fetcher: mapMemberFetcher(`http://simforge-simulation-closure-${loadAttempt}.internal`),
   });
   if (closures.size >= MAX_CACHED_CLOSURES) closures.delete(closures.keys().next().value!);

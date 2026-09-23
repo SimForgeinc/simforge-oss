@@ -78,7 +78,7 @@ stack entries.
       revision, and dependency-lock resolution.
 - [ ] Build Cloud using only public package entry points.
 - [ ] Exercise scenario load/save, compilation, simulation, replay, web/native
-      rendering, OpenSCENARIO import/export, map ingestion, and evaluation.
+      rendering, OpenSCENARIO export, map ingestion, and evaluation.
 - [ ] Confirm staging and production promote the identical locked artifacts.
 - [ ] Confirm the previous committed lock and artifact set remains a viable
       rollback target.

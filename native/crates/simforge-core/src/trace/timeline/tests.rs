@@ -265,7 +265,10 @@ fn body_attitude_signs_follow_openscenario() {
         }
         assert!(tr.body_pitch_rad[i].abs() <= body::MAX_RAD + 1e-9);
         assert!(tr.body_roll_rad[i].abs() <= body::MAX_RAD + 1e-9);
-        assert!((tr.pitch_rad[i] - (tr.road_pitch_rad[i] + tr.body_pitch_rad[i])).abs() < 2e-6);
+        // sampler/2: the actor transform carries road attitude only; body
+        // attitude is for the model's `body` node.
+        assert_eq!(tr.pitch_rad[i], tr.road_pitch_rad[i]);
+        assert_eq!(tr.roll_rad[i], tr.road_roll_rad[i]);
     }
     assert!(saw, "fixture brakes hard at least once");
     // Pedestrians carry no attitude and no wheels.

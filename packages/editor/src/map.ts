@@ -4,6 +4,14 @@ export interface ScenarioMapSumoStatus {
 }
 
 /** Immutable map artifact closure consumed by Scenario authoring. */
+/** Ground derivative of a map version: member digest plus the ingest validation to show. */
+export interface ScenarioMapGround {
+  readonly sha256: string;
+  readonly status: 'ok' | 'flagged' | 'no-xodr' | 'unreported';
+  readonly flags: readonly string[];
+  readonly warnings: readonly string[];
+}
+
 export interface ScenarioMapEntry {
   /** Immutable published map-version identity used for editor selection. */
   readonly id: string;
@@ -37,6 +45,8 @@ export interface ScenarioMapEntry {
    * (`derived/ambient/turn-verdicts.json.gz`). Absent from older servers.
    */
   readonly ambientTurnVerdicts?: { readonly engineSemVer: string; readonly closureDigest: string; readonly sha256: string } | null;
+  /** The ground derivative (engine 0.11 contact) and its ingest validation, when the version carries it. */
+  readonly ground?: ScenarioMapGround | null;
   /** Compatibility aliases retained for existing editor consumers. */
   readonly manifestUrl: string;
   readonly topologyUrl: string;

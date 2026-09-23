@@ -10,11 +10,11 @@ use crate::map::{
     build_follow_route, build_route, retarget_to_lane, retarget_to_neighbour, FollowRouteOptions,
     LaneSide, RetargetOptions, TimedRoute,
 };
-use crate::math::{cbrt, clamp, normalize_angle, Vec2};
+use crate::math::{clamp, normalize_angle, Vec2};
 use crate::physics::{MotionActorInitialization, MotionBackend, MotionInitialState};
 use crate::trace::{AbortReason, DespawnReason, ReleasedReason, SimEvent};
 use crate::types::{
-    ControlIndication, Dynamics, DynamicsConstraint, ExistState, Interaction, LaneChangeTarget,
+    ControlIndication, Dynamics, DynamicsConstraint, DynamicsShape, ExistState, Interaction, LaneChangeTarget,
     LaneOffsetMode, RouteActionTarget, RouteSpec, SetValue, SpeedTarget, Verb,
 };
 
@@ -26,7 +26,7 @@ use super::controllers::{cruise_speed, desired_gap_m, limits_for};
 use super::doors::{
     articulated_door_obb_for, door_target, DoorName, DoorRuntime, DOOR_OPEN_DURATION_S,
 };
-use super::dynamics::transition_duration;
+use super::dynamics::{shape_peak_factor, transition_duration};
 use super::gear::{
     gear_of_motion_direction, motion_direction_of_gear, GEAR_ENGAGE_SPEED_MPS,
     MOTION_GEAR_ENGAGED_KEY, MOTION_GEAR_KEY,
@@ -38,6 +38,12 @@ use super::triggers::{
 use super::world::{EngineResult, Shape, ShapeLabel, Simulation};
 use crate::solve::guards::timed_route_feasibility_issues;
 use crate::trace::pairs::along_route_gap_m;
+
+/// A fixed-target speed command is complete once the actor is within this of
+/// its target (a prescribed profile lands on it exactly).
+const SPEED_REACHED_TOLERANCE_MPS: f64 = 0.05;
+/// A `gap` command has reached its gap within this (or 5 % of it).
+const GAP_REACHED_TOLERANCE_M: f64 = 0.5;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RouteCommit {
@@ -256,6 +262,83 @@ impl Simulation {
         }
     }
 
+    /// Longitudinal commands that reached their goal by this tick
+    /// (OpenSCENARIO §7.5.2.1: a SpeedAction ends when the speed is reached).
+    ///
+    /// - `speed` with a fixed target completes when its transition is over and
+    ///   the actor is at the target speed; the axis is released and the target
+    ///   stays the cruise state, so `after end` dependents proceed.
+    /// - `gap` completes (once) when its profile is over and the gap and the
+    ///   relative speed have settled; it keeps following afterwards.
+    /// - `speed(match)` is continuous and never completes.
+    pub(super) fn evaluate_longitudinal_completions(&mut self, t: f64) {
+        for index in 0..self.actors.len() {
+            let a = &self.actors[index];
+            let Some(cmd) = &a.long_cmd else {
+                continue;
+            };
+            let interaction = cmd.interaction;
+            match cmd.kind {
+                LongitudinalKind::Speed => {
+                    if cmd.match_ref.is_some() {
+                        continue;
+                    }
+                    let finished = if cmd.dynamics.constraint == DynamicsConstraint::Distance
+                        && cmd.dynamics.shape != DynamicsShape::Step
+                        && cmd.prescribed
+                    {
+                        cmd.progress_m >= cmd.dynamics.value - 1e-9
+                    } else {
+                        t - cmd.fired_at >= cmd.duration - 1e-9
+                    };
+                    if !finished || (a.speed_mps - cmd.target).abs() > SPEED_REACHED_TOLERANCE_MPS {
+                        continue;
+                    }
+                    let actor = ActorIndex(index as u32);
+                    self.events.push(SimEvent::InteractionCompleted {
+                        t,
+                        actor_id: a.id.clone(),
+                        interaction_id: self.interactions[interaction.index()].id.clone(),
+                        final_lateral_offset_m: None,
+                    });
+                    self.release_axis(actor, &AxisId::Longitudinal, t, interaction, ReleasedReason::Complete);
+                }
+                LongitudinalKind::Gap => {
+                    if cmd.completed || t - cmd.fired_at < cmd.duration - 1e-9 {
+                        continue;
+                    }
+                    let Some(reference) = cmd.gap else {
+                        continue;
+                    };
+                    let leader = &self.actors[reference.actor.index()];
+                    let Some(gap) = along_route_gap_m(a, leader) else {
+                        continue;
+                    };
+                    let desired = desired_gap_m(a, reference.value, reference.mode, true);
+                    let settled = (gap - desired).abs() <= GAP_REACHED_TOLERANCE_M.max(0.05 * desired)
+                        && (a.speed_mps - leader.speed_mps).abs() <= SPEED_REACHED_TOLERANCE_MPS * 10.0;
+                    if !settled {
+                        continue;
+                    }
+                    let event = SimEvent::InteractionCompleted {
+                        t,
+                        actor_id: a.id.clone(),
+                        interaction_id: self.interactions[interaction.index()].id.clone(),
+                        final_lateral_offset_m: None,
+                    };
+                    self.events.push(event);
+                    if let Some(cmd) = self.actors[index].long_cmd.as_mut() {
+                        cmd.completed = true;
+                    }
+                    let tr = &mut self.triggers[interaction.index()];
+                    if tr.ended_at.is_none() {
+                        tr.ended_at = Some(t);
+                    }
+                }
+            }
+        }
+    }
+
     pub(super) fn evaluate_until(&mut self, t: f64) {
         let releases: Vec<(ActorIndex, AxisId, InteractionIndex)> =
             self.with_condition_context(t, |sim, ctx| {
@@ -439,6 +522,27 @@ impl Simulation {
                 let a = &mut self.actors[actor.index()];
                 let duration =
                     transition_duration(dynamics, resolved - a.speed_mps, a.speed_mps.max(0.1));
+                // A fixed target is an OpenSCENARIO SpeedAction: the profile
+                // prescribes speed. `match` follows a moving reference and is
+                // tracked physically (continuous, never completes).
+                let prescribed = match_ref.is_none();
+                if prescribed {
+                    let slowest = a.speed_mps.min(resolved).max(0.5);
+                    let until_t = t + if dynamics.constraint == DynamicsConstraint::Distance
+                        && dynamics.shape != DynamicsShape::Step
+                    {
+                        dynamics.value / slowest
+                    } else {
+                        duration
+                    };
+                    self.events.push(SimEvent::PrescribedMotion {
+                        t,
+                        actor_id: a.id.clone(),
+                        interaction_id: it.id.clone(),
+                        axis: "longitudinal".to_owned(),
+                        until_t,
+                    });
+                }
                 let cmd = LongitudinalCommand {
                     kind: LongitudinalKind::Speed,
                     interaction: index,
@@ -450,6 +554,9 @@ impl Simulation {
                     gap: None,
                     match_ref,
                     prior_cruise_override_mps: Some(a.cruise_override_mps),
+                    prescribed,
+                    progress_m: 0.0,
+                    completed: false,
                 };
                 // A SpeedAction changes the actor's desired cruise state; its
                 // editor clip is not a temporary throttle press.
@@ -488,6 +595,9 @@ impl Simulation {
                     }),
                     match_ref: None,
                     prior_cruise_override_mps: None,
+                    prescribed: false,
+                    progress_m: 0.0,
+                    completed: false,
                 });
             }
             Verb::ChangeLane { target, dynamics } => {
@@ -512,6 +622,14 @@ impl Simulation {
                     effective_duration_s: planned.1,
                     displacement_m: to - from,
                 });
+                self.events.push(SimEvent::PrescribedMotion {
+                    t,
+                    actor_id: a.id.clone(),
+                    interaction_id: it.id.clone(),
+                    axis: "lateral".to_owned(),
+                    until_t: t + planned.1,
+                });
+                let origin_s = a.route_s;
                 a.lat_cmd = Some(LateralCommand {
                     kind: LateralKind::LaneOffset,
                     interaction: index,
@@ -523,6 +641,7 @@ impl Simulation {
                     pending: None,
                     side: None,
                     done: false,
+                    origin_s,
                 });
             }
             Verb::Route {
@@ -543,11 +662,12 @@ impl Simulation {
             Verb::Exist { target } => {
                 let present = target.state == ExistState::Present;
                 let a = &mut self.actors[actor.index()];
-                if present != a.present {
-                    a.present = present;
+                if present != a.pending_present.unwrap_or(a.present) {
+                    // Effective over the step that starts now (applied in
+                    // `plan_all`), like every other action.
+                    a.pending_present = Some(present);
                     let id = a.id.clone();
                     if present {
-                        a.retired = false;
                         self.events.push(SimEvent::Spawn { t, actor_id: id });
                     } else {
                         self.events.push(SimEvent::Despawn {
@@ -716,6 +836,11 @@ impl Simulation {
             return;
         }
         if *axis == AxisId::Lateral {
+            self.abort_lateral(previous, actor, t, AbortReason::Preempted);
+        }
+        if *axis == AxisId::Longitudinal && self.triggers[previous.index()].ended_at.is_none() {
+            // Overridden by a newer action on the same domain: it ends here
+            // (OSC stopTransition), so `after end` dependents can proceed.
             self.abort_lateral(previous, actor, t, AbortReason::Preempted);
         }
         self.events.push(SimEvent::Preemption {
@@ -1120,14 +1245,22 @@ impl Simulation {
 
         let from = a.lateral_offset_m;
         let to = from + retarget.separation_m;
+        let origin_s = a.route_s;
         let planned = self.bounded_lateral_duration(actor, index, dynamics, retarget.separation_m);
         self.events.push(SimEvent::LateralManeuverPlanned {
             t,
             actor_id: self.actors[actor.index()].id.clone(),
-            interaction_id,
+            interaction_id: interaction_id.clone(),
             requested_duration_s: planned.0,
             effective_duration_s: planned.1,
             displacement_m: retarget.separation_m,
+        });
+        self.events.push(SimEvent::PrescribedMotion {
+            t,
+            actor_id: self.actors[actor.index()].id.clone(),
+            interaction_id,
+            axis: "lateral".to_owned(),
+            until_t: t + planned.1,
         });
         Some(LateralCommand {
             kind: LateralKind::ChangeLane,
@@ -1140,6 +1273,7 @@ impl Simulation {
             pending: Some(retarget),
             side,
             done: false,
+            origin_s,
         })
     }
 
@@ -1154,48 +1288,50 @@ impl Simulation {
     ) -> (f64, f64) {
         let a = &self.actors[actor.index()];
         let distance_m = displacement_m.abs();
-        let requested_s = if dynamics.constraint == DynamicsConstraint::Rate && distance_m > 1e-9 {
-            distance_m * 1.875 / dynamics.value
-        } else {
-            transition_duration(dynamics, displacement_m, a.speed_mps.max(0.1))
-        };
-        if distance_m <= 1e-6 {
+        // Rate is the peak lateral velocity of the authored shape (D-03);
+        // time is the value; distance is a nominal duration at the current
+        // speed (progress itself follows travelled distance).
+        let requested_s = transition_duration(dynamics, displacement_m, a.speed_mps.max(0.1));
+        if distance_m <= 1e-6 || dynamics.shape == DynamicsShape::Step {
             return (requested_s, requested_s);
         }
+        // The authored shape and duration are executed as written
+        // (docs/engineering/openscenario-conformance.md F-08). A manoeuvre
+        // beyond the class envelope is reported, never silently stretched.
         let limits = limits_for(a);
-        const PEAK_RATE: f64 = 1.875;
-        const PEAK_ACCEL: f64 = 5.773_502_692;
-        const PEAK_JERK: f64 = 60.0;
-        let required_s = (distance_m * PEAK_RATE / limits.lateral_rate_max.max(1e-6))
-            .max((distance_m * PEAK_ACCEL / limits.lateral_accel_max.max(1e-6)).sqrt())
-            .max(cbrt(
-                distance_m * PEAK_JERK / limits.lateral_jerk_max.max(1e-6),
-            ));
-        let effective_s = requested_s.max(required_s);
-        if effective_s > requested_s + 1e-6 && !self.lateral_clamp_diagnostics[index.index()] {
+        let peak_rate = distance_m * shape_peak_factor(dynamics.shape) / requested_s.max(1e-9);
+        let peak_accel = match dynamics.shape {
+            DynamicsShape::Linear => f64::INFINITY,
+            DynamicsShape::Sinusoidal => distance_m * std::f64::consts::PI * std::f64::consts::PI / (2.0 * requested_s * requested_s),
+            DynamicsShape::Cubic => 6.0 * distance_m / (requested_s * requested_s),
+            DynamicsShape::Step => f64::INFINITY,
+        };
+        let exceeds = peak_rate > limits.lateral_rate_max + 1e-9 || peak_accel > limits.lateral_accel_max + 1e-9;
+        if exceeds && !self.lateral_clamp_diagnostics[index.index()] {
             self.lateral_clamp_diagnostics[index.index()] = true;
             let mut detail = serde_json::Map::new();
             detail.insert("actorId".into(), a.id.clone().into());
             detail.insert("requestedDurationS".into(), requested_s.into());
-            detail.insert("effectiveDurationS".into(), effective_s.into());
+            detail.insert("effectiveDurationS".into(), requested_s.into());
             detail.insert("displacementM".into(), displacement_m.into());
+            detail.insert("peakLateralRateMps".into(), peak_rate.into());
             detail.insert("lateralRateMaxMps".into(), limits.lateral_rate_max.into());
-            detail.insert(
-                "lateralAccelMaxMps2".into(),
-                limits.lateral_accel_max.into(),
-            );
-            detail.insert("lateralJerkMaxMps3".into(), limits.lateral_jerk_max.into());
+            detail.insert("lateralAccelMaxMps2".into(), limits.lateral_accel_max.into());
             let interaction_id = &self.interactions[index.index()].id;
             self.issues.push(
                 SimIssue::warning(
                     SimIssueCode::LateralDurationClamped,
-                    format!("interactions.{interaction_id}.dynamics.value"),
-                    format!("requested {requested_s:.2} s lateral manoeuvre is infeasible for {}; clamped to {effective_s:.2} s", a.kind.as_str()),
+                    format!("interactions.{interaction_id}.dynamics"),
+                    format!(
+                        "requested {requested_s:.2} s {} lateral manoeuvre exceeds the {} lateral envelope; executed as authored",
+                        dynamics.shape.as_str(),
+                        a.kind.as_str()
+                    ),
                 )
                 .with_detail(detail),
             );
         }
-        (requested_s, effective_s)
+        (requested_s, requested_s)
     }
 
     pub(super) fn finish_never_fired(&mut self) {

@@ -434,6 +434,18 @@ impl WasmMapBundle {
             inner: MapAsset::from_sources(sources_json, topology).js()?,
         })
     }
+    /// Attach the map's ground surface (`derived/ground/ground-mesh.bin`):
+    /// worlds built from this bundle afterwards ground every body on it
+    /// (engine 0.11 contact, trace v5). Returns the surface digest.
+    #[wasm_bindgen(js_name = attachGround)]
+    pub fn attach_ground(&mut self, ground_mesh: &[u8]) -> Result<String, JsValue> {
+        self.inner.attach_ground(ground_mesh).js()
+    }
+    /// Digest of the attached ground surface, or `undefined`.
+    #[wasm_bindgen(getter, js_name = groundDigest)]
+    pub fn ground_digest(&self) -> Option<String> {
+        self.inner.ground_digest().map(str::to_owned)
+    }
     #[wasm_bindgen(js_name = topologyJson)]
     pub fn topology_json(&self) -> Result<String, JsValue> {
         self.inner.topology_json().js()
@@ -479,7 +491,7 @@ impl WasmMapBundle {
     /// `simforge.map-closure/v1`: identity of everything a simulation reads from this map.
     #[wasm_bindgen(getter, js_name = closureDigest)]
     pub fn closure_digest(&self) -> String {
-        self.inner.bundle().closure_digest().to_owned()
+        self.inner.closure_digest()
     }
     #[wasm_bindgen(getter)]
     pub fn graph(&self) -> WasmLaneGraph {
@@ -741,13 +753,20 @@ pub fn compile_situation(
 
 /// The document's Studio content applied to a materialised input: paint tags on role actors, then baked parked cars.
 #[wasm_bindgen(js_name = studioConcreteInput)]
-pub fn studio_concrete_input(input: &WasmScenarioInput, template_json: &str) -> Result<WasmScenarioInput, JsValue> {
-    rt::studio_concrete_input(&input.inner, template_json).map(|inner| WasmScenarioInput { inner }).js()
+pub fn studio_concrete_input(
+    input: &WasmScenarioInput,
+    template_json: &str,
+) -> Result<WasmScenarioInput, JsValue> {
+    rt::studio_concrete_input(&input.inner, template_json)
+        .map(|inner| WasmScenarioInput { inner })
+        .js()
 }
 /// The refinements every executor applies to the input it runs (stable high-speed world routes, cruise restoration).
 #[wasm_bindgen(js_name = executionRefinements)]
 pub fn execution_refinements(input: &WasmScenarioInput) -> Result<WasmScenarioInput, JsValue> {
-    rt::execution_refinements(&input.inner).map(|inner| WasmScenarioInput { inner }).js()
+    rt::execution_refinements(&input.inner)
+        .map(|inner| WasmScenarioInput { inner })
+        .js()
 }
 /// Ambient turn-feasibility verdicts held for `graph` (`simforge.ambient-turn-verdicts/v1`); persist beside the map closure.
 #[wasm_bindgen(js_name = ambientTurnVerdictsJson)]
@@ -1534,6 +1553,12 @@ impl WasmTrace {
     pub fn digest(&self) -> Result<String, JsValue> {
         self.inner.digest().js()
     }
+    /// `simforge.trace-upgrade/v1` JSON when the stored trace was an older
+    /// format upgraded in memory; `undefined` for a current-format trace.
+    #[wasm_bindgen(js_name = upgradeJson)]
+    pub fn upgrade_json(&self) -> Result<Option<String>, JsValue> {
+        self.inner.upgrade_json().js()
+    }
     #[wasm_bindgen(js_name = toJson)]
     pub fn to_json(&self) -> Result<String, JsValue> {
         self.inner.to_json().js()
@@ -1740,20 +1765,73 @@ impl WasmRenderTimeline {
             .map_err(timeline_err)
     }
 
-    /// Build a timeline from a trace (JSON bytes, gzip ok) and the map's
-    /// `.xodr` + topology sidecar bytes.
+    /// Parse a stored timeline of any sampler version, for inspection only
+    /// (motion comparison across sampler versions). Never render it: a
+    /// timeline from another sampler is re-derived from its trace.
+    #[wasm_bindgen(js_name = inspect)]
+    pub fn inspect(bytes: &[u8]) -> Result<WasmRenderTimeline, JsValue> {
+        render_timeline::RenderTimeline::inspect_json_slice(bytes)
+            .map(|inner| Self { inner })
+            .map_err(timeline_err)
+    }
+
+    /// Build a timeline from a trace (JSON bytes, gzip ok; any released
+    /// trace format, upgraded in memory) and the map's `.xodr` + topology
+    /// sidecar bytes. `recorded_trace_sha256` binds the identity recorded
+    /// next to a stored trace (verified by the caller against the stored
+    /// bytes): a current-format trace must recompute to it, an upgraded one
+    /// adopts it.
     #[wasm_bindgen(js_name = build)]
     pub fn build(
         trace: &[u8],
         xodr: &[u8],
         topology: &[u8],
         catalog_digest: Option<String>,
+        recorded_trace_sha256: Option<String>,
     ) -> Result<WasmRenderTimeline, JsValue> {
         let trace = render_timeline::maybe_gunzip(trace).map_err(timeline_err)?;
-        let trace =
+        let mut trace =
             simforge_core::trace::SimTrace::from_json_slice(&trace).map_err(timeline_err)?;
+        if let Some(recorded) = recorded_trace_sha256.as_deref() {
+            trace
+                .bind_recorded_identity(recorded)
+                .map_err(timeline_err)?;
+        }
         let height =
             render_timeline::HeightField::from_xodr(xodr, topology).map_err(timeline_err)?;
+        render_timeline::build_render_timeline(&trace, &height, catalog_digest.as_deref())
+            .map(|inner| Self { inner })
+            .map_err(timeline_err)
+    }
+
+    /// Build a timeline on the map's ground surface (`ground-contact/v1`):
+    /// `groundMesh` is `derived/ground/ground-mesh.bin`; the `.xodr` +
+    /// topology supply spawn deck hints for traces recorded without contact.
+    /// `build` (no ground) is the labelled legacy path for map versions
+    /// published before the ground derivative.
+    #[wasm_bindgen(js_name = buildOnGround)]
+    pub fn build_on_ground(
+        trace: &[u8],
+        ground_mesh: &[u8],
+        xodr: &[u8],
+        topology: &[u8],
+        catalog_digest: Option<String>,
+        recorded_trace_sha256: Option<String>,
+    ) -> Result<WasmRenderTimeline, JsValue> {
+        let trace = render_timeline::maybe_gunzip(trace).map_err(timeline_err)?;
+        let mut trace =
+            simforge_core::trace::SimTrace::from_json_slice(&trace).map_err(timeline_err)?;
+        if let Some(recorded) = recorded_trace_sha256.as_deref() {
+            trace
+                .bind_recorded_identity(recorded)
+                .map_err(timeline_err)?;
+        }
+        let topology = simforge_core::map::TopologyIndex::decode(topology)
+            .map_err(|e| JsValue::from_str(&format!("topology: {e}")))?;
+        let ground =
+            simforge_core::engine::GroundContext::from_bytes(ground_mesh, Some((xodr, &topology)))
+                .map_err(|e| JsValue::from_str(&e))?;
+        let height = render_timeline::HeightField::ground(std::sync::Arc::new(ground));
         render_timeline::build_render_timeline(&trace, &height, catalog_digest.as_deref())
             .map(|inner| Self { inner })
             .map_err(timeline_err)
@@ -1807,6 +1885,20 @@ impl WasmRenderTimeline {
     #[wasm_bindgen(getter, js_name = heightFieldDigest)]
     pub fn height_field_digest(&self) -> String {
         self.inner.identity.height_field_digest.clone()
+    }
+
+    /// Where z and road attitude came from: `trace`,
+    /// `derived-at-timeline-build`, `legacy-xodr-elevation` or `synthetic`.
+    #[wasm_bindgen(getter, js_name = contactOrigin)]
+    pub fn contact_origin(&self) -> String {
+        use render_timeline::ContactOrigin;
+        match self.inner.contact_origin {
+            ContactOrigin::Trace => "trace",
+            ContactOrigin::DerivedAtTimelineBuild => "derived-at-timeline-build",
+            ContactOrigin::Synthetic => "synthetic",
+            ContactOrigin::LegacyXodrElevation => "legacy-xodr-elevation",
+        }
+        .to_owned()
     }
 
     #[wasm_bindgen(getter, js_name = catalogDigest)]
@@ -1876,8 +1968,11 @@ impl WasmRenderTimeline {
     }
 
     /// Scene-yup (Bevy / scene-state.v1) projection of every actor at each of
-    /// `times`: `times.length × actorIds.length × 12` floats
-    /// `[present, px, py, pz, qx, qy, qz, qw, vx, vy, vz, speed]` with
+    /// `times`: `times.length × actorIds.length × 19` floats
+    /// `[present, px, py, pz, qx, qy, qz, qw, vx, vy, vz, speed, wheelSpin,
+    /// bodyPitch, bodyRoll, dropFL, dropFR, dropRL, dropRR]` (NaN where the
+    /// actor has no such channel: wheel spin for wheeled actors; body attitude
+    /// and wheel drop for four-wheelers, and not in yaw-only frames) with
     /// `position = [x, z, -y]`, the quaternion from `sampler::scene_yup`
     /// (`yawOnly` drops pitch/roll) and `velocity = [vx, vz, -vy]`.
     #[wasm_bindgen(js_name = sceneFramesArray)]
@@ -1886,10 +1981,15 @@ impl WasmRenderTimeline {
         times: &[f64],
         yaw_only: bool,
     ) -> Result<Float64Array, JsValue> {
-        let mut out = Vec::with_capacity(times.len() * self.inner.actors.len() * 12);
+        let mut out = Vec::with_capacity(times.len() * self.inner.actors.len() * 19);
         for t in times {
             for (_, p) in timeline_sampler::poses(&self.inner, *t).map_err(timeline_err)? {
                 let (pos, q) = timeline_sampler::scene_yup(&p, yaw_only);
+                let four_wheeled = p.wheel_drop_m.is_some() && !yaw_only;
+                let drop = p
+                    .wheel_drop_m
+                    .filter(|_| four_wheeled)
+                    .unwrap_or([f64::NAN; 4]);
                 out.extend_from_slice(&[
                     if p.present { 1.0 } else { 0.0 },
                     pos[0],
@@ -1903,6 +2003,21 @@ impl WasmRenderTimeline {
                     p.velocity[2],
                     -p.velocity[1],
                     p.speed_mps,
+                    p.wheel_spin_rad.unwrap_or(f64::NAN),
+                    if four_wheeled {
+                        p.body_pitch_rad
+                    } else {
+                        f64::NAN
+                    },
+                    if four_wheeled {
+                        p.body_roll_rad
+                    } else {
+                        f64::NAN
+                    },
+                    drop[0],
+                    drop[1],
+                    drop[2],
+                    drop[3],
                 ]);
             }
         }

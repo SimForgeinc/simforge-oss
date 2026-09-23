@@ -114,6 +114,18 @@ pub enum SimEvent {
         interaction_id: String,
         reason: AbortReason,
     },
+    /// An authored transition (speed or lateral) owns the actor's kinematic
+    /// state from `t` until at most `until_t`: its shape is executed exactly,
+    /// including non-physical steps. The plausibility audit explains motion
+    /// findings inside that window by this event.
+    #[serde(rename_all = "camelCase")]
+    PrescribedMotion {
+        t: f64,
+        actor_id: String,
+        interaction_id: String,
+        axis: String,
+        until_t: f64,
+    },
     #[serde(rename_all = "camelCase")]
     LateralManeuverPlanned {
         t: f64,
@@ -208,6 +220,7 @@ impl SimEvent {
             | SimEvent::InteractionCompleted { t, .. }
             | SimEvent::InteractionAborted { t, .. }
             | SimEvent::LateralManeuverPlanned { t, .. }
+            | SimEvent::PrescribedMotion { t, .. }
             | SimEvent::LaneChange { t, .. }
             | SimEvent::LaneChangeRejected { t, .. }
             | SimEvent::RouteChangeRejected { t, .. }
@@ -230,6 +243,7 @@ impl SimEvent {
             | SimEvent::InteractionCompleted { t, .. }
             | SimEvent::InteractionAborted { t, .. }
             | SimEvent::LateralManeuverPlanned { t, .. }
+            | SimEvent::PrescribedMotion { t, .. }
             | SimEvent::LaneChange { t, .. }
             | SimEvent::LaneChangeRejected { t, .. }
             | SimEvent::RouteChangeRejected { t, .. }
@@ -253,6 +267,7 @@ impl SimEvent {
             SimEvent::InteractionCompleted { .. } => "interaction_completed",
             SimEvent::InteractionAborted { .. } => "interaction_aborted",
             SimEvent::LateralManeuverPlanned { .. } => "lateral_maneuver_planned",
+            SimEvent::PrescribedMotion { .. } => "prescribed_motion",
             SimEvent::LaneChange { .. } => "lane_change",
             SimEvent::LaneChangeRejected { .. } => "lane_change_rejected",
             SimEvent::RouteChangeRejected { .. } => "route_change_rejected",
@@ -276,6 +291,7 @@ impl SimEvent {
             | SimEvent::InteractionCompleted { actor_id, .. }
             | SimEvent::InteractionAborted { actor_id, .. }
             | SimEvent::LateralManeuverPlanned { actor_id, .. }
+            | SimEvent::PrescribedMotion { actor_id, .. }
             | SimEvent::LaneChange { actor_id, .. }
             | SimEvent::LaneChangeRejected { actor_id, .. }
             | SimEvent::RouteChangeRejected { actor_id, .. }
@@ -299,6 +315,7 @@ impl SimEvent {
             | SimEvent::InteractionCompleted { interaction_id, .. }
             | SimEvent::InteractionAborted { interaction_id, .. }
             | SimEvent::LateralManeuverPlanned { interaction_id, .. }
+            | SimEvent::PrescribedMotion { interaction_id, .. }
             | SimEvent::LaneChangeRejected { interaction_id, .. }
             | SimEvent::RouteChangeRejected { interaction_id, .. } => Some(interaction_id),
             _ => None,

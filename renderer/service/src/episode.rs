@@ -120,7 +120,12 @@ impl Episode {
                     let speed = pose.velocity.iter().map(|v| v * v).sum::<f64>().sqrt();
                     *distance += if along < 0.0 { -speed } else { speed } / hz;
                 }
-                let wheel_spin_rad = Some(*distance / render_core::vehicle_model::TIMELINE_WHEEL_RADIUS_M);
+                // The document's own timeline channel when it carries one; an
+                // episode document without it gets the same rule derived here.
+                let wheel_spin_rad = match pose.wheel_spin_rad {
+                    Some(spin) => Some(spin),
+                    None => Some(*distance / render_core::vehicle_model::TIMELINE_WHEEL_RADIUS_M),
+                };
                 actors.push(ActorState {
                     id: pose.id.clone(),
                     kind: match pose.kind { ActorTickKind::Spawn => "spawn", ActorTickKind::Update => "update", ActorTickKind::Despawn => "despawn" }.into(),
@@ -129,6 +134,8 @@ impl Episode {
                     transform: ActorTransform { position: pose.position.map(|v| v as f32), rotation: pose.rotation.map(|v| v as f32) },
                     velocity: pose.velocity.map(|v| v as f32),
                     wheel_spin_rad,
+                    body_attitude: pose.body_attitude.map(|a| crate::scene::BodyAttitude { pitch_rad: a.pitch_rad as f32, roll_rad: a.roll_rad as f32 }),
+                    wheel_drop_m: pose.wheel_drop_m.map(|d| d.map(|v| v as f32)),
                 });
             }
             if !actors.iter().any(|a| a.id == ego_id && a.kind != "despawn") {

@@ -49,6 +49,9 @@ pub use world::{replay_world_log_json, TruthSubscriber, World, WorldSnapshotView
 pub struct Graph {
     graph: Arc<LaneGraph>,
     colliders: Arc<[StaticMapCollider]>,
+    /// The map ground surface (engine 0.11 contact); `None` for bare
+    /// topologies and maps without a ground derivative.
+    ground: Option<simforge_core::engine::SharedGround>,
     /// SHA-256 of the topology bytes this graph was decoded from.
     byte_digest: String,
 }
@@ -59,6 +62,7 @@ impl Graph {
         Ok(Self {
             graph,
             colliders: Arc::from(Vec::new()),
+            ground: None,
             byte_digest: simforge_core::hash::sha256_bytes(bytes),
         })
     }
@@ -71,8 +75,22 @@ impl Graph {
         Self {
             graph,
             colliders: Arc::from(colliders),
+            ground: None,
             byte_digest,
         }
+    }
+
+    pub(crate) fn set_ground(&mut self, ground: simforge_core::engine::SharedGround) {
+        self.ground = Some(ground);
+    }
+
+    /// Digest of the attached ground surface (`trace.header.groundDigest`).
+    pub fn ground_digest(&self) -> Option<&str> {
+        self.ground.as_ref().map(|g| g.digest())
+    }
+
+    pub fn ground(&self) -> Option<&simforge_core::engine::SharedGround> {
+        self.ground.as_ref()
     }
 
     #[inline]
@@ -254,6 +272,7 @@ impl Graph {
     pub fn run_options(&self, overrides: Option<&str>) -> Result<RunOptions> {
         let mut options = RunOptions::new(Arc::clone(&self.graph));
         options.static_colliders = self.colliders.to_vec();
+        options.ground = self.ground.clone();
         if let Some(text) = overrides {
             #[derive(serde::Deserialize)]
             #[serde(rename_all = "camelCase", deny_unknown_fields)]
