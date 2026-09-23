@@ -57,10 +57,11 @@ export async function approvedRenderWorker(workerNodeId: string, registrationId?
 export async function listPrewarmSets() {
   const rows = await queryRows<{
     set_id: string; map_version_id: string; map_id: string; closure_sha256: string;
-    object_count: number | string; byte_length: number | string; created_at: string;
+    object_count: number | string; byte_length: number | string; created_at: string; turn_verdicts_sha256: string | null;
   }>(
     `SELECT s.id AS set_id, mv.id AS map_version_id, mv.source_map_id AS map_id,
-            s.closure_sha256, s.object_count, s.byte_length, mv.created_at::text AS created_at
+            s.closure_sha256, s.object_count, s.byte_length, mv.created_at::text AS created_at,
+            mv.descriptor->'ambientTurnVerdicts'->>'sha256' AS turn_verdicts_sha256
      ${PUBLISHED_SETS}
      ORDER BY mv.created_at DESC, s.id`,
   );
@@ -72,9 +73,10 @@ export async function listPrewarmSets() {
     objectCount: Number(row.object_count),
     byteLength: Number(row.byte_length),
     createdAt: row.created_at,
+    ...(row.turn_verdicts_sha256 && /^[a-f0-9]{64}$/.test(row.turn_verdicts_sha256) ? { turnVerdictsSha256: row.turn_verdicts_sha256 } : {}),
   }));
   const generation = createHash("sha256")
-    .update(JSON.stringify(sets.map((set) => [set.setId, set.closureSha256, set.objectCount])))
+    .update(JSON.stringify(sets.map((set) => [set.setId, set.closureSha256, set.objectCount, set.turnVerdictsSha256 ?? null])))
     .digest("hex");
   return { schema: CONTROL_SCHEMA, type: "worker.prewarm-manifest" as const, generation, sets };
 }
@@ -95,12 +97,32 @@ export async function listPrewarmMembers(setId: string, after: string | null, pa
   );
   const limit = Math.max(1, Math.min(PREWARM_MEMBERS_PAGE, Math.floor(pageSize)));
   const page = rows.slice(0, limit);
-  return {
-    schema: CONTROL_SCHEMA,
-    type: "worker.prewarm-members" as const,
-    members: page.map((row) => ({ relativePath: row.relative_path, sha256: row.sha256, sizeBytes: Number(row.byte_length) })),
-    next: rows.length > limit ? page.at(-1)!.relative_path : null,
-  };
+  const next = rows.length > limit ? page.at(-1)!.relative_path : null;
+  const members = page.map((row) => ({ relativePath: row.relative_path, sha256: row.sha256, sizeBytes: Number(row.byte_length) }));
+  // The published ambient turn-verdict table rides with the closure when the
+  // map version binds it (WS-A, `descriptor.ambientTurnVerdicts`); served on
+  // the last page so it is listed exactly once.
+  if (next === null) {
+    const verdicts = await boundTurnVerdicts(setId);
+    if (verdicts && !members.some((member) => member.relativePath === AMBIENT_TURN_VERDICTS_PATH)) members.push(verdicts);
+  }
+  return { schema: CONTROL_SCHEMA, type: "worker.prewarm-members" as const, members, next };
+}
+
+export const AMBIENT_TURN_VERDICTS_PATH = "derived/ambient/turn-verdicts.json.gz";
+
+/** The turn-verdict blob a published set's map version binds, if any. */
+async function boundTurnVerdicts(setId: string) {
+  const rows = await queryRows<{ sha256: string; byte_length: number | string }>(
+    `SELECT b.sha256, b.byte_length
+       FROM simforge.browser_asset_blobs b
+      WHERE b.verification_state = 'verified'
+        AND b.sha256 = (SELECT mv.descriptor->'ambientTurnVerdicts'->>'sha256' ${PUBLISHED_SETS} AND s.id = :set_id LIMIT 1)
+      LIMIT 1`,
+    { set_id: setId },
+  );
+  const row = rows[0];
+  return row ? { relativePath: AMBIENT_TURN_VERDICTS_PATH, sha256: row.sha256, sizeBytes: Number(row.byte_length) } : null;
 }
 
 /**
@@ -123,6 +145,16 @@ export async function signPrewarmBlobs(setId: string, sha256s: readonly string[]
       ORDER BY b.sha256, b.id`,
     { set_id: setId, digests: digests.join(",") },
   );
+  const verdictRows = await queryRows<{ sha256: string; storage_bucket: string; storage_key: string }>(
+    `SELECT b.sha256, b.storage_bucket, b.storage_key
+       FROM simforge.browser_asset_blobs b
+      WHERE b.verification_state = 'verified'
+        AND b.sha256 = ANY(string_to_array(:digests, ','))
+        AND b.sha256 = (SELECT mv.descriptor->'ambientTurnVerdicts'->>'sha256' ${PUBLISHED_SETS} AND s.id = :set_id LIMIT 1)
+      LIMIT 1`,
+    { set_id: setId, digests: digests.join(",") },
+  );
+  if (verdictRows[0] && !rows.some((row) => row.sha256 === verdictRows[0]!.sha256)) rows.push(verdictRows[0]);
   const expiresAt = new Date(Date.now() + BLOB_URL_TTL_SECONDS * 1000).toISOString();
   await Promise.all(rows.map(async (row) => {
     downloads[row.sha256] = {
