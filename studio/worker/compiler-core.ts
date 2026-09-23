@@ -14,8 +14,10 @@ import {
   type ExecutionPackage,
   type MapBundle,
 } from "@simforge-oss/compiler/node";
+import { DEFAULT_EXPORT_COMPILER_CONTRACT } from "../app/lib/scenario/compiler-identity";
 
-export const COMPILER_VERSION = "uniscenario-compiler@2.0.0";
+/** The export contract this worker claims (see `compiler-identity.ts`). */
+export const COMPILER_VERSION = DEFAULT_EXPORT_COMPILER_CONTRACT;
 const MAX_ARTIFACT_BYTES = 512 * 1024 * 1024;
 
 export type CompilerArtifactKind = "xosc" | "capability-report" | "compiler-provenance" | "execution-manifest";

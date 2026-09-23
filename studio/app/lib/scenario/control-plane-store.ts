@@ -1,4 +1,5 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import { exportCompilerContract } from "./compiler-identity";
 import type { AppContext } from "@/app/lib/db/app-context";
 import { queryRows, withTransaction } from "@/app/lib/db/data-api";
 import {
@@ -253,8 +254,7 @@ export async function getScenarioControlPlaneHealth(workerNodeId?: string | null
     simforgeEnv("API_BASE_URL")?.trim() || "http://127.0.0.1:5199";
   const bucket =
     simforgeEnv("ARTIFACT_BUCKET")?.trim() || "local-artifacts";
-  const compilerVersion =
-    simforgeEnv("COMPILER_VERSION")?.trim() || "uniscenario-compiler@2.0.0";
+  const compilerVersion = exportCompilerContract();
   const configurationReady = Boolean(apiUrl && bucket && compilerVersion);
   const rows = await queryRows<{
     worker_nodes_ready: boolean;
@@ -354,7 +354,7 @@ export async function createExport(
   },
 ) {
   const id = scenarioId("usexp");
-  const compilerVersion = simforgeEnv("COMPILER_VERSION")?.trim() || "uniscenario-compiler@2.0.0";
+  const compilerVersion = exportCompilerContract();
   const rows = await queryRows<ExportRow>(
     `INSERT INTO simforge.exports (
        id, workspace_id, revision_id, export_format, compiler_version, idempotency_key,

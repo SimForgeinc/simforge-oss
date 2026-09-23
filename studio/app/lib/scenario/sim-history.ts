@@ -1,34 +1,44 @@
 import "server-only";
 
-import {
-  buildSimulationDualPlayback,
-  describeSimulationMotionDiff,
-  diffSimulationTraces,
-  SIMULATION_MOTION_DIFF_FORMAT,
-  type SimulationMotionDiff,
-} from "@simforge-oss/openscenario/trace-diff";
 import { engineSemantics } from "@simforge-oss/compiler/node";
-import type { SimTrace } from "@simforge-oss/engine";
-import { parseTrace } from "@simforge-oss/engine/node";
-import type {
-  RevisionSimulationReason,
-  ScenarioEngineChangeDto,
-  ScenarioSimulationStatusDto,
-  ScenarioVersionActorDto,
-  ScenarioVersionCreatedFor,
-  ScenarioVersionDto,
-  ScenarioVersionsDto,
-  SimulationComparisonDto,
-  SimulationMotionDiffDto,
+import { parseTemplate } from "@simforge-oss/scenario";
+import {
+  resolveScenarioMapUpgrade,
+  ScenarioMapResolutionError,
+  type RevisionSimulationReason,
+  type ScenarioEngineChangeDto,
+  type ScenarioMapDescriptorDto,
+  type ScenarioMapPinStatusDto,
+  type ScenarioMapRepinPreviewDto,
+  type ScenarioSimulationStatusDto,
+  type ScenarioVersionActorDto,
+  type ScenarioVersionCreatedFor,
+  type ScenarioVersionDto,
+  type ScenarioVersionsDto,
+  type SimulationMotionDiffDto,
 } from "@simforge-oss/studio-host";
 
 import type { AppContext } from "@/app/lib/db/app-context";
-import { queryOne, queryRows, withTransaction, type Transaction } from "@/app/lib/db/data-api";
+import { queryOne, queryRows } from "@/app/lib/db/data-api";
 import { parseJsonObject } from "@/app/lib/db/json-helpers";
-import { getS3ObjectBytes } from "@/app/lib/s3/s3-get-object";
 
-import { sha256 } from "./core";
-import { readSimulationRecord, resolveSimulation, SimulationFailedError } from "./sim-result-store";
+import { parseDiff, SimulationHistoryError, simulationMotionDiff } from "./sim-diff";
+import {
+  createScenarioRevision,
+  getScenarioDocument,
+  readPinnedScenarioMapDescriptor,
+  updateScenarioDocument,
+} from "./document-store";
+import { requireScenarioMapPin } from "./map-pin";
+import {
+  linkRevisionSimulation,
+  readSimulationRecord,
+  resimulateRevision,
+  resolveSimulation,
+  setRevisionActiveSimulation,
+} from "./sim-result-store";
+
+export { compareSimulations, SimulationHistoryError, simulationMotionDiff } from "./sim-diff";
 
 /**
  * Simulation history of a scenario (docs/engineering/simulation-history.md).
@@ -43,222 +53,7 @@ import { readSimulationRecord, resolveSimulation, SimulationFailedError } from "
  *   engine.
  */
 
-export class SimulationHistoryError extends Error {
-  constructor(readonly code: string, message: string, readonly status: 400 | 404 | 409 | 422 = 409) {
-    super(message);
-    this.name = "SimulationHistoryError";
-  }
-}
-
-// ── Traces and motion diffs ───────────────────────────────────────────────────────────────
-
-/**
- * An authoritative trace by key, verified against its recorded digest and read through the native
- * reader, which upgrades any released trace format in memory (stored bytes are never rewritten).
- */
-export async function readSimulationTrace(workspaceId: string, simKey: string): Promise<SimTrace> {
-  const record = await readSimulationRecord(workspaceId, simKey);
-  if (!record) throw new SimulationHistoryError("simulation_not_found", `simulation ${simKey} does not exist in this workspace`, 404);
-  const bytes = await getS3ObjectBytes(record.storage_bucket, record.trace_storage_key);
-  if (bytes.byteLength !== Number(record.trace_byte_length) || sha256(bytes) !== record.trace_gzip_sha256) {
-    throw new SimulationFailedError("simulation_trace_corrupt", `stored trace for ${simKey} does not match its recorded digest`);
-  }
-  return parseTrace(bytes).toTrace();
-}
-
-function diffDto(diff: SimulationMotionDiff, baseSimKey: string, candidateSimKey: string): SimulationMotionDiffDto {
-  return {
-    format: SIMULATION_MOTION_DIFF_FORMAT,
-    baseSimKey,
-    candidateSimKey,
-    identical: diff.identical,
-    summary: describeSimulationMotionDiff(diff),
-    maxPositionErrorM: diff.maxPositionErrorM,
-    maxHeadingErrorDeg: diff.maxHeadingErrorDeg,
-    worst: diff.worst,
-    actors: {
-      compared: diff.actors.compared,
-      changedCount: diff.actors.changedCount,
-      changed: [...diff.actors.changed],
-      added: [...diff.actors.added],
-      removed: [...diff.actors.removed],
-    },
-    eventsChanged: diff.eventsChanged,
-    collisionsChanged: diff.collisionsChanged,
-    signalsChanged: diff.signalsChanged,
-    durationS: diff.durationS,
-    strict: diff.strict,
-  };
-}
-
-function identicalDiff(baseSimKey: string, candidateSimKey: string, durationS: number): SimulationMotionDiffDto {
-  return {
-    format: SIMULATION_MOTION_DIFF_FORMAT,
-    baseSimKey,
-    candidateSimKey,
-    identical: true,
-    summary: "Motion identical",
-    maxPositionErrorM: 0,
-    maxHeadingErrorDeg: 0,
-    worst: null,
-    actors: { compared: 0, changedCount: 0, changed: [], added: [], removed: [] },
-    eventsChanged: 0,
-    collisionsChanged: 0,
-    signalsChanged: 0,
-    durationS: { base: durationS, candidate: durationS },
-    strict: { profile: "strict-trajectory-v1", verdict: "pass", reportHash: null, errorFindings: 0, reason: "the two results store the same trace" },
-  };
-}
-
-function parseDiff(value: unknown): SimulationMotionDiffDto | null {
-  const parsed = parseJsonObject(value as string | Record<string, unknown> | null);
-  return parsed && parsed.format === SIMULATION_MOTION_DIFF_FORMAT ? parsed as unknown as SimulationMotionDiffDto : null;
-}
-
-/**
- * The motion change from `baseSimKey` to `candidateSimKey`, memoized in `sim_motion_diffs`. Two
- * results that store the same trace digest are identical without reading either trace.
- */
-export async function simulationMotionDiff(workspaceId: string, baseSimKey: string, candidateSimKey: string): Promise<SimulationMotionDiffDto> {
-  if (baseSimKey === candidateSimKey) throw new SimulationHistoryError("simulation_diff_same_key", "a simulation cannot be compared with itself", 400);
-  const memo = await queryOne<{ diff: unknown }>(
-    `SELECT diff FROM simforge.sim_motion_diffs
-      WHERE workspace_id = :workspace_id AND base_sim_key = :base AND candidate_sim_key = :candidate AND profile = :profile`,
-    { workspace_id: workspaceId, base: baseSimKey, candidate: candidateSimKey, profile: SIMULATION_MOTION_DIFF_FORMAT },
-  );
-  const cached = memo ? parseDiff(memo.diff) : null;
-  if (cached) return cached;
-  const [base, candidate] = await Promise.all([
-    readSimulationRecord(workspaceId, baseSimKey),
-    readSimulationRecord(workspaceId, candidateSimKey),
-  ]);
-  if (!base || !candidate) {
-    throw new SimulationHistoryError("simulation_not_found", `simulation ${!base ? baseSimKey : candidateSimKey} does not exist in this workspace`, 404);
-  }
-  let dto: SimulationMotionDiffDto;
-  if (base.trace_sha256 === candidate.trace_sha256) {
-    const trace = await readSimulationTrace(workspaceId, baseSimKey);
-    dto = identicalDiff(baseSimKey, candidateSimKey, trace.header.clipSeconds);
-  } else {
-    const [a, b] = await Promise.all([readSimulationTrace(workspaceId, baseSimKey), readSimulationTrace(workspaceId, candidateSimKey)]);
-    dto = diffDto(diffSimulationTraces(a, b), baseSimKey, candidateSimKey);
-  }
-  await queryRows(
-    `INSERT INTO simforge.sim_motion_diffs (workspace_id, base_sim_key, candidate_sim_key, profile, diff)
-     VALUES (:workspace_id, :base, :candidate, :profile, CAST(:diff AS jsonb))
-     ON CONFLICT DO NOTHING RETURNING base_sim_key`,
-    { workspace_id: workspaceId, base: baseSimKey, candidate: candidateSimKey, profile: SIMULATION_MOTION_DIFF_FORMAT, diff: dto },
-  );
-  return dto;
-}
-
-/** Both simulations side by side for the Compare view. */
-export async function compareSimulations(workspaceId: string, baseSimKey: string, candidateSimKey: string): Promise<SimulationComparisonDto> {
-  const [baseRecord, candidateRecord] = await Promise.all([
-    readSimulationRecord(workspaceId, baseSimKey),
-    readSimulationRecord(workspaceId, candidateSimKey),
-  ]);
-  if (!baseRecord || !candidateRecord) {
-    throw new SimulationHistoryError("simulation_not_found", `simulation ${!baseRecord ? baseSimKey : candidateSimKey} does not exist in this workspace`, 404);
-  }
-  const [base, candidate] = await Promise.all([readSimulationTrace(workspaceId, baseSimKey), readSimulationTrace(workspaceId, candidateSimKey)]);
-  const diff = baseSimKey === candidateSimKey
-    ? identicalDiff(baseSimKey, candidateSimKey, base.header.clipSeconds)
-    : await simulationMotionDiff(workspaceId, baseSimKey, candidateSimKey);
-  const playback = buildSimulationDualPlayback(base, candidate, 10);
-  return {
-    base: { simKey: baseSimKey, engineSemVer: baseRecord.engine_sem_ver },
-    candidate: { simKey: candidateSimKey, engineSemVer: candidateRecord.engine_sem_ver },
-    diff,
-    playback: {
-      sampleHz: playback.sampleHz,
-      durationS: playback.durationS,
-      frames: playback.frames.map((frame) => ({ t: frame.t, actors: { ...frame.actors } })),
-    },
-  };
-}
-
-// ── Revision history rows and the active pointer ─────────────────────────────────────────
-
-type Executor = Pick<Transaction, "queryOne" | "queryRows" | "execute">;
-
-async function onExecutor<T>(tx: Transaction | null, run: (executor: Executor) => Promise<T>): Promise<T> {
-  return tx ? run(tx) : withTransaction(run);
-}
-
-/**
- * Append one simulation to a revision's history (idempotent per (revision, sim_key)). `origin` is
- * still written for rc.73 readers during the expand window.
- */
-export async function appendRevisionSimulation(
-  tx: Transaction | null,
-  input: {
-    workspaceId: string;
-    revisionId: string;
-    simKey: string;
-    engineSemVer: string;
-    reason: RevisionSimulationReason;
-    userId: string | null;
-    previousSimKey?: string | null;
-    motionDiff?: SimulationMotionDiffDto | null;
-  },
-): Promise<boolean> {
-  return onExecutor(tx, async (executor) => {
-    const rows = await executor.queryRows<{ sim_key: string }>(
-      `INSERT INTO simforge.revision_simulations (
-         workspace_id, revision_id, engine_sem_ver, sim_key, origin, reason, created_by_user_id,
-         previous_sim_key, motion_diff
-       ) VALUES (
-         :workspace_id, :revision_id, :engine_sem_ver, :sim_key, :origin, :reason, :user_id,
-         :previous_sim_key, CAST(:motion_diff AS jsonb)
-       ) ON CONFLICT DO NOTHING
-       RETURNING sim_key`,
-      {
-        workspace_id: input.workspaceId,
-        revision_id: input.revisionId,
-        engine_sem_ver: input.engineSemVer,
-        sim_key: input.simKey,
-        origin: input.reason === "commit" ? "commit" : "lazy",
-        reason: input.reason,
-        user_id: input.userId,
-        previous_sim_key: input.previousSimKey && input.previousSimKey !== input.simKey ? input.previousSimKey : null,
-        motion_diff: input.previousSimKey && input.previousSimKey !== input.simKey ? input.motionDiff ?? null : null,
-      },
-    );
-    return rows.length > 0;
-  });
-}
-
-export type ActivePointerReason = "commit" | "backfill-commit" | "backfill-resimulated" | "user";
-
-/**
- * Point a revision's renders at `simKey`, which must already be in its history.
- * TODO(playability-phase1): replace with phase 1's exported `setRevisionActiveSimulation` once
- * feat/playability-phase1 lands it (same signature).
- */
-export async function setRevisionActiveSimulation(
-  tx: Transaction | null,
-  input: { workspaceId: string; revisionId: string; simKey: string; reason: ActivePointerReason; userId: string | null },
-): Promise<void> {
-  await onExecutor(tx, async (executor) => {
-    const inHistory = await executor.queryOne<{ sim_key: string }>(
-      `SELECT sim_key FROM simforge.revision_simulations
-        WHERE workspace_id = :workspace_id AND revision_id = :revision_id AND sim_key = :sim_key`,
-      { workspace_id: input.workspaceId, revision_id: input.revisionId, sim_key: input.simKey },
-    );
-    if (!inHistory) {
-      throw new SimulationHistoryError("simulation_not_in_history", `simulation ${input.simKey} is not in revision ${input.revisionId}'s history`, 409);
-    }
-    await executor.execute(
-      `INSERT INTO simforge.revision_active_simulation (workspace_id, revision_id, sim_key, reason, set_by_user_id, set_at)
-       VALUES (:workspace_id, :revision_id, :sim_key, :reason, :user_id, NOW())
-       ON CONFLICT (workspace_id, revision_id) DO UPDATE
-         SET sim_key = EXCLUDED.sim_key, reason = EXCLUDED.reason,
-             set_by_user_id = EXCLUDED.set_by_user_id, set_at = EXCLUDED.set_at`,
-      { workspace_id: input.workspaceId, revision_id: input.revisionId, sim_key: input.simKey, reason: input.reason, user_id: input.userId },
-    );
-  });
-}
+// ── Revision history ──────────────────────────────────────────────────────────────────
 
 async function readActiveSimKey(workspaceId: string, revisionId: string): Promise<string | null> {
   const row = await queryOne<{ sim_key: string }>(
@@ -496,46 +291,34 @@ async function requireDocumentRevision(context: AppContext, documentId: string, 
 
 /**
  * "Re-simulate with the current engine": the revision's content on its pinned map under this
- * host's engine. The result joins the history with its diff against the active result; the active
- * pointer does not move ("Use this simulation" is separate).
+ * host's engine (`resimulateRevision`). The result joins the history with its diff against the
+ * active result; the active pointer does not move ("Use this simulation" is separate).
  */
 export async function resimulateVersion(
   context: AppContext,
   documentId: string,
   revisionId: string,
   options: { waitMs?: number } = {},
-): Promise<{ status: ScenarioSimulationStatusDto; appended: boolean; motionDiff: SimulationMotionDiffDto | null }> {
-  const revision = await requireDocumentRevision(context, documentId, revisionId);
-  if (!revision.map_version_id) {
-    throw new SimulationHistoryError("scenario_map_absent", "this version is not pinned to a map version and cannot be simulated", 422);
-  }
-  const status = await resolveSimulation({
-    workspaceId: context.workspaceId,
-    userId: context.userId,
-    canonicalContent: parseJsonObject(revision.canonical_content as string | Record<string, unknown>),
-    contentSha256: revision.content_sha256,
-    mapVersionId: revision.map_version_id,
-  }, { waitMs: options.waitMs ?? 0 });
-  if (status.state !== "succeeded") return { status, appended: false, motionDiff: null };
+): Promise<{ status: ScenarioSimulationStatusDto; motionDiff: SimulationMotionDiffDto | null }> {
+  await requireDocumentRevision(context, documentId, revisionId);
+  const result = await resimulateRevision(context, revisionId, options);
+  if (!result) throw new SimulationHistoryError("revision_not_found", `version ${revisionId} does not exist`, 404);
+  const status = result.status;
+  if (status.state !== "succeeded") return { status, motionDiff: null };
+  const row = await queryOne<{ motion_diff: unknown; previous_sim_key: string | null }>(
+    `SELECT motion_diff, previous_sim_key FROM simforge.revision_simulations
+      WHERE workspace_id = :workspace_id AND revision_id = :revision_id AND sim_key = :sim_key`,
+    { workspace_id: context.workspaceId, revision_id: revisionId, sim_key: status.result.simKey },
+  );
   const active = await readActiveSimKey(context.workspaceId, revisionId);
-  const motionDiff = active && active !== status.result.simKey
-    ? await simulationMotionDiff(context.workspaceId, active, status.result.simKey)
-    : null;
-  const appended = await appendRevisionSimulation(null, {
-    workspaceId: context.workspaceId,
-    revisionId,
-    simKey: status.result.simKey,
-    engineSemVer: status.result.engineSemVer,
-    reason: "resimulate",
-    userId: context.userId,
-    previousSimKey: active,
-    motionDiff,
-  });
-  return { status, appended, motionDiff };
+  const stored = row ? parseDiff(row.motion_diff) : null;
+  const motionDiff = stored
+    ?? (active && active !== status.result.simKey ? await simulationMotionDiff(context.workspaceId, active, status.result.simKey) : null);
+  return { status, motionDiff };
 }
 
 /** "Use this simulation": move the revision's active pointer (rollback or roll forward). */
-export async function useVersionSimulation(
+export async function selectVersionSimulation(
   context: AppContext,
   documentId: string,
   revisionId: string,
@@ -579,4 +362,177 @@ export async function fillMissingMotionDiffs(context: AppContext, documentId: st
     filled += updated.length;
   }
   return filled;
+}
+
+// ── Save version / keep the old motion / restore ──────────────────────────────────────────
+
+/** "Save version": the draft simulated under the current engine, frozen as a (named) version. */
+export async function saveDraftVersion(
+  context: AppContext,
+  documentId: string,
+  input: { expectedVersion: number; label?: string | null },
+) {
+  return createScenarioRevision(context, documentId, {
+    expectedVersion: input.expectedVersion,
+    idempotencyKey: `save-version:${documentId}:${input.expectedVersion}`,
+    createdFor: "save",
+    label: input.label ?? null,
+  });
+}
+
+/**
+ * "Keep the old motion as a version": the draft's content frozen into a version bound to the
+ * result it showed before the engine changed (replayed as stored, never re-simulated). The current
+ * engine's result joins that version's history (with its diff) so it can be used later, and the
+ * draft moves on with the current engine.
+ */
+export async function keepPreviousMotion(
+  context: AppContext,
+  documentId: string,
+  input: { expectedVersion: number; previousSimKey: string; currentSimKey: string },
+) {
+  if (input.previousSimKey === input.currentSimKey) {
+    throw new SimulationHistoryError("simulation_diff_same_key", "the previous and current simulations are the same", 400);
+  }
+  const current = await readSimulationRecord(context.workspaceId, input.currentSimKey);
+  if (!current) throw new SimulationHistoryError("simulation_not_found", `simulation ${input.currentSimKey} does not exist`, 404);
+  // For a version that already exists at this draft version, its active result is what the kept
+  // motion is compared against in its history.
+  const existing = await queryOne<{ id: string; active_sim_key: string | null }>(
+    `SELECT rv.id, p.sim_key AS active_sim_key
+       FROM simforge.revisions rv
+       LEFT JOIN simforge.revision_active_simulation p ON p.workspace_id = rv.workspace_id AND p.revision_id = rv.id
+      WHERE rv.workspace_id = :workspace_id AND rv.document_id = :document_id AND rv.source_draft_version = :draft_version`,
+    { workspace_id: context.workspaceId, document_id: documentId, draft_version: input.expectedVersion },
+  );
+  const bindPrevious = existing?.active_sim_key && existing.active_sim_key !== input.previousSimKey
+    ? { simKey: existing.active_sim_key, motionDiff: await simulationMotionDiff(context.workspaceId, existing.active_sim_key, input.previousSimKey) }
+    : null;
+  const result = await createScenarioRevision(context, documentId, {
+    expectedVersion: input.expectedVersion,
+    idempotencyKey: `keep-motion:${documentId}:${input.expectedVersion}:${input.previousSimKey}`,
+    createdFor: "engine_upgrade",
+    bindSimKey: input.previousSimKey,
+    bindPrevious,
+  });
+  if (result.kind !== "created") return result;
+  // The newer engine's result joins the kept version's history, compared against the kept motion.
+  await linkRevisionSimulation(null, {
+    workspaceId: context.workspaceId,
+    revisionId: result.revision.id,
+    simKey: input.currentSimKey,
+    engineSemVer: current.engine_sem_ver,
+    origin: "lazy",
+    reason: "resimulate",
+    userId: context.userId,
+    previousSimKey: input.previousSimKey,
+    motionDiff: await simulationMotionDiff(context.workspaceId, input.previousSimKey, input.currentSimKey),
+  });
+  await acceptDraftSimulation(context, documentId, { expectedVersion: input.expectedVersion, simKey: input.currentSimKey });
+  return result;
+}
+
+/**
+ * Restore a version onto the draft on the host: its content, and its map pin when it differs (an
+ * explicit re-pin). The editor applies same-map restores itself as one undoable edit instead.
+ */
+export async function restoreVersionToDraft(
+  context: AppContext,
+  documentId: string,
+  revisionId: string,
+  input: { expectedVersion: number },
+) {
+  const revision = await readVersionContent(context, documentId, revisionId);
+  const content = parseTemplate(revision.content);
+  return updateScenarioDocument(context, documentId, {
+    expectedVersion: input.expectedVersion,
+    content,
+    ...(revision.mapVersionId ? { mapVersionId: revision.mapVersionId } : {}),
+  });
+}
+
+// ── Map pin: newer publications and the diffed re-pin ──────────────────────────────────────
+
+export async function draftMapPinStatus(context: AppContext, documentId: string): Promise<(ScenarioMapPinStatusDto & { pinnedDescriptor: ScenarioMapDescriptorDto | null }) | null> {
+  const document = await getScenarioDocument(context, documentId);
+  if (!document) return null;
+  if (!document.mapVersionId) {
+    return { pinned: null, newer: null, newerUnavailable: null, pinnedDescriptor: null };
+  }
+  const pinnedRow = await queryOne<{ id: string; label: string; created_at: string; retired: boolean }>(
+    `SELECT id, label, created_at::text AS created_at, retired_at IS NOT NULL AS retired
+       FROM simforge.map_versions WHERE id = :map_version_id`,
+    { map_version_id: document.mapVersionId },
+  );
+  const pinnedDescriptor = await readPinnedScenarioMapDescriptor(document.mapVersionId);
+  // The newest unretired publication of the same source map with an available closure. Moving is
+  // offered only when its OpenDRIVE is byte-identical (anchors stay valid); otherwise the reason is
+  // shown and the author remaps explicitly (`resolveScenarioMapUpgrade`'s rule).
+  const newest = await queryOne<{ id: string; label: string; created_at: string; xodr_sha256: string }>(
+    `SELECT mv.id, mv.label, mv.created_at::text AS created_at, mv.xodr_sha256
+       FROM simforge.map_versions mv
+       JOIN simforge.map_versions pinned ON pinned.id = :pinned_id
+       JOIN simforge.browser_asset_sets bs ON bs.id = mv.browser_asset_set_id AND bs.map_version_id = mv.id
+        AND bs.asset_set_state = 'available'
+      WHERE mv.source_map_asset_id = pinned.source_map_asset_id AND mv.retired_at IS NULL
+      ORDER BY mv.created_at DESC, mv.id DESC
+      LIMIT 1`,
+    { pinned_id: document.mapVersionId },
+  );
+  let newer: ScenarioMapPinStatusDto["newer"] = null;
+  let newerUnavailable: ScenarioMapPinStatusDto["newerUnavailable"] = null;
+  if (newest && newest.id !== document.mapVersionId) {
+    try {
+      resolveScenarioMapUpgrade(document, [{ mapVersionId: newest.id, sourceMapId: document.mapSourceMapId ?? "", artifacts: { xodrSha256: newest.xodr_sha256 } }]);
+      newer = { mapVersionId: newest.id, name: newest.label, publishedAt: newest.created_at };
+    } catch (error) {
+      if (!(error instanceof ScenarioMapResolutionError)) throw error;
+      newerUnavailable = { code: error.code, message: error.message };
+    }
+  }
+  return {
+    pinned: pinnedRow
+      ? { mapVersionId: pinnedRow.id, name: pinnedRow.label, publishedAt: pinnedRow.created_at, retired: Boolean(pinnedRow.retired) }
+      : null,
+    newer,
+    newerUnavailable,
+    pinnedDescriptor,
+  };
+}
+
+/**
+ * Simulate the draft's content on `targetMapVersionId` (nothing changes on the draft) and diff it
+ * against the motion the draft shows now. The author then re-pins explicitly
+ * (`updateDocument({ mapVersionId })`).
+ */
+export async function previewMapRepin(
+  context: AppContext,
+  documentId: string,
+  input: { targetMapVersionId: string; waitMs?: number },
+): Promise<ScenarioMapRepinPreviewDto | null> {
+  const document = await getScenarioDocument(context, documentId);
+  if (!document) return null;
+  const target = await queryOne<{ id: string; label: string; created_at: string }>(
+    `SELECT id, label, created_at::text AS created_at FROM simforge.map_versions WHERE id = :id AND retired_at IS NULL`,
+    { id: input.targetMapVersionId },
+  );
+  if (!target) throw new SimulationHistoryError("scenario_map_version_unavailable", `map version ${input.targetMapVersionId} is retired or does not exist`, 404);
+  await requireScenarioMapPin({ queryOne }, target.id);
+  const status = await resolveSimulation({
+    workspaceId: context.workspaceId,
+    userId: context.userId,
+    canonicalContent: document.content,
+    contentSha256: document.contentSha256,
+    mapVersionId: target.id,
+  }, { waitMs: input.waitMs ?? 0 });
+  const draft = await readDraftSim(context.workspaceId, documentId);
+  const base = draft?.last_sim_key ?? null;
+  const motionDiff = status.state === "succeeded" && base && base !== status.result.simKey
+    ? await simulationMotionDiff(context.workspaceId, base, status.result.simKey)
+    : null;
+  return {
+    target: { mapVersionId: target.id, name: target.label, publishedAt: target.created_at },
+    status,
+    motionDiff,
+  };
 }

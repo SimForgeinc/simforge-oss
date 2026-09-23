@@ -33,7 +33,7 @@ export async function POST(request: Request, route: Context) {
       );
     }
     return NextResponse.json(
-      { draftVersion: result.draftVersion, ...result.status },
+      { draftVersion: result.draftVersion, ...result.status, engineChange: result.engineChange },
       { status: result.status.state === "succeeded" || result.status.state === "failed" ? 200 : 202, headers: SCENARIO_PRIVATE_CACHE_HEADERS },
     );
   } catch (error) {

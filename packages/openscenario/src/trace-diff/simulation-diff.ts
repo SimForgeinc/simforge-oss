@@ -15,7 +15,7 @@ import { COMMON_DURATION_S, type DualTraceFrame, type NormalizedTrace } from './
  * same ticks, and the events, collisions and signal edges agree exactly. Anything else is a change,
  * summarised by its largest position error and what it touched.
  */
-export const SIMULATION_MOTION_DIFF_FORMAT = 'simforge.motion-diff/v1';
+export const SIMULATION_MOTION_DIFF_FORMAT = 'simforge.simulation-diff/v1';
 export const MOTION_IDENTICAL_POSITION_M = 1e-3;
 export const MOTION_IDENTICAL_HEADING_RAD = (0.05 * Math.PI) / 180;
 const MAX_LISTED_ACTORS = 50;
