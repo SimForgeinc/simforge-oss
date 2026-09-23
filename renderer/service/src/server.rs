@@ -97,6 +97,12 @@ pub struct SceneSpec {
     /// scan). Every backend produces the same bytes; see [`LidarBackend`].
     #[serde(default)]
     pub lidar_backend: Option<String>,
+    /// The map's geometry LOD derivative (`derived/geometry-lod/manifest.json`
+    /// of the master in `glbs[0]`). Cameras and the ID pass then draw each
+    /// heavy mesh at the coarsest level within one pixel of error for the
+    /// rig's most demanding camera; lidar/radar keep full detail.
+    #[serde(default)]
+    pub geometry_lod: Option<String>,
 }
 
 impl SceneSpec {
@@ -160,6 +166,13 @@ pub fn prewarm(spec: &SceneSpec) -> Result<SceneApp> {
     phase("lighting", &mut mark);
     app.set_shared_shadows(spec.shared_shadows);
     app.load_tiles(&spec.glbs)?;
+    if let Some(manifest) = &spec.geometry_lod {
+        let master = spec
+            .glbs
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("geometryLod needs the master glTF in glbs[0]"))?;
+        app.load_geometry_lods(Path::new(manifest), master)?;
+    }
     app.load_vegetation(&spec.veg_glbs)?;
     // Bevy's atmosphere bindings are a per-view mesh layout. Mixing a
     // sensor view (which intentionally strips cinematic atmosphere) with an
@@ -603,7 +616,10 @@ impl ServiceState {
             scenes.static_scene.unique_tri_count(),
             scenes.static_scene.tri_count(),
             built_s - snapshot_s,
-            if scenes.gpu.is_some() { "on" } else { "off" },
+            match &scenes.gpu {
+                Some(gpu) => format!("on, {} sliver envelopes", gpu.envelope_triangles),
+                None => "off".to_string(),
+            },
             started.elapsed().as_secs_f64() - built_s,
         );
         if self.sensor_cache_dir.is_some() {
@@ -2714,12 +2730,15 @@ fn gpu_lidar_scan(
     rotation: Quat,
     instance_class: &(dyn Fn(u32) -> sensors::taxonomy::SemanticClass + Sync),
 ) -> Result<Vec<sensors::lidar::LidarPoint>, String> {
+    let t0 = std::time::Instant::now();
     let (frame, dirs) = sensors::lidar::beams(config, origin, rotation);
     let rays: Vec<sensors::gpu_rays::Ray> =
         dirs.iter().map(|dir| sensors::gpu_rays::Ray { origin, dir: *dir, t_max: config.range_m }).collect();
+    let t1 = std::time::Instant::now();
     let statics = gpu
         .cast_hits(combined.static_scene, &rays)
         .map_err(|error| format!("[native_lidar_gpu_trace] {error:#}"))?;
+    let t2 = std::time::Instant::now();
     let hits: Vec<Option<Hit>> = dirs
         .iter()
         .zip(statics)
@@ -2731,7 +2750,19 @@ fn gpu_lidar_scan(
             }
         })
         .collect();
-    Ok(sensors::lidar::points_from_hits(frame, &dirs, &hits, instance_class))
+    let t3 = std::time::Instant::now();
+    let points = sensors::lidar::points_from_hits(frame, &dirs, &hits, instance_class);
+    if std::env::var_os("SIMFORGE_DEBUG_LIDAR_TIMING").is_some() {
+        eprintln!(
+            "lidar-gpu: {} rays: beams {:.1} ms, trace {:.1} ms, actors {:.1} ms, points {:.1} ms",
+            rays.len(),
+            (t1 - t0).as_secs_f64() * 1e3,
+            (t2 - t1).as_secs_f64() * 1e3,
+            (t3 - t2).as_secs_f64() * 1e3,
+            t3.elapsed().as_secs_f64() * 1e3
+        );
+    }
+    Ok(points)
 }
 
 /// Build the actor scene and run every scan of `work` (pure; any thread).

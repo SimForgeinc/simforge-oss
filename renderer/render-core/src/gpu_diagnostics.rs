@@ -205,5 +205,5 @@ pub fn take_frame_times(world: &World) -> Vec<f64> {
     world
         .get_resource::<GpuFrameTimes>()
         .map(|times| std::mem::take(&mut *times.0.lock().unwrap()))
-        .unwrap_or_default()
+        .unwrap_or_default() // fallback-ok: profiling only; no diagnostics plugin means no timings
 }

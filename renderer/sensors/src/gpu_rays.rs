@@ -92,6 +92,7 @@ pub fn headless_device() -> Option<(wgpu::Device, wgpu::Queue, String)> {
         power_preference: wgpu::PowerPreference::HighPerformance,
         ..Default::default()
     }))
+    // fallback-ok: a capability probe; None tells the caller there is no such device
     .ok()?;
     if !adapter.features().contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY) {
         return None;
@@ -106,6 +107,7 @@ pub fn headless_device() -> Option<(wgpu::Device, wgpu::Queue, String)> {
         experimental_features: unsafe { wgpu::ExperimentalFeatures::enabled() },
         ..Default::default()
     }))
+    // fallback-ok: a capability probe; None tells the caller there is no such device
     .ok()?;
     Some((device, queue, name))
 }
@@ -391,6 +393,7 @@ impl GpuRayScene {
         let mut entries: Vec<wgpu::BlasBuildEntry> = Vec::new();
         for (mesh, pair) in blases.iter().enumerate() {
             for (group, blas) in pair.iter().enumerate() {
+                // fallback-ok: a mesh without slivers has no envelope BLAS to build
                 let Some(blas) = blas else { continue };
                 entries.push(wgpu::BlasBuildEntry {
                     blas,
@@ -557,6 +560,7 @@ impl GpuRayScene {
         let submission = self.queue.submit([encoder.finish()]);
         let (tx, rx) = std::sync::mpsc::channel();
         staging.slice(..).map_async(wgpu::MapMode::Read, move |result| {
+            // fallback-ok: the receiver outlives the map; a closed channel cannot occur
             let _ = tx.send(result);
         });
         device

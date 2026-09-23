@@ -101,6 +101,7 @@ fn request(value: serde_json::Value) -> Result<WireRequest> {
 fn attachment(source: &serde_json::Value, pitch_offset_deg: f64) -> serde_json::Value {
     let p = &source["transform"]["position"];
     let r = &source["transform"]["rotation"];
+    // fallback-ok: the intent omits zero mount offsets/angles
     let f = |v: &serde_json::Value| v.as_f64().unwrap_or(0.0);
     serde_json::json!({
         "actorId": source["actorId"],
@@ -269,6 +270,7 @@ fn main() -> Result<()> {
     if let ResponseBody::Error { error, .. } = &response.body {
         bail!("load_scene_state: {error}");
     }
+    // fallback-ok: discard load-time timings so the ticks start from zero
     let _ = state.app.take_gpu_pass_times();
 
     let end = (args.start + args.ticks).min(frames.len());
@@ -342,11 +344,13 @@ fn main() -> Result<()> {
             eprintln!("render-bench: tick {tick} {elapsed:.1} ms");
         }
     }
+    // fallback-ok: best-effort cleanup of the bench's own ring file
     let _ = std::fs::remove_file(&shm_path);
     let measured = tick_ms.len().max(1) as f64;
     let mean = tick_ms.iter().sum::<f64>() / measured;
     let mut sorted = tick_ms.clone();
     sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    // fallback-ok: benchmark statistics over zero ticks are reported as 0
     let median = sorted.get(sorted.len() / 2).copied().unwrap_or(0.0);
     let mut gpu_rows: Vec<(String, f64, f64)> = gpu
         .into_iter()
@@ -356,10 +360,12 @@ fn main() -> Result<()> {
     eprintln!("render-bench: mean {mean:.1} ms/tick, median {median:.1} ms/tick over {} ticks", tick_ms.len());
     let mut frames_sorted = gpu_frames.clone();
     frames_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    // fallback-ok: benchmark statistics without GPU timings are reported as 0
     let gpu_frame_median = frames_sorted.get(frames_sorted.len() / 2).copied().unwrap_or(0.0);
     let gpu_frame_total: f64 = gpu_frames.iter().sum();
     eprintln!(
         "render-bench: GPU frames {} (median {gpu_frame_median:.1} ms, max {:.1} ms), GPU busy {:.1} ms/tick",
+        // fallback-ok: benchmark statistics without GPU timings are reported as 0
         gpu_frames.len(), frames_sorted.last().copied().unwrap_or(0.0), gpu_frame_total / measured
     );
     for (key, total) in &stages {

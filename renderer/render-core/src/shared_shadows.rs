@@ -149,10 +149,12 @@ fn union_cascades(
         if cascades.cascades.is_empty() {
             continue;
         }
+        // fallback-ok: an entity without RenderLayers is on layer 0 (Bevy's definition)
         let light_layers = light_layers.cloned().unwrap_or_default();
         let views: Vec<(Mat4, Projection)> = cameras
             .iter()
             .filter(|(_, _, camera, layers)| {
+                // fallback-ok: an entity without RenderLayers is on layer 0 (Bevy's definition)
                 camera.is_active && layers.cloned().unwrap_or_default().intersects(&light_layers)
             })
             .map(|(transform, projection, _, _)| (transform.to_matrix(), projection.clone()))

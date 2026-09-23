@@ -423,7 +423,7 @@ fn ray_aabb(origin: Vec3, inv_dir: Vec3, t_max: f32, min: Vec3, max: Vec3) -> bo
 /// hit by about `eps * |coord| / cos`, a few millimetres at map scale,
 /// which is what lets both the CPU trees ([`Blas`] slack) and the hardware
 /// backend (triangle inflation) be provably conservative. Real returns at
-/// such incidence are negligible (the intensity proxy is already at its
+/// such incidence are negligible (the modelled intensity is already at its
 /// floor) and a physical lidar does not report them either.
 pub const MIN_INCIDENCE_COS: f32 = 0.05;
 const MIN_INCIDENCE_COS2: f32 = MIN_INCIDENCE_COS * MIN_INCIDENCE_COS;

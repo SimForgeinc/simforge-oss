@@ -1682,9 +1682,9 @@ struct NightWindowOriginal(Handle<StandardMaterial>);
 #[derive(Component)]
 struct SceneSpawned;
 #[derive(Component)]
-struct IdClone;
+pub(crate) struct IdClone;
 #[derive(Component, Clone, Copy)]
-struct InstanceId(u32);
+pub(crate) struct InstanceId(pub(crate) u32);
 #[derive(Component)]
 struct ActorModelRoot;
 #[derive(Clone)]
@@ -2197,6 +2197,10 @@ pub struct SceneApp {
     /// Fit one directional cascade set to the whole RGB rig and render it
     /// once per frame ([`crate::shared_shadows`]).
     shared_shadows: bool,
+    /// Distance LODs of the static map ([`crate::geometry_lod`]).
+    geometry_lods: Option<crate::geometry_lod::GeometryLods>,
+    /// Static master mesh entity -> its ID-pass clone and ID material.
+    id_clone_of: HashMap<Entity, (Entity, Handle<StandardMaterial>)>,
 }
 
 impl SceneApp {
@@ -2474,6 +2478,8 @@ impl SceneApp {
             probe_cubemap: None,
             env_gain: 1.0,
             shared_shadows: false,
+            geometry_lods: None,
+            id_clone_of: HashMap::new(),
         })
     }
 
@@ -3608,6 +3614,7 @@ impl SceneApp {
         self.groups.push(GroupEntities { spec, profile, rgb_entity, id_entity, host });
         self.rig_revision += 1;
         self.sync_host_layers();
+        self.refresh_lod_ranges();
         if self.ready {
             // Post-ready registration: pump updates so extraction and
             // pipeline compilation happen before the next capture. Two
@@ -4521,7 +4528,18 @@ impl SceneApp {
                 >();
                 q.iter(world).count()
             };
-            if pending_loads == 0 && pending_vegetation == 0 && pending_instances == 0 {
+            let pending_lods = match &self.geometry_lods {
+                Some(lods) => {
+                    use bevy::asset::RecursiveDependencyLoadState as State;
+                    match world.resource::<AssetServer>().recursive_dependency_load_state(&lods.lod_gltf) {
+                        State::Loaded => 0,
+                        State::Failed(error) => bail!("geometry LOD derivative {} failed to load: {error}", lods.lod_path),
+                        _ => 1,
+                    }
+                }
+                None => 0,
+            };
+            if pending_loads == 0 && pending_vegetation == 0 && pending_instances == 0 && pending_lods == 0 {
                 // Collect instance entities under the query's mutable borrow,
                 // then re-check readiness through plain world access.
                 let roots: Vec<Entity> = {
@@ -4698,12 +4716,13 @@ impl SceneApp {
                 .collect()
         };
         let mut legend = Vec::with_capacity(prepared.len());
+        let mut id_clone_of = HashMap::with_capacity(prepared.len());
         for (id, name, entity, mesh_h, mat, parent, transform, skin) in prepared {
             world.entity_mut(entity).insert(InstanceId(id));
             let mut cmd = world.spawn((
                 IdClone,
                 Mesh3d(mesh_h),
-                MeshMaterial3d(mat),
+                MeshMaterial3d(mat.clone()),
                 RenderLayers::layer(1),
                 transform,
             ));
@@ -4713,6 +4732,7 @@ impl SceneApp {
             if let Some(skin) = skin {
                 cmd.insert(skin);
             }
+            id_clone_of.insert(entity, (cmd.id(), mat));
             legend.push(LegendEntry { id, name });
         }
         // Dynamic actors take ids above the static legend: before this, the
@@ -4725,11 +4745,59 @@ impl SceneApp {
             bail!("actors were spawned before the static instance-ID legend was frozen");
         }
         self.next_instance_id = static_max;
+        self.id_clone_of = id_clone_of;
+        if let Some(lods) = &self.geometry_lods {
+            let (masters, levels) = crate::geometry_lod::spawn_levels(self.app.world_mut(), lods, &self.id_clone_of)?;
+            eprintln!("geometry-lod: {masters} master primitives, {levels} level entities");
+        }
 
-        // One update so the newly spawned ID clones are extracted before the
-        // first real render request.
+        // One update so the newly spawned ID clones (and LOD levels, whose
+        // ranges need propagated transforms) are extracted before the first
+        // real render request.
         self.app.update();
+        self.refresh_lod_ranges();
         Ok(())
+    }
+
+    /// Load the map's geometry LOD derivative (`manifest.json` beside its
+    /// `lod.gltf`) for the master glTF `master`. Call after
+    /// [`Self::load_tiles`] and before readiness; the levels are spawned
+    /// when the scene is finalized.
+    pub fn load_geometry_lods(&mut self, manifest: &std::path::Path, master: &str) -> Result<()> {
+        let parsed = crate::geometry_lod::Manifest::load(manifest)?;
+        let dir = manifest.parent().ok_or_else(|| anyhow::anyhow!("geometry LOD manifest has no directory"))?;
+        let lod_path = crate::platform::asset_path(&dir.join("lod.gltf")).map_err(|e| anyhow::anyhow!("lod.gltf {e}"))?;
+        let master_path = crate::platform::asset_path(std::path::Path::new(master)).map_err(|e| anyhow::anyhow!("master {e}"))?;
+        let lod_gltf = self.app.world().resource::<AssetServer>().load(lod_path.clone());
+        self.geometry_lods = Some(crate::geometry_lod::GeometryLods {
+            manifest: parsed,
+            lod_path,
+            master_path,
+            lod_gltf,
+            pixel_error_px: crate::geometry_lod::DEFAULT_PIXEL_ERROR_PX,
+            applied_f_px: None,
+        });
+        Ok(())
+    }
+
+    /// Recompute LOD ranges for the most demanding RGB camera of the rig
+    /// (largest focal length in pixels). No-op without LODs or cameras, or
+    /// when the rig's focal length did not change.
+    fn refresh_lod_ranges(&mut self) {
+        let Some(lods) = &self.geometry_lods else { return };
+        let f_px = self
+            .groups
+            .iter()
+            .map(|g| crate::geometry_lod::focal_px(g.spec.fov_y_deg.to_radians(), g.spec.height))
+            .fold(0.0f32, f32::max);
+        if f_px <= 0.0 || lods.applied_f_px == Some(f_px) {
+            return;
+        }
+        let pixel_error = lods.pixel_error_px;
+        crate::geometry_lod::apply_ranges(self.app.world_mut(), f_px, pixel_error);
+        if let Some(lods) = &mut self.geometry_lods {
+            lods.applied_f_px = Some(f_px);
+        }
     }
 
     /// Set the pose of a registered camera group (applies to RGB + ID cams).
@@ -4792,6 +4860,7 @@ impl SceneApp {
         world.flush();
         self.rig_revision += 1;
         self.sync_host_layers();
+        self.refresh_lod_ranges();
         true
     }
 
