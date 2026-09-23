@@ -385,6 +385,9 @@ def build_intent(scenario_bytes: bytes, xodr_path: Path, catalog_path: Path,
              "sizeBytes": catalog_path.stat().st_size},
         ],
         "seed": seed if seed is not None else random.randrange(2**32),
+        # The developer CLI renders a raw OpenSCENARIO file: that is the
+        # explicit legacy replay, not a fallback from a missing timeline.
+        "motionSource": "original-xosc",
     }
 
 

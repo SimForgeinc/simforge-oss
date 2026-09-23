@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { RenderSourceTransformSchema, type RenderIntentV1 } from '@simforge-oss/scenario';
+import { LEGACY_XOSC_MOTION_SOURCE, RenderSourceTransformSchema, type RenderIntentV1 } from '@simforge-oss/scenario';
 
 import { createFixedSchedules, unionFrameMicros, type FixedSchedule } from '../schedule.js';
 import { NATIVE_ACTOR_ASSETS_INPUT_ID } from './actor-assets.js';
@@ -299,6 +299,8 @@ export interface NativeRunExpectations {
   readonly videos: ReadonlyMap<string, NativeExpectedVideo>;
   /** Digest of the intent's `render.timeline` asset: the run must render from it and pass parity. */
   readonly timelineSha256?: string;
+  /** The intent explicitly requested the legacy OpenSCENARIO replay: the run must say so. */
+  readonly legacyXoscReplay?: true;
   /** Lidar/radar sources that must each carry one `sensorArchive` (the intent asked for it), keyed like `videos`. */
   readonly sensorArchives: ReadonlySet<string>;
 }
@@ -388,6 +390,7 @@ export function nativeRunExpectations(
     frameCount: unionFrameMicros(schedules).length,
     videos,
     ...(timeline ? { timelineSha256: timeline.sha256 } : {}),
+    ...(intent.motionSource === LEGACY_XOSC_MOTION_SOURCE ? { legacyXoscReplay: true as const } : {}),
     sensorArchives,
   };
 }
@@ -449,8 +452,13 @@ export function nativeEvidenceFailure(
     || diagnostics.parity?.pass !== true
     || diagnostics.parity.comparedPoses === 0
   );
+  // Only an explicitly requested legacy replay may report the legacy source,
+  // and it must.
+  const legacyMismatch = (expectations.legacyXoscReplay === true) !== (manifest.sceneSource === 'openscenario-legacy')
+    && (expectations.legacyXoscReplay === true || manifest.sceneSource !== undefined);
   const mismatch =
     timelineMismatch
+    || legacyMismatch
     || lineageMismatch(manifest)
     || lineageMismatch(diagnostics)
     || manifest.loweringSha256 !== diagnostics.loweringSha256

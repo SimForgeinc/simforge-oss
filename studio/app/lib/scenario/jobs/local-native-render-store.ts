@@ -726,6 +726,7 @@ export async function completeLocalNativeRender(
     diagnostics,
     features: new Set([CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY]),
     timelineSha256: intent.assets.find((asset) => asset.assetId === RENDER_TIMELINE_INPUT_ID)?.sha256 ?? null,
+    motionSource: intent.motionSource,
   }) ?? renderSubstitutionsVerdict(
     (rawManifest as Record<string, unknown> | null)?.substitutions,
     intent.allowSubstitutions ?? [],
