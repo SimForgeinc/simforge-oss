@@ -109,3 +109,8 @@ template a new component starts from. `pnpm style:ratchet --check` and
 - `docs/simcloud-convergence.md` — canonical ownership and the local-to-product
   flow.
 - `packages/cli/README.md` — full command reference.
+
+## Git safety
+- Several agents work on one machine at once. Never run `git stash`, `reset`, `checkout --`, `clean` or `apply` in a tree you did not create. Use your own worktree.
+- Mutate with `git -C <absolute path>`, so a failed `cd` can't leave a command running in someone else's checkout.
+- Move a shared branch only with `commit` or `merge`, never with `update-ref` or `reset`.
