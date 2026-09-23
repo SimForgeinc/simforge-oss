@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 from .transport import download, upload
+from ..actor_bindings import load as load_actor_bindings
 from .backend import RenderBackend, presentation_video_codec_args, runtime_asset_bindings
 # historical name retained for stored-data compat
 from .compiler import (
@@ -329,7 +330,7 @@ def _resolve_actor_bodies(
             raise ContractError(f"asset catalog has no CARLA binding for {actor_id} ({binding.catalog_name})")
         blueprint = entry.get("blueprintId")
         fidelity = entry.get("fidelity")
-        if not isinstance(fidelity, str) or not fidelity:
+        if isinstance(blueprint, str) and blueprint and (not isinstance(fidelity, str) or not fidelity):
             raise CarlaRenderError(
                 "carla_catalog_binding_incomplete",
                 f'catalog "{binding.catalog_name}" (actor {actor_id}) declares no CARLA binding fidelity, '
@@ -351,7 +352,8 @@ def _resolve_actor_bodies(
             ))
             continue
         reason = (
-            f"the catalog binds no native CARLA body ({blueprint!r})" if not native
+            (f"no CARLA body is bound: {entry['unavailableReason']}" if entry.get("unavailableReason")
+             else f"the catalog binds no native CARLA body ({blueprint!r})") if not native
             else f"this CARLA runtime cannot place {blueprint}"
         )
         if prefixes is None:
@@ -695,6 +697,7 @@ def _manifest_to_path(
             "xosc": {"sha256": lease.execution_package.xosc.sha256, "sizeBytes": lease.execution_package.xosc.size_bytes, "xsdSha256": lease.execution_package.xosc.xsd_sha256},
             "xodr": {"sha256": lease.execution_package.xodr.sha256, "sizeBytes": lease.execution_package.xodr.size_bytes, "mapName": lease.execution_package.xodr.map_name},
             "assetCatalog": {"sha256": lease.execution_package.asset_catalog.sha256, "sizeBytes": lease.execution_package.asset_catalog.size_bytes, "catalogVersionId": lease.execution_package.asset_catalog.catalog_version_id},
+            "actorBindings": load_actor_bindings().evidence(),
         },
         "runtimeRequirements": asdict(lease.execution_package.runtime_requirements),
         "xoscValidation": dict(validation),
@@ -1735,10 +1738,12 @@ def execute_lease(
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ContractError("asset catalog manifest must be valid UTF-8 JSON") from exc
     check_abort("index_asset_catalog")
+    actor_binding_table = load_actor_bindings()
     catalog = runtime_asset_bindings(
         catalog_manifest,
         expected_catalog_version_id=package.asset_catalog.catalog_version_id,
         manifest_sha256=hashlib.sha256(catalog_bytes).hexdigest(),
+        actor_bindings=actor_binding_table,
         abort=lambda: check_abort("index_asset_catalog"),
     )
     for catalog_id, binding in (runtime_asset_overrides or {}).items():

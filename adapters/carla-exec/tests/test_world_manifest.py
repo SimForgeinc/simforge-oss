@@ -291,3 +291,114 @@ def test_unversioned_local_catalog_is_content_addressed():
     assert runtime_asset_bindings(body, expected_catalog_version_id=f"catalog_local_{sha}", manifest_sha256=sha) == {}
     with pytest.raises(Exception, match="version does not match"):
         runtime_asset_bindings(body, expected_catalog_version_id=f"catalog_local_{'cd' * 32}", manifest_sha256=sha)
+
+
+# -- CARLA actor binding table --------------------------------------------------------
+
+def _object_catalog():
+    return {
+        "contractVersion": "simcloud.carla-object-catalog/v1", "carlaVersion": "0.10.0", "generatedFrom": {},
+        "objects": [
+            {"id": "carla.vehicle_gazelle_omafiets", "actorClass": "bicycle", "carla": {"blueprintId": "vehicle.gazelle.omafiets"}},
+            {"id": "carla.walker_0016", "actorClass": "pedestrian", "carla": {"blueprintId": "walker.pedestrian.0016"}},
+        ],
+        "equivalents": [
+            {"catalogId": "vehicle.bicycle", "blueprintId": "vehicle.gazelle.omafiets", "carlaObjectId": "carla.vehicle_gazelle_omafiets",
+             "fidelity": "native-blueprint", "dimensionalAgreement": "close"},
+            {"catalogId": "pedestrian.adult", "blueprintId": "walker.pedestrian.0016", "carlaObjectId": "carla.walker_0016",
+             "fidelity": "native-blueprint", "dimensionalAgreement": "loose"},
+        ],
+        "unavailable": [{"catalogId": "animal.cat", "reason": "no CARLA animal blueprint matches this model"}],
+    }
+
+
+def _table(subs=None):
+    from simforge_oss_carla_exec import actor_bindings
+    body = json.dumps(actor_bindings.generate(_object_catalog(), "0" * 64, subs, "1" * 64 if subs else None)).encode()
+    return actor_bindings.parse(body)
+
+
+def test_actor_binding_table_binds_walkers_with_a_class_and_fails_unbound_by_name():
+    from simforge_oss_carla_exec.runtime.backend import runtime_asset_bindings
+    table = _table({"substitutions": {"vehicle.bus": {"carla": None, "reason": "no bus body"}}})
+    assert table.bindings["pedestrian.adult"]["actorClass"] == "pedestrian"
+    assert table.unavailable["vehicle.bus"].startswith("renderer parity")
+    catalog = {"contractVersion": "uniscenario.asset-catalog/v1", "entries": [
+        {"id": "pedestrian.adult", "class": "pedestrian", "dims": {"l": 0.3, "w": 0.5, "h": 1.75}},
+        {"id": "vehicle.bicycle", "actorClass": "bicycle"},
+        {"id": "animal.cat"}, {"id": "vehicle.unknown"},
+    ]}
+    sha = "ab" * 32
+    index = runtime_asset_bindings(catalog, expected_catalog_version_id=f"catalog_local_{sha}", manifest_sha256=sha, actor_bindings=table)
+    assert index["pedestrian.adult"]["blueprintId"] == "walker.pedestrian.0016"
+    assert index["pedestrian.adult"]["actorClass"] == "pedestrian"
+    assert index["pedestrian.adult"]["bindingSource"] == "carla-actor-bindings"
+    assert index["vehicle.bicycle"]["blueprintId"] == "vehicle.gazelle.omafiets"
+    assert "blueprintId" not in index["animal.cat"] and "animal" in index["animal.cat"]["unavailableReason"]
+    assert "has no binding" in index["vehicle.unknown"]["unavailableReason"]
+
+
+def test_a_catalog_binding_that_disagrees_with_the_table_is_refused():
+    from simforge_oss_carla_exec.runtime.backend import runtime_asset_bindings
+    catalog = {"contractVersion": "uniscenario.asset-catalog/v1", "catalogVersionId": "v", "entries": [
+        {"id": "vehicle.bicycle", "runtimeBindings": {"carla": {"blueprintId": "vehicle.diamondback.century", "fidelity": "native-blueprint"}}},
+    ]}
+    with pytest.raises(RuntimeError, match="carla_actor_binding_conflict"):
+        runtime_asset_bindings(catalog, expected_catalog_version_id="v", actor_bindings=_table())
+
+
+def test_parity_substitutions_must_agree_with_the_object_catalog():
+    from simforge_oss_carla_exec import actor_bindings
+    with pytest.raises(ValueError, match="binds vehicle.bicycle"):
+        actor_bindings.generate(_object_catalog(), "0" * 64,
+                                {"substitutions": {"vehicle.bicycle": {"carla": "vehicle.diamondback.century"}}}, "1" * 64)
+
+
+def test_checked_in_actor_binding_table_covers_the_dev_road_users():
+    from simforge_oss_carla_exec import actor_bindings
+    table = actor_bindings.load()
+    for catalog_id, blueprint in {
+        "pedestrian.adult": "walker.pedestrian.0016", "vehicle.bicycle": "vehicle.gazelle.omafiets",
+        "vehicle.motorcycle": "vehicle.harley.lowrider", "vehicle.delivery_van": "vehicle.sprinter.mercedes",
+        "vehicle.sedan": "vehicle.lincoln.mkz", "vehicle.hatchback": "vehicle.mini.cooper",
+    }.items():
+        assert table.bindings[catalog_id]["blueprintId"] == blueprint, catalog_id
+    assert table.evidence()["sha256"] == table.sha256
+
+
+def test_placement_probes_are_destroyed_server_side_in_synchronous_mode():
+    """actor.destroy() on a probe spawned since the last synchronous tick returns
+    False and leaves the actor in the world; the batch command removes it."""
+    from types import SimpleNamespace
+    calls = []
+    backend = object.__new__(CarlaBackend)
+    backend.carla = SimpleNamespace(command=SimpleNamespace(DestroyActor=lambda actor_id: ("destroy", actor_id)))
+    backend.client = SimpleNamespace(apply_batch_sync=lambda commands, _tick: calls.extend(commands) or [SimpleNamespace(error="")])
+    probe = SimpleNamespace(id=42, destroy=lambda: pytest.fail("actor.destroy() leaks pre-tick probes"))
+    backend._destroy_probe("vehicle.gazelle.omafiets", probe)
+    assert calls == [("destroy", 42)]
+    backend.client = SimpleNamespace(apply_batch_sync=lambda commands, _tick: [SimpleNamespace(error="actor not found")])
+    with pytest.raises(RuntimeError, match="failed to destroy the vehicle.gazelle.omafiets placement probe: actor not found"):
+        backend._destroy_probe("vehicle.gazelle.omafiets", probe)
+
+
+def test_a_walker_satisfies_all_off_lights_and_fails_a_lit_one():
+    from types import SimpleNamespace
+    backend = object.__new__(CarlaBackend)
+    backend.carla = SimpleNamespace(VehicleLightState=None)
+    walker = SimpleNamespace(type_id="walker.pedestrian.0016")
+    backend._apply_appearance("ped", walker, {"light.brakeLights": "off", "light.lowBeam": "off"}, 0.0)
+    assert backend.appearance_verification["ped"]["light.brakeLights"] == "body-has-no-lights"
+    with pytest.raises(RuntimeError, match="carla_actor_lights_unsupported"):
+        backend._apply_appearance("ped", walker, {"light.brakeLights": "on"}, 0.0)
+
+
+def test_carla_010_bone_readback_names_bones_name():
+    from types import SimpleNamespace
+    from simforge_oss_carla_exec.runtime.policy import bone_pose_signature
+    rot = lambda p: SimpleNamespace(rotation=SimpleNamespace(pitch=p, yaw=0.0, roll=0.0))
+    bones = SimpleNamespace(bone_transforms=[
+        SimpleNamespace(name="crl_root", relative=rot(0.0)), SimpleNamespace(name="crl_thigh__R", relative=rot(12.0)),
+        SimpleNamespace(bone_name="thigh_l", relative=rot(3.0)),
+    ])
+    assert bone_pose_signature(bones) == {"crl_thigh__R": (12.0, 0.0, 0.0), "thigh_l": (3.0, 0.0, 0.0)}

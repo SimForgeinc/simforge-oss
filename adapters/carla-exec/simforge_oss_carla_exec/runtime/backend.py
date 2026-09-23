@@ -15,6 +15,7 @@ from threading import Condition, Lock
 from time import monotonic, sleep
 from typing import Any, Callable, Iterable, Mapping, Protocol
 
+from .. import actor_bindings as _actor_bindings
 from .. import world_manifest as _world_manifest
 from .compiler import LIFECYCLE_ABSENT, ActorBinding, PlanFrame
 from .policy import (
@@ -194,6 +195,45 @@ RGB_QUALITY_ATTRIBUTES: Mapping[str, Mapping[str, str]] = {
     "high": {"enable_postprocess_effects": "True", "motion_blur_intensity": "0.0", "gamma": "2.2"},
     "cinematic": {"enable_postprocess_effects": "True", "motion_blur_intensity": "0.0", "gamma": "2.2"},
 }
+
+#: RGB camera profiles per CARLA engine generation (``client.get_server_version()``
+#: major.minor). The `rrmaps-accepted-v1` grade needs the UE4 post-process
+#: attributes (temp, tint, slope, gamma, motion blur...). CARLA 0.10 (UE5)
+#: removed them from `sensor.camera.rgb` (it exposes post_process_profile and the
+#: lens attributes only), so its profile is the engine's own post-process, named
+#: and recorded, never a silent partial grade. An engine not listed fails.
+RGB_CAMERA_PROFILES: Mapping[str, Mapping[str, Any]] = {
+    "0.9": {
+        "profile": CAMERA_GRADE_PROFILE,
+        "grade": DEFAULT_RGB_CAMERA_GRADE,
+        "quality": RGB_QUALITY_ATTRIBUTES,
+        "mapExposure": True,
+    },
+    "0.10": {
+        "profile": "carla-0.10-ue5-native-v1",
+        "grade": {},
+        "quality": {
+            "preview": {"enable_postprocess_effects": "False"},
+            "standard": {"enable_postprocess_effects": "True"},
+            "high": {"enable_postprocess_effects": "True"},
+            "cinematic": {"enable_postprocess_effects": "True"},
+        },
+        "mapExposure": False,
+    },
+}
+
+
+def rgb_camera_profile(server_version: str) -> tuple[str, Mapping[str, Any]]:
+    parts = str(server_version or "").split(".")
+    generation = ".".join(parts[:2]) if len(parts) >= 2 else ""
+    profile = RGB_CAMERA_PROFILES.get(generation)
+    if profile is None:
+        raise CarlaRenderError(
+            "carla_engine_version_unsupported",
+            f"no RGB camera profile is defined for CARLA server version {server_version!r}",
+        )
+    return generation, profile
+
 
 #: The lighting a cooked world bakes, per exact cooked map name, as CARLA
 #: weather values. A cooked RoadRunner world reports `is_weather_enabled()`
@@ -696,9 +736,14 @@ def runtime_asset_bindings(
     *,
     expected_catalog_version_id: str,
     manifest_sha256: str | None = None,
+    actor_bindings: "_actor_bindings.ActorBindingTable | None" = None,
     abort: Callable[[], None] | None = None,
 ) -> dict[str, Mapping[str, object]]:
-    """Validate a signed asset catalog and index its CARLA bindings (blueprint, fidelity, class, dims)."""
+    """Validate a signed asset catalog and index its CARLA bindings (blueprint, fidelity, class, dims).
+
+    With ``actor_bindings`` (the renderer's CARLA actor binding table), an entry the
+    catalog does not bind to CARLA is bound through the table; see ``actor_bindings``.
+    """
     check = abort or (lambda: None)
     check()
     if not isinstance(manifest, Mapping):
@@ -750,6 +795,8 @@ def runtime_asset_bindings(
             }
             if len(narrowed_dims) == 3:
                 indexed["dims"] = narrowed_dims
+        if actor_bindings is not None:
+            indexed = _actor_bindings.resolve(asset_id, indexed, actor_bindings)
         bindings[asset_id] = indexed
     check()
     return bindings
@@ -1189,10 +1236,27 @@ class CarlaBackend:
             if probe is None:
                 continue  # registered but not cooked into this image
             available.add(blueprint_id)
-            if probe.destroy() is False:
-                # A probe left in the world would be rendered.
-                raise RuntimeError(f"CARLA failed to destroy the {blueprint_id} placement probe")
+            self._destroy_probe(blueprint_id, probe)
         return frozenset(available)
+
+    def _destroy_probe(self, blueprint_id: str, probe: Any) -> None:
+        """Remove a placement probe for certain, or fail (a probe left in the world is rendered).
+
+        In synchronous mode an actor spawned since the last tick is not yet
+        registered on the client, so ``actor.destroy()`` returns False ("already
+        dead") and the actor stays in the world. A server-side batch
+        ``DestroyActor`` removes it regardless and reports its own error.
+        """
+        command = getattr(getattr(self.carla, "command", None), "DestroyActor", None)
+        apply_batch_sync = getattr(getattr(self, "client", None), "apply_batch_sync", None)
+        if callable(command) and callable(apply_batch_sync):
+            responses = apply_batch_sync([command(probe.id)], False)
+            error = str(getattr(responses[0], "error", "") or "") if responses else "no response"
+            if error:
+                raise RuntimeError(f"CARLA failed to destroy the {blueprint_id} placement probe: {error}")
+            return
+        if probe.destroy() is False:
+            raise RuntimeError(f"CARLA failed to destroy the {blueprint_id} placement probe")
 
     def spawn(self, actors: Mapping[str, ActorBinding], first_frame: PlanFrame, catalog: Mapping[str, Any], abort: Callable[[], None] | None = None) -> None:
         assert self.world is not None
@@ -2376,14 +2440,24 @@ class CarlaBackend:
                 }
                 if requested.modality == "rgb":
                     loaded_map_name = str(self.map_evidence.get("loadedMapName"))
-                    grade = dict(DEFAULT_RGB_CAMERA_GRADE)
+                    server_version = str(self.client.get_server_version())
+                    generation, camera_profile = rgb_camera_profile(server_version)
+                    grade = dict(camera_profile["grade"])
                     if loaded_map_name in COOKED_MAP_RGB_EXPOSURE:
+                        if not camera_profile["mapExposure"]:
+                            raise CarlaRenderError(
+                                "carla_sensor_attribute_unsupported",
+                                f"cooked map {loaded_map_name} needs exposure_compensation "
+                                f"{COOKED_MAP_RGB_EXPOSURE[loaded_map_name]}, which CARLA {server_version} cameras lack",
+                            )
                         grade["exposure_compensation"] = COOKED_MAP_RGB_EXPOSURE[loaded_map_name]
                     attributes.update(grade)
-                    attributes.update(RGB_QUALITY_ATTRIBUTES[spec.quality])
+                    attributes.update(camera_profile["quality"][spec.quality])
                     self.camera_grade_evidence[key] = {
                         "schema": "simforge.camera-grade-evidence/v1",
-                        "profile": CAMERA_GRADE_PROFILE,
+                        "profile": camera_profile["profile"],
+                        "engineGeneration": generation,
+                        "serverVersion": server_version,
                         "mapName": loaded_map_name,
                         "attributes": dict(sorted(grade.items())),
                         "mapExposureSource": (
@@ -2391,7 +2465,7 @@ class CarlaBackend:
                         ),
                         "quality": spec.quality,
                         "postprocess": spec.quality != "preview",
-                        "motionBlurIntensity": 0.0,
+                        "motionBlurIntensity": 0.0 if "motion_blur_intensity" in attributes else None,
                     }
                     self.visual_quality_stats[key] = {
                         "sampleCount": 0,
@@ -3066,6 +3140,15 @@ class CarlaBackend:
         self.door_states = getattr(self, "door_states", {})
         lights = {key[len("light."):]: value for key, value in appearance.items() if key.startswith("light.")}
         doors = {key[len("door."):]: value for key, value in appearance.items() if key.startswith("door.")}
+        if lights and not callable(getattr(actor, "get_light_state", None)) and all(
+            mode == "off" for mode in lights.values()
+        ):
+            # A body without lights (a walker) shows every light off, which is
+            # exactly the authored state; any lit request still fails below.
+            self.appearance_verification.setdefault(actor_id, {}).update(
+                {f"light.{name}": "body-has-no-lights" for name in lights}
+            )
+            lights = {}
         if lights:
             self._apply_vehicle_lights(actor_id, actor, lights, t)
         if doors:
@@ -3090,6 +3173,12 @@ class CarlaBackend:
         the artifact under test, and render determinism outranks the visual
         plausibility of an automatically-lit night scene.
         """
+        if not callable(getattr(actor, "get_light_state", None)):
+            raise CarlaRenderError(
+                "carla_actor_lights_unsupported",
+                f"actor {actor_id} ({getattr(actor, 'type_id', '?')}) has authored lights "
+                f"{dict(lights)} but its CARLA body has no light state",
+            )
         light_state_cls = getattr(self.carla, "VehicleLightState", None)
         if light_state_cls is None:
             raise RuntimeError("this .xosc authors vehicle light states but the CARLA runtime has no VehicleLightState")

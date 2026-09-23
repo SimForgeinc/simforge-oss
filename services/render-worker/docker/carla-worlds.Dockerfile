@@ -22,7 +22,8 @@
 # sha256; neither is part of the local build context.
 #
 #   depot build -f services/render-worker/docker/carla-worlds.Dockerfile \
-#     --build-context carla-exec=adapters/carla-exec \
+#     --build-context carla-exec=adapters/carla-exec --build-context native=native \
+#     --build-context timeline=adapters/timeline \
 #     --build-arg CARLA_WORKER_IMAGE=<registry>/<repo>@sha256:<approved worker> \
 #     --build-arg CARLA_WORLD_PACK_URL=<https url> --build-arg CARLA_WORLD_PACK_SHA256=<sha256> \
 #     --build-arg CARLA_ASSET_REGISTRY_URL=<https url> --build-arg CARLA_ASSET_REGISTRY_SHA256=<sha256> \
@@ -42,6 +43,15 @@ ADD --checksum=sha256:${CARLA_ASSET_REGISTRY_SHA256} ${CARLA_ASSET_REGISTRY_URL}
 RUN mkdir /out && tar -xf /pack.tar -C /out && rm /pack.tar \
  && test -d /out/CarlaUnreal/Content && test ! -e /out/CarlaUnreal/AssetRegistry.bin \
  && mv /AssetRegistry.bin /out/CarlaUnreal/AssetRegistry.bin
+
+# The shared render-timeline sampler (PyO3, abi3 >= 3.10, manylinux2014). The
+# trace-replay path refuses a package that ships a render timeline without it,
+# so an image without this wheel cannot render any platform CARLA job.
+FROM ghcr.io/pyo3/maturin:v1.9.6 AS timeline-build
+COPY --from=native / /src/native
+COPY --from=timeline / /src/adapters/timeline
+WORKDIR /src/adapters/timeline
+RUN maturin build --release --locked --manylinux 2014 -o /wheels
 
 FROM python:3.12.10-slim-bookworm AS python-build
 WORKDIR /src
@@ -64,7 +74,9 @@ RUN test -n "$SOURCE_REVISION" && test -n "$IMAGE_VERSION" && test -n "$CARLA_WO
  && echo "$CARLA_ENGINE_BINARY_SHA256  /home/carla/CarlaUnreal/Binaries/Linux/CarlaUnreal-Linux-Shipping" | sha256sum -c -
 COPY --from=world-pack --chown=carla:carla /out/ /home/carla/
 COPY --from=python-build /wheels /tmp/wheels
+COPY --from=timeline-build /wheels /tmp/wheels
 RUN python3 -m pip install --no-cache-dir --no-deps --force-reinstall /tmp/wheels/*.whl && rm -rf /tmp/wheels \
+ && python3 -c "import simforge_oss_timeline, simforge_oss_carla_exec.actor_bindings as a; a.load()" \
  && for world in $CARLA_WORLDS; do \
       test -s "/home/carla/CarlaUnreal/Content/Carla/Maps/$world.umap" \
       && test -s "/home/carla/CarlaUnreal/Content/Carla/Maps/OpenDrive/$world.xodr" || exit 1; \
