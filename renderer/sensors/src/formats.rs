@@ -11,12 +11,10 @@
 //!   parity with `_write_radar_csv`.
 //! - IMU / GNSS: JSONL.
 
-use crate::imu_gnss::{GnssSample, ImuSample};
 use crate::lidar::LidarPoint;
 use crate::radar::RadarDetection;
 use anyhow::Result;
 use std::fmt::Write as _;
-use std::io::Write;
 use std::path::Path;
 
 pub fn encode_lidar_ply(points: &[LidarPoint]) -> Vec<u8> {
@@ -132,22 +130,6 @@ pub fn encode_radar_csv(detections: &[RadarDetection]) -> Vec<u8> {
 
 pub fn write_radar_csv(path: &Path, detections: &[RadarDetection]) -> Result<()> {
     std::fs::write(path, encode_radar_csv(detections))?;
-    Ok(())
-}
-
-pub fn write_imu_jsonl(path: &Path, samples: &[ImuSample]) -> Result<()> {
-    let mut f = std::fs::File::create(path)?;
-    for s in samples {
-        writeln!(f, "{}", serde_json::to_string(s)?)?;
-    }
-    Ok(())
-}
-
-pub fn write_gnss_jsonl(path: &Path, samples: &[GnssSample]) -> Result<()> {
-    let mut f = std::fs::File::create(path)?;
-    for s in samples {
-        writeln!(f, "{}", serde_json::to_string(s)?)?;
-    }
     Ok(())
 }
 

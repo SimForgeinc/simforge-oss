@@ -1,5 +1,5 @@
 //! `ktx2-gpu-variant`: the ingest generator of the `textures-full-bc7` map
-//! texture variant (see `render_core::ktx2_variant`).
+//! texture variant (see `crate::ktx2_variant`).
 //!
 //!   ktx2-gpu-variant --out-dir DIR [--supercompression zstd|none] FILE.ktx2...
 //!   ktx2-gpu-variant --fingerprint
@@ -12,7 +12,7 @@
 //! verified to load to the source's exact blocks before it is written; any
 //! failure exits non-zero. Output is deterministic (same input, same bytes).
 use anyhow::{bail, Context, Result};
-use render_core::ktx2_variant::{gpu_variant, Supercompression, VariantCodec, KTX2_GPU_VARIANT_TOOL};
+use crate::ktx2_variant::{gpu_variant, Supercompression, VariantCodec, KTX2_GPU_VARIANT_TOOL};
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 
@@ -31,8 +31,8 @@ fn fingerprint() -> Result<serde_json::Value> {
     }))
 }
 
-fn main() -> Result<()> {
-    let mut args = std::env::args().skip(1);
+pub fn run(args: Vec<String>) -> Result<()> {
+    let mut args = args.into_iter().skip(1);
     let mut out_dir: Option<PathBuf> = None;
     let mut supercompression = Supercompression::ZstdFastest;
     let mut inputs = Vec::new();

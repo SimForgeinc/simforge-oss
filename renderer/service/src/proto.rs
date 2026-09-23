@@ -65,8 +65,10 @@ pub struct WireRequest {
 
 /// One rig camera in a render request. Poses are absolute world-space
 /// eye/target points (y-up), matching the spike / W0 camera convention.
+/// Unknown keys are refused: the retired per-camera `profile` (and any
+/// misspelt field) must fail loudly rather than be dropped.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ServiceCamera {
     pub sensor_id: String,
     pub width: u32,
@@ -89,11 +91,6 @@ pub struct ServiceCamera {
     /// excluded from this camera's view only.
     #[serde(default)]
     pub attach: Option<CameraAttach>,
-    /// Optional per-camera render profile. Omit to inherit the service scene
-    /// profile. A campaign chase camera can therefore be cinematic while the
-    /// retained Pronto cameras remain sensor-profile and hash-stable.
-    #[serde(default)]
-    pub profile: Option<render_core::engine::Profile>,
 }
 
 /// Retained spinning lidar declaration for `render_bundle`.
@@ -325,7 +322,6 @@ pub enum ResponseBody {
     Hello {
         ok: bool,
         protocol: u32,
-        profile: String,
         legend_entries: usize,
         shm: ShmInfo,
         /// Additive ops this build answers beyond the protocol baseline.
@@ -600,25 +596,20 @@ pub fn decode_request_json(document: &str) -> Result<WireRequest, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use render_core::engine::Profile;
 
     #[test]
-    fn camera_profile_is_optional_and_camel_case() {
+    fn camera_is_camel_case_and_refuses_the_retired_profile() {
         let base = r#"{
             "sensorId":"pronto-cam0","width":1920,"height":1080,"fovDeg":60,
             "eye":[0,2,0],"target":[1,2,0]
         }"#;
-        let sensor: ServiceCamera = serde_json::from_str(base).unwrap();
-        assert_eq!(sensor.profile, None);
-
-        let cinematic: ServiceCamera = serde_json::from_str(
-            &base.replace(
-                "\"eye\"",
-                "\"profile\":\"cinematic\",\"eye\"",
-            ),
+        let camera: ServiceCamera = serde_json::from_str(base).unwrap();
+        assert_eq!(camera.sensor_id, "pronto-cam0");
+        let error = serde_json::from_str::<ServiceCamera>(
+            &base.replace("\"eye\"", "\"profile\":\"cinematic\",\"eye\""),
         )
-        .unwrap();
-        assert_eq!(cinematic.profile, Some(Profile::Cinematic));
+        .unwrap_err();
+        assert!(error.to_string().contains("profile"), "{error}");
     }
 
     #[test]

@@ -16,9 +16,8 @@
 //! Lighting/profile routing: the scene is lit by the WSB4 lighting ladder
 //! (`crate::lighting::spawn_lighting` — IBL sky, physical sun via the shared
 //! spec docs/lighting-calibration.md) and every RGB camera gets its render
-//! profile from `crate::profiles::RenderProfile::apply` (fixed EV100,
-//! AgX cinematic stack, GTAO at rung ≥ 3). Sensor views keep TAA, motion
-//! blur and auto-exposure disabled.
+//! look from `crate::profiles::RenderProfile::apply` (fixed EV100, the
+//! render config's AA/SSAO/SSR/post stack; no auto-exposure).
 use anyhow::{bail, Result};
 use bevy::app::ScheduleRunnerPlugin;
 use bevy::asset::RecursiveDependencyLoadState;
@@ -54,28 +53,6 @@ use bevy::mesh::{skinning::SkinnedMesh, Meshable, SphereKind, SphereMeshBuilder}
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-
-/// Render profile: part of the render intent (native-renderer plan WSB4).
-///
-/// - `Sensor`: linear output (no tonemapping), fixed exposure, zero temporal
-///   effects — the hash-stable machine-vision profile.
-/// - `Cinematic`: AgX tonemapping + authored look — human-facing; the full
-///   realism stack (WSB4) layers on top of this variant.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Profile {
-    Sensor,
-    Cinematic,
-}
-
-impl Profile {
-    fn render_profile(self) -> RenderProfile {
-        match self {
-            Profile::Sensor => RenderProfile::Sensor,
-            Profile::Cinematic => RenderProfile::Cinematic,
-        }
-    }
-}
 
 /// Scene lighting configuration, resolved through the shared lighting spec
 /// (docs/lighting-calibration.md) at rung ≥ 2. `sun_lux`/`ambient` are the
@@ -1965,9 +1942,6 @@ struct Legend(Vec<LegendEntry>);
 
 struct GroupEntities {
     spec: CameraSpec,
-    /// Profile this group's RGB camera was built with, so a live re-light
-    /// can rebuild the same stack without re-registering the camera.
-    profile: Profile,
     rgb_entity: Entity,
     id_entity: Option<Entity>,
     /// Actor this camera is mounted on. Its RGB geometry is excluded from
@@ -2773,7 +2747,7 @@ impl SceneApp {
     }
 
     /// Direct world access for profiling tools and ablation experiments
-    /// (`render-bench`). Production paths go through the typed methods.
+    /// (`simforge-render job --ablate`). Production paths go through the typed methods.
     pub fn world_mut(&mut self) -> &mut World {
         self.app.world_mut()
     }
@@ -3289,13 +3263,12 @@ impl SceneApp {
         };
         self.lighting = lighting.clone();
 
-        let views: Vec<(Entity, Profile, f32, f32, u32)> = self
+        let views: Vec<(Entity, f32, f32, u32)> = self
             .groups
             .iter()
             .map(|g| {
                 (
                     g.rgb_entity,
-                    g.profile,
                     g.spec.far,
                     g.spec.fov_y_deg,
                     g.spec.height,
@@ -3326,13 +3299,13 @@ impl SceneApp {
         {
             let world = self.app.world_mut();
             let mut commands = world.commands();
-            for (entity, profile, far, fov_y_deg, height) in views {
+            for (entity, far, fov_y_deg, height) in views {
                 // A free camera is not a vehicle. Ensure a stale rev15
                 // camera-owned source cannot survive the clean cutover.
                 commands.entity(entity).remove::<SpotLight>();
                 RenderProfile::strip(&mut commands, entity);
                 commands.entity(entity).remove::<DistanceFog>();
-                profile.render_profile().apply(
+                RenderProfile::apply(
                     &mut commands,
                     entity,
                     ev100,
@@ -3341,17 +3314,17 @@ impl SceneApp {
                     fx,
                 );
                 match sky_template {
-                    Some(template) if profile == Profile::Cinematic => {
+                    Some(template) => {
                         let mut sky = template;
                         sky.pixel_angle =
                             fov_y_deg.to_radians() / height.max(1) as f32;
                         commands.entity(entity).insert(sky);
                     }
-                    _ => {
+                    None => {
                         commands.entity(entity).remove::<crate::sky_pass::SkyPass>();
                     }
                 }
-                if use_atmosphere && profile == Profile::Cinematic {
+                if use_atmosphere {
                     attach_atmosphere_view(&mut commands, entity, far, env_gain);
                 } else {
                     detach_atmosphere_view(&mut commands, entity);
@@ -3541,23 +3514,21 @@ impl SceneApp {
             moon_direct_precloud,
         );
         self.sky_pass = Some(template);
-        let views: Vec<(Entity, Profile, f32, u32)> = self
+        let views: Vec<(Entity, f32, u32)> = self
             .groups
             .iter()
-            .map(|g| (g.rgb_entity, g.profile, g.spec.fov_y_deg, g.spec.height))
+            .map(|g| (g.rgb_entity, g.spec.fov_y_deg, g.spec.height))
             .collect();
         let world = self.app.world_mut();
-        for (entity, profile, fov_y_deg, height) in views {
+        for (entity, fov_y_deg, height) in views {
             if let Some(mut exposure) = world.get_mut::<bevy::camera::Exposure>(entity) {
                 exposure.ev100 = resolved.ev100;
             }
-            if profile == Profile::Cinematic {
-                set_view_env_gain(world, entity, env_gain);
-                if let Some(mut sky) = world.get_mut::<crate::sky_pass::SkyPass>(entity) {
-                    let pixel_angle = fov_y_deg.to_radians() / height.max(1) as f32;
-                    *sky = template;
-                    sky.pixel_angle = pixel_angle;
-                }
+            set_view_env_gain(world, entity, env_gain);
+            if let Some(mut sky) = world.get_mut::<crate::sky_pass::SkyPass>(entity) {
+                let pixel_angle = fov_y_deg.to_radians() / height.max(1) as f32;
+                *sky = template;
+                sky.pixel_angle = pixel_angle;
             }
         }
         self.lighting = lighting.clone();
@@ -3718,8 +3689,8 @@ impl SceneApp {
     /// directly; the legend is not re-derived, so IDs stay stable. A camera
     /// already registered under the same `sensor_id` is replaced (its
     /// targets, staging and host binding are released), which is how a
-    /// resize or profile change is expressed.
-    pub fn add_camera(&mut self, spec: CameraSpec, profile: Profile) {
+    /// resize is expressed.
+    pub fn add_camera(&mut self, spec: CameraSpec) {
         let host = self
             .groups
             .iter()
@@ -3760,9 +3731,6 @@ impl SceneApp {
                 .insert(crate::shared_shadows::SharedShadowView);
         }
 
-        // Sensor views retain the deterministic contract. Cinematic views use
-        // the configured temporal/reflection/filmic stack and can coexist in
-        // the same SceneApp.
         let use_atmosphere = atmosphere_view_active(&self.lighting);
         // Same gain and the same sky the last relight resolved; a view that
         // registers late must not re-derive either from a different path.
@@ -3770,7 +3738,7 @@ impl SceneApp {
         {
             let world = self.app.world_mut();
             let mut commands = world.commands();
-            profile.render_profile().apply(
+            RenderProfile::apply(
                 &mut commands,
                 rgb_entity,
                 self.ev100_fixed,
@@ -3778,17 +3746,14 @@ impl SceneApp {
                 self.skybox_brightness,
                 self.profile_config.cinematic,
             );
-            // Cinematic only; see the same guard in `apply_lighting`.
-            if use_atmosphere && profile == Profile::Cinematic {
+            if use_atmosphere {
                 attach_atmosphere_view(&mut commands, rgb_entity, spec.far, env_gain);
             }
-            if let (Some(template), Profile::Cinematic) = (self.sky_pass, profile) {
+            if let Some(template) = self.sky_pass {
                 let mut sky = template;
                 sky.pixel_angle = spec.fov_y_deg.to_radians() / spec.height.max(1) as f32;
                 commands.entity(rgb_entity).insert(sky);
             }
-            // Sensor deliberately receives no stochastic screen-space
-            // AO/contact pass. Cinematic owns those effects.
             if let Some(fog) = self.fog.clone() {
                 commands.entity(rgb_entity).insert(fog);
             }
@@ -3848,7 +3813,7 @@ impl SceneApp {
             });
         }
 
-        self.groups.push(GroupEntities { spec, profile, rgb_entity, id_entity, host });
+        self.groups.push(GroupEntities { spec, rgb_entity, id_entity, host });
         self.rig_revision += 1;
         self.sync_host_layers();
         self.refresh_lod_ranges();
@@ -3963,12 +3928,12 @@ impl SceneApp {
         }
     }
 
-    /// Registered spec and profile of one camera, if it exists.
-    pub fn camera(&self, sensor_id: &str) -> Option<(&CameraSpec, Profile)> {
+    /// Registered spec of one camera, if it exists.
+    pub fn camera(&self, sensor_id: &str) -> Option<&CameraSpec> {
         self.groups
             .iter()
             .find(|g| g.spec.sensor_id == sensor_id)
-            .map(|g| (&g.spec, g.profile))
+            .map(|g| &g.spec)
     }
 
     /// Frozen legend (static instance ids). Dynamic actors get ids above the
@@ -6750,8 +6715,7 @@ mod tests {
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
         app.load_tiles(&[repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb").to_string_lossy().into_owned()]).unwrap();
         app.add_camera(
-            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera("cam", 160, 120) },
-            Profile::Sensor,
+            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera("cam", 160, 120) }
         );
         app.wait_until_ready().unwrap();
         app.upsert_actor("moto", "motorcycle", [0.0, 0.7, -20.0], Quat::IDENTITY, [2.1, 1.4, 0.75], [0.5, 0.5, 0.5], false);
@@ -6795,8 +6759,7 @@ mod tests {
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
         app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
         app.add_camera(
-            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera("cam", 128, 96) },
-            Profile::Sensor,
+            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera("cam", 128, 96) }
         );
         app.wait_until_ready().unwrap();
 
@@ -6880,8 +6843,7 @@ mod tests {
     /// Every ID-pass pixel decodes to the background, a static legend entry
     /// or a live actor: no dithered, blended or sRGB-rounded neighbour ids
     /// (formerly ~10k px per 960x540 frame decoded to id +/- 1, 256 or 65536).
-    /// A cinematic view (post-process AA on its RGB camera) and a sensor view
-    /// both hold. Runs on a GPU or on lavapipe (see the actor mesh test).
+    /// Two views (post-process AA on their RGB cameras) both hold. Runs on a GPU or on lavapipe (see the actor mesh test).
     #[test]
     #[ignore = "focused GPU integration test"]
     fn every_id_pass_pixel_decodes_to_a_known_instance() {
@@ -6890,11 +6852,8 @@ mod tests {
         let pedestrian = repo.join("catalog/pedestrians-carla/models/pedestrian_0015.glb");
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
         app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
-        for (sensor, profile) in [("sensor", Profile::Sensor), ("cinematic", Profile::Cinematic)] {
-            app.add_camera(
-                CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera(sensor, 320, 180) },
-                profile,
-            );
+        for sensor in ["left", "right"] {
+            app.add_camera(CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera(sensor, 320, 180) });
         }
         app.wait_until_ready().unwrap();
         for (k, x) in [-6.0f32, 0.0, 6.0].into_iter().enumerate() {
@@ -6913,13 +6872,13 @@ mod tests {
         known.insert(0);
         let mut tick = 0;
         for eye in [[9.0, 2.5, -8.0], [-10.0, 1.2, -12.0], [0.5, 6.0, -2.0]] {
-            for cam in ["sensor", "cinematic"] {
+            for cam in ["left", "right"] {
                 app.set_pose(cam, &eye, &[0.0, 0.8, -18.0]).unwrap();
             }
             app.warmup(2);
             tick += 1;
             let frame = app.render_once(tick).unwrap();
-            for cam in ["sensor", "cinematic"] {
+            for cam in ["left", "right"] {
                 let bytes = &frame.passes[&format!("{cam}:id")].bytes;
                 let raw = strip_padding(bytes, 320, 180, 4);
                 let mut hist: HashMap<u32, usize> = HashMap::new();
@@ -6961,7 +6920,7 @@ mod tests {
     #[ignore = "focused GPU integration test"]
     fn capture_returns_the_submission_it_names_and_follows_camera_lifecycle() {
         let mut app = sedan_scene();
-        app.add_camera(test_camera("cam", 96, 64), Profile::Sensor);
+        app.add_camera(test_camera("cam", 96, 64));
         app.wait_until_ready().unwrap();
         app.warmup(3);
         let left = ([6.0, 1.5, 6.0], [0.0, 0.5, 0.0]);
@@ -6994,7 +6953,7 @@ mod tests {
 
         // Re-registering resizes in place and bumps the rig.
         let before = app.rig_revision();
-        app.add_camera(test_camera("cam", 128, 64), Profile::Sensor);
+        app.add_camera(test_camera("cam", 128, 64));
         app.set_pose("cam", &left.0, &left.1).unwrap();
         let wide = app.render_once(6).unwrap();
         assert!(wide.identity.rig_revision > before);
@@ -7027,7 +6986,7 @@ mod tests {
         app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
         let mut spec = test_camera("cam", 160, 96);
         spec.passes = PassSet { rgb: true, id: false, depth: false };
-        app.add_camera(spec, Profile::Cinematic);
+        app.add_camera(spec);
         app.wait_until_ready().unwrap();
         app.set_pose("cam", &[6.0, 1.8, 6.0], &[0.0, 0.8, 0.0]).unwrap();
         app.wait_for_capture_ready().unwrap();
@@ -7144,8 +7103,8 @@ mod tests {
     #[ignore = "focused GPU integration test"]
     fn mounted_camera_excludes_only_its_own_host() {
         let mut app = sedan_scene();
-        app.add_camera(test_camera("mounted", 96, 64), Profile::Sensor);
-        app.add_camera(test_camera("spectator", 96, 64), Profile::Sensor);
+        app.add_camera(test_camera("mounted", 96, 64));
+        app.add_camera(test_camera("spectator", 96, 64));
         app.wait_until_ready().unwrap();
         app.upsert_actor("ego", "car", [0.0, 0.0, 0.0], Quat::IDENTITY, [4.5, 1.6, 1.8], [0.9, 0.1, 0.1], false);
         app.upsert_actor("lead", "car", [0.0, 0.0, -6.0], Quat::IDENTITY, [4.5, 1.6, 1.8], [0.1, 0.1, 0.9], false);

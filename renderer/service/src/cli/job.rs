@@ -1,43 +1,44 @@
-//! `render-bench` — replay a real native render job against the resident
-//! service state, in process, and report where each tick's time goes.
+//! `simforge-render job`: render a job offline, in process, through exactly
+//! the request path the render service serves (`load_scene_state`, then one
+//! `render_bundle` per tick), and write its artifacts.
 //!
-//! It drives exactly the request path the Studio worker drives
-//! (`load_scene_state` once, then one `render_bundle` per tick with the rig's
-//! attached cameras, lidar and radar), through [`service::server::dispatch`],
-//! minus the socket and the Node-side encoders. That isolates the service:
-//! scene application, readiness settling, GPU rendering, readback, CPU
-//! sensors and shm publication.
+//! Two ways to describe a job:
 //!
-//! Inputs are the job's own files: the worker writes
-//! `native-service-scene.json` and `trace/native-trace.json` into the job
-//! workspace; the render intent supplies the sources and their mounts.
+//! * `--job job.json` (`simforge.render-job/v2`): a scene spec, an optional
+//!   scene-state stream, a rig (explicit service cameras/lidars/radars, or a
+//!   Pronto qualification rig program), the ticks and passes, and `outDir`.
+//!   Artifacts land as `<outDir>/<sensor>/<tick:08>.<pass>.<ext>` plus
+//!   `results.json` (sha256 per artifact, timings, the resolved render
+//!   config).
+//! * `--scene native-service-scene.json --trace native-trace.json --intent
+//!   intent.json`: replay a platform render job from its own workspace files
+//!   (the intent supplies the sources and mounts), for profiling.
 //!
-//! Usage:
-//!   render-bench --scene native-service-scene.json --trace native-trace.json
-//!       --intent intent.json [--glb master.gltf] [--models actor-assets]
-//!       [--start 0] [--ticks 48] [--sources all|rgb|lidar|<outputName,...>]
-//!       [--dump-dir DIR --dump-every N] [--out result.json]
-//!       [--preset training|showcase] [--set render.key=value ...]
-//!       [--scene-set sceneSpecField=json ...]
+//! Common flags: `--preset training|showcase`, `--set key=value`,
+//! `--scene-set field=json`, `--start/--ticks`, `--out result.json`,
+//! `--dump-dir DIR --dump-every N` (RGB PNGs), `--sweep entries.json` (many
+//! render configs in one process), `--camera-size WxH`, `--ablate ...`
+//! (diagnostic feature removal), `--sources` (replay subset).
 //!
 //! `SIMFORGE_RENDER_DIAGNOSTICS=1` adds per-pass GPU timings (Bevy's
 //! render diagnostics; totals are per tick, summed over views and frames).
 use anyhow::{bail, Context, Result};
-use service::proto::{ResponseBody, WireRequest};
-use service::server::{dispatch, prewarm, SceneSpec, ServiceState};
-use service::shm::{ShmRing, RECORD_HEADER_BYTES};
+use crate::proto::{ResponseBody, WireRequest};
+use crate::server::{dispatch, prewarm, SceneSpec, ServiceState};
+use crate::shm::{ShmRing, RECORD_HEADER_BYTES};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Instant;
 
 struct Args {
+    job: Option<PathBuf>,
     scene: PathBuf,
     trace: PathBuf,
     intent: PathBuf,
     glb: Option<String>,
     models: Option<String>,
-    start: usize,
-    ticks: usize,
+    start_set: Option<usize>,
+    ticks_set: Option<usize>,
     sources: String,
     dump_dir: Option<PathBuf>,
     dump_every: usize,
@@ -51,16 +52,17 @@ struct Args {
     camera_size: Option<(u32, u32)>,
 }
 
-fn parse_args() -> Result<Args> {
-    let mut args = std::env::args().skip(1);
+fn parse_args(argv: Vec<String>) -> Result<Args> {
+    let mut args = argv.into_iter();
     let mut parsed = Args {
+        job: None,
         scene: PathBuf::new(),
         trace: PathBuf::new(),
         intent: PathBuf::new(),
         glb: None,
         models: None,
-        start: 0,
-        ticks: 48,
+        start_set: None,
+        ticks_set: None,
         sources: "all".into(),
         dump_dir: None,
         dump_every: 0,
@@ -76,13 +78,14 @@ fn parse_args() -> Result<Args> {
     while let Some(arg) = args.next() {
         let mut value = || args.next().with_context(|| format!("{arg} requires a value"));
         match arg.as_str() {
+            "--job" => parsed.job = Some(value()?.into()),
             "--scene" => parsed.scene = value()?.into(),
             "--trace" => parsed.trace = value()?.into(),
             "--intent" => parsed.intent = value()?.into(),
             "--glb" => parsed.glb = Some(value()?),
             "--models" => parsed.models = Some(value()?),
-            "--start" => parsed.start = value()?.parse()?,
-            "--ticks" => parsed.ticks = value()?.parse()?,
+            "--start" => parsed.start_set = Some(value()?.parse()?),
+            "--ticks" => parsed.ticks_set = Some(value()?.parse()?),
             "--sources" => parsed.sources = value()?,
             "--dump-dir" => parsed.dump_dir = Some(value()?.into()),
             "--dump-every" => parsed.dump_every = value()?.parse()?,
@@ -105,8 +108,10 @@ fn parse_args() -> Result<Args> {
             other => bail!("unknown argument {other}"),
         }
     }
-    if parsed.scene.as_os_str().is_empty() || parsed.trace.as_os_str().is_empty() || parsed.intent.as_os_str().is_empty() {
-        bail!("--scene, --trace and --intent are required");
+    if parsed.job.is_none()
+        && (parsed.scene.as_os_str().is_empty() || parsed.trace.as_os_str().is_empty() || parsed.intent.as_os_str().is_empty())
+    {
+        bail!("--job, or --scene with --trace and --intent, is required");
     }
     Ok(parsed)
 }
@@ -295,8 +300,7 @@ fn vertical_fov(horizontal_deg: f64, width: f64, height: f64) -> f64 {
     2.0 * ((horizontal_deg.to_radians() / 2.0).tan() * height / width).atan().to_degrees()
 }
 
-fn main() -> Result<()> {
-    let args = parse_args()?;
+fn plan_from_replay(args: &Args) -> Result<Plan> {
     let mut spec_json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&args.scene)?)?;
     if let Some(glb) = &args.glb {
         spec_json["glbs"] = serde_json::json!([glb]);
@@ -308,10 +312,7 @@ fn main() -> Result<()> {
     for (key, value) in &args.spec_overrides {
         spec_json[key] = serde_json::from_str(value).with_context(|| format!("--set {key}"))?;
     }
-    let mut spec: SceneSpec = serde_json::from_value(spec_json)?;
-    service::server::apply_render_cli(&mut spec, args.preset.clone(), &args.render_sets)?;
-    let (resolved, _) = spec.render_config()?;
-    eprintln!("render-bench: render config {}", serde_json::to_string(&resolved)?);
+    let spec: SceneSpec = serde_json::from_value(spec_json)?;
     let trace: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&args.trace)?)?;
     let intent: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&args.intent)?)?;
     let frames = trace["frames"].as_array().context("trace.frames")?.clone();
@@ -372,23 +373,273 @@ fn main() -> Result<()> {
             })
         })
         .collect();
+    Ok(Plan {
+        spec, frames, cameras, lidars, radars, passes: vec!["rgb".into()], out_dir: None,
+        start: args.start_set.unwrap_or(0), // fallback-ok: replay defaults, printed with the run
+        ticks: args.ticks_set.unwrap_or(48), // fallback-ok: replay defaults, printed with the run
+    })
+}
+
+/// Write one published frame as a job artifact:
+/// `<dir>/<sensor>/<tick:08>.<pass>.<ext>`. RGB / instance-ID / semantic
+/// are lossless PNG (RGBA8, padding stripped), depth is raw little-endian
+/// f32 rows, lidar/radar are the service's own PLY/CSV payloads.
+fn write_artifact(
+    state: &ServiceState,
+    record: &crate::proto::FrameRecord,
+    dir: &std::path::Path,
+    tick: usize,
+) -> Result<serde_json::Value> {
+    let map = state.shm.as_bytes();
+    let offset = record.offset as usize + RECORD_HEADER_BYTES;
+    let data = &map[offset..offset + record.len as usize];
+    let sensor_dir = dir.join(&record.sensor_id);
+    std::fs::create_dir_all(&sensor_dir)?;
+    let (name, bytes): (String, Vec<u8>) = match record.format.as_str() {
+        "rgba8" => {
+            let raw = render_core::engine::strip_padding(data, record.width as usize, record.height as usize, 4);
+            let mut png = Vec::new();
+            image::ImageEncoder::write_image(image::codecs::png::PngEncoder::new(&mut png),
+                &raw,
+                record.width,
+                record.height,
+                image::ExtendedColorType::Rgba8,
+            )?;
+            (format!("{tick:08}.{}.png", record.pass), png)
+        }
+        "depth32f" => (
+            format!("{tick:08}.{}.f32.bin", record.pass),
+            render_core::engine::strip_padding(data, record.width as usize, record.height as usize, 4),
+        ),
+        "ply-ascii" | "ply-binary" => (format!("{tick:08}.ply"), data.to_vec()),
+        "radar-csv" => (format!("{tick:08}.csv"), data.to_vec()),
+        other => bail!("job artifact: {} {} has format {other}, which a job does not write", record.sensor_id, record.pass),
+    };
+    let path = sensor_dir.join(&name);
+    std::fs::write(&path, &bytes)?;
+    use sha2::Digest;
+    Ok(serde_json::json!({
+        "sensorId": record.sensor_id,
+        "pass": record.pass,
+        "tick": tick,
+        "path": format!("{}/{name}", record.sensor_id),
+        "sha256": format!("{:x}", sha2::Sha256::digest(&bytes)),
+        "bytes": bytes.len(),
+    }))
+}
+
+/// `simforge.render-job/v2`.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct JobSpec {
+    schema: String,
+    scene: serde_json::Value,
+    /// Scene-state document (`{frames: [...]}` or a bare frame array),
+    /// `.json` or `.json.gz`; absent for a static scene.
+    #[serde(default)]
+    scene_state: Option<PathBuf>,
+    rig: JobRig,
+    #[serde(default)]
+    ticks: JobTicks,
+    /// Camera passes (`rgb`, `depth`, `instance`, `semantic`); required.
+    passes: Vec<String>,
+    out_dir: PathBuf,
+}
+
+#[derive(serde::Deserialize, Default)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct JobTicks {
+    #[serde(default)]
+    start: Option<usize>,
+    #[serde(default)]
+    count: Option<usize>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct JobRig {
+    /// Service cameras (`ServiceCamera` wire shape).
+    #[serde(default)]
+    cameras: Vec<serde_json::Value>,
+    #[serde(default)]
+    lidars: Vec<serde_json::Value>,
+    #[serde(default)]
+    radars: Vec<serde_json::Value>,
+    /// A `render-qualification-program/v1` document whose `prontoRig`
+    /// sensors (plus the trailing chase camera) mount on `host`.
+    #[serde(default)]
+    pronto: Option<ProntoRig>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ProntoRig {
+    program: PathBuf,
+    host: String,
+    width: u32,
+    height: u32,
+}
+
+fn plan_from_job(path: &std::path::Path, args: &Args) -> Result<Plan> {
+    let job: JobSpec = serde_json::from_slice(&std::fs::read(path).with_context(|| format!("read {}", path.display()))?)
+        .with_context(|| format!("parse {}", path.display()))?;
+    anyhow::ensure!(job.schema == "simforge.render-job/v2", "job schema {:?} (simforge.render-job/v2)", job.schema);
+    let mut scene = job.scene;
+    for (key, value) in &args.spec_overrides {
+        scene[key] = serde_json::from_str(value).with_context(|| format!("--scene-set {key}"))?;
+    }
+    let spec: SceneSpec = serde_json::from_value(scene).context("job scene")?;
+    let frames = match &job.scene_state {
+        None => Vec::new(),
+        Some(path) => {
+            let bytes = std::fs::read(path).with_context(|| format!("read {}", path.display()))?;
+            let text = if path.extension().is_some_and(|ext| ext == "gz") {
+                let mut out = String::new();
+                std::io::Read::read_to_string(&mut flate2::read::GzDecoder::new(&bytes[..]), &mut out)?;
+                out
+            } else {
+                String::from_utf8(bytes)?
+            };
+            let doc: serde_json::Value = serde_json::from_str(&text)?;
+            match doc {
+                serde_json::Value::Array(frames) => frames,
+                serde_json::Value::Object(mut map) => match map.remove("frames") {
+                    Some(serde_json::Value::Array(frames)) => frames,
+                    _ => bail!("{}: scene-state has no frames array", path.display()),
+                },
+                _ => bail!("{}: scene-state is neither a frame array nor {{frames}}", path.display()),
+            }
+        }
+    };
+    let mut cameras = job.rig.cameras;
+    let mut lidars = job.rig.lidars;
+    let mut radars = job.rig.radars;
+    if let Some(pronto) = &job.rig.pronto {
+        let (c, l, r) = pronto_rig(pronto)?;
+        cameras.extend(c);
+        lidars.extend(l);
+        radars.extend(r);
+    }
+    anyhow::ensure!(!(cameras.is_empty() && lidars.is_empty() && radars.is_empty()), "job rig has no sensors");
+    std::fs::create_dir_all(&job.out_dir)?;
+    Ok(Plan {
+        spec,
+        frames,
+        cameras,
+        lidars,
+        radars,
+        passes: job.passes,
+        out_dir: Some(job.out_dir),
+        // The job's range, unless the command line names one.
+        start: args.start_set.unwrap_or(job.ticks.start.unwrap_or(0)), // fallback-ok: a job without ticks.start starts at tick 0 by the v2 schema
+        ticks: args.ticks_set.unwrap_or(job.ticks.count.unwrap_or(1)), // fallback-ok: a job without ticks.count renders one tick by the v2 schema
+    })
+}
+
+/// The Pronto port-E qualification rig (`prontoRig` of a
+/// `render-qualification-program/v1` document) as attached service sensors,
+/// plus the trailing chase camera. Sheet mounts are longitudinal/lateral-
+/// right/up millimetres from the pod datum; see the qualification program.
+fn pronto_rig(rig: &ProntoRig) -> Result<(Vec<serde_json::Value>, Vec<serde_json::Value>, Vec<serde_json::Value>)> {
+    const POD_FRONT_DATUM_M: f64 = 0.85;
+    const POD_PLATE_HEIGHT_M: f64 = 1.78;
+    let doc: serde_json::Value = serde_json::from_slice(&std::fs::read(&rig.program)?)?;
+    let sensors = doc["prontoRig"]["sensors"].as_array().context("prontoRig.sensors missing")?;
+    let f = |v: &serde_json::Value| v.as_f64().unwrap_or(0.0); // fallback-ok: an omitted sheet mount/rotation component is 0 by the program's definition
+    let attach = |s: &serde_json::Value, host_visible: bool| -> serde_json::Value {
+        let m = &s["sourceMountMm"];
+        let r = &s["rotationDeg"];
+        serde_json::json!({
+            "actorId": rig.host,
+            // Wire mount: forward / right / up. The sheet's lateral axis is
+            // lateral-right; the service's middle component is the Bevy
+            // actor-local z (left), hence the sign.
+            "offsetM": [POD_FRONT_DATUM_M + f(&m["longitudinal"]) / 1000.0, -f(&m["lateralRight"]) / 1000.0, POD_PLATE_HEIGHT_M + f(&m["up"]) / 1000.0],
+            "yawDeg": f(&r["yaw"]), "pitchDeg": f(&r["pitch"]), "rollDeg": f(&r["roll"]),
+            "hostVisible": host_visible,
+        })
+    };
+    let (mut cameras, mut lidars, mut radars) = (Vec::new(), Vec::new(), Vec::new());
+    let (w, h) = (f64::from(rig.width), f64::from(rig.height));
+    for s in sensors {
+        let id = s["id"].as_str().context("prontoRig sensor id")?;
+        match s["type"].as_str() {
+            Some("dash_camera") => cameras.push(serde_json::json!({
+                "sensorId": id, "width": rig.width, "height": rig.height,
+                "fovDeg": vertical_fov(s["horizontalFovDeg"].as_f64().context("camera horizontalFovDeg")?, w, h),
+                "eye": [0.0, 0.0, 0.0], "target": [0.0, 0.0, 1.0], "attach": attach(s, false),
+            })),
+            Some("lidar") => lidars.push(serde_json::json!({
+                "sensorId": id, "attach": attach(s, false), "channels": 128, "rotationFrequencyHz": 10.0,
+                "pointsPerSecond": 1_300_000, "horizontalFovDeg": s["horizontalFovDeg"].as_f64().unwrap_or(360.0), // fallback-ok: a lidar without an hfov is a spinning 360-degree unit in the program
+                "verticalFovDeg": s["verticalFovDeg"].as_f64().context("lidar verticalFovDeg")?, "rangeM": 200.0,
+            })),
+            Some("radar") => radars.push(serde_json::json!({
+                "sensorId": id, "attach": attach(s, false), "pointsPerSecond": 1_500,
+                "horizontalFovDeg": s["horizontalFovDeg"].as_f64().context("radar horizontalFovDeg")?,
+                "verticalFovDeg": s["verticalFovDeg"].as_f64().unwrap_or(30.0), // fallback-ok: the program's radar default elevation span
+                "rangeM": 100.0,
+            })),
+            other => bail!("unknown prontoRig sensor type {other:?} for {id}"),
+        }
+    }
+    // Trailing chase (presentation): 9 m behind, 3.4 m up, -11.3 deg, HFOV 70.
+    cameras.push(serde_json::json!({
+        "sensorId": "chase-cam-trailing", "width": rig.width, "height": rig.height,
+        "fovDeg": vertical_fov(70.0, w, h), "eye": [0.0, 0.0, 0.0], "target": [0.0, 0.0, 1.0],
+        "attach": {"actorId": rig.host, "offsetM": [-9.0, 0.0, 3.4], "pitchDeg": -11.3, "hostVisible": true},
+    }));
+    Ok((cameras, lidars, radars))
+}
+
+/// Everything one run renders.
+struct Plan {
+    spec: SceneSpec,
+    /// Scene-state frames (`load_scene_state`); empty for a static scene.
+    frames: Vec<serde_json::Value>,
+    cameras: Vec<serde_json::Value>,
+    lidars: Vec<serde_json::Value>,
+    radars: Vec<serde_json::Value>,
+    /// `rgb | id | depth | semantic` for the cameras.
+    passes: Vec<String>,
+    /// Write every artifact of every tick here (plus `results.json`).
+    out_dir: Option<PathBuf>,
+    start: usize,
+    ticks: usize,
+}
+
+pub fn run(argv: Vec<String>) -> Result<()> {
+    let args = parse_args(argv)?;
+    let plan = match &args.job {
+        Some(job) => plan_from_job(job, &args)?,
+        None => plan_from_replay(&args)?,
+    };
+    let Plan { mut spec, frames, cameras, lidars, radars, passes, out_dir, start, ticks } = plan;
+    crate::server::apply_render_cli(&mut spec, args.preset.clone(), &args.render_sets)?;
+    let (resolved, _) = spec.render_config()?;
+    eprintln!("simforge-render job: render config {}", serde_json::to_string(&resolved)?);
     eprintln!(
-        "render-bench: {} cameras, {} lidars, {} radars, ticks {}..{} of {}",
-        cameras.len(), lidars.len(), radars.len(), args.start, args.start + args.ticks, frames.len()
+        "simforge-render job: {} cameras, {} lidars, {} radars, ticks {}..{} of {}",
+        cameras.len(), lidars.len(), radars.len(), start, start + ticks, frames.len()
     );
 
     let t0 = Instant::now();
     let app = prewarm(&spec)?;
     let prewarm_s = t0.elapsed().as_secs_f64();
-    eprintln!("render-bench: prewarmed in {prewarm_s:.1} s");
-    let shm_path = std::env::temp_dir().join(format!("render-bench.{}", std::process::id()));
+    eprintln!("simforge-render job: prewarmed in {prewarm_s:.1} s");
+    let shm_path = std::env::temp_dir().join(format!("simforge-render-job.{}", std::process::id()));
     let shm = ShmRing::create(&shm_path, (args.shm_size_mb * 1024 * 1024) as usize)?;
     let mut state = ServiceState::new(app, &spec, shm_path.to_string_lossy().into_owned(), shm)?;
 
-    let response = dispatch(&mut state, request(serde_json::json!({"i": 1, "op": "load_scene_state", "states": frames}))?);
-    if let ResponseBody::Error { error, .. } = &response.body {
-        bail!("load_scene_state: {error}");
+    if !frames.is_empty() {
+        let response = dispatch(&mut state, request(serde_json::json!({"i": 1, "op": "load_scene_state", "states": frames}))?);
+        if let ResponseBody::Error { error, .. } = &response.body {
+            bail!("load_scene_state: {error}");
+        }
     }
+    // A static scene (no scene-state) still renders its ticks: tick numbers
+    // only label the artifacts.
+    let tick_count = if frames.is_empty() { start + ticks } else { frames.len() };
     // fallback-ok: discard load-time timings so the ticks start from zero
     let _ = state.app.take_gpu_pass_times();
 
@@ -400,24 +651,25 @@ fn main() -> Result<()> {
         let mut results = Vec::new();
         for (index, entry) in entries.iter().enumerate() {
             let name = entry["name"].as_str().context("sweep entry needs a name")?.to_string();
-            let request: service::server::RenderRequestJson = serde_json::from_value(entry["render"].clone())
+            let request: crate::server::RenderRequestJson = serde_json::from_value(entry["render"].clone())
                 .with_context(|| format!("sweep entry {name}: render"))?;
             let config = request.0.resolve().with_context(|| format!("sweep entry {name}"))?;
             state.reconfigure(&config).map_err(|error| anyhow::anyhow!("sweep entry {name}: {error}"))?;
             let dump = args.dump_dir.as_ref().map(|dir| dir.join(&name));
-            let pass = sweep_pass(&mut state, &cameras, if index == 0 { &lidars } else { &[] }, &radars, args.start, args.ticks, frames.len(), dump.as_deref(), args.dump_every)?;
-            eprintln!("render-bench sweep {name}: {:.1} ms/tick, GPU {:.1} ms/frame", pass["medianMsPerTick"], pass["gpuFrameMedianMs"]);
+            let pass = sweep_pass(&mut state, &cameras, if index == 0 { &lidars } else { &[] }, &radars, start, ticks, tick_count, dump.as_deref(), args.dump_every)?;
+            eprintln!("simforge-render job sweep {name}: {:.1} ms/tick, GPU {:.1} ms/frame", pass["medianMsPerTick"], pass["gpuFrameMedianMs"]);
             results.push(serde_json::json!({"name": name, "renderConfig": config, "result": pass}));
         }
         // fallback-ok: best-effort cleanup of the bench's own ring file
         let _ = std::fs::remove_file(&shm_path);
         if let Some(out) = &args.out {
-            std::fs::write(out, serde_json::to_vec_pretty(&serde_json::json!({"schema": "simforge.render-bench-sweep/v1", "entries": results}))?)?;
+            std::fs::write(out, serde_json::to_vec_pretty(&serde_json::json!({"schema": "simforge.render-job-sweep/v1", "entries": results}))?)?;
         }
         return Ok(());
     }
 
-    let end = (args.start + args.ticks).min(frames.len());
+    let end = (start + ticks).min(tick_count);
+    let mut artifacts: Vec<serde_json::Value> = Vec::new();
     let mut tick_ms = Vec::new();
     let mut server_ms = Vec::new();
     let mut digests: BTreeMap<String, Vec<String>> = BTreeMap::new();
@@ -425,11 +677,14 @@ fn main() -> Result<()> {
     let mut first_tick_ms = 0.0;
     let mut stages: BTreeMap<String, f64> = BTreeMap::new();
     let mut gpu_frames: Vec<f64> = Vec::new();
-    for (n, tick) in (args.start..end).enumerate() {
+    for (n, tick) in (start..end).enumerate() {
         let mut body = serde_json::json!({
-            "i": 10 + tick, "op": "render_bundle", "sim_tick": tick, "tick_index": tick,
-            "cameras": cameras, "passes": ["rgb"],
+            "i": 10 + tick, "op": "render_bundle", "sim_tick": tick,
+            "cameras": cameras, "passes": passes,
         });
+        if !frames.is_empty() {
+            body["tick_index"] = serde_json::json!(tick);
+        }
         if n == 0 {
             if !lidars.is_empty() { body["lidars"] = serde_json::json!(lidars); }
             if !radars.is_empty() { body["radars"] = serde_json::json!(radars); }
@@ -442,6 +697,11 @@ fn main() -> Result<()> {
             if let ResponseBody::Error { error, .. } = response.body { bail!("tick {tick}: {error}"); }
             bail!("tick {tick}: unexpected response");
         };
+        if let Some(dir) = &out_dir {
+            for record in &records {
+                artifacts.push(write_artifact(&state, record, dir, tick)?);
+            }
+        }
         for record in &records {
             digests.entry(format!("{}:{}", record.sensor_id, record.pass)).or_default().push(record.digest.clone());
             if let Some(dir) = &args.dump_dir {
@@ -477,7 +737,7 @@ fn main() -> Result<()> {
         }
         if n == 0 {
             first_tick_ms = elapsed;
-            eprintln!("render-bench: first tick {elapsed:.0} ms (includes lidar BVH build / pipeline warmup)");
+            eprintln!("simforge-render job: first tick {elapsed:.0} ms (includes lidar BVH build / pipeline warmup)");
             gpu.clear();
         } else {
             tick_ms.push(elapsed);
@@ -493,7 +753,7 @@ fn main() -> Result<()> {
             }
         }
         if n % 8 == 0 {
-            eprintln!("render-bench: tick {tick} {elapsed:.1} ms");
+            eprintln!("simforge-render job: tick {tick} {elapsed:.1} ms");
         }
     }
     // fallback-ok: best-effort cleanup of the bench's own ring file
@@ -513,14 +773,14 @@ fn main() -> Result<()> {
         .map(|(path, (total, count))| (path, total / measured, count as f64 / measured))
         .collect();
     gpu_rows.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-    eprintln!("render-bench: mean {mean:.1} ms/tick, median {median:.1} ms/tick over {} ticks", tick_ms.len());
+    eprintln!("simforge-render job: mean {mean:.1} ms/tick, median {median:.1} ms/tick over {} ticks", tick_ms.len());
     let mut frames_sorted = gpu_frames.clone();
     frames_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
     // fallback-ok: benchmark statistics without GPU timings are reported as 0
     let gpu_frame_median = frames_sorted.get(frames_sorted.len() / 2).copied().unwrap_or(0.0);
     let gpu_frame_total: f64 = gpu_frames.iter().sum();
     eprintln!(
-        "render-bench: GPU frames {} (median {gpu_frame_median:.1} ms, max {:.1} ms), GPU busy {:.1} ms/tick",
+        "simforge-render job: GPU frames {} (median {gpu_frame_median:.1} ms, max {:.1} ms), GPU busy {:.1} ms/tick",
         // fallback-ok: benchmark statistics without GPU timings are reported as 0
         gpu_frames.len(), frames_sorted.last().copied().unwrap_or(0.0), gpu_frame_total / measured
     );
@@ -531,7 +791,7 @@ fn main() -> Result<()> {
         eprintln!("  {per_tick:9.3} ms/tick  {spans:5.1} spans  {path}");
     }
     let result = serde_json::json!({
-        "schema": "simforge.render-bench/v1",
+        "schema": "simforge.render-job-results/v2",
         "ablate": args.ablate,
         "renderConfig": resolved,
         "prewarmS": prewarm_s,
@@ -547,7 +807,11 @@ fn main() -> Result<()> {
         "gpuPerTick": gpu_rows.iter().map(|(p, v, c)| serde_json::json!({"path": p, "perTick": v, "spansPerTick": c})).collect::<Vec<_>>(),
         "stagesPerTick": stages.iter().map(|(k, v)| (k.clone(), serde_json::json!(v / measured))).collect::<serde_json::Map<_, _>>(),
         "digests": digests,
+        "artifacts": artifacts,
     });
+    if let Some(dir) = &out_dir {
+        std::fs::write(dir.join("results.json"), serde_json::to_vec_pretty(&result)?)?;
+    }
     if let Some(out) = &args.out {
         std::fs::write(out, serde_json::to_vec_pretty(&result)?)?;
     }

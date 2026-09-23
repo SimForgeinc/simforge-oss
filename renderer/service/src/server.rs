@@ -22,7 +22,7 @@ use crate::shm::{
 use anyhow::{Context, Result};
 use bevy::math::{Quat, Vec3};
 use render_core::engine::{
-    CameraSpec, CapturedFrame, LegendEntry, Lighting, PassSet, Profile, SceneApp, SensorTriangle,
+    CameraSpec, CapturedFrame, LegendEntry, Lighting, PassSet, SceneApp, SensorTriangle,
 };
 use render_core::profiles::RenderProfileConfig;
 use render_core::render_config::{LidarBackend, Preset, RenderConfig, RenderRequest};
@@ -43,8 +43,7 @@ pub struct SceneSpec {
     /// Required: an absent lighting block would render the calibration
     /// defaults (a fixed dawn), not the scene's.
     pub lighting: Lighting,
-    pub profile: Profile,
-    /// Advanced cinematic settings; ignored by sensor cameras.
+    /// Legacy look settings; superseded by `render`.
     #[serde(default)]
     pub profile_config: RenderProfileConfig,
     #[serde(default = "default_near")]
@@ -273,33 +272,16 @@ pub fn prewarm(spec: &SceneSpec) -> Result<SceneApp> {
         app.load_geometry_lods(Path::new(manifest), master)?;
     }
     app.load_vegetation(&spec.veg_glbs)?;
-    // Bevy's atmosphere bindings are a per-view mesh layout. Mixing a
-    // sensor view (which intentionally strips cinematic atmosphere) with an
-    // atmosphere cinematic view during the same prewarm produces incompatible
-    // bind groups and permanently poisons the render pipelines. Prewarm only
-    // the actual cinematic layout for physical-atmosphere scenes.
-    let prewarm_profiles: &[(&str, Profile)] = if spec.lighting.atmosphere {
-        &[("__prewarm_cinematic__", Profile::Cinematic)]
-    } else {
-        &[
-            ("__prewarm_sensor__", Profile::Sensor),
-            ("__prewarm_cinematic__", Profile::Cinematic),
-        ]
-    };
-    for &(sensor_id, profile) in prewarm_profiles {
-        app.add_camera(
-            CameraSpec {
-                sensor_id: sensor_id.into(),
-                width: 64,
-                height: 64,
-                fov_y_deg: 58.0,
-                near: spec.near_m,
-                far: spec.far_m,
-                passes: PassSet { rgb: true, id: false, depth: false },
-            },
-            profile,
-        );
-    }
+    // One view compiles the look's pipelines before the first request.
+    app.add_camera(CameraSpec {
+        sensor_id: "__prewarm__".into(),
+        width: 64,
+        height: 64,
+        fov_y_deg: 58.0,
+        near: spec.near_m,
+        far: spec.far_m,
+        passes: PassSet { rgb: true, id: false, depth: false },
+    });
     let _legend = app.wait_until_ready()?;
     phase("ready", &mut mark);
     app.warmup(spec.warmup_frames);
@@ -568,7 +550,6 @@ impl Raycast for CombinedSensorScene<'_> {
 /// state stays on one thread by design.
 pub struct ServiceState {
     pub app: SceneApp,
-    pub profile: Profile,
     pub shm_path: String,
     pub shm: ShmRing,
     pub near_m: f32,
@@ -789,7 +770,6 @@ impl ServiceState {
             .collect();
         Ok(Self {
             app,
-            profile: spec.profile,
             shm_path,
             shm,
             near_m: spec.near_m,
@@ -918,9 +898,8 @@ fn write_ready_file(path: &Path, record: &ReadyRecord<'_>) -> Result<()> {
 pub fn serve(mut state: ServiceState, endpoint: &str, ready_file: Option<&Path>) -> Result<()> {
     let mut listener = crate::endpoint::Listener::bind(endpoint)?;
     eprintln!(
-        "native-render-service listening on {} (profile {:?})",
+        "simforge-render serve listening on {}",
         crate::endpoint::describe(listener.endpoint()),
-        state.profile
     );
     if let Some(path) = ready_file {
         let (size_bytes, meta_bytes, _) = state.shm.path_size_meta();
@@ -1097,7 +1076,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
                 if let Err(error)=episode.configure_consumer(consumer) {return WireResponse::error(i,error);}
             }
             if episode.consumer.video() || episode.consumer.labels {
-                return WireResponse::error(i,"policy episodes require image products without labels; showcase video uses sensor-capture");
+                return WireResponse::error(i,"policy episodes require image products without labels; labelled and video captures use `simforge-render job`");
             }
             if episode.consumer.depth.is_some_and(|depth| !matches!(depth,render_core::products::DepthProduct::MetricAxial {..})) {
                 return WireResponse::error(i,"policy depth requires metric_axial; raw reverse-Z is available through render_bundle");
@@ -1109,16 +1088,14 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
                 // The consumer product defines the policy image; a camera that
                 // asks for something else is refused, not silently rewritten.
                 if (camera.width,camera.height)!=(episode.consumer.width,episode.consumer.height)
-                    || camera.profile.is_some_and(|profile| profile!=Profile::Cinematic)
                     || camera.semantic
                     || camera.depth_encoding.is_some()
                 {
                     return WireResponse::error(i,format!(
-                        "[native_episode_camera_conflict] camera {} asks for {}x{} {:?} semantic={} depth={:?}; policy episodes render {}x{} cinematic rgb (depth via the consumer spec)",
-                        camera.sensor_id,camera.width,camera.height,camera.profile,camera.semantic,camera.depth_encoding,
+                        "[native_episode_camera_conflict] camera {} asks for {}x{} semantic={} depth={:?}; policy episodes render {}x{} rgb (depth via the consumer spec)",
+                        camera.sensor_id,camera.width,camera.height,camera.semantic,camera.depth_encoding,
                         episode.consumer.width,episode.consumer.height));
                 }
-                camera.profile=Some(Profile::Cinematic);
                 if camera.attach.as_ref().is_some_and(|mount| mount.roll_deg!=0.0) {
                     return WireResponse::error(i,"SceneApp eye/target cameras do not support calibrated roll");
                 }
@@ -1183,7 +1160,6 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
                 body: ResponseBody::Hello {
                     ok: true,
                     protocol: NATIVE_SERVICE_PROTOCOL_VERSION,
-                    profile: format!("{:?}", state.profile).to_lowercase(),
                     legend_entries: state.legend.len(),
                     shm: ShmInfo {
                         path: state.shm_path.clone(),
@@ -1890,8 +1866,8 @@ fn upsert_rig(state: &mut ServiceState, cam: &ServiceCamera) -> Result<(), Strin
 /// only renders when one of its passes is requested.
 const SERVICE_PASSES: PassSet = PassSet { rgb: true, id: true, depth: true };
 
-/// Register a camera, or re-register it when its size, field of view or
-/// profile changed since the last request. Cached payloads of a replaced
+/// Register a camera, or re-register it when its size or field of view
+/// changed since the last request. Cached payloads of a replaced
 /// camera belong to the old target and are dropped.
 fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera) {
     let spec = CameraSpec {
@@ -1903,13 +1879,12 @@ fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera) {
         far: state.far_m,
         passes: SERVICE_PASSES,
     };
-    let profile = cam.profile.unwrap_or(state.profile); // fallback-ok: documented: a camera without a profile uses the scene profile
-    if state.app.camera(&cam.sensor_id) == Some((&spec, profile)) {
+    if state.app.camera(&cam.sensor_id) == Some(&spec) {
         return;
     }
     let prefix = format!("{}:", cam.sensor_id);
     state.cache.retain(|key, _| !key.starts_with(&prefix));
-    state.app.add_camera(spec, profile);
+    state.app.add_camera(spec);
     // A presentation camera that shows its host (the trailing chase) is
     // narrow: the rig-wide cascade union would coarsen its shadows ~3x, so
     // it keeps its own fit. Rig sensors share one cascade set.
@@ -2280,7 +2255,7 @@ fn capture_bundle(
 /// `gpu-interop` feature; host frames through the ring are the portable path.
 #[cfg(not(feature = "gpu-interop"))]
 const NO_DEVICE_INTEROP: &str = if cfg!(target_os = "linux") {
-    "this native-render-service was built without the `gpu-interop` feature; device streams are unavailable (host frames via the shm ring remain available)"
+    "this simforge-render was built without the `gpu-interop` feature; device streams are unavailable (host frames via the shm ring remain available)"
 } else {
     "device streams (Vulkan/CUDA opaque-fd export) are a Linux-only capability; this OS build serves host frames via the shm ring only"
 };
@@ -3179,7 +3154,6 @@ mod tests {
             semantic: false,
             depth_encoding: None,
             attach: None,
-            profile: None,
         };
         let (want, id_output, semantic) =
             parse_bundle_passes(&["rgb".to_string(), "semantic".to_string()]).unwrap();
@@ -3294,13 +3268,7 @@ mod tests {
             hfov_deg: 30.0,
             range_m: 30.0,
         };
-        let radar = sensors::radar::RadarConfig::from_budget(
-            Some(128),
-            20.0,
-            30.0,
-            10.0,
-            30.0,
-        );
+        let radar = sensors::radar::RadarConfig::from_points_per_second(1280, 20.0, 30.0, 10.0, 30.0).unwrap();
         (0..3)
             .map(|tick| {
                 let origin = Vec3::new(tick as f32 * 0.25, 0.0, 0.0);
@@ -3358,7 +3326,7 @@ mod tests {
             }],
             radars: vec![super::RadarJob {
                 sensor_id: "radar".into(),
-                config: sensors::radar::RadarConfig::from_budget(Some(512), 20.0, 60.0, 10.0, 60.0),
+                config: sensors::radar::RadarConfig::from_points_per_second(1280, 20.0, 60.0, 10.0, 60.0).unwrap(),
                 origin: Vec3::new(0.0, 1.0, 0.0),
                 rotation: Quat::IDENTITY,
                 host_velocity: Vec3::new(10.0, 0.0, 0.0),

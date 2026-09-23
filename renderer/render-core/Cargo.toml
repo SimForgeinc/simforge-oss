@@ -3,26 +3,6 @@ name = "render-core"
 version.workspace = true
 edition.workspace = true
 
-[[bin]]
-name = "ktx2-gpu-variant"
-path = "src/bin/ktx2-gpu-variant.rs"
-
-[[bin]]
-name = "scen-play"
-path = "src/bin/scen-play.rs"
-
-[[bin]]
-name = "native-render-job"
-path = "src/bin/native-render-job.rs"
-
-[[bin]]
-name = "parity-check"
-path = "src/bin/parity-check.rs"
-
-[[bin]]
-name = "sky-bench"
-path = "src/bin/sky-bench.rs"
-
 [dependencies]
 crossbeam-channel = "0.5"
 # `basis-universal` transcodes the map masters' UASTC KTX2 images to GPU formats at load.
@@ -49,7 +29,7 @@ clap = { version = "4", features = ["derive"] }
 half = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# Ingest-time GPU texture variants (`ktx2_variant`, bin `ktx2-gpu-variant`):
+# Ingest-time GPU texture variants (`ktx2_variant`, `simforge-render dev ktx2-gpu-variant`):
 # the same KTX2 reader and zstd encoder versions Bevy already locks.
 ktx2 = "0.5"
 ruzstd = "0.8"

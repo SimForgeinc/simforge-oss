@@ -1,15 +1,22 @@
 [package]
-name = "service"
+name = "simforge-render"
+description = "The SimForge Renderer: one engine, one binary (serve | job | view | dev)."
 version.workspace = true
 edition.workspace = true
 
+[lib]
+name = "render_service"
+
 [[bin]]
-name = "native-render-service"
-path = "src/bin/native-render-service.rs"
+name = "simforge-render"
+path = "src/bin/simforge-render.rs"
 
 [dependencies]
 render-core = { path = "../render-core" }
 sensors = { path = "../sensors" }
+simforge-render-view = { path = "../viewport" }
+flate2 = "1"
+sha2 = "0.10"
 bevy = { version = "0.19.1", default-features = false }
 anyhow = "1"
 crc32fast = "1"

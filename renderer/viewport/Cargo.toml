@@ -1,11 +1,11 @@
 [package]
-name = "simforge-native-viewport"
+name = "simforge-render-view"
 version.workspace = true
 edition.workspace = true
 
-[[bin]]
-name = "simforge-native-viewport"
-path = "src/main.rs"
+[lib]
+name = "simforge_render_view"
+path = "src/lib.rs"
 
 [dependencies]
 anyhow = "1"

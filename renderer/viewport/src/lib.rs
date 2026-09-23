@@ -1,4 +1,4 @@
-//! SimForge native interactive viewport.
+//! SimForge Renderer interactive viewport (`simforge-render view`).
 //!
 //! A Bevy/wgpu process that the Electron shell owns and the React editor
 //! drives over newline-delimited JSON (see `PROTOCOL.md`). It renders a
@@ -372,8 +372,9 @@ impl ViewportState {
     }
 }
 
-fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
+/// Run the viewport (`simforge-render view`); `argv[0]` names the program.
+pub fn run(argv: Vec<String>) -> anyhow::Result<()> {
+    let args = Args::parse_from(argv);
     let (control_tx, control_rx) = mpsc::channel();
     std::thread::spawn(move || {
         use std::io::BufRead;

@@ -34,10 +34,10 @@ use std::time::Instant;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use render_core::atmosphere::AtmosphereInputs;
-use render_core::engine::{CameraSpec, Lighting, PassSet, Profile, SceneApp};
-use render_core::profiles::RenderProfileConfig;
-use render_core::weather::Weather;
+use crate::atmosphere::AtmosphereInputs;
+use crate::engine::{CameraSpec, Lighting, PassSet, SceneApp};
+use crate::profiles::RenderProfileConfig;
+use crate::weather::Weather;
 use serde::{Deserialize, Serialize};
 
 #[derive(Parser, Debug)]
@@ -147,7 +147,6 @@ struct BenchReport {
     gpu: String,
     bevy: String,
     scene: String,
-    profile: String,
     anti_alias: String,
     eye: Vec<f32>,
     target: Vec<f32>,
@@ -196,12 +195,12 @@ fn probe_conditions() -> Vec<(&'static str, f32, f32, Weather, AtmosphereInputs)
         AtmosphereInputs {
             sun_elevation_deg: elev,
             turbidity: seed.turbidity,
-            ozone_du: render_core::atmosphere::REFERENCE_OZONE_DU,
+            ozone_du: crate::atmosphere::REFERENCE_OZONE_DU,
             air_density: 1.0,
             visibility_m: seed.visibility_m,
             deck: seed.deck,
             cloud_cover: seed.cloud_cover,
-            ground_albedo: render_core::atmosphere::GROUND_ALBEDO,
+            ground_albedo: crate::atmosphere::GROUND_ALBEDO,
             ..Default::default()
         }
     };
@@ -236,7 +235,7 @@ fn run_probe() -> Result<()> {
     );
     let mut rows = Vec::new();
     for (name, elev, azim, _w, inputs) in probe_conditions() {
-        let (_, r) = render_core::atmosphere::resolve(&inputs, azim, 2000.0);
+        let (_, r) = crate::atmosphere::resolve(&inputs, azim, 2000.0);
         println!(
             "{:<16} {:>7.1} {:>8.4} {:>9.3} {:>9.3} {:>9.3} {:>8.2} {:>9.2} {:>9.2} {:>7.0} {:>6.0} {:>5.1}",
             name,
@@ -256,14 +255,14 @@ fn run_probe() -> Result<()> {
     }
     println!(
         "\nmedium LUT pair: {0}x{0} Rgba32Float x2 = {1:.1} MB",
-        render_core::atmosphere::MEDIUM_LUT_RESOLUTION,
-        (render_core::atmosphere::MEDIUM_LUT_RESOLUTION as f64).powi(2) * 16.0 / 1.0e6,
+        crate::atmosphere::MEDIUM_LUT_RESOLUTION,
+        (crate::atmosphere::MEDIUM_LUT_RESOLUTION as f64).powi(2) * 16.0 / 1.0e6,
     );
     Ok(())
 }
 
-fn main() -> Result<()> {
-    let args = Args::parse();
+pub fn run(args: Vec<String>) -> Result<()> {
+    let args = Args::parse_from(args);
     if args.probe {
         return run_probe();
     }
@@ -338,7 +337,6 @@ fn main() -> Result<()> {
                     far: manifest.far_m,
                     passes: PassSet { rgb: true, id: false, depth: false },
                 },
-                Profile::Cinematic,
             );
             app.set_pose(
                 &format!("bench{w}x{h}"),
@@ -375,7 +373,6 @@ fn main() -> Result<()> {
                 far: manifest.far_m,
                 passes: PassSet { rgb: true, id: false, depth: false },
             },
-            Profile::Cinematic,
         );
         app.set_pose(
             "relight",
@@ -461,7 +458,6 @@ fn main() -> Result<()> {
         gpu: gpu_name(),
         bevy: "0.19.1".into(),
         scene: scene_path,
-        profile: "cinematic".into(),
         anti_alias: format!("{:?}", profile_config.cinematic.aa),
         eye: args.eye.clone(),
         target: args.target.clone(),

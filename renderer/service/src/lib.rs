@@ -7,6 +7,7 @@
 //! local named pipe on Windows ([`endpoint`]); frame payloads are handed off
 //! through a memory-mapped ring file ([`shm`]) on every OS.
 pub mod carla;
+pub mod cli;
 pub mod endpoint;
 pub mod dynamics;
 pub mod episode;

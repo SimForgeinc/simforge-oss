@@ -68,11 +68,6 @@ impl SemanticClass {
         }
     }
 
-    /// Classify a scenario-model actor class/kind string.
-    pub fn from_actor_class(actor_class: &str) -> SemanticClass {
-        Self::try_from_actor_class(actor_class).unwrap_or(SemanticClass::Prop) // fallback-ok: lenient mapping for the sensor-capture harness; the render service uses try_from_actor_class
-    }
-
     /// Strict actor-class mapping (every class the render engine emits:
     /// `packages/render/src/native/lowering.ts` NATIVE_ACTOR_CLASSES). Vans,
     /// SUVs, pickups and motorcycles are motor vehicles (`Car`); `prop` is

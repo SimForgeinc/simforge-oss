@@ -6,26 +6,8 @@ edition.workspace = true
 [dependencies]
 render-core = { path = "../render-core" }
 bevy = { version = "0.19.1", default-features = true, features = ["png", "hdr", "ktx2", "debug", "tonemapping_luts"] }
-image = "0.25"
 anyhow = "1"
-clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-crossbeam-channel = "0.5"
-sha2 = "0.10"
-hex = "0.4"
-# Already pinned and vendored in the renderer dependency graph; used for timestamp queries.
+# Pinned with the rest of the renderer; `gpu_rays` drives ray queries directly.
 wgpu = { version = "29.0.4", default-features = false }
-parking_lot = { version = "0.12.5", optional = true }
 
-[features]
-# Driver-loaded CUDA/NVENC, with pinned C ABI headers; no CUDA SDK dependency.
-gpu-video = ["render-core/gpu-interop", "dep:parking_lot"]
-
-[[bin]]
-name = "sensor-capture"
-path = "src/bin/sensor_capture.rs"
-
-[[bin]]
-name = "trace-to-scene-state"
-path = "src/bin/trace_to_scene_state.rs"

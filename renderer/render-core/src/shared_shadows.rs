@@ -31,9 +31,8 @@
 //! order) since the first marked view: interleaving an unmarked view keeps
 //! the output correct and only forfeits the saving.
 //!
-//! This originated in the sensor-capture harness (`sensors/shared_shadows.rs`,
-//! TICK-LATENCY-REPORT.md); this is the resident engine's version, keyed on
-//! an explicit per-view marker rather than the harness's camera type.
+//! This originated in the retired sensor-capture harness
+//! (TICK-LATENCY-REPORT.md); it is keyed on an explicit per-view marker.
 use bevy::camera::visibility::RenderLayers;
 use bevy::light::{CascadeShadowConfig, Cascades, DirectionalLight, DirectionalLightShadowMap, SimulationLightSystems};
 use bevy::prelude::*;

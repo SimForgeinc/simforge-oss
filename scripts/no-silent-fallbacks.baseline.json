@@ -326,18 +326,6 @@
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
     },
     {
-      "file": "renderer/render-core/src/bin/sky-bench.rs",
-      "rule": "rs-ok-discard",
-      "count": 2,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
-      "file": "renderer/render-core/src/bin/sky-bench.rs",
-      "rule": "rs-unwrap-or",
-      "count": 1,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
       "file": "renderer/render-core/src/catalog.rs",
       "rule": "rs-ok-discard",
       "count": 1,
@@ -354,6 +342,18 @@
       "rule": "rs-unwrap-or",
       "count": 1,
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
+    },
+    {
+      "file": "renderer/render-core/src/dev/sky_bench.rs",
+      "rule": "rs-ok-discard",
+      "count": 2,
+      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
+    },
+    {
+      "file": "renderer/render-core/src/dev/sky_bench.rs",
+      "rule": "rs-unwrap-or",
+      "count": 1,
+      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
     },
     {
       "file": "renderer/render-core/src/fixture.rs",
@@ -384,18 +384,6 @@
       "rule": "rs-unwrap-or",
       "count": 2,
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
-    },
-    {
-      "file": "renderer/render-core/src/playback.rs",
-      "rule": "rs-let-underscore",
-      "count": 2,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
-      "file": "renderer/render-core/src/playback.rs",
-      "rule": "rs-unwrap-or",
-      "count": 19,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
     },
     {
       "file": "renderer/render-core/src/road_detail.rs",
@@ -422,40 +410,10 @@
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
     },
     {
-      "file": "renderer/sensors/src/bin/trace_to_scene_state.rs",
-      "rule": "rs-let-underscore",
-      "count": 1,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
-      "file": "renderer/sensors/src/bin/trace_to_scene_state.rs",
-      "rule": "rs-ok-discard",
-      "count": 1,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
-      "file": "renderer/sensors/src/bin/trace_to_scene_state.rs",
-      "rule": "rs-unwrap-or",
-      "count": 5,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
       "file": "renderer/sensors/src/bvh.rs",
       "rule": "fallback-word",
       "count": 2,
       "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
-    },
-    {
-      "file": "renderer/sensors/src/capture_plan.rs",
-      "rule": "rs-unwrap-or",
-      "count": 2,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
-      "file": "renderer/sensors/src/capture.rs",
-      "rule": "fallback-word",
-      "count": 1,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
     },
     {
       "file": "renderer/sensors/src/formats.rs",
@@ -464,37 +422,7 @@
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"
     },
     {
-      "file": "renderer/sensors/src/gpu_video.rs",
-      "rule": "rs-let-underscore",
-      "count": 1,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
-      "file": "renderer/sensors/src/occupancy.rs",
-      "rule": "fallback-word",
-      "count": 1,
-      "justification": "the words fallback/placeholder/proxy in pre-policy code and comments (e.g. BVH Node::PLACEHOLDER, lidar intensity proxy); audited, not a silent substitution; burn down"
-    },
-    {
-      "file": "renderer/sensors/src/projection.rs",
-      "rule": "rs-unwrap-or",
-      "count": 1,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
-      "file": "renderer/sensors/src/rig.rs",
-      "rule": "rs-unwrap-or",
-      "count": 1,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
-      "file": "renderer/sensors/src/video.rs",
-      "rule": "rs-unwrap-or",
-      "count": 1,
-      "justification": "non-product harness (scen-play / sensor-capture / native-render-job / road-detail tooling), not the SimForge render path; its actor-model fallbacks now need explicit flags; burn down"
-    },
-    {
-      "file": "renderer/service/src/bin/native-render-service.rs",
+      "file": "renderer/service/src/cli/serve.rs",
       "rule": "rs-unwrap-or",
       "count": 1,
       "justification": "pre-policy construct audited in the 2026-09 no-silent-fallbacks sweep (docs/engineering/no-silent-fallbacks.md); render-affecting cases were fixed or are listed there; burn down"

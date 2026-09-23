@@ -2,7 +2,7 @@
 //! `simforge_render.dll`): the native render service as an in-process C ABI.
 //!
 //! Same resident scene, same V5 request/response contract as the socket
-//! service (`service::proto`), driven by JSON documents instead of
+//! service (`render_service::proto`), driven by JSON documents instead of
 //! msgpack frames, so a host talks to the renderer on its own thread
 //! without a socket hop. Host frames go through the shm ring the handle was
 //! created with (a regular file on every OS), which the host maps
@@ -18,9 +18,9 @@
 //!
 //! Strings returned by this library are NUL-terminated, allocated here and
 //! must be released with [`simforge_render_free_string`].
-use service::proto::{decode_request_json, WireResponse};
-use service::server::{prewarm, SceneSpec, ServiceState};
-use service::shm::ShmRing;
+use render_service::proto::{decode_request_json, WireResponse};
+use render_service::server::{prewarm, SceneSpec, ServiceState};
+use render_service::shm::ShmRing;
 use std::ffi::{c_char, c_int, CStr, CString};
 use std::path::Path;
 use std::ptr;
@@ -43,7 +43,7 @@ pub extern "C" fn simforge_render_abi() -> c_int {
 /// Wire protocol version served by [`simforge_render_request`].
 #[no_mangle]
 pub extern "C" fn simforge_render_protocol() -> c_int {
-    service::proto::NATIVE_SERVICE_PROTOCOL_VERSION as c_int
+    render_service::proto::NATIVE_SERVICE_PROTOCOL_VERSION as c_int
 }
 
 /// 1 when this library was built with `gpu-interop` (device-stream ops
@@ -79,7 +79,7 @@ unsafe fn str_arg<'a>(ptr: *const c_char, name: &str) -> Result<&'a str, String>
 
 /// Prewarm a scene and return a renderer handle, or null with `error` set.
 ///
-/// `scene_json` is the same document `native-render-service --scene` reads;
+/// `scene_json` is the same document `simforge-render serve --scene` reads;
 /// `shm_path` is the ring file host frames are published to (created here,
 /// `shm_size_bytes` total).
 ///
@@ -135,7 +135,7 @@ pub unsafe extern "C" fn simforge_render_request(
         Ok(request) => request,
         Err(message) => return c_string(error_json(0, &message)),
     };
-    let response = service::server::dispatch(&mut renderer.state, request);
+    let response = render_service::server::dispatch(&mut renderer.state, request);
     #[cfg(feature = "gpu-interop")]
     if let Some(exported) = renderer.state.take_export() {
         renderer.export = Some(exported);
