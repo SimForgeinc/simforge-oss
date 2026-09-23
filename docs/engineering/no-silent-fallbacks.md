@@ -41,11 +41,13 @@ and in CI) scans `renderer/`, `packages/render/src` and
 - `except ...: pass`, `.get(key, default)` and `or <literal>` in Python;
 - the words fallback, placeholder and proxy.
 
-Each hit must match an entry in `scripts/ci/no-silent-fallbacks.allowlist.json`,
-which records a path, the exact matched line text, and a justification (why the
-construct cannot change render output, or which recorded, explicit mechanism
-covers it). New code that adds a construct without an allowlist entry fails the
-check. Moving code is fine: entries match on text, not line numbers.
+A hit passes in one of two ways. It can carry a `fallback-ok: <reason>` comment
+on its line or the line above; a reviewer reads the reason in the diff. Or it
+can be counted in `scripts/no-silent-fallbacks.baseline.json`, the burn-down of
+pre-policy hits per file and rule, where every entry has a justification. Counts
+must match exactly, so a new unjustified hit fails and so does a count left
+above what remains. `--write-baseline` lowers counts; raising one needs
+`--reason`.
 
 ## Findings and treatment
 
