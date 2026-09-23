@@ -9,6 +9,7 @@ import * as stylex from "@stylexjs/stylex";
 // `packages/` at all, and a relative path out of `app/` cannot be resolved
 // there. The public subpath is the specifier every consumer can resolve.
 import { driveColors } from "@simforge-oss/studio-ui/drive/drive.stylex";
+import { layout, space, text } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
 
 /**
  * The session's frame, drawn from Drive's instrument tokens rather than the
@@ -89,6 +90,31 @@ export const driveFrame = stylex.create({
     fontSize: "0.75rem",
     lineHeight: "1rem",
     color: driveColors.textBody,
+  },
+  /**
+   * The take's own controls: start, and keep or discard a recorded clip.
+   * Top-centre under the clip countdown, clear of the car the chase camera
+   * frames, and the one panel here that takes the mouse — these are the only
+   * buttons that decide whether anything is written into the scenario.
+   */
+  take: {
+    position: "absolute",
+    left: "50%",
+    top: space.s12,
+    transform: "translateX(-50%)",
+    display: "flex",
+    flexDirection: "column",
+    gap: space.s2,
+    padding: space.s3,
+    maxWidth: layout.formMeasure,
+    fontSize: text.sizeSm,
+    lineHeight: text.lineSm,
+    pointerEvents: "auto",
+    color: driveColors.textBody,
+  },
+  takeActions: {
+    display: "flex",
+    gap: space.s2,
   },
   controlSource: {
     position: "absolute",
