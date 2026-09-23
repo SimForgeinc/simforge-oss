@@ -280,10 +280,10 @@ function VersionRow({
             </span>
             {version.matchesDraft ? <Chip tone="accent">Draft</Chip> : null}
           </span>
-          <span {...stylex.props(typography.meta, textLayout.truncate)}>
+          <span {...stylex.props(typography.meta)}>
             {[shortDate(version.createdAt), actorName(version.createdBy), createdForLabel(version.createdFor)].filter(Boolean).join(" · ")}
           </span>
-          <span {...stylex.props(typography.meta, textLayout.truncate)} data-testid="scenario-version-map">{mapLabel(version.map)}</span>
+          <span {...stylex.props(typography.meta)} data-testid="scenario-version-map">{mapLabel(version.map)}</span>
         </div>
         <div {...stylex.props(styles.actions)}>
           <Button
@@ -298,7 +298,7 @@ function VersionRow({
                 : "Copy this version into the draft (undoable)"}
             variant="outline"
           >
-            {otherMap && version.createdFor === "map_move" ? "Revert to previous map version" : "Restore to draft"}
+            {otherMap ? "Revert to previous map version" : "Restore to draft"}
           </Button>
           {needsResimulation ? (
             <Button

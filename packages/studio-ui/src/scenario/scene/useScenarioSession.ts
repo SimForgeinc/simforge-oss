@@ -314,6 +314,8 @@ export function useScenarioSession({
       verificationRef.current = { key, abort };
       const current = () => verificationRef.current?.key === key && !abort.signal.aborted;
       const target = { id: persisted.id, draftVersion: persisted.draftVersion };
+      // An undecided engine change belongs to the draft version it was found on.
+      setSimulationEngineChange((pending) => (pending && pending.documentId === target.id && pending.draftVersion === target.draftVersion ? pending : null));
       setSimulationVerification({ status: "verifying" });
       void (async () => {
         for (let attempt = 0; attempt < VERIFY_ATTEMPTS && current(); attempt += 1) {
