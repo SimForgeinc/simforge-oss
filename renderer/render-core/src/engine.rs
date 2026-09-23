@@ -1940,6 +1940,18 @@ pub fn id_pass_camera() -> impl Bundle {
 #[derive(Resource, Default)]
 struct Legend(Vec<LegendEntry>);
 
+/// Tearing down a render world whose device reported an error crashes in
+/// wgpu (a segfault instead of the error the caller is returning), so a
+/// failed app is leaked; the process is about to exit with that error.
+impl Drop for SceneApp {
+    fn drop(&mut self) {
+        let failed = self.app.world().get_resource::<RenderFailure>().is_some_and(|failure| failure.0.is_some());
+        if failed {
+            std::mem::forget(std::mem::replace(&mut self.app, App::empty()));
+        }
+    }
+}
+
 /// The first GPU device error the renderer hit, if any (see
 /// [`SceneApp::ensure_rendering`]). Rendering has stopped once it is set.
 #[derive(Resource, Default)]
@@ -2563,6 +2575,13 @@ impl SceneApp {
             copy_device_passes
                 .after(RenderGraphSystems::Render)
                 .before(RenderGraphSystems::Submit),
+        );
+        // A reconfigured look can drop the motion-vector prepass from a live
+        // view; Bevy's background motion-vector pipeline id stays on the
+        // retained render-world view and no longer matches its prepass.
+        render_app.add_systems(
+            bevy::render::Render,
+            drop_stale_background_motion_vectors.in_set(bevy::render::RenderSystems::PrepareBindGroups),
         );
 
         // Opt-in GPU pass timing (timestamp queries + pipeline statistics per
@@ -6186,6 +6205,26 @@ fn enforce_shadow_cascades(
     }
 }
 
+/// Remove Bevy's background motion-vector pipeline and bind group from views
+/// that no longer have a motion-vector prepass (see `SceneApp::new`).
+fn drop_stale_background_motion_vectors(
+    mut commands: Commands,
+    stale: Query<
+        Entity,
+        (
+            With<bevy::core_pipeline::prepass::background_motion_vectors::BackgroundMotionVectorsPipelineId>,
+            Without<bevy::core_pipeline::prepass::MotionVectorPrepass>,
+        ),
+    >,
+) {
+    for entity in &stale {
+        commands.entity(entity).remove::<(
+            bevy::core_pipeline::prepass::background_motion_vectors::BackgroundMotionVectorsPipelineId,
+            bevy::core_pipeline::prepass::background_motion_vectors::BackgroundMotionVectorsBindGroup,
+        )>();
+    }
+}
+
 /// Threads that finish the frame's command encoders (see `SceneApp::new`).
 #[derive(Resource)]
 struct EncoderFinishThreads(usize);
@@ -7185,6 +7224,31 @@ mod tests {
     /// drawn before it must not leak in. It did through the atmosphere's
     /// per-view environment probe, filtered one frame late (fixed in the
     /// vendored bevy_pbr, `downsampling_current_view`).
+    /// Reconfiguring a running app between looks (SMAA -> TAA adds the
+    /// motion-vector prepass, and back) must render like a fresh app: no
+    /// pipeline specialized for the old prepass set may meet the new pass.
+    /// GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn reconfigure_between_looks_keeps_rendering() {
+        use crate::render_config::{Preset, RenderConfig};
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let showcase = RenderConfig::preset(Preset::Showcase);
+        let mut app = SceneApp::new_with_profile_config(&Lighting::default(), showcase.profile_config()).unwrap();
+        app.apply_render_config(&showcase).unwrap();
+        app.load_tiles(&[repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb").to_string_lossy().into_owned()]).unwrap();
+        app.add_camera(test_camera("cam", 96, 64));
+        app.wait_until_ready().unwrap();
+        app.render_once(1).unwrap();
+        let reference = RenderConfig::reference();
+        for (tick, config) in [reference, showcase, reference].into_iter().enumerate() {
+            app.reconfigure(&config).unwrap();
+            app.wait_for_capture_ready().unwrap();
+            app.render_once(2 + tick as u64).unwrap_or_else(|error| panic!("after reconfigure to {:?}: {error}", config.aa.mode));
+        }
+        std::mem::forget(app);
+    }
+
     /// A device error stops rendering for good; the next wait must fail at
     /// once with the cause, not time out (an out-of-memory device used to
     /// spin in `wait_until_ready` for its full 300 s). GPU or lavapipe.
@@ -7213,7 +7277,8 @@ mod tests {
         assert!(error.to_string().contains("[native_render_device_error]"), "{error}");
         assert!(started.elapsed() < Duration::from_secs(30), "failed at once, not at the deadline");
         assert!(app.render_once(1).is_err(), "every later capture fails too");
-        std::mem::forget(app);
+        // Dropping a failed app must not crash the process (it is leaked).
+        drop(app);
     }
 
     #[test]
