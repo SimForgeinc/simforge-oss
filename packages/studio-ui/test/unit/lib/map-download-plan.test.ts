@@ -154,8 +154,8 @@ describe("render-profile download plans", () => {
 
   it("chooses the texture variant the viewer chooses", () => {
     const gpu = { bc7: true, astc: false, maxTextureSize: 4096 };
-    expect(textureVariantForPreference("low-no-foliage", gpu).variantId).toBe("textures-256-uastc");
-    expect(textureVariantForPreference("low", gpu).variantId).toBe("textures-256-uastc");
+    expect(textureVariantForPreference("low-no-foliage", gpu).variantId).toBe("textures-256-bc7");
+    expect(textureVariantForPreference("low", gpu).variantId).toBe("textures-256-bc7");
     expect(textureVariantForPreference("medium", gpu).variantId).toBe("textures-512-bc7");
     expect(textureVariantForPreference("medium", { bc7: false, astc: true, maxTextureSize: 4096 }).variantId).toBe("textures-512-astc");
     expect(textureVariantForPreference("medium", { bc7: false, astc: false, maxTextureSize: 256 }).variantId).toBe("textures-256-uastc");

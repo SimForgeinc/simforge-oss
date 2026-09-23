@@ -90,7 +90,7 @@ explained in the row. Unless a path says otherwise, Rust paths are under
 | `server.rs` `auto_meter` | Error printed; view kept another heading's exposure | Fail `native_auto_meter_failed` | — |
 | `server.rs` `encode_jpeg_op` | JPEG of id/depth bytes | Fail `native_jpeg_pass_unsupported` | — |
 | `server.rs` ResetEpisode | Camera size/profile/semantic/depth silently rewritten | Fail `native_episode_camera_conflict` | — |
-| `render-core/src/vehicle_model.rs` | Entries without `glbPath` skipped; `tintable` defaulted true/false inconsistently; `manifest.json` catalog path and unreadable manifest ignored; `model.clips` ignored (frozen pedestrians) | Strict: bad entries fail; `tintable`/`scaleToDims` required; `animated` entries must bind clips; `model.clips` bound as idle/walk; sidecar only | `meshy_sidecar_resolves…` |
+| `render-core/src/vehicle_model.rs` | Entries without `glbPath` skipped; `tintable` defaulted true/false inconsistently; `manifest.json` catalog path and unreadable manifest ignored; `model.clips` ignored (frozen pedestrians) | Strict: bad entries fail; `tintable`/`scaleToDims` required; `animated` entries must bind clips; `model.clips` bound as idle/walk; sidecar only | `generated_sidecar_resolves…` |
 
 ### Renderer lighting, vegetation, device, harnesses
 

@@ -467,7 +467,7 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
       { workspaceId: LOCAL_WORKSPACE_ID, userId: LOCAL_USER_ID },
       {
         schema: "simforge.submit-render-intent/v1", revisionId: REVISION_ID, executionPackageId: EXECUTION_PACKAGE_ID,
-        engine: "native", renderSpec: RENDER_SPEC, idempotencyKey: "prewarm-native-too-big",
+        engine: "native", motionSource: "original-xosc", renderSpec: RENDER_SPEC, idempotencyKey: "prewarm-native-too-big",
       } as Parameters<typeof createRenderIntentJob>[1],
     ),
     (error: unknown) => error instanceof NativeSceneMemoryError && /largest available render GPU has 24.0 GB/.test(error.detail),
@@ -486,7 +486,7 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
     { workspaceId: LOCAL_WORKSPACE_ID, userId: LOCAL_USER_ID },
     {
       schema: "simforge.submit-render-intent/v1", revisionId: REVISION_ID, executionPackageId: EXECUTION_PACKAGE_ID,
-      engine: "native", renderSpec: RENDER_SPEC, idempotencyKey: "prewarm-native-geometry-lod",
+      engine: "native", motionSource: "original-xosc", renderSpec: RENDER_SPEC, idempotencyKey: "prewarm-native-geometry-lod",
     } as Parameters<typeof createRenderIntentJob>[1],
   );
   assert.ok(nativeJob);
@@ -503,7 +503,7 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
     { workspaceId: LOCAL_WORKSPACE_ID, userId: LOCAL_USER_ID },
     {
       schema: "simforge.submit-render-intent/v1", revisionId: REVISION_ID, executionPackageId: EXECUTION_PACKAGE_ID,
-      engine: "native", renderSpec: RENDER_SPEC, idempotencyKey: "prewarm-native-geometry-lod-broken",
+      engine: "native", motionSource: "original-xosc", renderSpec: RENDER_SPEC, idempotencyKey: "prewarm-native-geometry-lod-broken",
     } as Parameters<typeof createRenderIntentJob>[1],
   ), /map_derivative_member_unavailable/);
   await execute(`UPDATE simforge.native_map_asset_blobs SET verification_state = 'verified' WHERE sha256 = :sha`, { sha: lodBinSha });
