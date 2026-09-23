@@ -20,7 +20,11 @@ edition = "2021"
 #   removes the only previous-pose dependence of a pinned capture).
 # - bevy_render: command encoders are finished in parallel at submission, in
 #   recording order (vendor/bevy_render.patch; output-identical, it only
-#   moves wgpu-core's per-encoder HAL recording off the render thread).
+#   moves wgpu-core's per-encoder HAL recording off the render thread);
+#   and draw order is a function of the scene, not of the run: sorted phases
+#   break equal sort keys by main entity, and binned phases keep each bin in
+#   entity order (without this, blended items at equal distance composited
+#   differently between runs and two golden record runs disagreed).
 # Every other Bevy crate stays pinned to crates.io 0.19.1.
 [patch.crates-io]
 bevy_gltf = { path = "vendor/bevy_gltf" }

@@ -202,6 +202,10 @@ where
     for phase in phases.values_mut() {
         phase.multidrawable_meshes.sort_unstable_keys();
         phase.batchable_meshes.sort_unstable_keys();
+        // SimForge patch: a deterministic draw order within each bin.
+        for bin in phase.batchable_meshes.values_mut() {
+            bin.sort_entities();
+        }
         phase.unbatchable_meshes.sort_unstable_keys();
         phase.non_mesh_items.sort_unstable_keys();
     }

@@ -1846,7 +1846,14 @@ where
     }
 
     /// Sorts all of its [`PhaseItem`]s.
+    ///
+    /// SimForge patch: items are first put in main-entity order, so items
+    /// with equal sort keys (equal view distance) draw in the same order on
+    /// every run. Otherwise that order is the order visibility found them in
+    /// and their retained insertion history, and blended items with equal
+    /// keys composite differently between runs.
     pub fn sort(&mut self) {
+        self.items.sort_unstable_by(|a, _, b, _| a.1.cmp(&b.1).then(a.0.cmp(&b.0)));
         I::sort(&mut self.items);
     }
 
@@ -2220,6 +2227,14 @@ impl RenderBin {
     /// Returns true if the bin contains no entities.
     fn is_empty(&self) -> bool {
         self.entities.is_empty()
+    }
+
+    /// SimForge patch: order the bin's entities by entity id. Insertion and
+    /// `swap_remove` otherwise make the draw order (which decides coplanar
+    /// depth ties) depend on the order visibility was found and on the
+    /// view's visibility history.
+    pub(crate) fn sort_entities(&mut self) {
+        self.entities.sort_unstable_keys();
     }
 
     /// Returns the [`IndexMap`] containing all the entities in the bin, along
