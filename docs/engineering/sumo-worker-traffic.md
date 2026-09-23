@@ -123,6 +123,12 @@ The artifact is `uniscenarios.materialized-traffic.v1` with provider
   names the artifact bytes.
 - **tracks:** xodr-local `(x, y = −z)`, heading, speed, `present`, and `s`
   equal to the distance driven.
+- **playback:** these actors are trace-only. `parsePlaybackPair` accepts them
+  by origin, renders them from the metadata above (a `catalog:*` tag or the
+  kind decides the model, so a trace that carries a vehicle class renders it)
+  and leaves the authored identity checks strict. Every SUMO vehicle is a
+  sedan today because the demand has one vehicle type; classes need a demand
+  and coupling-version change here, not a playback change.
 
 ### Float32 and the scene frame
 

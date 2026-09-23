@@ -12,6 +12,7 @@ import {
   realtimePlaybackTime,
   samplePlaybackDoors,
   samplePlaybackVehicleCues,
+  TRACE_TRAFFIC_LAYER,
 } from '../controller';
 import { DashCameraSensorSchema } from '@simforge-oss/scenario';
 
@@ -450,6 +451,69 @@ describe('all-actors playback camera', () => {
     expect(plan.actorIds).toEqual(['driver', 'pedestrian']);
     expect(plan.centerX).toBeLessThan(20);
     expect(plan.radius).toBeGreaterThan(10);
+  });
+});
+
+describe('worker SUMO traffic replayed from the trace', () => {
+  function sumoBundle(): PlaybackBundle {
+    const bundle = cameraBundle({
+      subject: 'ego',
+      pair: ['ego', 'other'],
+      tracks: { ego: [[0, 0], [10, 0]], other: [[2, 0], [4, 0]], 'sumo-0a1b2c3d': [[400, 400], [420, 400]] },
+    });
+    return {
+      ...bundle,
+      actors: bundle.actors.map((actor) => actor.id === 'sumo-0a1b2c3d'
+        ? { ...actor, origin: 'sumo' as const, kind: 'car' as const, tags: ['ambient', 'catalog:vehicle.sedan', 'sumo'], modelBasis: 'input-tag' as const }
+        : { ...actor, origin: 'authored' as const }),
+    };
+  }
+
+  function sharedController(bundle: PlaybackBundle) {
+    const renderer = { syncLayer: vi.fn(), setSelection: vi.fn(), setLayerVisible: vi.fn(), clearLayer: vi.fn() };
+    const controller = new PlaybackController({
+      viewer: {
+        camera: new PerspectiveCamera(55, 16 / 9, 0.1, 2000),
+        scene: new Scene(),
+        controls: { getView: vi.fn(), applyView: vi.fn(), setView: vi.fn() },
+      } as never,
+      bundle,
+      sampleHeight: () => 0,
+      renderer: renderer as never,
+    });
+    const lastIds = (layer: string) => (renderer.syncLayer.mock.calls.filter(([name]) => name === layer).at(-1)?.[1] as { id: string }[] | undefined)
+      ?.map((view) => view.id);
+    return { controller, renderer, lastIds };
+  }
+
+  it('keeps SUMO traffic visible on its own layer while the editor owns the view', () => {
+    const { controller, lastIds } = sharedController(sumoBundle());
+    expect(lastIds(TRACE_TRAFFIC_LAYER)).toEqual(['sumo-0a1b2c3d']);
+    expect(lastIds('playback')).toEqual(['ego', 'other']);
+    controller.dispose();
+  });
+
+  it('moves SUMO traffic into the playback layer while playback is presented, and back', () => {
+    const { controller, renderer, lastIds } = sharedController(sumoBundle());
+    controller.setPresentationActive(true);
+    expect(lastIds('playback')).toEqual(['ego', 'other', 'sumo-0a1b2c3d']);
+    expect(renderer.clearLayer).toHaveBeenCalledWith(TRACE_TRAFFIC_LAYER);
+    controller.setPresentationActive(false);
+    expect(lastIds(TRACE_TRAFFIC_LAYER)).toEqual(['sumo-0a1b2c3d']);
+    controller.dispose();
+    expect(renderer.clearLayer).toHaveBeenLastCalledWith(TRACE_TRAFFIC_LAYER);
+  });
+
+  it('never lets SUMO traffic drive the overview or incident camera', () => {
+    const bundle = sumoBundle();
+    expect(buildAllActorsCameraPlan(bundle)?.actorIds).toEqual(['ego', 'other']);
+    expect(buildIncidentCameraPlan(bundle)?.actorIds).not.toContain('sumo-0a1b2c3d');
+  });
+
+  it('leaves bundles without SUMO traffic on the playback layer only', () => {
+    const { controller, renderer } = sharedController(cameraBundle({ subject: 'ego', pair: ['ego', 'other'], tracks: { ego: [[0, 0]], other: [[2, 0]] } }));
+    expect(renderer.syncLayer.mock.calls.some(([layer]) => layer === TRACE_TRAFFIC_LAYER)).toBe(false);
+    controller.dispose();
   });
 });
 
