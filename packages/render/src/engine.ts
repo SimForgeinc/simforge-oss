@@ -70,6 +70,15 @@ export interface RenderEngineAdapter {
   execute(context: RenderExecutionContext): Promise<RenderArtifactManifest>;
   close?(): Promise<void>;
   /**
+   * A process this engine keeps resident on the GPU between jobs (an
+   * on-demand CARLA server), or null when none is up. The worker advertises
+   * it next to the GPU lock so a co-tenant job measures the device only after
+   * it has been released (see `gpu-lock.ts` in the render worker).
+   */
+  gpuResidency?(): { readonly residentSince: string } | null;
+  /** Stops the resident GPU process now (a co-tenant job took the GPU). */
+  releaseGpuResidency?(reason: string): Promise<void>;
+  /**
    * The claimed inputs this intent actually renders from. The worker fetches
    * only these and `execute` receives only these; claimed inputs outside the
    * set stay declared (the intent hash still binds them) but are never

@@ -6,6 +6,7 @@ import { RenderIntentV1Schema } from '@simforge-oss/scenario';
 
 import { RenderArtifactManifestSchema, type RenderArtifactManifest } from './artifacts.js';
 import { ENGINE_CAPABILITIES_V1_SCHEMA, type EngineCapabilityDeclaration } from './capabilities.js';
+import { CarlaSimulator, type CarlaSimulatorOptions } from './carla-simulator.js';
 import { loadRenderEngine, type RenderEngineAdapter, type RenderExecutionContext } from './engine.js';
 import { scrubbedLogTail } from './log-scrub.js';
 import { parseProgressJsonl } from './progress.js';
@@ -65,11 +66,49 @@ class CarlaProcessEngine implements RenderEngineAdapter {
     private readonly host: string,
     private readonly port: number,
     engineVersion: string,
+    private readonly simulator?: CarlaSimulator,
   ) {
     this.capabilities = { ...CARLA_CAPABILITIES, engineVersion };
   }
 
+  gpuResidency(): { readonly residentSince: string } | null {
+    return this.simulator?.residency() ?? null;
+  }
+
+  async releaseGpuResidency(reason: string): Promise<void> {
+    await this.simulator?.stop(reason);
+  }
+
+  async close(): Promise<void> {
+    await this.simulator?.stop('worker stopping');
+  }
+
   async execute(context: RenderExecutionContext): Promise<RenderArtifactManifest> {
+    if (!this.simulator) return this.run(context);
+    // On demand: the server is started for this job (or reused while warm)
+    // and stops after its idle timeout. A server that cannot start fails the
+    // job with its carla_simulator_* code; nothing renders without it.
+    const start = await this.simulator.ensureRunning(context.signal);
+    if (start.cold) {
+      await context.reportProgress({
+        schema: 'simforge.render-progress/v1',
+        event: 'warning',
+        code: 'carla_simulator_cold_start',
+        message: `CARLA server cold-started on demand for this job in ${(start.coldStartMs / 1000).toFixed(1)} s (coldStartMs=${start.coldStartMs}); it was not running before the lease`,
+        jobId: context.jobId,
+        attempt: context.attempt,
+        sequence: 0,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    try {
+      return await this.run(context);
+    } finally {
+      this.simulator.markIdle();
+    }
+  }
+
+  private async run(context: RenderExecutionContext): Promise<RenderArtifactManifest> {
     await mkdir(context.workspace, { recursive: true });
     const intentPath = join(context.workspace, 'render-intent.json');
     const packagePath = join(context.workspace, 'input-package.json');
@@ -258,5 +297,49 @@ export async function loadBuiltinRenderEngine(
       + ` received ${engineVersion === '' ? 'nothing' : engineVersion}`,
     );
   }
-  return new CarlaProcessEngine(binary, host, configuredPort, engineVersion);
+  const simulator = options.simulator === undefined ? undefined : new CarlaSimulator(carlaSimulatorOptions(options.simulator, host, configuredPort));
+  return new CarlaProcessEngine(binary, host, configuredPort, engineVersion, simulator);
+}
+
+/**
+ * `options.simulator`: the worker starts and stops the CARLA server itself
+ * (on demand) instead of connecting to an always-on one. Every field is
+ * required except the timeouts; a malformed block is a configuration error,
+ * never a silent always-on fallback.
+ */
+export function carlaSimulatorOptions(raw: unknown, host: string, port: number): CarlaSimulatorOptions {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('CARLA simulator options must be an object');
+  const value = raw as Record<string, unknown>;
+  const known = new Set(['command', 'args', 'cwd', 'readyTimeoutMs', 'idleStopMs', 'handshake', 'stopGraceMs']);
+  const unknown = Object.keys(value).filter((key) => !known.has(key));
+  if (unknown.length > 0) throw new Error(`Unknown CARLA simulator option(s): ${unknown.join(', ')}`);
+  if (typeof value.command !== 'string' || value.command.length === 0) throw new Error('CARLA simulator command is required');
+  if (!Array.isArray(value.args) || !value.args.every((arg) => typeof arg === 'string')) throw new Error('CARLA simulator args must be a string array');
+  const portArg = value.args.find((arg: string) => arg.startsWith('-carla-rpc-port='));
+  if (portArg !== undefined && portArg !== `-carla-rpc-port=${port}`) {
+    throw new Error(`CARLA simulator ${portArg} does not match the engine port ${port}`);
+  }
+  const duration = (key: string, fallback: number, min: number, max: number): number => {
+    const configured = value[key] ?? fallback;
+    if (typeof configured !== 'number' || !Number.isInteger(configured) || configured < min || configured > max) {
+      throw new Error(`CARLA simulator ${key} must be an integer from ${min} to ${max}`);
+    }
+    return configured;
+  };
+  const handshake = value.handshake;
+  if (handshake !== undefined && handshake !== null && !(Array.isArray(handshake) && handshake.length > 0 && handshake.every((arg) => typeof arg === 'string'))) {
+    throw new Error('CARLA simulator handshake must be a non-empty string array or null');
+  }
+  if (value.cwd !== undefined && typeof value.cwd !== 'string') throw new Error('CARLA simulator cwd must be a string');
+  return {
+    command: value.command,
+    args: value.args as string[],
+    ...(typeof value.cwd === 'string' ? { cwd: value.cwd } : {}),
+    host,
+    port,
+    readyTimeoutMs: duration('readyTimeoutMs', 120_000, 1_000, 900_000),
+    idleStopMs: duration('idleStopMs', 600_000, 0, 86_400_000),
+    stopGraceMs: duration('stopGraceMs', 20_000, 0, 300_000),
+    ...(handshake !== undefined ? { handshake: handshake as string[] | null } : {}),
+  };
 }

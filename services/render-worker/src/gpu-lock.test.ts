@@ -3,7 +3,19 @@ import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 
-import { acquireGpuJobLock, clearStaleGpuLock, gpuLockIdentity, gpuLockStatus, staleGpuLockReason } from './gpu-lock.js';
+import {
+  acquireGpuJobLock,
+  advertiseGpuResidency,
+  clearStaleGpuLock,
+  foreignGpuLockPresent,
+  gpuLockIdentity,
+  gpuLockStatus,
+  gpuResidentMarkerPath,
+  otherGpuResidents,
+  staleGpuLockReason,
+  waitForGpuResidentsToYield,
+  withdrawGpuResidency,
+} from './gpu-lock.js';
 
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))); });
@@ -174,4 +186,38 @@ it('never reclaims a valid lock another worker holds, whatever its age within th
   expect(waits[0]).toMatchObject({ heldBy: 'usrj_foreign' });
   expect(gpuLockStatus(path)).toEqual({ state: 'free' });
   expect(JSON.parse(await readFile(path, 'utf8')).jobId).toBe('usrj_foreign');
+});
+
+it('a co-tenant job waits for an idle resident to release the GPU before measuring it', async () => {
+  const path = await lockPath();
+  await advertiseGpuResidency(path, 'dev-carla', '2026-09-24T16:00:00.000Z');
+  // The resident's own worker never waits for itself.
+  expect(await otherGpuResidents(path, 'dev-carla')).toEqual([]);
+  expect(await otherGpuResidents(path, 'dev-native')).toEqual(['dev-carla']);
+  // The native job takes the lock; the CARLA worker sees a lock it does not hold...
+  const lock = await acquireGpuJobLock(path, 'usrj_native', { refreshMs: 60_000 });
+  expect(await foreignGpuLockPresent(path)).toBe(false); // (this process holds it)
+  setTimeout(() => { void withdrawGpuResidency(path, 'dev-carla'); }, 300);
+  const waited = await waitForGpuResidentsToYield(path, 'dev-native', { pollMs: 50, timeoutMs: 5_000 });
+  expect(waited.waitedFor).toEqual(['dev-carla']);
+  expect(waited.stillResident).toEqual([]);
+  expect(waited.waitedMs).toBeGreaterThanOrEqual(250);
+  await lock.release();
+});
+
+it('reports a resident that never yields, and ignores a dead worker\'s stale marker', async () => {
+  const path = await lockPath();
+  await advertiseGpuResidency(path, 'dev-carla', '2026-09-24T16:00:00.000Z');
+  const stuck = await waitForGpuResidentsToYield(path, 'dev-native', { pollMs: 50, timeoutMs: 200 });
+  expect(stuck.stillResident).toEqual(['dev-carla']);
+  const old = new Date(Date.now() - 60_000);
+  await utimes(gpuResidentMarkerPath(path, 'dev-carla'), old, old);
+  expect(await otherGpuResidents(path, 'dev-native')).toEqual([]);
+});
+
+it('an idle worker sees a GPU lock it does not hold as a co-tenant taking the GPU', async () => {
+  const path = await lockPath();
+  expect(await foreignGpuLockPresent(path)).toBe(false);
+  await writeFile(path, JSON.stringify({ jobId: 'usrj_other', token: 'x', host: 'elsewhere', pid: 7 }));
+  expect(await foreignGpuLockPresent(path)).toBe(true);
 });

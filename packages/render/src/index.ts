@@ -1,6 +1,7 @@
 export * from './artifacts.js';
 export * from './blob-cache.js';
 export * from './builtin-engines.js';
+export * from './carla-simulator.js';
 export * from './log-scrub.js';
 export * from './cancellation.js';
 export * from './capabilities.js';

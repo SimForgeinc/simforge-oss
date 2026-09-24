@@ -35,7 +35,16 @@ import { collectNativeMapMembers, isNativeMapMemberInputId } from '@simforge-oss
 
 import type { RenderWorkerConfig } from './config.js';
 import { BlobStore } from './blob-store.js';
-import { acquireGpuJobLock, clearStaleGpuLock, gpuLockStatus, type GpuJobLock } from './gpu-lock.js';
+import {
+  acquireGpuJobLock,
+  advertiseGpuResidency,
+  clearStaleGpuLock,
+  foreignGpuLockPresent,
+  gpuLockStatus,
+  waitForGpuResidentsToYield,
+  withdrawGpuResidency,
+  type GpuJobLock,
+} from './gpu-lock.js';
 import { probeGpuMemory, probeGpuMemoryDetailed, type GpuMemory } from './gpu-memory.js';
 import type { WorkerHealth } from './health.js';
 import { withBoundedRetry } from './retry.js';
@@ -489,6 +498,19 @@ async function executeClaim(
         isJobActive: async (jobId) => jobId === job.jobId || !(await ownPastJob(config.scratchDir, jobId)),
         onWait: (_owner, wait) => console.error(JSON.stringify({ event: 'gpu.lock_wait', ...wait })),
       });
+      // Another worker's idle resident (an on-demand CARLA server between its
+      // jobs) releases the GPU when it sees this lock; measure after it has.
+      const residents = await waitForGpuResidentsToYield(config.gpuLockPath, config.workerId, { signal: state.controller.signal });
+      if (residents.waitedFor.length > 0) {
+        console.error(JSON.stringify({ event: 'gpu.residents_yield', jobId: job.jobId, ...residents }));
+      }
+      if (residents.stillResident.length > 0) {
+        await forward({
+          schema: 'simforge.render-progress/v1', event: 'warning', code: 'render_gpu_resident_not_released',
+          message: `idle GPU resident(s) of ${residents.stillResident.join(', ')} did not release the GPU within ${Math.round(residents.waitedMs / 1000)} s; the device was measured with them still resident`,
+          jobId: job.jobId, attempt: job.attempt, sequence: 0, timestamp: new Date().toISOString(),
+        });
+      }
       // Measured while holding the lock: co-tenant renders are excluded, their idle residency is not.
       const probe = await probeGpuMemoryDetailed();
       if ('memory' in probe) {
@@ -663,6 +685,10 @@ async function executeClaim(
     state.heartbeatController.abort(new Error('job finalized'));
     state.controller.abort(new RenderCanceledError('job finalized'));
     await heartbeat.catch(() => undefined);
+    // An engine that stays resident (on-demand CARLA) is advertised before the
+    // lock is released, so a co-tenant that takes it next always sees it.
+    const residency = gpuLock ? engine.gpuResidency?.() : null;
+    if (residency) await advertiseGpuResidency(config.gpuLockPath, config.workerId, residency.residentSince).catch(() => undefined);
     await gpuLock?.release();
     finishedJobs.add(job.jobId);
     store.setMode('idle');
@@ -781,6 +807,30 @@ export async function runRenderWorker(
     health.setStatus?.('gpuLock', gpuLockStatus(config.gpuLockPath));
   }, 2000);
   statusTimer.unref();
+  // Idle GPU residency (gpu-lock.ts): keep this worker's marker fresh while
+  // its engine is resident, and release the residency as soon as a co-tenant
+  // job takes the GPU lock.
+  let residencyCheck: Promise<void> | undefined;
+  let advertised = false;
+  const residencyTimer = engine.gpuResidency ? setInterval(() => {
+    residencyCheck ??= (async () => {
+      const residency = engine.gpuResidency?.() ?? null;
+      if (residency && await foreignGpuLockPresent(config.gpuLockPath)) {
+        await engine.releaseGpuResidency?.('a co-tenant job took the GPU lock');
+      }
+      const still = engine.gpuResidency?.() ?? null;
+      if (still) {
+        await advertiseGpuResidency(config.gpuLockPath, config.workerId, still.residentSince);
+        advertised = true;
+      } else if (advertised) {
+        await withdrawGpuResidency(config.gpuLockPath, config.workerId);
+        advertised = false;
+      }
+    })().catch((error: unknown) => {
+      console.error(JSON.stringify({ event: 'gpu.residency_check_failed', error: error instanceof Error ? error.message : String(error) }));
+    }).finally(() => { residencyCheck = undefined; });
+  }, 1000) : undefined;
+  residencyTimer?.unref();
   const prewarmRun = prewarmer?.run(AbortSignal.any([drainSignal, prewarmStop.signal])).catch((error: unknown) => {
     console.error(JSON.stringify({ event: 'prewarm.stopped', error: error instanceof Error ? error.message : String(error) }));
   });
@@ -829,7 +879,10 @@ export async function runRenderWorker(
       type: 'worker.drain',
       registrationId: registration.registrationId,
     }, drainRequestSignal)).catch(() => undefined);
+    if (residencyTimer) clearInterval(residencyTimer);
+    await residencyCheck;
     await engine.close?.();
+    if (engine.gpuResidency) await withdrawGpuResidency(config.gpuLockPath, config.workerId).catch(() => undefined);
     await transport.close?.();
   }
 }

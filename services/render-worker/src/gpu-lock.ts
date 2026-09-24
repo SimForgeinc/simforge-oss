@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { constants, readFileSync, unlinkSync } from 'node:fs';
-import { mkdir, open, readFile, stat, unlink, utimes } from 'node:fs/promises';
+import { mkdir, open, readdir, readFile, rename, stat, unlink, utimes, writeFile } from 'node:fs/promises';
 import { hostname } from 'node:os';
-import { dirname } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 
 /**
  * One render at a time per GPU, across every worker process and container
@@ -278,5 +278,98 @@ export async function acquireGpuJobLock(path: string, jobId: string, options: Gp
     }
   } finally {
     waiting.delete(path);
+  }
+}
+
+/**
+ * Idle GPU residents. An engine may keep a process on the GPU between its
+ * jobs (the on-demand CARLA server holds ~6.5 GiB while it waits for the
+ * next job). The lock serialises renders, not residency, so a co-tenant job
+ * that took the lock would otherwise measure free memory, and plan its scene,
+ * against a device the idle server still occupies.
+ *
+ * The protocol: while its engine is resident and no job of its own runs, a
+ * worker keeps a marker next to the lock (`<lock>.resident.<workerId>`,
+ * refreshed every few seconds) and releases the residency as soon as a lock
+ * it does not hold appears. A worker that takes the lock waits for every
+ * other worker's fresh marker to disappear before it measures the device. A
+ * marker not refreshed for `staleAfterMs` belongs to a dead worker and is
+ * ignored. The marker is written before a resident worker releases the lock,
+ * so there is no window in which a co-tenant sees neither.
+ */
+export interface GpuResidentMarker {
+  readonly workerId: string;
+  readonly residentSince: string;
+  readonly refreshedAt: string;
+}
+
+const RESIDENT_MARKER = '.resident.';
+
+export function gpuResidentMarkerPath(lockPath: string, workerId: string): string {
+  return `${lockPath}${RESIDENT_MARKER}${workerId.replace(/[^A-Za-z0-9._-]/g, '_')}`;
+}
+
+export async function advertiseGpuResidency(lockPath: string, workerId: string, residentSince: string): Promise<void> {
+  const path = gpuResidentMarkerPath(lockPath, workerId);
+  await mkdir(dirname(path), { recursive: true });
+  const next = `${path}.${process.pid}.tmp`;
+  await writeFile(next, JSON.stringify({ workerId, residentSince, refreshedAt: new Date().toISOString() } satisfies GpuResidentMarker), { mode: 0o644 });
+  await rename(next, path);
+}
+
+export async function withdrawGpuResidency(lockPath: string, workerId: string): Promise<void> {
+  await unlink(gpuResidentMarkerPath(lockPath, workerId)).catch((error: NodeJS.ErrnoException) => {
+    if (error.code !== 'ENOENT') throw error;
+  });
+}
+
+/** Whether a GPU lock this process does not hold is present (a co-tenant job has, or is taking, the GPU). */
+export async function foreignGpuLockPresent(lockPath: string): Promise<boolean> {
+  if (held.has(lockPath)) return false;
+  return stat(lockPath).then(() => true, () => false);
+}
+
+/** Other workers' fresh resident markers next to the lock. */
+export async function otherGpuResidents(lockPath: string, workerId: string, staleAfterMs = 15_000, now = Date.now()): Promise<string[]> {
+  const own = gpuResidentMarkerPath(lockPath, workerId);
+  const prefix = `${basename(lockPath)}${RESIDENT_MARKER}`;
+  let names: string[];
+  try {
+    names = await readdir(dirname(lockPath));
+  } catch {
+    return [];
+  }
+  const residents: string[] = [];
+  for (const name of names) {
+    if (!name.startsWith(prefix) || name.endsWith('.tmp')) continue;
+    const path = join(dirname(lockPath), name);
+    if (path === own) continue;
+    const fresh = await stat(path).then((info) => now - info.mtimeMs < staleAfterMs, () => false);
+    if (fresh) residents.push(name.slice(prefix.length));
+  }
+  return residents;
+}
+
+/**
+ * Called holding the lock, before measuring the device: waits (bounded) for
+ * other workers' idle residents to release the GPU. Returns who was waited
+ * for and who is still resident at the timeout (the caller reports it; the
+ * engine's own memory check then decides with the device as it is).
+ */
+export async function waitForGpuResidentsToYield(
+  lockPath: string,
+  workerId: string,
+  options: { timeoutMs?: number; pollMs?: number; staleAfterMs?: number; signal?: AbortSignal } = {},
+): Promise<{ waitedFor: string[]; stillResident: string[]; waitedMs: number }> {
+  const startedAt = Date.now();
+  const deadline = startedAt + (options.timeoutMs ?? 120_000);
+  const waitedFor = new Set<string>();
+  for (;;) {
+    const residents = await otherGpuResidents(lockPath, workerId, options.staleAfterMs);
+    residents.forEach((resident) => waitedFor.add(resident));
+    if (residents.length === 0 || Date.now() >= deadline || options.signal?.aborted) {
+      return { waitedFor: [...waitedFor], stillResident: residents, waitedMs: Date.now() - startedAt };
+    }
+    await delay(options.pollMs ?? 500, options.signal);
   }
 }
