@@ -12,15 +12,22 @@
 #   uploads, then undrafts it (still a prerelease) -> release-smoke.yml ->
 #   promote.yml flips it to stable/latest, pushes :latest, PyPI, Homebrew.
 
+# The SDK keeps the oss/ layout (SPLIT-MAP.md): no root Cargo workspace. The
+# CLI (native/crates/simforge-cli) is a member of the renderer workspace, which
+# carries the vendored-Bevy [patch.crates-io] and the lockfile.
 [workspace]
-members = ["cargo:."]
+members = ["cargo:renderer"]
 
 [dist]
 cargo-dist-version = "0.33.0"
 ci = "github"
-# Only the CLI is distributed. The renderer's own `simforge-render` binary and
-# every other workspace crate stay out of the release.
-packages = ["simforge"]
+# Only the CLI is distributed: nothing is by default, and the CLI crate opts in
+# with `[package.metadata.dist] dist = true`. (dist 0.33 ignores the global
+# `packages` list for Cargo workspaces, so an allow-list must live in the
+# crate.) The renderer's own `simforge-render` binary stays out of the release.
+dist = false
+# Build only the CLI package, not the whole renderer workspace.
+precise-builds = true
 targets = [
   "x86_64-unknown-linux-gnu",
   "aarch64-unknown-linux-gnu",
@@ -49,7 +56,8 @@ cargo-auditable = true
 # until promote.yml clears it.
 create-release = false
 # Self-hosted Linux runner on a public repo: never run release jobs for PRs
-# (fork code would execute on path-pc). supply-chain.yml covers PR checks.
+# (fork code would execute on path-pc). PRs are checked by the merger's local
+# SDK gate (scripts/release/check.sh).
 pr-run-mode = "skip"
 # Custom jobs see prereleases too; each one decides what a prerelease gets
 # (no :latest, no PyPI, no Homebrew until promote.yml).

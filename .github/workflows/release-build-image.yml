@@ -2,7 +2,7 @@ name: release-build-image
 # Builds ghcr.io/simforgeinc/simforge-release-build:<date> from
 # docker/release-build.Dockerfile. A change to the Dockerfile or to
 # rust-toolchain.toml must also bump the tag in dist-workspace.toml and the
-# release*.yml/supply-chain.yml `container:` lines (one date string; the
+# release*.yml `container:` lines (one date string; the
 # release agent does it in the same PR). The image is public: public-repo
 # workflows pull it without credentials.
 on:

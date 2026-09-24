@@ -1,7 +1,8 @@
 # cargo-deny policy for the SimForge SDK (run: `cargo deny check`).
 #
-# Gates every PR (supply-chain.yml) and every release (the release PR runs it,
-# and the release agent refuses to tag with a red check). The binary we ship is
+# Gates every PR (the merger's SDK gate runs scripts/release/check.sh) and
+# every release (release-preflight.yml; the release agent refuses to tag with a
+# red check). The binary we ship is
 # Apache-2.0; nothing copyleft is linked into it. ffmpeg/x264 (GPL) are never
 # linked: `simforge render` runs a system ffmpeg as a separate process, and
 # `simforge doctor` checks for it.

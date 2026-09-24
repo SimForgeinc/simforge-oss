@@ -20,7 +20,7 @@ jobs:
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: One version everywhere (Cargo, pyproject, CHANGELOG, tag)
         run: python3 scripts/release/check-versions.py --tag "$GITHUB_REF_NAME"
-      - name: Licence, advisory, ban and source policy (deny.toml)
-        run: cargo deny --locked --workspace check
+      - name: Licence, advisory, ban and source policy (deny.toml), every shipped workspace
+        run: scripts/release/check.sh deny
       - name: THIRD_PARTY_NOTICES.md and asset attributions are current
-        run: scripts/release/notices.sh --check
+        run: scripts/release/check.sh notices

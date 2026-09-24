@@ -1,19 +1,23 @@
 # Paths the release tooling needs, in one place. Sourced by scripts/release/*.sh
 # and by the release workflows (they append it to $GITHUB_ENV).
 #
-# These are the post-move paths (PLAN §3.2 `cli/` layout at the root of
-# SimForgeinc/simforge-sdk). Track S owns the layout: when a path moves, change
-# it here and nowhere else.
+# The SDK keeps today's oss/ layout (SPLIT-MAP.md, track S owns it): no root
+# Cargo workspace; the CLI is a member of the renderer workspace. When a path
+# moves (the post-move workspace unification, track X's closure pins, track P's
+# fixtures), change it here and nowhere else.
 SIMFORGE_CLI_PACKAGE=simforge
-SIMFORGE_CLI_MANIFEST=crates/simforge-cli/Cargo.toml
-SIMFORGE_GYM_DIR=python/simforge-oss-gym
+SIMFORGE_CLI_MANIFEST=native/crates/simforge-cli/Cargo.toml
+# Every Cargo workspace whose crates ship (cargo deny runs over each).
+SIMFORGE_CARGO_WORKSPACES="renderer native"
+SIMFORGE_GYM_DIR=adapters/gym
 SIMFORGE_GYM_DIST_NAME=simforge_oss_gym
 # In-repo asset catalogs whose ATTRIBUTION.json must be complete (track X moves
 # the models out of git; the manifests and ATTRIBUTION.json stay).
-SIMFORGE_ASSET_CATALOGS="assets/vehicles-carla assets/pedestrians-carla"
-# The actor closure the CLI pulls by default (digest), checked on every release.
+SIMFORGE_ASSET_CATALOGS="catalog/vehicles-carla catalog/pedestrians-carla"
+# The actor closure the CLI pulls by default ({"digest": ...}), checked on every
+# release. Proposed path; track X/C decide where the CLI's pin lives.
 SIMFORGE_ACTOR_CLOSURE_PIN_FILE=contracts/pins/actor-assets.json
 # The fixture the release smoke renders with lavapipe: a full-form (air-gapped)
-# scenario package, so the smoke needs no registry.
+# scenario package, so the smoke needs no registry. Proposed path (track P).
 SIMFORGE_SMOKE_PACKAGE=fixtures/scenario-package/smoke/richmond-06.full.zip
 SIMFORGE_SMOKE_RIG=fixtures/scenario-package/smoke/rig.json

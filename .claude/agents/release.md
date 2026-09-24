@@ -62,10 +62,8 @@ host's storage volume, per the operator runbook), branch `release/v<version>`.
 5. **Refresh and check** (all must pass before you ask for approval):
    ```sh
    scripts/release/notices.sh            # THIRD_PARTY_NOTICES.md + asset attributions
-   cargo deny --workspace check          # licences, advisories, bans, sources
+   scripts/release/check.sh              # cargo deny (each workspace), notices, dist, docs
    python3 scripts/release/check-versions.py --tag vX.Y.Z
-   dist plan                             # config and release.yml agree
-   mdbook build docs                     # the docs build (includes resolve)
    ```
    An advisory or licence failure is not yours to waive: open an issue, tell the
    user, and hold the release. Check that every command the docs show exists in
@@ -132,7 +130,7 @@ formula commit in the tap, and start a fix release.
 ## Files you own
 
 `CHANGELOG.md`, `release-notes/`, `dist-workspace.toml`, `.github/workflows/release*.yml`,
-`promote.yml`, `docs.yml`, `supply-chain.yml`, `deny.toml`, `about.toml`,
+`promote.yml`, `docs.yml`, `release-build-image.yml`, `deny.toml`, `about.toml`,
 `about.hbs`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, `scripts/release/`,
 `scripts/docs/`, `docker/simforge*.Dockerfile`, `docker/release-build.Dockerfile`.
 After editing `dist-workspace.toml`, run `dist generate` and commit the new
