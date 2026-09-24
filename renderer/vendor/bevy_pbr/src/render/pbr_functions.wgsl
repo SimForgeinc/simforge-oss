@@ -756,8 +756,8 @@ fn apply_pbr_lighting(
     // open sky is mostly leaves. Upward reflections lose most of it, upward
     // facing diffuse part of it (a canopy transmits and re-emits some light).
     let canopy_R = reflect(-in.V, in.N);
-    let canopy_specular = 1.0 - 0.85 * canopy_cover * smoothstep(-0.2, 0.3, canopy_R.y);
-    let canopy_diffuse = 1.0 - 0.6 * canopy_cover * saturate(0.5 + 0.5 * in.N.y);
+    let canopy_specular = 1.0 - 0.95 * canopy_cover * smoothstep(-0.2, 0.3, canopy_R.y);
+    let canopy_diffuse = 1.0 - 0.75 * canopy_cover * saturate(0.5 + 0.5 * in.N.y);
     indirect_light += environment_light.diffuse * diffuse_occlusion * canopy_diffuse;
     if (!use_ssr) {
         indirect_light += environment_light.specular * specular_occlusion * canopy_specular;
