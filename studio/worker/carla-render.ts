@@ -3,6 +3,22 @@ import { loadBuiltinRenderEngine, type CompletedArtifact, type JobLeasedResponse
 import { executeEngine, safeArtifactPath } from "./executor.js";
 import { downloadInputs } from "./http-client.js";
 import type { RenderControlClient } from "./render-control-client.js";
+import type { RemoteInput } from "./types.js";
+
+/**
+ * The lease leaves `download` out only for workers that registered lazy input
+ * URLs (`labels.inputUrls = "batch-v1"`). This worker does not, so a missing URL
+ * is a control-plane contract violation: refuse the claim instead of skipping
+ * the input.
+ */
+export function leasedInputsWithDownloads(claim: Pick<JobLeasedResponse, "jobId" | "inputs">): RemoteInput[] {
+  return claim.inputs.map((input) => {
+    if (!input.download) {
+      throw new Error(`render job ${claim.jobId}: input ${input.inputId} has no download URL; this worker does not sign input URLs lazily`);
+    }
+    return { ...input, download: input.download };
+  });
+}
 
 export async function runCarlaClaim(
   client: RenderControlClient,
@@ -32,7 +48,7 @@ export async function runCarlaClaim(
   heartbeat.unref?.();
   try {
     await progress("downloading", 0, claim.inputs.length);
-    const inputs = await downloadInputs(claim.inputs, join(workspace, "inputs"), signal, client.transfers.hostOrigin);
+    const inputs = await downloadInputs(leasedInputsWithDownloads(claim), join(workspace, "inputs"), signal, client.transfers.hostOrigin);
     await progress("downloading", claim.inputs.length, claim.inputs.length);
     const engine = await loadBuiltinRenderEngine("carla");
     let execution;

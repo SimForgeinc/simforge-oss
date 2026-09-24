@@ -551,6 +551,10 @@ class RenderSpec:
     quality: str
     environment: Environment
     formats: tuple[str, ...]
+    #: The rendered window of the scenario clip, ``(startSeconds,
+    #: endSeconds)`` in clip time. ``None`` renders the whole authored clip
+    #: (leases that predate sub-clip rendering never state it).
+    clip: tuple[float, float] | None = None
 
     @classmethod
     def parse(cls, value: Any, allow_sensor_free: bool = False) -> "RenderSpec":
@@ -559,7 +563,7 @@ class RenderSpec:
         expected_schema = INTERACTION_SPEC_SCHEMA if allow_sensor_free else RENDER_SPEC_SCHEMA
         allowed_fields = {
             "schema", "fps", "sensors", "outputs", "executionMode", "quality",
-            "environment", "formats",
+            "environment", "formats", "clip",
         }
         # Quality and environment change the pixels, so neither has a default.
         required_fields = {"schema", "fps", "sensors", "outputs", "quality", "environment"}
@@ -673,9 +677,19 @@ class RenderSpec:
             raise ContractError(f"renderSpec.formats is missing required formats: {', '.join(missing_formats)}")
         if "video" in outputs and not any(sensor.modality == "rgb" for sensor in sensors):
             raise ContractError("video output requires at least one RGB sensor")
+        clip: tuple[float, float] | None = None
+        if "clip" in value:
+            raw_clip = value["clip"]
+            if not isinstance(raw_clip, Mapping) or set(raw_clip) != {"startSeconds", "endSeconds"}:
+                raise ContractError("renderSpec.clip must contain exactly startSeconds and endSeconds")
+            start = _finite_number(raw_clip["startSeconds"], "renderSpec.clip.startSeconds", 0.0, MAX_DURATION_SECONDS)
+            end = _finite_number(raw_clip["endSeconds"], "renderSpec.clip.endSeconds", 0.0, MAX_DURATION_SECONDS)
+            if end <= start:
+                raise ContractError("renderSpec.clip must have endSeconds > startSeconds >= 0")
+            clip = (start, end)
         return cls(
             expected_schema, fps, tuple(sensors), tuple(outputs), execution_mode,
-            quality, environment, tuple(raw_formats),
+            quality, environment, tuple(raw_formats), clip,
         )
 
 

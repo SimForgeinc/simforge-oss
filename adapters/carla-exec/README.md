@@ -56,6 +56,20 @@ closes with render-artifact-manifest/v1. `--control-features` passes the
 lease's `controlFeatures` (comma-separated); newer manifest fields, such as
 `substitutions` (`render-evidence.substitutions`), are written only when listed.
 
+`renderSpec.clip` may name part of the authored clip, as it does for the native
+engine: output frame `k` shows clip time `startSeconds + k / fps`, so a
+sub-clip's frames are the corresponding frames of the full-clip render. The
+ticks before a later window are a pre-roll, replayed but neither captured nor
+graded, so camera exposure, temporal filtering and streamed geometry reach the
+window start exactly as in the full render (spawning at the start pose alone
+renders visibly different first frames). The window is recorded in the render
+manifest (`renderWindow`). A window CARLA cannot render exactly is refused before CARLA
+is contacted, never widened to the full clip: `carla_clip_outside_scenario`
+(ends after the authored clip), `carla_clip_frame_count_fractional` (the window
+is not a whole number of frames), `carla_clip_too_short`, and
+`carla_clip_physics_validation_partial` (physics validation integrates and
+grades the whole authored clip, so it renders only that).
+
 ### No silent fallbacks
 
 Missing, failed or unsupported data never silently degrades a render
@@ -63,7 +77,11 @@ Missing, failed or unsupported data never silently degrades a render
 `carla_*` code; `run-intent` then prints one
 `simforge.carla-render-failure/v1` JSON line (`code`, `message`,
 `retryable: false`) and exits 3, and every message starts with
-`[carla_<code>] `. The only substitution CARLA makes is `carla-actor-body`, and
+`[carla_<code>] `. Every other deterministic refusal (an intent, input
+package or lease that violates its contract) takes the same exit as
+`carla_render_contract_violation`, so the worker never retries it. Exit 1 is
+left to unexpected crashes, which the worker reports with the scrubbed tail of
+stderr. The only substitution CARLA makes is `carla-actor-body`, and
 only when the intent's `allowSubstitutions` lists it and the lease can record
 it (else `carla_substitutions_unreportable`): each one is written to the
 manifest's `substitutions` and announced as a `carla.substitution.*` warning.

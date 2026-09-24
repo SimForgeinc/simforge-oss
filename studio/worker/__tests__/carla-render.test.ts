@@ -40,3 +40,17 @@ it("offers CARLA exactly when executable and permitted by worker capabilities", 
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+it("refuses a CARLA lease whose inputs lack download URLs instead of skipping them", async () => {
+  const { leasedInputsWithDownloads } = await import("../carla-render.js");
+  const sha256 = "a".repeat(64);
+  const download = { url: "https://example.test/input", headers: {} };
+  assert.deepEqual(
+    leasedInputsWithDownloads({ jobId: "job-1", inputs: [{ inputId: "map", sha256, sizeBytes: 1, download }] }),
+    [{ inputId: "map", sha256, sizeBytes: 1, download }],
+  );
+  assert.throws(
+    () => leasedInputsWithDownloads({ jobId: "job-1", inputs: [{ inputId: "map", sha256, sizeBytes: 1 }] }),
+    /job-1: input map has no download URL/,
+  );
+});

@@ -118,7 +118,15 @@ export async function POST(request: Request) {
       || error.message.startsWith("native_")
       || error.message.startsWith("render_sensor_")
     )) {
-      return NextResponse.json({ error: "render_intent_invalid" }, { status: 422 });
+      // The reason names what the engine cannot render (a ZodError's issues
+      // are not a reason a user can act on and stay out of the response).
+      const reason = error.name === "ZodError" ? undefined : error.message;
+      const detail = (error as Error & { detail?: unknown }).detail;
+      return NextResponse.json({
+        error: "render_intent_invalid",
+        ...(reason ? { reason } : {}),
+        ...(typeof detail === "string" ? { message: detail } : {}),
+      }, { status: 422 });
     }
     throw error;
   }

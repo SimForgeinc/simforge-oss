@@ -1,8 +1,10 @@
 import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
+import type { z } from 'zod';
 import {
   ArtifactIdentitySchema,
+  JobFailureSchema,
   RENDER_WORKER_CONTROL_V2_SCHEMA,
   RenderArtifactManifestSchema,
   RenderCanceledError,
@@ -33,7 +35,7 @@ import {
 
 import type { RenderWorkerConfig } from './config.js';
 import { BlobStore } from './blob-store.js';
-import { acquireGpuJobLock, clearStaleGpuLock, type GpuJobLock } from './gpu-lock.js';
+import { acquireGpuJobLock, clearStaleGpuLock, gpuLockStatus, type GpuJobLock } from './gpu-lock.js';
 import { probeGpuMemory, type GpuMemory } from './gpu-memory.js';
 import type { WorkerHealth } from './health.js';
 import { withBoundedRetry } from './retry.js';
@@ -70,9 +72,30 @@ export function boundedFailureMessage(raw: string, limit = 1800): string {
 /** The control plane's failure code limit (`FailRenderJobV2Schema`); the worker's own schema allows 128. */
 const CONTROL_FAILURE_CODE_MAX = 100;
 
-export function failureOf(error: unknown): { code: string; message: string; retryable: boolean } {
+/**
+ * What the worker reports for a failed job (`JobFailureSchema`). `details`
+ * is structured evidence the engine attached, e.g. a crashed process's exit
+ * and scrubbed stderr tail.
+ */
+export type JobFailure = z.infer<typeof JobFailureSchema>;
+
+export function failureOf(error: unknown): JobFailure {
   const failure = uncappedFailureOf(error);
   return { ...failure, code: failure.code.slice(0, CONTROL_FAILURE_CODE_MAX) };
+}
+
+/** An engine error's `details`, when it is a JSON object the control plane can store. */
+function failureDetails(error: unknown): JobFailure['details'] {
+  const details = (error as { details?: unknown }).details;
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return undefined;
+  try {
+    const round = JSON.parse(JSON.stringify(details)) as unknown;
+    return round && typeof round === 'object' && !Array.isArray(round) && Object.keys(round).length > 0
+      ? JobFailureSchema.shape.details.parse(round)
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -152,7 +175,7 @@ export function completionRefusal(error: unknown): CompletionRefusal | null {
   return null;
 }
 
-function uncappedFailureOf(error: unknown): { code: string; message: string; retryable: boolean } {
+function uncappedFailureOf(error: unknown): JobFailure {
   if (error instanceof CompletionRefusedError) {
     return { code: error.refusal.failureCode, message: boundedFailureMessage(error.refusal.message), retryable: false };
   }
@@ -161,7 +184,8 @@ function uncappedFailureOf(error: unknown): { code: string; message: string; ret
   // native_gpu_memory_insufficient) report them as-is.
   const coded = error as { code?: unknown; retryable?: unknown };
   if (error instanceof Error && typeof coded.code === 'string' && /^(?:native|carla|render)_[a-z0-9_]+$/.test(coded.code) && typeof coded.retryable === 'boolean') {
-    return { code: `render.${coded.code}`, message, retryable: coded.retryable };
+    const details = failureDetails(error);
+    return { code: `render.${coded.code}`, message, retryable: coded.retryable, ...(details ? { details } : {}) };
   }
   if (error instanceof RenderCanceledError) return { code: 'render.canceled', message, retryable: false };
   if (error instanceof UnsupportedRenderIntentError) return { code: error.code, message, retryable: false };
@@ -506,7 +530,7 @@ async function executeClaim(
         signal: state.controller.signal,
         // A lock naming one of this worker's own earlier jobs is a leftover.
         isJobActive: async (jobId) => jobId === job.jobId || !(await ownPastJob(config.scratchDir, jobId)),
-        onWait: (owner) => console.error(JSON.stringify({ event: 'gpu.lock_wait', jobId: job.jobId, heldBy: owner.jobId ?? null })),
+        onWait: (_owner, wait) => console.error(JSON.stringify({ event: 'gpu.lock_wait', ...wait })),
       });
       // Measured while holding the lock: co-tenant renders are excluded, their idle residency is not.
       gpuMemory = await probeGpuMemory();
@@ -794,6 +818,8 @@ export async function runRenderWorker(
     }
     health.setStatus?.('cache', prewarmer?.status() ?? { state: 'disabled' });
     health.setStatus?.('transfers', store.stats());
+    // Waiting for the GPU names the holder, why its lock counts as live, and for how long.
+    health.setStatus?.('gpuLock', gpuLockStatus(config.gpuLockPath));
   }, 2000);
   statusTimer.unref();
   const prewarmRun = prewarmer?.run(AbortSignal.any([drainSignal, prewarmStop.signal])).catch((error: unknown) => {

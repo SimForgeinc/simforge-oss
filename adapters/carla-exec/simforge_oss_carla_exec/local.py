@@ -43,7 +43,8 @@ from .runtime.contract import (
     RENDER_INTENT_SCHEMA,
     RENDER_SPEC_V3_SCHEMA,
 )
-from .runtime.executor import execute_lease, filesystem_validator
+from .runtime.executor import _capture_schedule, execute_lease, filesystem_validator
+from .runtime.timeline import resolve_render_window
 from .runtime.policy import (
     CarlaRenderError,
     RenderPolicy,
@@ -768,9 +769,14 @@ def _intent_lease(
     plan = compile_xosc14(xosc)
     duration = plan.frames[-1].t
     requested_clip = intent["renderSpec"]["clip"]
-    if float(requested_clip["startSeconds"]) != 0.0 or abs(float(requested_clip["endSeconds"]) - duration) > 1e-9:
-        raise ContractError("CARLA run-intent currently requires the full authored clip")
-    capture_count = round(duration * parsed_spec.fps)
+    clip = (float(requested_clip["startSeconds"]), float(requested_clip["endSeconds"]))
+    # Refuse here, before any CARLA work, a window CARLA cannot render
+    # exactly; the executor re-derives the same window from the lease.
+    window = resolve_render_window(plan, clip, parsed_spec.execution_mode)
+    _capture_schedule(plan, parsed_spec.fps, execution_mode=parsed_spec.execution_mode, window=window)
+    native_render_spec = {**native_render_spec, "clip": {"startSeconds": clip[0], "endSeconds": clip[1]}}
+    window_seconds = window.end_s - window.start_s
+    capture_count = round(window_seconds * parsed_spec.fps)
     raster = [sensor for sensor in parsed_spec.sensors if sensor.modality in {"rgb", "depth", "semantic", "instance", "normals"}]
     raster_samples = sum(int(sensor.config["width"]) * int(sensor.config["height"]) for sensor in raster)
     point_samples = sum(
@@ -911,7 +917,7 @@ def _intent_lease(
         "sensorModalities": sorted({sensor.modality for sensor in parsed_spec.sensors}),
         "outputs": sorted(parsed_spec.outputs),
         "resources": {
-            "schema": "simforge.render-resource-request/v1", "durationS": duration,
+            "schema": "simforge.render-resource-request/v1", "durationS": window_seconds,
             "sensors": len(parsed_spec.sensors), "captureFrames": capture_count,
             "actors": max(1, len(plan.actors)), "actorFrameStates": max(1, len(plan.actors) * len(plan.frames)),
             "sensorSamples": sensor_samples, "outputBytes": 8 * 1024 * 1024 * 1024,
@@ -1129,7 +1135,10 @@ def _preflight_intent(args: argparse.Namespace) -> dict[str, object]:
 
 def _run_intent(args: argparse.Namespace) -> dict[str, object]:
     intent_path, package_path = Path(args.intent), Path(args.package)
-    intent = json.loads(intent_path.read_text("utf-8"))
+    try:
+        intent = json.loads(intent_path.read_text("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ContractError(f"render intent is not UTF-8 JSON: {exc}") from exc
     if not isinstance(intent, Mapping):
         raise ContractError("render intent must be an object")
     intent_sha, execution_package_control_sha256, inputs = _read_input_package(package_path, intent)
@@ -1288,6 +1297,22 @@ def _run_intent(args: argparse.Namespace) -> dict[str, object]:
     return artifact_manifest
 
 
+#: The failure code of a contract violation that carries no code of its own.
+CONTRACT_VIOLATION_CODE = "carla_render_contract_violation"
+
+
+def render_failure_record(error: ContractError) -> dict[str, object]:
+    """The ``simforge.carla-render-failure/v1`` record for a deterministic refusal."""
+    code = error.code if isinstance(error, CarlaRenderError) else CONTRACT_VIOLATION_CODE
+    message = str(error) if isinstance(error, CarlaRenderError) else f"[{code}] {error}"
+    return {
+        "schema": "simforge.carla-render-failure/v1",
+        "code": code,
+        "message": message[:4096],
+        "retryable": False,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="simforge-oss-carla-exec")
     parser.add_argument("--host", default="127.0.0.1")
@@ -1385,15 +1410,12 @@ def main() -> None:
     else:
         try:
             result = _run_intent(args)
-        except CarlaRenderError as exc:
-            # A policy refusal: print the machine code for the engine to
-            # report non-retryable, and exit distinctly from a crash.
-            print(json.dumps({
-                "schema": "simforge.carla-render-failure/v1",
-                "code": exc.code,
-                "message": str(exc)[:4096],
-                "retryable": False,
-            }, sort_keys=True))
+        except ContractError as exc:
+            # A deterministic refusal (a policy refusal, or an intent/package
+            # that violates its contract): print the machine code for the
+            # engine to report non-retryable, and exit distinctly from a crash.
+            # Rerunning the same inputs refuses them the same way.
+            print(json.dumps(render_failure_record(exc), sort_keys=True))
             raise SystemExit(3) from exc
     print(json.dumps(result, sort_keys=True))
     if args.command in {"probe-ticks", "pose-smoke"} and result.get("verdict") != "pass":

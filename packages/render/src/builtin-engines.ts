@@ -7,6 +7,7 @@ import { RenderIntentV1Schema } from '@simforge-oss/scenario';
 import { RenderArtifactManifestSchema, type RenderArtifactManifest } from './artifacts.js';
 import { ENGINE_CAPABILITIES_V1_SCHEMA, type EngineCapabilityDeclaration } from './capabilities.js';
 import { loadRenderEngine, type RenderEngineAdapter, type RenderExecutionContext } from './engine.js';
+import { scrubbedLogTail } from './log-scrub.js';
 import { parseProgressJsonl } from './progress.js';
 import { RENDER_INPUT_ERROR_CODE, RenderInputError, renderInputErrorFromServiceMessage, type RenderInputErrorCode } from './render-input-error.js';
 
@@ -95,10 +96,15 @@ class CarlaProcessEngine implements RenderEngineAdapter {
     ], { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
+    let stderrTruncated = false;
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (chunk: string) => { stdout = `${stdout}${chunk}`.slice(-16_384); });
-    child.stderr.on('data', (chunk: string) => { stderr = `${stderr}${chunk}`.slice(-16_384); });
+    child.stdout.on('data', (chunk: string) => { stdout = `${stdout}${chunk}`.slice(-CARLA_OUTPUT_CAPTURE_CHARS); });
+    child.stderr.on('data', (chunk: string) => {
+      const joined = `${stderr}${chunk}`;
+      if (joined.length > CARLA_OUTPUT_CAPTURE_CHARS) stderrTruncated = true;
+      stderr = joined.slice(-CARLA_OUTPUT_CAPTURE_CHARS);
+    });
     const terminate = (): void => {
       child.kill('SIGTERM');
       const hardKill = setTimeout(() => child.kill('SIGKILL'), 10_000);
@@ -141,15 +147,58 @@ class CarlaProcessEngine implements RenderEngineAdapter {
     context.signal.removeEventListener('abort', terminate);
     await forwardProgress();
     if (result.code === 3) {
-      // A policy refusal (docs/engineering/no-silent-fallbacks.md): the
+      // A deterministic refusal (docs/engineering/no-silent-fallbacks.md): the
       // adapter's last stdout line names the missing thing and its code.
-      throw carlaRenderFailure(stdout) ?? new Error(`CARLA renderer refused the render without a failure record: stdout=${stdout} stderr=${stderr}`);
+      const refusal = carlaRenderFailure(stdout);
+      if (refusal) throw refusal;
     }
     if (result.code !== 0) {
-      throw new Error(`CARLA renderer exited code=${String(result.code)} signal=${String(result.signal)} stdout=${stdout} stderr=${stderr}`);
+      throw carlaProcessFailure(result, stderr, { truncatedHead: stderrTruncated, aborted: context.signal.aborted });
     }
     return RenderArtifactManifestSchema.parse(JSON.parse(await readFile(manifestPath, 'utf8')));
   }
+}
+
+/** How much of each CARLA process stream the engine keeps (the tail). */
+const CARLA_OUTPUT_CAPTURE_CHARS = 16_384;
+
+/**
+ * A CARLA process that exited non-zero without a readable failure record.
+ * Its message carries the scrubbed tail of stderr, so the job's failure
+ * detail says why instead of a bare execution failure. An unexplained crash
+ * may be transient (a lost CARLA server, an OOM kill) and stays retryable;
+ * exit 3 is the adapter's own deterministic refusal and is not retried even
+ * when its record could not be read.
+ */
+export class CarlaProcessError extends Error {
+  readonly code: 'carla_process_failed' | 'carla_process_refused';
+  constructor(
+    message: string,
+    readonly retryable: boolean,
+    readonly details: { exitCode: number | null; signal: string | null; stderrTail: string },
+  ) {
+    super(message);
+    this.name = 'CarlaProcessError';
+    this.code = retryable ? 'carla_process_failed' : 'carla_process_refused';
+  }
+}
+
+export function carlaProcessFailure(
+  exit: { code: number | null; signal: NodeJS.Signals | null },
+  stderr: string,
+  options: { truncatedHead?: boolean; aborted?: boolean } = {},
+): CarlaProcessError {
+  const refused = exit.code === 3;
+  const tail = scrubbedLogTail(stderr, { truncatedHead: options.truncatedHead });
+  const how = exit.signal ? `was killed by ${exit.signal}` : `exited with code ${String(exit.code)}`;
+  const head = refused
+    ? `CARLA renderer refused the render (exit 3) without a readable failure record`
+    : `CARLA renderer ${how} without a failure record${options.aborted ? ' after the job was aborted' : ''}`;
+  return new CarlaProcessError(
+    tail ? `${head}; last stderr lines:\n${tail}` : `${head}; stderr was empty`,
+    !refused,
+    { exitCode: exit.code, signal: exit.signal, stderrTail: tail },
+  );
 }
 
 /** The adapter's `simforge.carla-render-failure/v1` record, as a non-retryable error. */
