@@ -750,7 +750,10 @@ pub(crate) struct SceneEvidence {
     /// Models whose rear lamp material lost its lens colour, drawn with a
     /// red tail lens ([`render_core::brake_lamps::lamp_lens_colour_lost`]).
     tail_lens_substituted: std::collections::BTreeSet<String>,
-    /// Lamp kind -> actors that lit it; this renderer draws brake lamps only.
+    /// Low-beam vehicles past the projected-beam budget (their lamps glow,
+    /// no beam is cast).
+    beams_over_budget: std::collections::BTreeSet<String>,
+    /// Lamp kind -> actors whose model could not draw it.
     unrendered_lights: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<String>>,
     /// Frames without lamp state for a vehicle (xosc-lowered legacy frames).
     light_state_absent: std::collections::BTreeSet<String>,
@@ -813,8 +816,19 @@ impl SceneEvidence {
             out.push(SceneWarning {
                 code: "native_actor_light_unrendered".into(),
                 message: format!(
-                    "the timeline lights {kind} on {}; the native renderer draws brake lamps only, so {kind} is not drawn",
+                    "the timeline lights {kind} on {}, whose model has no {kind} slot (or no catalog model); it is not drawn",
                     list(actors.iter().cloned())
+                ),
+            });
+        }
+        if !self.beams_over_budget.is_empty() {
+            out.push(SceneWarning {
+                code: "native_actor_beam_budget".into(),
+                message: format!(
+                    "more than {} vehicles have their low beams on; each frame projects beams for the camera hosts and then the vehicles nearest a camera ({} in all), so {} glowed without a projected beam in some frames",
+                    render_core::actor_lights::PROJECTED_HEADLIGHT_LIMIT,
+                    render_core::actor_lights::PROJECTED_HEADLIGHT_LIMIT,
+                    list(self.beams_over_budget.iter().cloned())
                 ),
             });
         }
@@ -2158,14 +2172,80 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
 /// The frame's vehicle lamps and signal lenses. Brake lamps are drawn on
 /// the model's brake-lamp slot; everything the renderer does not draw as
 /// asked is recorded in [`SceneEvidence`].
+/// Order low-beam vehicles for the projected-beam budget: camera hosts
+/// first, then by distance to the nearest camera eye, ties (and vehicles
+/// with no position or no camera) by actor id. Deterministic.
+fn beam_priority<'a>(candidates: &[(&'a str, bool, Option<Vec3>)], eyes: &[Vec3]) -> Vec<&'a str> {
+    let mut ranked: Vec<(bool, f32, &str)> = candidates
+        .iter()
+        .map(|(id, host, position)| {
+            let distance = position
+                .and_then(|p| eyes.iter().map(|e| e.distance(p)).reduce(f32::min))
+                .unwrap_or(f32::INFINITY); // fallback-ok: an unplaced vehicle ranks last, ties by id
+            (!host, distance, *id)
+        })
+        .collect();
+    ranked.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.total_cmp(&b.1)).then(a.2.cmp(b.2)));
+    ranked.into_iter().map(|(_, _, id)| id).collect()
+}
+
 fn apply_frame_lamps(state: &mut ServiceState, frame: &SceneState) -> Result<(), String> {
+    use render_core::actor_lights::{is_vehicle_class, PROJECTED_HEADLIGHT_LIMIT};
+    // Projected beams: at most PROJECTED_HEADLIGHT_LIMIT low-beam vehicles
+    // with a model, by relevance to this tick's cameras
+    // ([`beam_priority`]): camera hosts first, then the vehicles nearest a
+    // camera, ties by actor id.
+    let hosts: std::collections::HashSet<&str> = state
+        .rig
+        .iter()
+        .filter_map(|cam| cam.attach.as_ref().map(|a| a.actor_id.as_str()))
+        .collect();
+    let position_of = |id: &str| {
+        frame
+            .actors
+            .iter()
+            .find(|a| a.id == id && a.kind != "despawn")
+            .map(|a| Vec3::from_array(a.transform.position))
+    };
+    let eyes: Vec<Vec3> = state
+        .rig
+        .iter()
+        .filter_map(|cam| match &cam.attach {
+            Some(attach) => position_of(&attach.actor_id),
+            None => Some(Vec3::from_array(cam.eye)),
+        })
+        .collect();
+    let candidates: Vec<(&str, bool, Option<Vec3>)> = frame
+        .actors
+        .iter()
+        .filter(|a| a.kind != "despawn")
+        .filter(|a| a.lights.is_some_and(|l| l.low_beam))
+        .filter(|a| a.actor_class.as_deref().is_some_and(is_vehicle_class))
+        .filter(|a| state.app.actor_has_model(&a.id))
+        .map(|a| {
+            (
+                a.id.as_str(),
+                hosts.contains(a.id.as_str()),
+                Some(Vec3::from_array(a.transform.position)),
+            )
+        })
+        .collect();
+    let lit = beam_priority(&candidates, &eyes);
+    let beamed: std::collections::HashSet<String> = lit
+        .iter()
+        .take(PROJECTED_HEADLIGHT_LIMIT)
+        .map(|id| id.to_string())
+        .collect();
+    if lit.len() > PROJECTED_HEADLIGHT_LIMIT {
+        state.scene_evidence.beams_over_budget.extend(
+            lit[PROJECTED_HEADLIGHT_LIMIT..]
+                .iter()
+                .map(|id| id.to_string()),
+        );
+    }
     for actor in frame.actors.iter().filter(|a| a.kind != "despawn") {
         let Some(lights) = actor.lights else {
-            if actor
-                .actor_class
-                .as_deref()
-                .is_some_and(render_core::actor_lights::is_vehicle_class)
-            {
+            if actor.actor_class.as_deref().is_some_and(is_vehicle_class) {
                 state
                     .scene_evidence
                     .light_state_absent
@@ -2173,14 +2253,25 @@ fn apply_frame_lamps(state: &mut ServiceState, frame: &SceneState) -> Result<(),
             }
             continue;
         };
+        let lamps = render_core::vehicle_lamps::VehicleLamps {
+            low_beam: lights.low_beam,
+            brake: lights.brake,
+            reverse: lights.reverse,
+            indicator_left: lights.indicator_left,
+            indicator_right: lights.indicator_right,
+            emergency: lights.emergency,
+            beam: beamed.contains(&actor.id),
+        };
         let drawn = state
             .app
-            .set_actor_brake(&actor.id, lights.brake)
+            .set_actor_lamps(&actor.id, lamps)
             .map_err(|error| format!("[native_actor_lamp_failed] actor {}: {error:#}", actor.id))?;
-        // A bicycle's timeline brake is kinematic (it decelerates); it has
-        // no brake lamp to draw, so nothing is missing.
-        let lampless = matches!(actor.actor_class.as_deref(), Some("cyclist" | "pedestrian"));
-        if lights.brake && !drawn && !lampless {
+        // A bicycle's or pedestrian's timeline lamps are kinematic (the
+        // brake follows deceleration); they have no lamps to draw.
+        if matches!(actor.actor_class.as_deref(), Some("cyclist" | "pedestrian")) {
+            continue;
+        }
+        if lights.brake && !drawn.brake {
             let model = state
                 .actor_model_bindings
                 .get(&actor.id)
@@ -2192,14 +2283,19 @@ fn apply_frame_lamps(state: &mut ServiceState, frame: &SceneState) -> Result<(),
                 .brake_lamp_missing
                 .insert(actor.id.clone(), model);
         }
-        for (kind, lit) in [
-            ("lowBeam", lights.low_beam),
-            ("reverse", lights.reverse),
-            ("indicatorLeft", lights.indicator_left),
-            ("indicatorRight", lights.indicator_right),
-            ("emergency", lights.emergency),
+        for (kind, lit, done) in [
+            ("headLamp", lights.low_beam, drawn.head),
+            ("tailLamp", lights.low_beam, drawn.tail),
+            ("reverse", lights.reverse, drawn.reverse),
+            ("indicatorLeft", lights.indicator_left, drawn.indicator_left),
+            (
+                "indicatorRight",
+                lights.indicator_right,
+                drawn.indicator_right,
+            ),
+            ("emergency", lights.emergency, drawn.emergency),
         ] {
-            if lit {
+            if lit && !done {
                 state
                     .scene_evidence
                     .unrendered_lights
@@ -4605,6 +4701,29 @@ mod tests {
     }
 
     #[test]
+    fn beams_go_to_the_host_then_the_nearest_vehicles() {
+        use bevy::math::Vec3;
+        let at = |x: f32| Some(Vec3::new(x, 0.0, 0.0));
+        let candidates = [
+            ("a-far", false, at(200.0)),
+            ("z-near", false, at(5.0)),
+            ("ego", true, at(0.0)),
+            ("m-tie", false, at(20.0)),
+            ("b-tie", false, at(20.0)),
+            ("unplaced", false, None),
+        ];
+        assert_eq!(
+            super::beam_priority(&candidates, &[Vec3::ZERO]),
+            ["ego", "z-near", "b-tie", "m-tie", "a-far", "unplaced"]
+        );
+        // No cameras: hosts first, then by id.
+        assert_eq!(
+            super::beam_priority(&candidates[..2], &[]),
+            ["a-far", "z-near"]
+        );
+    }
+
+    #[test]
     fn undrawn_lamps_and_signals_are_reported_not_dropped() {
         let mut evidence = super::SceneEvidence::default();
         assert!(evidence.warnings().is_empty());
@@ -4620,6 +4739,7 @@ mod tests {
             .color_untintable
             .insert("bus".into(), "vehicle_bus_mitsubishi_fusorosa.glb".into());
         evidence.signal_heads_undriven = Some((3, 10));
+        evidence.beams_over_budget.insert("vehicle-09".into());
         let codes: Vec<String> = evidence.warnings().into_iter().map(|w| w.code).collect();
         assert_eq!(
             codes,
@@ -4627,6 +4747,7 @@ mod tests {
                 "native_actor_brake_lamp_missing",
                 "native_actor_color_untintable",
                 "native_actor_light_unrendered",
+                "native_actor_beam_budget",
                 "native_signal_head_undriven",
             ]
         );

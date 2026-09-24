@@ -74,17 +74,36 @@ pub fn lamp_lens_colour_lost(
     white && (!has_base_texture || base_texture_is_emissive_mask)
 }
 
+/// Which end of the body a lamp slot is taken from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LampZone {
+    /// Tail and brake lamps.
+    Rear,
+    /// Headlamps.
+    Front,
+}
+
 /// Whether a glTF material is a vehicle lamp material. Siren, interior,
 /// reversing and headlamp-only materials and lamp brackets are not.
 pub fn is_lamp_material(name: &str) -> bool {
+    is_lamp_material_in(name, LampZone::Rear)
+}
+
+/// Whether a glTF material can hold lamps of `zone`: a lamp material that
+/// is not a siren, interior or bracket, and not named for the other end
+/// (`*_front_*` holds no tail lamp, `*_back_*` no headlamp).
+pub fn is_lamp_material_in(name: &str, zone: LampZone) -> bool {
     let name = name.to_ascii_lowercase();
     let lamp = ["light", "lamp", "emissive"]
         .iter()
         .any(|token| name.contains(token));
-    let excluded = ["siren", "_int", "backup", "reverse", "front", "support"]
-        .iter()
-        .any(|token| name.contains(token));
-    lamp && !excluded
+    let excluded: &[&str] = match zone {
+        LampZone::Rear => &["siren", "_int", "backup", "reverse", "front", "support"],
+        LampZone::Front => &[
+            "siren", "_int", "backup", "reverse", "back", "rear", "support",
+        ],
+    };
+    lamp && !excluded.iter().any(|token| name.contains(token))
 }
 
 /// One primitive of a model, in model space (the model root's frame before
@@ -130,12 +149,24 @@ impl ModelExtent {
 /// centroid lies in the rear zone above [`MIN_HEIGHT_FRACTION`]. Empty for
 /// non-lamp materials.
 pub fn select_brake_triangles(primitive: &LampPrimitive, extent: ModelExtent) -> Vec<u32> {
-    if !is_lamp_material(primitive.material) {
+    select_lamp_triangles(primitive, extent, LampZone::Rear)
+}
+
+/// The lamp triangles of one primitive at one end of the body: lamp
+/// material triangles whose centroid lies within [`REAR_FRACTION`] of the
+/// model length from that end, above the lamp floor.
+pub fn select_lamp_triangles(
+    primitive: &LampPrimitive,
+    extent: ModelExtent,
+    zone: LampZone,
+) -> Vec<u32> {
+    if !is_lamp_material_in(primitive.material, zone) {
         return Vec::new();
     }
     let length = extent.max_x - extent.min_x;
     let height = extent.max_y - extent.min_y;
     let rear_limit = extent.min_x + REAR_FRACTION * length;
+    let front_limit = extent.max_x - REAR_FRACTION * length;
     let floor = extent.min_y + (MIN_HEIGHT_FRACTION * height).min(MAX_LAMP_FLOOR_M);
     let mut out = Vec::new();
     for tri in primitive.indices.chunks_exact(3) {
@@ -148,7 +179,11 @@ pub fn select_brake_triangles(primitive: &LampPrimitive, extent: ModelExtent) ->
         };
         let cx = (corners[0][0] + corners[1][0] + corners[2][0]) / 3.0;
         let cy = (corners[0][1] + corners[1][1] + corners[2][1]) / 3.0;
-        if cx <= rear_limit && cy >= floor {
+        let in_zone = match zone {
+            LampZone::Rear => cx <= rear_limit,
+            LampZone::Front => cx >= front_limit,
+        };
+        if in_zone && cy >= floor {
             out.extend_from_slice(tri);
         }
     }

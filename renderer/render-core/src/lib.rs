@@ -54,5 +54,6 @@ pub mod signal_heads;
 pub mod sky_pass;
 pub mod sky_texture;
 pub mod veg;
+pub mod vehicle_lamps;
 pub mod vehicle_model;
 pub mod weather;
