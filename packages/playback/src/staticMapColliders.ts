@@ -1,6 +1,15 @@
 import { sha256BytesAsync, type StaticColliderClass, type StaticMapCollider } from '@simforge-oss/engine';
 
-const SCHEMA = 'simforge.static-map-colliders/v1';
+/**
+ * Collider artifact schema per `variants['static-colliders'].schemaVersion`.
+ * v1 carries 2D footprints (full-height prisms); v2 adds each collider's
+ * vertical extent and drops overhead fixtures at ingest. Published v1
+ * artifacts stay loadable with their v1 semantics.
+ */
+const SCHEMAS: Readonly<Record<number, string>> = {
+  1: 'simforge.static-map-colliders/v1',
+  2: 'simforge.static-map-colliders/v2',
+};
 const CLASSES = new Set<StaticColliderClass>(['building', 'wall', 'barrier', 'prop', 'road-boundary']);
 /**
  * Same rule as `ROAD_BOUNDARY_MAX_THICKNESS_M` in the artifact builder
@@ -44,6 +53,8 @@ export interface StaticColliderDiagnostics {
   readonly sourceTiles: number;
   readonly accepted: number;
   readonly rejectedRoadOverlap: number;
+  /** v2 artifacts: fixtures dropped at ingest because no body on the ground under them can reach them. */
+  readonly rejectedOverhead?: number;
   readonly ignored: number;
   readonly classes: Readonly<Record<StaticColliderClass, number>>;
 }
@@ -103,7 +114,7 @@ async function loadArtifact(manifestUrl: string, fetcher: typeof fetch): Promise
   const derivativeManifestBytes = new Uint8Array(await manifestResponse.arrayBuffer());
   const manifest = parseDerivativeManifest(derivativeManifestBytes);
   const variant = manifest.variants?.['static-colliders'];
-  if (variant?.schemaVersion !== 1 || typeof variant.file !== 'string') {
+  if (!variant || !SCHEMAS[variant.schemaVersion ?? 0] || typeof variant.file !== 'string') {
     throw new Error('Static collision derivative is not published for this map');
   }
   const artifactUrl = new URL(variant.file, new URL('.', derivativeUrl)).toString();
@@ -146,12 +157,13 @@ export async function verifyStaticColliderArtifact(sources: StaticColliderArtifa
     throw new Error('Static collision derivative targets a stale map bundle');
   }
   const variant = manifest.variants?.['static-colliders'];
-  if (variant?.schemaVersion !== 1 || typeof variant.file !== 'string' || !isSha256(variant.outputSha256)) {
+  const schemaVersion = variant?.schemaVersion ?? 0;
+  if (!variant || !SCHEMAS[schemaVersion] || typeof variant.file !== 'string' || !isSha256(variant.outputSha256)) {
     throw new Error('Static collision derivative is not published for this map');
   }
   if (await sha256BytesAsync(sources.artifact) !== variant.outputSha256) throw new Error('Static collision artifact checksum mismatch');
   const artifact = JSON.parse(new TextDecoder().decode(sources.artifact)) as StaticColliderArtifact;
-  validateArtifact(artifact, manifest, variant.digest);
+  validateArtifact(artifact, manifest, schemaVersion, variant.digest);
   const colliders = artifact.colliders.filter(
     (collider) => collider.class !== 'road-boundary' || Math.min(collider.obb.lengthM, collider.obb.widthM) <= ROAD_BOUNDARY_MAX_THICKNESS_M,
   );
@@ -169,8 +181,8 @@ export async function verifyStaticColliderArtifact(sources: StaticColliderArtifa
   };
 }
 
-function validateArtifact(artifact: StaticColliderArtifact, manifest: DerivativeManifest, expectedDigest?: string): void {
-  if (!artifact || artifact.schema !== SCHEMA || typeof artifact.mapId !== 'string') throw new Error('Static collision artifact has an unsupported schema');
+function validateArtifact(artifact: StaticColliderArtifact, manifest: DerivativeManifest, schemaVersion: number, expectedDigest?: string): void {
+  if (!artifact || artifact.schema !== SCHEMAS[schemaVersion] || typeof artifact.mapId !== 'string') throw new Error('Static collision artifact has an unsupported schema');
   if (!isSha256(artifact.sourceManifestSha256) || artifact.sourceManifestSha256 !== manifest.sourceManifestSha256) {
     throw new Error('Static collision artifact targets a different map bundle');
   }
@@ -195,6 +207,11 @@ function validateArtifact(artifact: StaticColliderArtifact, manifest: Derivative
     seen.add(collider.id);
     previousId = collider.id;
     if (!CLASSES.has(collider.class) || !validObb(collider.obb)) throw new Error(`Static collision artifact has malformed collider ${collider.id}`);
+    // v2 publishes every collider's vertical extent, v1 none: a mix would make
+    // part of a map full-height prisms without saying so.
+    if (schemaVersion === 2 ? !validVertical(collider.vertical) : collider.vertical !== undefined) {
+      throw new Error(`Static collision artifact has malformed collider ${collider.id}: ${schemaVersion === 2 ? 'missing or invalid' : 'unexpected'} vertical extent`);
+    }
   }
   if (!isSha256Digest(artifact.digest) || artifact.digest !== expectedDigest) throw new Error('Static collision artifact digest does not match its map bundle');
 }
@@ -205,6 +222,10 @@ function validObb(obb: StaticMapCollider['obb'] | undefined): boolean {
     && Number.isFinite(obb.lengthM) && obb.lengthM > 0
     && Number.isFinite(obb.widthM) && obb.widthM > 0
     && Number.isFinite(obb.headingRad));
+}
+
+function validVertical(vertical: StaticMapCollider['vertical']): boolean {
+  return Boolean(vertical && Number.isFinite(vertical.minY) && Number.isFinite(vertical.maxY) && vertical.minY <= vertical.maxY);
 }
 
 function absoluteUrl(url: string): string {

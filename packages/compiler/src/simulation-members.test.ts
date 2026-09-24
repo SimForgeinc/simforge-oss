@@ -4,7 +4,7 @@ import { isSimulationMapMember, SIMULATION_MAP_MEMBERS, simulationMemberSources,
 
 describe('simulation map members', () => {
   it('is the one list of what a simulation reads, the ground included', () => {
-    for (const member of ['map.xodr', 'topology-index.json.gz', 'signals.geojson.gz', 'derived/topology-derived.json.gz', 'derived/locations.json.gz', 'derived/ground/ground-mesh.bin', '3d/variants/static-colliders-v1.json']) {
+    for (const member of ['map.xodr', 'topology-index.json.gz', 'signals.geojson.gz', 'derived/topology-derived.json.gz', 'derived/locations.json.gz', 'derived/ground/ground-mesh.bin', '3d/variants/static-colliders-v1.json', '3d/variants/static-colliders-v2.json']) {
       expect(isSimulationMapMember(member), member).toBe(true);
     }
     // Derived members that do not move a simulation never change the pin.

@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use super::collision::{
     ContactPose, ContactRef, PlanarCollisionBody, PlanarContactSolver, PlanarStaticCollider,
-    DEFAULT_CONTACT_FRICTION, DEFAULT_CONTACT_RESTITUTION,
+    VerticalSpan, DEFAULT_CONTACT_FRICTION, DEFAULT_CONTACT_RESTITUTION,
 };
 use super::gearbox::{gearbox_for, GearDemand, GEAR_NEUTRAL, GEAR_REVERSE};
 use super::motion::{
@@ -261,8 +261,8 @@ fn engage_gear(entry: &mut VehicleEntry, intent: &MotionIntent, dt_s: f64) {
         },
         None => {
             let travel = intent.motion_direction.sign() * entry.state.longitudinal_velocity_mps;
-            let wants_drive = intent.target_speed_mps > travel + 1e-9
-                || intent.target_acceleration_mps2 > 0.0;
+            let wants_drive =
+                intent.target_speed_mps > travel + 1e-9 || intent.target_acceleration_mps2 > 0.0;
             GearDemand::Authored {
                 reverse: intent.motion_direction.sign() < 0.0,
                 throttle: if wants_drive { 1.0 } else { 0.0 },
@@ -474,12 +474,12 @@ fn integrate(
     // and spinning it about its centre of gravity. The yaw-rate and sideslip
     // terms enter through `atan2(.., |u|)`, whose sign is carried by the
     // numerator.
-    let steer_slip_scale =
-        if s.longitudinal_velocity_mps.abs() >= LOW_SPEED_SLIP_REGULARISATION_MPS {
-            direction
-        } else {
-            s.longitudinal_velocity_mps / speed_for_slip
-        };
+    let steer_slip_scale = if s.longitudinal_velocity_mps.abs() >= LOW_SPEED_SLIP_REGULARISATION_MPS
+    {
+        direction
+    } else {
+        s.longitudinal_velocity_mps / speed_for_slip
+    };
     let front_slip = atan2(
         s.lateral_velocity_mps + lf * s.yaw_rate_radps,
         speed_for_slip,
@@ -541,7 +541,9 @@ fn integrate(
     let rolling_limit = p
         .rolling_yaw_rate_limit_radps(s.longitudinal_velocity_mps)
         .unwrap_or(f64::INFINITY);
-    let yaw_limit = p.max_yaw_rate_radps.min(rolling_limit.max(contact_yaw_rate_radps));
+    let yaw_limit = p
+        .max_yaw_rate_radps
+        .min(rolling_limit.max(contact_yaw_rate_radps));
     s.yaw_rate_radps = clamp(s.yaw_rate_radps + yaw_dot * h, -yaw_limit, yaw_limit);
     s.yaw_rad = normalize_angle(old_yaw + 0.5 * (old_yaw_rate + s.yaw_rate_radps) * h);
     let (old_sin, old_cos) = sin_cos(old_yaw);
@@ -774,6 +776,8 @@ pub struct WorldStaticCollider<'a> {
     pub obb: Obb,
     pub velocity: Vec2,
     pub angular_velocity: f64,
+    /// Where a body can meet it vertically (see [`VerticalSpan`]).
+    pub vertical: VerticalSpan,
 }
 
 impl<'a> WorldStaticCollider<'a> {
@@ -783,6 +787,7 @@ impl<'a> WorldStaticCollider<'a> {
             obb,
             velocity: Vec2::ZERO,
             angular_velocity: 0.0,
+            vertical: VerticalSpan::UNBOUNDED,
         }
     }
 }
@@ -799,6 +804,8 @@ struct WorldScratch {
     body_rank: Vec<u32>,
     /// Active bodies sorted by id.
     active: Vec<BodyIndex>,
+    /// `BodyIndex -> vertical span` for the current step.
+    body_vertical: Vec<VerticalSpan>,
     /// Static collider slots sorted by id.
     static_order: Vec<u32>,
     bodies: Vec<PlanarCollisionBody>,
@@ -979,13 +986,34 @@ impl DynamicV1Backend {
         static_colliders: &[WorldStaticCollider<'_>],
         dt_s: f64,
     ) -> Result<&[WorldContact], PhysicsError> {
+        self.step_world_vertical(active, &[], static_colliders, dt_s)
+    }
+
+    /// [`Self::step_world`] with each body's vertical span (ground contact
+    /// plus body height): a body meets a static collider only where their
+    /// spans overlap. A body not listed in `body_vertical` is unbounded.
+    /// Body/body contact stays planar.
+    pub fn step_world_vertical(
+        &mut self,
+        active: &[BodyIndex],
+        body_vertical: &[(BodyIndex, VerticalSpan)],
+        static_colliders: &[WorldStaticCollider<'_>],
+        dt_s: f64,
+    ) -> Result<&[WorldContact], PhysicsError> {
         if !(dt_s > 0.0) {
             return Err(PhysicsError::InvalidTimestep(dt_s));
         }
-        for &body in active {
+        for &body in active.iter().chain(body_vertical.iter().map(|(b, _)| b)) {
             if body.index() >= self.entries.len() {
                 return Err(PhysicsError::UnknownBody(body.0));
             }
+        }
+        self.scratch.body_vertical.clear();
+        self.scratch
+            .body_vertical
+            .resize(self.entries.len(), VerticalSpan::UNBOUNDED);
+        for &(body, span) in body_vertical {
+            self.scratch.body_vertical[body.index()] = span;
         }
         let ids = &self.ids;
         let entries = &mut self.entries;
@@ -1062,6 +1090,7 @@ impl DynamicV1Backend {
                     vx: velocity.x,
                     vy: velocity.y,
                     angular_velocity: s.yaw_rate_radps,
+                    vertical: scratch.body_vertical[scratch.active[bi].index()],
                 });
                 bi += 1;
             } else {
@@ -1071,6 +1100,7 @@ impl DynamicV1Backend {
                     obb: c.obb,
                     velocity: c.velocity,
                     angular_velocity: c.angular_velocity,
+                    vertical: c.vertical,
                 });
                 si += 1;
             }

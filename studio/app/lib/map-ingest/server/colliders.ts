@@ -14,6 +14,7 @@ import { createHash } from "node:crypto";
 import {
   buildStaticColliderArtifact,
   serializeStaticColliderArtifact,
+  STATIC_COLLIDER_SCHEMA_VERSION,
 } from "@simforge-oss/maps/ingest";
 
 import type { MapTopologyIndex } from "@simforge-oss/maps/topology";
@@ -55,6 +56,10 @@ export function buildMapColliderDerivative({
     sourceManifestSha256,
     manifest,
     topology: topologyIndex,
+    // Uploaded maps carry no ground derivative: nothing is classified overhead
+    // (`overheadClearanceM: null`), and the engine has no body heights to test
+    // the colliders' vertical extents against, so they act at full height.
+    ground: null,
     readSource: (file: string) => {
       const bytes = bytesByFile.get(file);
       if (!bytes) throw new Error(`collider source ${file} is not an uploaded layer`);
@@ -74,7 +79,7 @@ export function buildMapColliderDerivative({
     sourceManifestSha256,
     variants: {
       "static-colliders": {
-        schemaVersion: 1,
+        schemaVersion: STATIC_COLLIDER_SCHEMA_VERSION,
         // Resolved relative to `variants/`, which is where the reader resolves
         // it from — not relative to the map root.
         file: `static-colliders/${outputSha256}.json`,

@@ -471,6 +471,9 @@ impl TrafficHandoffWorld {
                 vx: body.vx,
                 vy: body.vz,
                 angular_velocity: body.angular_velocity_rad_s,
+                // The handoff world is planar: SUMO bodies carry no ground
+                // contact. Overhead fixtures are dropped at ingest.
+                vertical: super::collision::VerticalSpan::UNBOUNDED,
             });
         }
         self.solver.solve(

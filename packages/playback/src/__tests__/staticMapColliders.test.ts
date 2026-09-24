@@ -34,7 +34,7 @@ function artifact(overrides: Record<string, unknown> = {}): Record<string, unkno
   };
 }
 
-function fixtureFetcher(value: Record<string, unknown>, calls: string[]): typeof fetch {
+function fixtureFetcher(value: Record<string, unknown>, calls: string[], schemaVersion = 1): typeof fetch {
   const bytes = new TextEncoder().encode(`${JSON.stringify(value)}\n`);
   const outputSha256 = createHash('sha256').update(bytes).digest('hex');
   return (async (input: string | URL | Request) => {
@@ -43,13 +43,41 @@ function fixtureFetcher(value: Record<string, unknown>, calls: string[]): typeof
     if (url.endsWith('/3d/manifest.json')) return new Response(SOURCE_BYTES);
     if (url.endsWith('/variants/manifest.json')) return Response.json({
       sourceManifestSha256: SOURCE_HASH,
-      variants: { 'static-colliders': { schemaVersion: 1, file: 'static-colliders-v1.json', digest: DIGEST, outputSha256 } },
+      variants: { 'static-colliders': { schemaVersion, file: `static-colliders-v${schemaVersion}.json`, digest: DIGEST, outputSha256 } },
     });
     return new Response(bytes);
   }) as typeof fetch;
 }
 
 describe('precomputed static map colliders', () => {
+  it('loads a v2 artifact with every collider\'s vertical extent', async () => {
+    resetStaticColliderCacheForTests();
+    const pole = { id: 'canonical-master/1', class: 'prop', obb: { center: { x: 1, z: 2 }, lengthM: 0.4, widthM: 0.4, headingRad: 0 }, vertical: { minY: 7.1, maxY: 14 } };
+    const v2 = artifact({
+      schema: 'simforge.static-map-colliders/v2', colliders: [pole], overheadClearanceM: 4.6,
+      statistics: { sourceTiles: 1, accepted: 1, rejectedRoadOverlap: 0, rejectedOverhead: 3, ignored: 2, classes: { building: 0, wall: 0, barrier: 0, prop: 1, 'road-boundary': 0 } },
+    });
+    const bundle = await loadStaticMapColliders('/dev-assets/v2-map/3d/manifest.json', fixtureFetcher(v2, [], 2));
+    expect(bundle.diagnostics).toMatchObject({ status: 'ready', accepted: 1, rejectedOverhead: 3 });
+    expect(bundle.colliders).toEqual([pole]);
+  });
+
+  it('fails closed on a v2 collider without an extent, or a v1 collider with one', async () => {
+    resetStaticColliderCacheForTests();
+    const flat = { id: 'canonical-master/1', class: 'prop', obb: { center: { x: 1, z: 2 }, lengthM: 0.4, widthM: 0.4, headingRad: 0 } };
+    const v2 = await loadStaticMapColliders('/dev-assets/v2-flat/3d/manifest.json',
+      fixtureFetcher(artifact({ schema: 'simforge.static-map-colliders/v2', colliders: [flat] }), [], 2));
+    expect(v2.diagnostics.status).toBe('unavailable');
+    expect(v2.diagnostics.warning).toMatch(/missing or invalid vertical extent/);
+    const v1 = await loadStaticMapColliders('/dev-assets/v1-tall/3d/manifest.json',
+      fixtureFetcher(artifact({ colliders: [{ ...flat, vertical: { minY: 0, maxY: 3 } }] }), []));
+    expect(v1.diagnostics.warning).toMatch(/unexpected vertical extent/);
+    // A v2 artifact advertised as v1 is refused by its schema string.
+    const mislabelled = await loadStaticMapColliders('/dev-assets/v2-as-v1/3d/manifest.json',
+      fixtureFetcher(artifact({ schema: 'simforge.static-map-colliders/v2' }), []));
+    expect(mislabelled.diagnostics.warning).toMatch(/unsupported schema/);
+  });
+
   it('loads and validates one compact artifact, then reuses the map cache', async () => {
     resetStaticColliderCacheForTests();
     const calls: string[] = [];

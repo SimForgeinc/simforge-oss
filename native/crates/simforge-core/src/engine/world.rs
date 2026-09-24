@@ -30,18 +30,21 @@ use crate::math::{
 use crate::physics::{
     swept_obb_time_of_impact, AxleUtilization, DynamicV1Backend, MotionActorInitialization,
     MotionBackend, MotionDirection, MotionInitialState, PhysicsTelemetrySample, VehicleControl,
-    VehicleTelemetry, DYNAMIC_V1_DEFAULT_SUBSTEP_S, STANDARD_GRAVITY_MPS2,
+    VehicleTelemetry, VerticalSpan, DYNAMIC_V1_DEFAULT_SUBSTEP_S, STANDARD_GRAVITY_MPS2,
 };
 use crate::rng::Rng;
 use crate::trace::metrics::{CollisionRecord, MetricAccumulator};
 use crate::trace::perception::PerceptionAccumulator;
 use crate::trace::{SimEvent, SimTrace, TraceCapture, TraceRecorder};
 use crate::types::{
-    ActorKind, Condition, ControlIndication, Interaction, PhysicsConfig,
-    PropAttachment, RouteSpec, SetValue, SimActor, SimScenarioInput, VehiclePhysicsProfile,
+    ActorKind, Condition, ControlIndication, Interaction, PhysicsConfig, PropAttachment, RouteSpec,
+    SetValue, SimActor, SimScenarioInput, VehiclePhysicsProfile,
 };
 
-use super::actor::{ActorIndex, ActorRuntime, DriverBehaviorProfile, InteractionIndex, RouteStationRuntime, RoadControlRuntimeState};
+use super::actor::{
+    ActorIndex, ActorRuntime, DriverBehaviorProfile, InteractionIndex, RoadControlRuntimeState,
+    RouteStationRuntime,
+};
 use super::controllers::cruise_speed;
 use super::doors::{articulated_door_obb_for, DoorName, DoorRuntime};
 use super::gear::{
@@ -541,6 +544,16 @@ impl Simulation {
                 .filter(|o| !attached_occluder_ids.contains(&o.id)),
         );
         let statics = StaticCollisionResources::build(&input.props, &options.static_colliders);
+        if statics.has_vertical() && options.ground.is_none() {
+            // A body's vertical extent comes from its ground contact. Without a
+            // ground surface there is none, so the map's colliders stand at
+            // full height, as a v1 artifact's always did. Say so.
+            issues.push(SimIssue::warning(
+                SimIssueCode::StaticColliderHeightsUnused,
+                "map.staticColliders",
+                "the map's static colliders carry vertical extents, but the run has no ground surface to give bodies a height: every collider acts at full height, overhead fixtures included",
+            ));
+        }
 
         if options.guards != GuardMode::Skip {
             let found = check_feasibility(&input, &graph);
@@ -734,9 +747,11 @@ impl Simulation {
         tags: &[String],
     ) -> Option<VehiclePhysicsProfile> {
         let authored = self.physics_config.profile(actor_id).cloned();
-        if !tags.iter().any(|t| t.strip_prefix("catalog:").is_some_and(|id|
-            crate::catalog_aliases::canonical_catalog_id(id) == "pedestrian.child"
-        )) {
+        if !tags.iter().any(|t| {
+            t.strip_prefix("catalog:").is_some_and(|id| {
+                crate::catalog_aliases::canonical_catalog_id(id) == "pedestrian.child"
+            })
+        }) {
             return authored;
         }
         let base = crate::physics::child_pedestrian_physics_profile();
@@ -906,9 +921,15 @@ impl Simulation {
             _ => None,
         };
         let route_stations = match &spec.behavior.route {
-            RouteSpec::Polyline { stop_controls, .. } => stop_controls.iter().map(|stop| RouteStationRuntime {
-                id: stop.id.clone(), s: stop.s, dwell_s: stop.dwell_s, coordination_id: stop.coordination_id.clone(),
-            }).collect(),
+            RouteSpec::Polyline { stop_controls, .. } => stop_controls
+                .iter()
+                .map(|stop| RouteStationRuntime {
+                    id: stop.id.clone(),
+                    s: stop.s,
+                    dwell_s: stop.dwell_s,
+                    coordination_id: stop.coordination_id.clone(),
+                })
+                .collect(),
             _ => Vec::new(),
         };
         let remaining_turns = match &spec.behavior.route {
@@ -1738,8 +1759,18 @@ impl Simulation {
                 return false;
             }
         }
+        // Every sight line between the two bodies lies within the vertical
+        // band their spans cover: a map collider wholly above or below it (a
+        // mast arm over both cars) cannot block it.
+        let band = if self.statics.has_vertical() {
+            let o = self.body_vertical_span(observer.index.index());
+            let t = self.body_vertical_span(target.index());
+            VerticalSpan::new(o.min.min(t.min), o.max.max(t.max))
+        } else {
+            VerticalSpan::UNBOUNDED
+        };
         for shape in self.statics.shapes() {
-            if blocked_by(&shape.corners) {
+            if shape.vertical.overlaps(&band) && blocked_by(&shape.corners) {
                 return false;
             }
         }
@@ -1918,8 +1949,14 @@ impl Simulation {
         }
 
         // Fixed props/map proxies participate in the same continuous pipeline.
+        let vertical = self.statics.has_vertical();
         for &index in &scratch.live_actors {
             let shapes = &scratch.current_shapes[index.index()];
+            let span = if vertical {
+                self.body_vertical_span(index.index())
+            } else {
+                VerticalSpan::UNBOUNDED
+            };
             let previous = &self.collision_snapshots[index.index()];
             let bounds = Self::swept_bounds(
                 index.0,
@@ -1939,6 +1976,11 @@ impl Simulation {
             );
             for &slot in &scratch.static_candidates {
                 let shape = self.statics.shape(slot);
+                // Only a collider within the body's vertical span can touch
+                // it: the car passes under the mast arm, not through the pole.
+                if !shape.vertical.overlaps(&span) {
+                    continue;
+                }
                 let key = ordered(CollisionParty::Actor(index), CollisionParty::Static(slot));
                 let mut current_overlap = false;
                 let mut contact_t: Option<f64> = None;

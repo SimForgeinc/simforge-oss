@@ -7,7 +7,8 @@ import {
   analyzeRoadTiling, atomicWrite, classifyRoadsOnlySceneRoots, collectManifestGlbs, geometryIdentity, makeGeometryOnlyGlb, makeMarkingFirstRoadsOnlyGlb, readGlb, sha256, subsetSceneNodes, subsetSceneRoots,
 } from './map-derivatives-lib.mjs';
 import { inspectPinnedToolchain, pinnedToolEnvironment } from './map-derivative-toolchain.mjs';
-import { buildStaticColliderArtifact, serializeStaticColliderArtifact } from './static-map-colliders-lib.mjs';
+import { buildStaticColliderArtifact, serializeStaticColliderArtifact, STATIC_COLLIDER_FILE, STATIC_COLLIDER_SCHEMA_VERSION } from './static-map-colliders-lib.mjs';
+import { decodeGroundMesh, GroundQuery } from '@simforge-oss/map-pipeline';
 import { buildTextureTiers, TEXTURE_VARIANTS } from '@simforge-oss/map-pipeline/texture-tiers';
 import { buildBrowserPacks } from '@simforge-oss/map-pipeline/browser-packs';
 
@@ -286,20 +287,25 @@ if (variant === 'static-colliders' || variant === 'all') {
   if (!topologyFile) throw new Error(`Map has no topology index: ${mapId}`);
   const topologyBytes = fs.readFileSync(topologyFile);
   const topology = JSON.parse((topologyFile.endsWith('.gz') ? zlib.gunzipSync(topologyBytes) : topologyBytes).toString('utf8'));
+  // The ground surface (derived/ground) classifies overhead fixtures; a map
+  // built without one gets no overhead classification (`overheadClearanceM: null`).
+  const groundFile = path.join(repository, 'dev-assets', mapId, 'derived', 'ground', 'ground-mesh.bin');
+  const groundQuery = fs.existsSync(groundFile) ? new GroundQuery(decodeGroundMesh(new Uint8Array(fs.readFileSync(groundFile)))) : null;
   const artifact = buildStaticColliderArtifact({
     mapId,
     sourceManifestSha256: sha256(manifestBytes),
     manifest,
     topology,
+    ground: groundQuery ? { surfacesAt: (x, y) => groundQuery.surfacesAt(x, y).map((hit) => hit.z) } : null,
     readSource: (file) => readGlbJsonChunk(path.join(mapRoot, file)),
   });
-  const relative = 'static-colliders-v1.json';
+  const relative = STATIC_COLLIDER_FILE;
   const serialized = serializeStaticColliderArtifact(artifact);
   atomicWrite(path.join(outputRoot, relative), serialized);
   variants['static-colliders'] = {
     id: 'static-colliders',
-    schemaVersion: 1,
-    generator: { name: 'simforge-static-map-colliders', version: '1.0.0' },
+    schemaVersion: STATIC_COLLIDER_SCHEMA_VERSION,
+    generator: { name: 'simforge-static-map-colliders', version: '2.0.0' },
     file: relative,
     digest: artifact.digest,
     outputSha256: sha256(Buffer.from(serialized)),

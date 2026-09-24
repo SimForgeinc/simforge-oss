@@ -34,6 +34,49 @@ pub const DEFAULT_CONTACT_RESTITUTION: f64 = 0.08;
 /// Coulomb friction coefficient between contacting footprints.
 pub const DEFAULT_CONTACT_FRICTION: f64 = 0.65;
 
+/// Vertical extent of a contact participant, metres on the ground surface's
+/// datum (xodr-local z, scene y). The solver and the engine's collision
+/// detection are planar; a vertical span only decides whether a planar
+/// overlap between a moving body and a static collider counts, so a vehicle
+/// passes under a signal mast arm and still strikes the pole it hangs from.
+/// [`VerticalSpan::UNBOUNDED`] is the planar default: it overlaps everything.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerticalSpan {
+    pub min: f64,
+    pub max: f64,
+}
+
+impl VerticalSpan {
+    pub const UNBOUNDED: Self = Self {
+        min: f64::NEG_INFINITY,
+        max: f64::INFINITY,
+    };
+
+    #[inline]
+    pub fn new(min: f64, max: f64) -> Self {
+        Self { min, max }
+    }
+
+    #[inline]
+    pub fn is_bounded(&self) -> bool {
+        self.min.is_finite() || self.max.is_finite()
+    }
+
+    /// Closed-interval overlap: touching spans overlap, so a body whose roof
+    /// is exactly level with a fixture's underside still strikes it.
+    #[inline]
+    pub fn overlaps(&self, other: &Self) -> bool {
+        self.min <= other.max && other.min <= self.max
+    }
+}
+
+impl Default for VerticalSpan {
+    fn default() -> Self {
+        Self::UNBOUNDED
+    }
+}
+
 /// Pose at the start of the interval, the origin of a body's sweep.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -61,6 +104,9 @@ pub struct PlanarCollisionBody {
     pub vx: f64,
     pub vy: f64,
     pub angular_velocity: f64,
+    /// Tested only against bounded static spans (map colliders): body/body
+    /// contact stays planar.
+    pub vertical: VerticalSpan,
 }
 
 /// Infinite-mass collider: map geometry, props, fixed actors, or a
@@ -72,6 +118,10 @@ pub struct PlanarStaticCollider {
     /// Kinematic surface velocity. Static props/map geometry leave this zero.
     pub velocity: Vec2,
     pub angular_velocity: f64,
+    /// A dynamic body contacts this collider only where their vertical spans
+    /// overlap. [`VerticalSpan::UNBOUNDED`] for everything but map colliders
+    /// with a published vertical extent.
+    pub vertical: VerticalSpan,
 }
 
 impl PlanarStaticCollider {
@@ -81,6 +131,7 @@ impl PlanarStaticCollider {
             obb,
             velocity: Vec2::ZERO,
             angular_velocity: 0.0,
+            vertical: VerticalSpan::UNBOUNDED,
         }
     }
 }
@@ -119,6 +170,7 @@ struct SolverBody {
     vx: f64,
     vy: f64,
     angular_velocity: f64,
+    vertical: VerticalSpan,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -372,6 +424,7 @@ impl PlanarContactSolver {
                 vx: body.vx,
                 vy: body.vy,
                 angular_velocity: body.angular_velocity,
+                vertical: body.vertical,
             });
         }
         for (slot, collider) in statics.iter().enumerate() {
@@ -393,6 +446,7 @@ impl PlanarContactSolver {
                 vx: collider.velocity.x,
                 vy: collider.velocity.y,
                 angular_velocity: collider.angular_velocity,
+                vertical: collider.vertical,
             });
         }
         // Ranks are unique, so an unstable sort is deterministic.
@@ -425,7 +479,17 @@ impl PlanarContactSolver {
                 if ej.min_y > ei.max_y || ej.max_y < ei.min_y {
                     continue;
                 }
-                if !dynamic_i && self.bodies[j as usize].inverse_mass <= 0.0 {
+                let dynamic_j = self.bodies[j as usize].inverse_mass > 0.0;
+                if !dynamic_i && !dynamic_j {
+                    continue;
+                }
+                // A body and a static collider meet only where their vertical
+                // spans overlap: the arm over the lane, not the pole beside it.
+                if !(dynamic_i && dynamic_j)
+                    && !self.bodies[i as usize]
+                        .vertical
+                        .overlaps(&self.bodies[j as usize].vertical)
+                {
                     continue;
                 }
                 self.pairs.push(if i < j { (i, j) } else { (j, i) });

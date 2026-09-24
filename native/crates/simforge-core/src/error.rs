@@ -100,6 +100,7 @@ pub enum SimIssueCode {
     ImplausibleMotion,
     // ground contact
     GroundWheelUnsupported,
+    StaticColliderHeightsUnused,
 }
 
 impl SimIssueCode {
@@ -131,6 +132,7 @@ impl SimIssueCode {
             Self::LateralTrackingFailed => "lateral_tracking_failed",
             Self::ImplausibleMotion => "implausible_motion",
             Self::GroundWheelUnsupported => "ground_wheel_unsupported",
+            Self::StaticColliderHeightsUnused => "static_collider_heights_unused",
         }
     }
 }

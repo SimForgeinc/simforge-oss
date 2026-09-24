@@ -77,6 +77,15 @@ const manifest = existsSync(join(GOLDEN, 'manifest.json'))
   : null;
 const tiers = process.env['SIMFORGE_GOLDEN_TIERS'] === 'all' ? new Set(['ci', 'local']) : new Set(['ci']);
 
+/** The map directory carries the static-collider artifact its variants manifest names (v1 or v2). */
+function collidersInstalled(dir: string): boolean {
+  const variants = join(dir, '3d', 'variants');
+  if (!existsSync(join(variants, 'manifest.json'))) return false;
+  const file = (JSON.parse(readFileSync(join(variants, 'manifest.json'), 'utf8')) as { variants?: Record<string, { file?: unknown }> })
+    .variants?.['static-colliders']?.file;
+  return typeof file === 'string' && existsSync(join(variants, file));
+}
+
 function plain(file: string): Uint8Array {
   for (const candidate of [file, `${file}.gz`]) {
     if (!existsSync(candidate)) continue;
@@ -92,7 +101,7 @@ function mapDir(testCase: GoldenCase): string | null {
   const roots = process.env['SIMFORGE_GOLDEN_MAPS_ROOT']
     ? [process.env['SIMFORGE_GOLDEN_MAPS_ROOT']]
     : [join(process.env['SIMFORGE_MAPS_CACHE_ROOT'] ?? join(data, 'simforge', 'maps'), 'dev-assets'), join(process.env['SIMFORGE_MAPS_CACHE_ROOT'] ?? join(data, 'simforge', 'maps'), 'map-bundles')];
-  return roots.map((root) => join(root, testCase.map)).find((dir) => existsSync(join(dir, '3d', 'variants', 'static-colliders-v1.json'))) ?? null;
+  return roots.map((root) => join(root, testCase.map)).find((dir) => collidersInstalled(dir)) ?? null;
 }
 
 /**

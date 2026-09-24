@@ -5,142 +5,142 @@
       "inputHash": "022622ee670bf93da7e639a22acffecd3d7c7cedce51289dd73ba83365b5b0b9",
       "mapClosureDigest": "5b611c7574bd90ac50419b42f8e47c467bcaf2b106b18b87f16ceb7ef6976155",
       "ticks": 601,
-      "traceSha256": "277bc640992d3aaa4022d2adf0f33811ff9d257e7a0a0ae7e4404af3649baae9"
+      "traceSha256": "c8259ff7b9069b13ba26445adf3db7c2a0d563b80db5d23c6b48e1cba55899b4"
     },
     "rfs-ambient-heavy-1": {
       "actors": 48,
       "inputHash": "40a6787fed7526d14b0f2d74516849681ed27005c1b7b3f08509708a3a806018",
       "mapClosureDigest": "5b611c7574bd90ac50419b42f8e47c467bcaf2b106b18b87f16ceb7ef6976155",
       "ticks": 601,
-      "traceSha256": "08d4b08dbb6c0aa8d1638381d81f9bc1d24ab3c46f299bb961b6d314d808d049"
+      "traceSha256": "3a100f33651a4095ee1601fe296583eefaa38b769cefc21fa710b20a4b5dda2a"
     },
     "rfs-ambient-heavy-2": {
       "actors": 48,
       "inputHash": "64352dc9445fa5ef933ab8cb7176a034f842b387fd32bc2a29edc75bd07c903f",
       "mapClosureDigest": "5b611c7574bd90ac50419b42f8e47c467bcaf2b106b18b87f16ceb7ef6976155",
       "ticks": 601,
-      "traceSha256": "0a2bde7af9e9b6ff8dce9a25243a60cf9bbde6a0f6441e4b30b1668488bbeb4d"
+      "traceSha256": "ce16df9a15ab8f054a552d12cb454955f7fa947b618efe0849a7d652a16f3c94"
     },
     "rfs-collider-building": {
       "actors": 1,
       "inputHash": "9fa5bc5dad44552579d7c75b92fe8786a50dca972df0934716bfeecbeddd1659",
       "mapClosureDigest": "5b611c7574bd90ac50419b42f8e47c467bcaf2b106b18b87f16ceb7ef6976155",
       "ticks": 501,
-      "traceSha256": "6b7de8b273a8bd3b3a325a94e074c0a31851dc6a4148988ffb01b7b98e9c5879"
+      "traceSha256": "73c4fbb79a350cbfcb7d59430261518211d0a87e6cb6a70b0002099ec5cc2fd9"
     },
     "rfs-stop-and-go": {
       "actors": 1,
       "inputHash": "a9ec3a97916760c445012ac426d9d8825ea8f0d6c99d423add953f28d79af4ce",
       "mapClosureDigest": "5b611c7574bd90ac50419b42f8e47c467bcaf2b106b18b87f16ceb7ef6976155",
       "ticks": 1001,
-      "traceSha256": "f692e4e93d9223ac622c14b9e6ff4afd438733561eb56544cb18e2716619e926"
+      "traceSha256": "d9953a94c644ab5c8898a0249117635c40fcbe9f252db8b9f339ea2da4ced651"
     },
     "rfs-template-ltap": {
       "actors": 2,
       "inputHash": "959c09f9d47bb1c6ed6f93e36fe03abea6565afe6b788e1fcca2309fe574f6f0",
       "mapClosureDigest": "5b611c7574bd90ac50419b42f8e47c467bcaf2b106b18b87f16ceb7ef6976155",
       "ticks": 801,
-      "traceSha256": "5d77a22ce12cd9a888c85dd222c9f6cc1aee8322016fe8c747103db565a33b47"
+      "traceSha256": "16414853b08c71f67c2e76b5311a9fdcda63b3ee597f7f663d9905da547e8a42"
     },
     "rfs-template-ltap-carla-catalog": {
       "actors": 2,
       "inputHash": "e2e5a041792f5f1948b9f0477fd97f3678bdfff7d0de2227a43b522a39928c12",
       "mapClosureDigest": "5b611c7574bd90ac50419b42f8e47c467bcaf2b106b18b87f16ceb7ef6976155",
       "ticks": 801,
-      "traceSha256": "93002e75c7944c094a2a0757f3870e313a9aeb3adf20bb193e74cfc0f1f4a0b6"
+      "traceSha256": "571f0f45d2e82b0b4c799627f84569d205425a53e5571386ead8477b8641c64f"
     },
     "rfs-template-ltap-pinned-seed": {
       "actors": 2,
       "inputHash": "959c09f9d47bb1c6ed6f93e36fe03abea6565afe6b788e1fcca2309fe574f6f0",
       "mapClosureDigest": "5b611c7574bd90ac50419b42f8e47c467bcaf2b106b18b87f16ceb7ef6976155",
       "ticks": 801,
-      "traceSha256": "5d77a22ce12cd9a888c85dd222c9f6cc1aee8322016fe8c747103db565a33b47"
+      "traceSha256": "16414853b08c71f67c2e76b5311a9fdcda63b3ee597f7f663d9905da547e8a42"
     },
     "rfs-uturn-car": {
       "actors": 1,
       "inputHash": "cedec770a66f28cfbada20701e1e20520262839e0a8142f733ff4f9948ac3aa0",
       "mapClosureDigest": "5b611c7574bd90ac50419b42f8e47c467bcaf2b106b18b87f16ceb7ef6976155",
       "ticks": 1501,
-      "traceSha256": "9ae96e186a1a1801edc280e7ddbff24917520a01b9ea409fce52e5fccc0098c4"
+      "traceSha256": "83e8a6499614b31ba575f1347be03dffcf12a7039dfce0ec7825abf09eb0fa2a"
     },
     "rfs-uturn-van": {
       "actors": 1,
       "inputHash": "e88dc1efe450b867ac7f3fd1c0d1d683f37054d7b707c34671965f590ce36e7a",
       "mapClosureDigest": "5b611c7574bd90ac50419b42f8e47c467bcaf2b106b18b87f16ceb7ef6976155",
       "ticks": 1701,
-      "traceSha256": "ade3edf0dd26bfd8754c8f50d9ea67339936b251f3813266348f37f15738d765"
+      "traceSha256": "4068788cc60feac31ed92015a97b9569d3cbb1822de2a151bd115b4c4725e79c"
     },
     "rfs-walkers-crossing": {
       "actors": 4,
       "inputHash": "5ab9075aee5b6182d731697c830ad0480e2372ebc0bee567e69e695fac76f590",
       "mapClosureDigest": "5b611c7574bd90ac50419b42f8e47c467bcaf2b106b18b87f16ceb7ef6976155",
       "ticks": 801,
-      "traceSha256": "b7983675a833b1ef6eb1d07e87a9875bb7e62c2dc523e6546c1045b7ae0bac1a"
+      "traceSha256": "031606adbe2fa650fa245e0e19c08d10ed7e11f1fe17cce9abd05ce8c144efd5"
     },
     "stopspin-el-camino-road-ambient-1": {
       "actors": 51,
       "inputHash": "000ff7bcb778f9287984c7299a37afe7dcd3c1e4bacf416680b32b335688ec20",
       "mapClosureDigest": "63a27ed3c8bb0865a016510176825cc9bd21dcbd7f8fc74252195a08411e5a18",
       "ticks": 3001,
-      "traceSha256": "4b09fd517f31b09f7143a2ce6f071e92bcb321860ad70553e586e32a480f5562"
+      "traceSha256": "ce9a4371de6c92ad603c8dc2e09e56afc667604b3aaf1f726f8de60c99552b5e"
     },
     "stopspin-el-camino-road-ambient-2": {
       "actors": 54,
       "inputHash": "f0e8f9009540e2fe9d4c7cbfa5bd6d901e953f27b258fd68224432789bf38395",
       "mapClosureDigest": "63a27ed3c8bb0865a016510176825cc9bd21dcbd7f8fc74252195a08411e5a18",
       "ticks": 3001,
-      "traceSha256": "c7269d414435a4ed7d0567da4f19eb32c8959531792147e7e3ff2cc5be972f1a"
+      "traceSha256": "8795966bcf0bd9dc55fecc87bd7a585fb437264f6fa8df03b8f361b758e7a6de"
     },
     "stopspin-el-camino-road-ambient-3": {
       "actors": 51,
       "inputHash": "ea8fd72db95f826e9135ff6db8684ede7c261d2cd5c751083eedd3aefd5f0012",
       "mapClosureDigest": "63a27ed3c8bb0865a016510176825cc9bd21dcbd7f8fc74252195a08411e5a18",
       "ticks": 3001,
-      "traceSha256": "d8479556383713d32823b7834d60aad9e7e8ebdebb467997c481747871e988c0"
+      "traceSha256": "edcb360859420d50c56f71a6c5c8122c8c798b6e8a70fd2b0fb8ea53d57a713c"
     },
     "stopspin-richmond-field-station-ambient-1": {
       "actors": 80,
       "inputHash": "92c7f7597bc47ff2ed1ae792013d66af51ab309cd2d482f4637e0220ec3e0efa",
       "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
       "ticks": 3001,
-      "traceSha256": "2e91bbe0c7a9e89ffe3811d7ee8c7819de499cf351b2acc2b632aed60b5e839a"
+      "traceSha256": "361b718d01278e6d2616579ba62f9ca3518d3d7a94cd77c08d2267b20d49987a"
     },
     "stopspin-richmond-field-station-ambient-2": {
       "actors": 80,
       "inputHash": "f9222c0379f43a79468da55c98509b422edc49c720f2b0aa8bb9a8ecbc7855d2",
       "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
       "ticks": 3001,
-      "traceSha256": "b70afb7dda981132e1fb4ca1b8d39a219b2b6510c08cc6339d02b9629d30596b"
+      "traceSha256": "d2f69282fe449e2890688250154cbb6b7b2accae572d0e6edcf4b14822700e80"
     },
     "stopspin-richmond-field-station-ambient-3": {
       "actors": 80,
       "inputHash": "02f81f7a96097b002b473ed12188493d978ab3fcbe0a4cb2e46b1e888d38da97",
       "mapClosureDigest": "b142ec46723f2e4174a12ad0d5688b729404f45d6cac4e6bc6f016ec94c6c395",
       "ticks": 3001,
-      "traceSha256": "e4dadaa2f7d1188f2edf484afaa48c217661152b4f687638be45f7d74ffdf40e"
+      "traceSha256": "13a27ac666e3cd26c0123a60f8be51f9111709714fb54dc72ac601297e3dc2e6"
     },
     "stopspin-yale-street-ambient-1": {
       "actors": 23,
       "inputHash": "9bc693a5964d459cc550ae8f6aa6666811f5466e714538d120b9b46997afceb1",
       "mapClosureDigest": "d192d24b11d2b023c13dc7a3ac67996f11449a6b19f8634889dc5a213a8659c5",
       "ticks": 3001,
-      "traceSha256": "9c31c25044e7712cc8b5137f8d5d7f5422abc26976855f871f7a2a711fef357c"
+      "traceSha256": "656c285457287d49183aa82b79e3b851bd337bf68912e698d24861c9a4268fdd"
     },
     "stopspin-yale-street-ambient-2": {
       "actors": 27,
       "inputHash": "e0cf96e38e9ade0c5275ed0dcfb1153add92b9a9b0ed44fd718548835e481781",
       "mapClosureDigest": "d192d24b11d2b023c13dc7a3ac67996f11449a6b19f8634889dc5a213a8659c5",
       "ticks": 3001,
-      "traceSha256": "78125a559543e9c8927bc19baf95f155d0f671f1dab38b2ade31005206f7192a"
+      "traceSha256": "915f63ac4315f999e680a27e51ce28420c8b1fc9d4704d11a4817c580dca03ac"
     },
     "stopspin-yale-street-ambient-3": {
       "actors": 21,
       "inputHash": "7846010ec49d27123e5a47bc67457a358fc62f8c81ce57a61140424eea234eca",
       "mapClosureDigest": "d192d24b11d2b023c13dc7a3ac67996f11449a6b19f8634889dc5a213a8659c5",
       "ticks": 3001,
-      "traceSha256": "656797ef6f6a9b767899ba3cd72d217ef7505d0ef1b736ae96ce5d51ae6753c6"
+      "traceSha256": "25bebf87e70f8adc471b6158ae598e06d2bd5bc9bad80aaeb73494b9c8eab864"
     }
   },
-  "engineSemVer": "0.11.0",
+  "engineSemVer": "0.12.0",
   "schema": "simforge.golden-traces/v1"
 }

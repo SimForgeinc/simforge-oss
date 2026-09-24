@@ -1,6 +1,10 @@
 import type { Buffer } from "node:buffer";
 
-export const STATIC_COLLIDER_SCHEMA: "simforge.static-map-colliders/v1";
+export const STATIC_COLLIDER_SCHEMA: "simforge.static-map-colliders/v2";
+export const STATIC_COLLIDER_SCHEMA_VERSION: 2;
+export const STATIC_COLLIDER_FILE: "static-colliders-v2.json";
+/** Clearance above every ground surface under a fixture at which ingest drops it as overhead. */
+export const OVERHEAD_CLEARANCE_M: number;
 
 export type StaticColliderClass =
   | "building"
@@ -16,10 +20,25 @@ export interface StaticColliderObb {
   headingRad: number;
 }
 
+/** Scene-frame vertical extent (y up; the ground surface's datum). */
+export interface StaticColliderVertical {
+  minY: number;
+  maxY: number;
+}
+
 export interface StaticCollider {
   id: string;
   class: StaticColliderClass;
   obb: StaticColliderObb;
+  vertical: StaticColliderVertical;
+}
+
+/**
+ * The map's ground surface as the builder samples it: every surface height
+ * under an xodr-local plan point (x east, y north; scene z = -y).
+ */
+export interface StaticColliderGround {
+  surfacesAt(x: number, y: number): readonly number[];
 }
 
 export interface StaticColliderArtifact {
@@ -32,10 +51,14 @@ export interface StaticColliderArtifact {
     declaredBytes: number | null;
   }>;
   colliders: StaticCollider[];
+  /** {@link OVERHEAD_CLEARANCE_M} when the map's ground surface classified overhead fixtures; null without one. */
+  overheadClearanceM: number | null;
   statistics: {
     sourceTiles: number;
     accepted: number;
     rejectedRoadOverlap: number;
+    /** Fixtures no body on the ground under them can reach (mast arms, signal heads, luminaires, bridge soffits). */
+    rejectedOverhead: number;
     ignored: number;
     classes: Record<StaticColliderClass, number>;
   };
@@ -85,6 +108,8 @@ export function buildStaticColliderArtifact(input: {
       polyline?: Array<[number, number] | { x: number; y: number }>;
     }>;
   };
+  /** The map's ground surface (`derived/ground`), or null for a map without one: then nothing is classified overhead. */
+  ground: StaticColliderGround | null;
 } & (
   | { readSource(file: string): Buffer; canonicalGltf?: never }
   | { canonicalGltf: { file: string; bytes: Buffer }; readSource?: never }

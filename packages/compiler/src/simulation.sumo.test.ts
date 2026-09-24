@@ -11,7 +11,7 @@
  * (`pnpm maps:sumo -- --map richmond-field-station`).
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -27,9 +27,18 @@ const MAP_ID = 'richmond-field-station';
 /** An installed map directory with its collider and SUMO derivatives (override with `SIMFORGE_SIM_TEST_MAP_DIR`). */
 const mapDir = path.resolve(process.env['SIMFORGE_SIM_TEST_MAP_DIR'] ?? path.join(DEV_ASSETS, MAP_ID));
 const runtimeDir = path.resolve(process.env['SIMFORGE_SUMO_RUNTIME_DIR'] ?? path.join(DEV_ASSETS, 'sumo-runtime'));
+/** The map directory carries the static-collider artifact its variants manifest names (v1 or v2). */
+function collidersInstalled(dir: string): boolean {
+  const variants = path.join(dir, '3d', 'variants');
+  if (!existsSync(path.join(variants, 'manifest.json'))) return false;
+  const file = (JSON.parse(readFileSync(path.join(variants, 'manifest.json'), 'utf8')) as { variants?: Record<string, { file?: unknown }> })
+    .variants?.['static-colliders']?.file;
+  return typeof file === 'string' && existsSync(path.join(variants, file));
+}
+
 const available = existsSync(path.join(runtimeDir, 'sumo.wasm'))
   && existsSync(path.join(mapDir, 'derived', 'sumo', 'sumo-network-manifest.json'))
-  && existsSync(path.join(mapDir, '3d', 'variants', 'static-colliders-v1.json'));
+  && collidersInstalled(mapDir);
 
 async function sumoDocument() {
   const template = JSON.parse(await readFile(new URL('./__fixtures__/richmond-map-bound.template.json', import.meta.url), 'utf8'));

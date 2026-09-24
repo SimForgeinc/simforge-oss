@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::math::{obb_corners, Obb, SceneXZ, Vec2};
+use crate::physics::VerticalSpan;
 use crate::types::StaticProp;
 
 use super::spatial::point_cell;
@@ -30,6 +31,16 @@ pub struct SceneObb {
     pub heading_rad: f64,
 }
 
+/// Scene-frame vertical extent of a map collider (`simforge.static-map-colliders/v2`):
+/// y up, on the ground surface's datum, so it compares directly with a body's
+/// ground contact z.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ColliderVertical {
+    pub min_y: f64,
+    pub max_y: f64,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StaticMapCollider {
@@ -37,6 +48,10 @@ pub struct StaticMapCollider {
     pub id: String,
     pub class: StaticColliderClass,
     pub obb: SceneObb,
+    /// Present on every v2 collider, absent on v1 (a full-height prism). Not
+    /// serialized when absent, so a v1 closure's digest is unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vertical: Option<ColliderVertical>,
 }
 
 /// Uniform-grid size; larger than ordinary road-user footprints and one tick's motion.
@@ -48,6 +63,9 @@ pub struct StaticCollisionShape {
     pub id: String,
     pub obb: Obb,
     pub corners: [Vec2; 4],
+    /// A body meets this shape only where their vertical spans overlap.
+    /// Unbounded for props and for v1 map colliders.
+    pub vertical: VerticalSpan,
 }
 
 /// Immutable static collision resources for one world layout.
@@ -57,6 +75,8 @@ pub struct StaticCollisionResources {
     shapes: Vec<StaticCollisionShape>,
     /// `(cell x, cell y, shape index)` sorted.
     grid: Vec<(i32, i32, u32)>,
+    /// Whether any shape has a bounded vertical span.
+    vertical: bool,
 }
 
 impl StaticCollisionResources {
@@ -77,6 +97,7 @@ impl StaticCollisionResources {
                     id: format!("prop:{}", p.id),
                     obb,
                     corners: obb_corners(&obb),
+                    vertical: VerticalSpan::UNBOUNDED,
                 }
             })
             .collect();
@@ -93,6 +114,9 @@ impl StaticCollisionResources {
                 id: format!("map:{}", c.id),
                 obb,
                 corners: obb_corners(&obb),
+                vertical: c.vertical.map_or(VerticalSpan::UNBOUNDED, |v| {
+                    VerticalSpan::new(v.min_y, v.max_y)
+                }),
             });
         }
         // Slot order is the contact order handed to the solver; the reference
@@ -121,7 +145,19 @@ impl StaticCollisionResources {
             }
         }
         grid.sort_unstable();
-        Self { shapes, grid }
+        let vertical = shapes.iter().any(|s| s.vertical.is_bounded());
+        Self {
+            shapes,
+            grid,
+            vertical,
+        }
+    }
+
+    /// Whether any shape carries a vertical extent: only then do bodies need
+    /// one.
+    #[inline]
+    pub fn has_vertical(&self) -> bool {
+        self.vertical
     }
 
     #[inline]

@@ -20,6 +20,13 @@ export interface StaticMapCollider {
     readonly widthM: number;
     readonly headingRad: number;
   };
+  /**
+   * Scene-frame vertical extent (y up, the ground surface's datum): present on
+   * every `simforge.static-map-colliders/v2` collider, absent on v1 (a
+   * full-height prism). A grounded body meets the collider only where its own
+   * span (ground contact to roof) overlaps this one.
+   */
+  readonly vertical?: { readonly minY: number; readonly maxY: number };
 }
 
 /** One spawn moved by the arrival solver so an `arrival` trigger fires at the authored delta. */

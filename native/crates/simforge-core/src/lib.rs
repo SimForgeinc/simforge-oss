@@ -96,8 +96,14 @@ pub type Result<T, E = CoreError> = std::result::Result<T, E>;
 /// from the tick after their cause; 0.11.0 grounds every body on the map's
 /// ground surface each tick (docs/engineering/ground-height.md): trace v5
 /// carries z, road pitch and roll and per-wheel drop from rigid wheel
-/// contact, and a body with no surface under it is an engine error.
-pub const ENGINE_SEM_VER: &str = "0.11.0";
+/// contact, and a body with no surface under it is an engine error; 0.12.0
+/// gives map colliders a vertical extent (`simforge.static-map-colliders/v2`)
+/// and a grounded body meets one only where its own span (ground contact to
+/// roof) overlaps it, in collision detection, the contact solver and ego line
+/// of sight, so a vehicle passes under a signal mast arm or a bridge and still
+/// strikes the pole (docs/engineering/ground-height.md). v1 colliders keep
+/// full height and their traces are unchanged.
+pub const ENGINE_SEM_VER: &str = "0.12.0";
 
 /// Former name of [`ENGINE_SEM_VER`]; always the same value. Prefer the new
 /// name in new code.

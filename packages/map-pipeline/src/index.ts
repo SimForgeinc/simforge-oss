@@ -1,8 +1,6 @@
 import { cp, link, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { gunzipSync } from 'node:zlib';
-import { buildStaticColliderArtifact, serializeStaticColliderArtifact } from '@simforge-oss/maps/ingest';
 
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
@@ -20,7 +18,8 @@ import { withStageLock } from './stage-lock.js';
 import { buildTextureTiers, TEXTURE_TIERS_REVISION, TEXTURE_VARIANTS } from '../scripts/texture-tiers.mjs';
 import { buildBrowserPacks, BROWSER_PACK_REVISION } from '../scripts/browser-packs.mjs';
 import { buildSumoDerivative, SUMO_DERIVATIVE_FINGERPRINT, SUMO_DERIVED_DIR } from '../scripts/sumo-network.mjs';
-import { buildGroundDerivative, GROUND_DERIVED_DIR, GROUND_FINGERPRINT } from './ground/index.js';
+import { buildGroundDerivative, GROUND_DERIVED_DIR, GROUND_FINGERPRINT, GROUND_MESH_FILE } from './ground/index.js';
+import { STATIC_COLLIDER_STAGE_REVISION, staticColliderMembers } from './static-colliders.js';
 import { composeNativeTextureClosure } from './native-texture-closure.js';
 import { buildGeometryLod, GEOMETRY_LOD_DIR, geometryLodFingerprint } from './geometry-lod/index.js';
 import { buildRoadDecals, ROAD_DECALS_DIR, roadDecalsFingerprint } from './road-decals.js';
@@ -64,6 +63,7 @@ export { borrowTerrainLayerTextures, collectLibraryDonors, terrainDonorLibrary, 
 export type { TerrainDonor, TerrainDonorPool, TerrainLayerReport } from './terrain-layer-textures.js';
 export { DEFAULT_SKY_PATH, resolveXodrPath, writeRoadSidecars, writeSky } from './sidecars.js';
 export { canonicalJson, closureBytes, closureDigest, sha256 } from './closure.js';
+export { STATIC_COLLIDER_STAGE_REVISION, staticColliderMembers, type StaticColliderMembers, type StaticColliderMembersInput } from './static-colliders.js';
 export type { ClosureKind, ClosureMember, MapClosure } from './closure.js';
 export {
   ROADWAY_CONSISTENCY_SCHEMA_VERSION,
@@ -521,42 +521,34 @@ async function webRuntimeStage(master: MasterStageResult, geometry: WebStageResu
   const masterMember = master.closure.members['master.gltf'];
   if (!topologyMember || !masterMember) throw new Error('Scenario-ready web maps require canonical geometry and topology');
   const verdicts = options.ambientTurnVerdicts;
-  const toolFingerprint = sha256(`${geometry.toolFingerprint}\0canonical-static-colliders-v2${verdicts ? `\0ambient-turn-verdicts=${verdicts.fingerprint}` : ''}`);
-  const inputDigest = sha256(canonicalJson({ mapId: options.name, geometry: geometry.closureDigest, master: masterMember.sha256, topology: topologyMember.sha256 }));
+  const toolFingerprint = sha256(`${geometry.toolFingerprint}\0${STATIC_COLLIDER_STAGE_REVISION}${verdicts ? `\0ambient-turn-verdicts=${verdicts.fingerprint}` : ''}`);
+  // The ground surface classifies overhead fixtures, so it is an input of the colliders.
+  const groundMember = master.closure.members[`${GROUND_DERIVED_DIR}/${GROUND_MESH_FILE}`];
+  const inputDigest = sha256(canonicalJson({ mapId: options.name, geometry: geometry.closureDigest, master: masterMember.sha256, topology: topologyMember.sha256, ground: groundMember?.sha256 ?? null }));
   const cacheKey = sha256(`${inputDigest}\0${toolFingerprint}`);
   const outputDir = path.resolve(options.workDir, 'web-runtime', cacheKey);
   const keys = { inputDigest, toolFingerprint, cacheKey };
   return withStageLock(outputDir, async () => {
     const cached = await cachedStage(outputDir);
     if (cached) return { ...keys, ...cached, outputDir: path.join(outputDir, 'content'), viewerOnly: false, report: geometry.report };
-    const [manifestBytes, masterBytes, topologyBytes] = await Promise.all([
+    const [manifestBytes, masterBytes, topologyBytes, groundBytes] = await Promise.all([
       readFile(path.join(geometry.outputDir, '3d', 'manifest.json')),
       readFile(path.join(master.outputDir, 'master.gltf')),
       readFile(path.join(master.outputDir, 'topology-index.json.gz')),
+      groundMember ? readFile(path.join(master.outputDir, ...GROUND_DERIVED_DIR.split('/'), GROUND_MESH_FILE)) : null,
     ]);
-    const sourceManifestSha256 = sha256(manifestBytes);
-    const artifact = buildStaticColliderArtifact({
-      mapId: options.name,
-      sourceManifestSha256,
-      manifest: JSON.parse(manifestBytes.toString('utf8')),
-      topology: JSON.parse(gunzipSync(topologyBytes).toString('utf8')),
-      canonicalGltf: { file: 'master.gltf', bytes: masterBytes },
-    });
-    const colliderBytes = Buffer.from(serializeStaticColliderArtifact(artifact));
     const contentDir = await resetStageContent(outputDir);
     await copyMembers(geometry.outputDir, contentDir, Object.keys(geometry.closure.members));
     const variantsDir = path.join(contentDir, '3d', 'variants');
     await mkdir(variantsDir, { recursive: true });
-    await writeFile(path.join(variantsDir, 'static-colliders-v1.json'), colliderBytes);
     const variantManifestPath = path.join(variantsDir, 'manifest.json');
-    const variants = JSON.parse(await readFile(variantManifestPath, 'utf8'));
-    variants.variants['static-colliders'] = {
-      id: 'static-colliders', schemaVersion: 1, file: 'static-colliders-v1.json',
-      digest: artifact.digest, outputSha256: sha256(colliderBytes), bytes: colliderBytes.length,
-      sourceTiles: artifact.statistics.sourceTiles, accepted: artifact.statistics.accepted,
-    };
+    const colliders = staticColliderMembers({
+      mapId: options.name, manifestBytes, masterBytes, topologyBytes, groundBytes,
+      variantsManifestBytes: await readFile(variantManifestPath),
+    });
+    await writeFile(path.join(variantsDir, colliders.file), colliders.artifactBytes);
     // copyMembers hardlinks immutable inputs: replace the manifest, never truncate it.
-    await writeFile(`${variantManifestPath}.tmp`, `${canonicalJson(variants)}\n`);
+    await writeFile(`${variantManifestPath}.tmp`, colliders.variantsManifestBytes);
     await rename(`${variantManifestPath}.tmp`, variantManifestPath);
     if (verdicts) {
       // After the colliders: the table is keyed by the simulation closure they belong to.

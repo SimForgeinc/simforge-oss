@@ -1,6 +1,31 @@
 import { createHash } from 'node:crypto';
 
-export const STATIC_COLLIDER_SCHEMA = 'simforge.static-map-colliders/v1';
+/**
+ * v2 adds each collider's vertical extent (`vertical: { minY, maxY }`, scene
+ * frame, y up, the same datum as the ground surface's z) and drops overhead
+ * fixtures at ingest. v1 artifacts carried a 2D footprint only, so the engine
+ * treated a signal mast arm 9 m above the carriageway as a wall standing on it.
+ * Published v1 artifacts stay loadable, with their full-height semantics.
+ */
+export const STATIC_COLLIDER_SCHEMA = 'simforge.static-map-colliders/v2';
+/** `variants['static-colliders'].schemaVersion` of an artifact this module builds. */
+export const STATIC_COLLIDER_SCHEMA_VERSION = 2;
+/** Published file name of an artifact this module builds (`3d/variants/<file>`). */
+export const STATIC_COLLIDER_FILE = 'static-colliders-v2.json';
+/**
+ * Clearance above every ground surface under a fixture at which no road
+ * vehicle can reach it, so ingest drops it (`rejectedOverhead`). US legal
+ * vehicle height tops out at 4.27 m (14 ft, California); MUTCD puts the bottom
+ * of an overhead signal head at 4.6 m (15 ft) at the least, and overhead signs,
+ * mast arms, luminaires and bridge soffits sit higher. Fixtures lower than
+ * this stay colliders and the engine tests them against each body's vertical
+ * extent (ground contact plus body height), so a 3.5 m truck still strikes a
+ * 3.2 m canopy that a car passes under.
+ */
+export const OVERHEAD_CLEARANCE_M = 4.6;
+/** Plan spacing of the ground samples taken under a fixture's footprint. */
+const OVERHEAD_SAMPLE_SPACING_M = 1;
+const OVERHEAD_MAX_SAMPLES_PER_AXIS = 32;
 const TRAVEL_LANE_TYPES = new Set(['driving', 'biking', 'parking', 'shoulder']);
 const ROAD_INDEX_CELL_M = 20;
 const COLLIDER_CLASSES = ['building', 'wall', 'barrier', 'prop', 'road-boundary'];
@@ -22,9 +47,12 @@ const MIN_EXTENT_M = 0.08;
  * are flat: a vehicle drives over them. Height is the one vertical measure
  * these sources support. The authored vertical datum differs per map (node
  * floors run from 0 m to 490 m across the ten exports) and relief inside a map
- * reaches 30 m, so nothing may be excluded for *being high up*: a mast arm
- * over the carriageway is rejected by the travel-lane test instead, and a
- * hillside building keeps its collider.
+ * reaches 30 m, so nothing may be excluded for its absolute height. A mast
+ * arm over the carriageway is excluded for its height *above the ground under
+ * it* (`isOverhead`, measured on the map's ground surface), and a hillside
+ * building keeps its collider. The travel-lane test alone never caught mast
+ * arms reliably: it samples lane polylines, and a 0.5 m signal head hanging
+ * between two samples of a junction lane survived it.
  */
 const MIN_OBSTACLE_HEIGHT_M = 0.15;
 /** Footprint and height at which an unnamed box is reported as a building. */
@@ -122,7 +150,7 @@ function extractJsonColliders(json, tileId) {
         else if (obb.lengthM < MIN_EXTENT_M || obb.widthM < MIN_EXTENT_M) exclude('tiny');
         else if (obb.heightM < MIN_OBSTACLE_HEIGHT_M) exclude('flat');
         else if (collisionClass === 'road-boundary' && Math.min(obb.lengthM, obb.widthM) > ROAD_BOUNDARY_MAX_THICKNESS_M) exclude('mergedBoundary');
-        else colliders.push({ id: `${tileId}/${index}`, class: collisionClass, obb: { center: obb.center, lengthM: obb.lengthM, widthM: obb.widthM, headingRad: obb.headingRad } });
+        else colliders.push({ id: `${tileId}/${index}`, class: collisionClass, obb: { center: obb.center, lengthM: obb.lengthM, widthM: obb.widthM, headingRad: obb.headingRad }, vertical: { minY: obb.minY, maxY: obb.maxY } });
       }
     }
     for (const child of node.children ?? []) visit(child, world, trait);
@@ -147,7 +175,8 @@ function extractJsonColliders(json, tileId) {
  * than a side effect. Published closures are immutable, so nothing already
  * published moves.
  */
-export function buildStaticColliderArtifact({ mapId, sourceManifestSha256, manifest, topology, readSource, canonicalGltf }) {
+export function buildStaticColliderArtifact({ mapId, sourceManifestSha256, manifest, topology, ground, readSource, canonicalGltf }) {
+  if (ground === undefined) throw new Error('Static collision build needs `ground`: the map\'s ground surface, or null when the map has none');
   if (!Array.isArray(manifest.tiles)) throw new Error('Static collision manifest has no tile list');
   const tileSources = manifest.tiles.map((tile, index) => {
     const lod = [...(tile.lods ?? [])].sort((a, b) => b.level - a.level || a.file.localeCompare(b.file))[0];
@@ -166,7 +195,7 @@ export function buildStaticColliderArtifact({ mapId, sourceManifestSha256, manif
   const classes = Object.fromEntries(COLLIDER_CLASSES.map((name) => [name, 0]));
   const travelLaneIndex = buildTravelLaneIndex(topology);
   const colliders = []; const sources = [];
-  let rejectedRoadOverlap = 0; let ignored = 0;
+  let rejectedRoadOverlap = 0; let rejectedOverhead = 0; let ignored = 0;
   for (const tile of selected) {
     const bytes = canonicalGltf ? canonicalGltf.bytes : readSource(tile.file);
     sources.push({ id: tile.id, file: tile.file, declaredBytes: tile.declaredBytes });
@@ -175,6 +204,7 @@ export function buildStaticColliderArtifact({ mapId, sourceManifestSha256, manif
       : extractGlbColliders(bytes, tile.id);
     ignored += extracted.ignored;
     for (const collider of extracted.colliders) {
+      if (ground && isOverhead(collider, ground)) { rejectedOverhead += 1; continue; }
       if (collider.class !== 'road-boundary' && overlapsTravelLane({ obb: footprintCore(collider.obb) }, travelLaneIndex)) { rejectedRoadOverlap += 1; continue; }
       classes[collider.class] += 1;
       colliders.push(collider);
@@ -182,7 +212,9 @@ export function buildStaticColliderArtifact({ mapId, sourceManifestSha256, manif
   }
   colliders.sort((a, b) => a.id.localeCompare(b.id));
   const payload = { schema: STATIC_COLLIDER_SCHEMA, mapId, sourceManifestSha256, sources, colliders,
-    statistics: { sourceTiles: selected.length, accepted: colliders.length, rejectedRoadOverlap, ignored, classes } };
+    // null: the map has no ground surface, so nothing was classified overhead.
+    overheadClearanceM: ground ? OVERHEAD_CLEARANCE_M : null,
+    statistics: { sourceTiles: selected.length, accepted: colliders.length, rejectedRoadOverlap, rejectedOverhead, ignored, classes } };
   return { ...payload, digest: `sha256-${sha256(Buffer.from(JSON.stringify(payload)))}` };
 }
 
@@ -284,9 +316,9 @@ function projectedObb(bounds, matrix) {
   const headingRad = Math.atan2(basis[2], basis[0]);
   const forward = [Math.cos(headingRad), Math.sin(headingRad)]; const left = [-forward[1], forward[0]];
   let halfLength = 0; let halfWidth = 0;
-  // `heightM` never reaches the artifact — the published OBB stays a 2D
-  // footprint — but admission needs it: a painted arrow and a wall have the
-  // same footprint and only one of them can be hit.
+  // `heightM` decides admission (a painted arrow and a wall have the same
+  // footprint and only one of them can be hit); `minY`/`maxY` are published
+  // as the collider's vertical extent.
   let minY = Infinity; let maxY = -Infinity;
   for (const x of [bounds.min[0], bounds.max[0]]) for (const y of [bounds.min[1], bounds.max[1]]) for (const z of [bounds.min[2], bounds.max[2]]) {
     const point = transformPoint(matrix, [x, y, z]); const dx = point[0] - center3[0]; const dz = point[2] - center3[2];
@@ -294,7 +326,39 @@ function projectedObb(bounds, matrix) {
     halfWidth = Math.max(halfWidth, Math.abs(dx * left[0] + dz * left[1]));
     minY = Math.min(minY, point[1]); maxY = Math.max(maxY, point[1]);
   }
-  return { center: { x: center3[0], z: center3[2] }, lengthM: halfLength * 2, widthM: halfWidth * 2, headingRad, heightM: maxY - minY };
+  return { center: { x: center3[0], z: center3[2] }, lengthM: halfLength * 2, widthM: halfWidth * 2, headingRad, heightM: maxY - minY, minY, maxY };
+}
+
+/**
+ * An overhead fixture: no body standing on any ground surface under its
+ * footprint can reach it. At every sample point of the footprint, each surface
+ * is either above the fixture's top (a body on it stands over the fixture: a
+ * deck over its own girders) or at least {@link OVERHEAD_CLEARANCE_M} below the
+ * fixture's bottom (a mast arm, signal head, luminaire or sign gantry over the
+ * carriageway, a bridge soffit over the road beneath). A footprint with no
+ * surface under it at all is not classified: nothing is known about what
+ * could stand there, so it stays a collider and the engine's vertical test
+ * decides.
+ *
+ * `ground.surfacesAt(x, y)` takes xodr-local plan coordinates (x east, y
+ * north; scene z = -y) and returns the surface heights there.
+ */
+function isOverhead(collider, ground) {
+  const { obb, vertical } = collider;
+  const cos = Math.cos(obb.headingRad); const sin = Math.sin(obb.headingRad);
+  const steps = (extent) => Math.min(OVERHEAD_MAX_SAMPLES_PER_AXIS, Math.max(1, Math.ceil(extent / OVERHEAD_SAMPLE_SPACING_M)));
+  const along = steps(obb.lengthM); const across = steps(obb.widthM);
+  let sampled = false;
+  for (let i = 0; i <= along; i += 1) for (let j = 0; j <= across; j += 1) {
+    const a = (i / along - 0.5) * obb.lengthM; const b = (j / across - 0.5) * obb.widthM;
+    // Scene frame: forward (cos, sin) and left (-sin, cos) over (x, z).
+    const x = obb.center.x + a * cos - b * sin; const z = obb.center.z + a * sin + b * cos;
+    for (const surface of ground.surfacesAt(x, -z)) {
+      sampled = true;
+      if (surface < vertical.maxY && surface + OVERHEAD_CLEARANCE_M > vertical.minY) return false;
+    }
+  }
+  return sampled;
 }
 
 /**

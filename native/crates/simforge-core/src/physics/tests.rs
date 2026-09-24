@@ -322,6 +322,64 @@ fn recorded_state_placement_resets_the_swept_origin_and_command() {
 }
 
 #[test]
+fn a_body_meets_a_static_collider_only_where_their_vertical_spans_overlap() {
+    // A car whose nose already overlaps a collider's footprint, closing at 10 m/s.
+    let contact = |collider: VerticalSpan| {
+        let (mut value, body) = backend(DYNAMIC_V1_DEFAULT_SUBSTEP_S, 1.0);
+        value
+            .set_state(
+                body,
+                VehicleMotionState {
+                    x: 0.0,
+                    y: 0.0,
+                    yaw_rad: 0.0,
+                    longitudinal_velocity_mps: 10.0,
+                    lateral_velocity_mps: 0.0,
+                    yaw_rate_radps: 0.0,
+                    steer_rad: 0.0,
+                    wheel_angular_speed_radps: 0.0,
+                    longitudinal_acceleration_mps2: 0.0,
+                },
+            )
+            .unwrap();
+        let fixture = WorldStaticCollider {
+            vertical: collider,
+            ..WorldStaticCollider::fixed(
+                "map:fixture",
+                Obb {
+                    center: Vec2 { x: 2.4, y: 0.0 },
+                    length_m: 0.6,
+                    width_m: 4.0,
+                    heading_rad: 0.0,
+                },
+            )
+        };
+        let car = VerticalSpan::new(10.0, 11.5);
+        let impulses = value
+            .step_world_vertical(&[body], &[(body, car)], &[fixture], TICK_S)
+            .unwrap()
+            .len();
+        (
+            impulses,
+            value.state(body).unwrap().longitudinal_velocity_mps,
+        )
+    };
+    // A mast arm 6 m over the road: no contact, the car keeps its speed.
+    assert_eq!(contact(VerticalSpan::new(16.0, 16.4)), (0, 10.0));
+    // The pole from the road up, a planar (v1) collider, and a fixture whose
+    // underside is exactly level with the roof: contact.
+    for span in [
+        VerticalSpan::new(9.9, 17.0),
+        VerticalSpan::UNBOUNDED,
+        VerticalSpan::new(11.5, 12.0),
+    ] {
+        let (impulses, speed) = contact(span);
+        assert_eq!(impulses, 1, "{span:?}");
+        assert!(speed < 10.0, "{span:?}: {speed}");
+    }
+}
+
+#[test]
 fn downed_walker_slides_passively_and_comes_to_rest() {
     let mut value = DynamicV1Backend::with_default_substep();
     let body = value
@@ -400,6 +458,7 @@ fn contact_body(rank: u32, x: f64, previous_x: f64, vx: f64, y: f64) -> PlanarCo
         vx,
         vy: 0.0,
         angular_velocity: 0.0,
+        vertical: VerticalSpan::UNBOUNDED,
     }
 }
 
@@ -692,6 +751,7 @@ fn fixed_actors_have_infinite_mass_and_shove_dynamic_bodies() {
             heading_rad: 0.0,
         },
         velocity: Vec2 { x: 5.0, y: 0.0 },
+        vertical: VerticalSpan::UNBOUNDED,
         angular_velocity: 0.0,
     };
     let before = value.state(bike).unwrap().planar_speed_mps();
@@ -1077,7 +1137,11 @@ fn pedals_alone_reverse_the_body_and_take_drive_again() {
     // The throttle is the service brake while reversing, and once stopped it
     // is the request to pull away forwards again.
     let forward = drive_for(&mut value, body, &driven(1.0, 0.0, 0.0, false), 3.0);
-    assert!(forward.telemetry.gear > 0, "gear {}", forward.telemetry.gear);
+    assert!(
+        forward.telemetry.gear > 0,
+        "gear {}",
+        forward.telemetry.gear
+    );
     assert!(
         forward.state.longitudinal_velocity_mps > 1.0,
         "should be driving forwards, got {}",

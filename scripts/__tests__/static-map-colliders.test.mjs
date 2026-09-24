@@ -14,12 +14,15 @@ test('static collider artifact is byte-for-byte deterministic and schema-stable'
     sourceManifestSha256: 'a'.repeat(64),
     manifest: { tiles: [{ id: 'yale-0-0', lods: [{ level: 3, file: 'tile.glb' }] }] },
     topology: { lanes: {} },
+    ground: null,
     readSource: () => bytes,
   };
   const first = buildStaticColliderArtifact(input);
   const second = buildStaticColliderArtifact(input);
   assert.equal(serializeStaticColliderArtifact(first), serializeStaticColliderArtifact(second));
-  assert.equal(first.schema, 'simforge.static-map-colliders/v1');
+  assert.equal(first.schema, 'simforge.static-map-colliders/v2');
+  assert.equal(first.overheadClearanceM, null);
+  assert.ok(first.colliders.every(({ vertical }) => Number.isFinite(vertical.minY) && vertical.maxY > vertical.minY));
   assert.match(first.digest, /^sha256-[a-f0-9]{64}$/);
   assert.deepEqual(first.colliders, extractGlbColliders(bytes, 'yale-0-0').colliders.sort((a, b) => a.id.localeCompare(b.id)));
 });
@@ -46,6 +49,7 @@ test('only explicitly named curbs become road-boundary colliders', () => {
     mapId: 'curb-test', sourceManifestSha256: 'a'.repeat(64),
     manifest: { tiles: [{ id: 'tile', lods: [{ level: 3, file: 'tile.glb' }] }] },
     topology: { lanes: { lane: { laneType: 'driving', representativeWidthM: 3.5, polyline: [[0, 0], [2, 0]] } } },
+    ground: null,
     readSource: () => glb,
   });
   assert.deepEqual(artifact.colliders.map(({ id, class: kind }) => ({ id, kind })), [{ id: 'tile/0', kind: 'road-boundary' }]);

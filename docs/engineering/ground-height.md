@@ -105,6 +105,45 @@ Map versions published before the ground derivative keep simulating without
 contact (their pins and simulation keys are unchanged); their timelines are
 labelled `legacy-xodr-elevation`.
 
+## Map colliders have heights
+
+Engine 0.12.0. The static-collider artifact (`simforge.static-map-colliders/v2`,
+`3d/variants/static-colliders-v2.json`) publishes each collider's vertical
+extent, and a grounded body meets a map collider only where their vertical
+spans overlap. Before it, a collider was a 2D footprint standing at full
+height, so on San Ramon P1 a sedan crossing junction 5249 under a signal
+head hanging from a mast arm (`Signal_3Light_Post01`, node 999) was
+crash-disabled by it.
+
+- **Ingest** (`@simforge-oss/maps` `buildStaticColliderArtifact`, given the
+  map's ground surface): every collider carries `vertical: {minY, maxY}` in
+  the scene frame (y up), the ground mesh's datum. A fixture is dropped as
+  overhead (`statistics.rejectedOverhead`) when, at every sample of its
+  footprint (1 m grid), each ground surface there lies either above its top (a
+  deck over its own girders) or at least `OVERHEAD_CLEARANCE_M` = 4.6 m below
+  its bottom. US legal vehicle height tops out at 4.27 m and MUTCD puts
+  overhead signal heads at 4.6 m or higher. A footprint with no surface under
+  it is not classified. On San Ramon P1 this drops 417 fixtures (luminaire
+  heads and arms, mast-arm signal heads, signal mast arms); pole-mounted heads
+  3.7-4.5 m up stay. Without a ground surface (uploaded maps, editor
+  derivatives) nothing is classified and `overheadClearanceM` is `null`.
+- **Engine**: a body's span runs from its ground contact `z` to `z + dims.h`,
+  widened by `L/2·sin|pitch| + W/2·sin|roll|`. Collision detection, the contact
+  solver (dynamic body against map collider) and ego line of sight (a collider
+  outside the band both bodies span cannot block it) all test it.
+  Body/body contact stays planar. Detection runs before the tick's contact
+  update, so it reads the previous tick's contact; a body on its first tick
+  gets the contact about to be computed.
+- **Without ground** the extents cannot be used: every collider stands at full
+  height and the run reports `static_collider_heights_unused` (a warning).
+- **v1 artifacts** (no extents) load unchanged with full-height semantics, and
+  their closure digest is unchanged (an absent extent is not serialized).
+- The SUMO handoff world is planar (its bodies carry no contact); it relies on
+  the ingest classification.
+
+A map version whose collider artifact moves to v2 is a new map version: the
+artifact is a simulation member (`SIMULATION_MAP_MEMBERS`).
+
 ## Rollout
 
 1. Derivative, Rust surface, ingest gates, the Richmond fixture: done.

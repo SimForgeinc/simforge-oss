@@ -33,7 +33,7 @@ pub use output::{
     ActorState, CheckpointOptions, LateralCommandState, PendingRetargetState, SimulationCheckpoint,
 };
 pub use signals::{signal_snapshot_at, SignalBook, SignalSnapshot};
-pub use static_colliders::{SceneObb, StaticColliderClass, StaticMapCollider};
+pub use static_colliders::{ColliderVertical, SceneObb, StaticColliderClass, StaticMapCollider};
 pub use triggers::{CollisionParty, ResolvedCondition, TriggerProgress, TriggerStatus};
 pub use world::{
     run_simulation, ActionOverride, ActorAction, ActorSnapshot, AmbientReactivity, EngineResult,

@@ -48,7 +48,20 @@ pub const MAP_CLOSURE_VERSION: &str = "simforge.map-closure/v1";
 /// every host that builds a bundle (browser WASM, Node addon, CLI, workers)
 /// simulates against the same colliders.
 pub const ROAD_BOUNDARY_MAX_THICKNESS_M: f64 = 2.0;
-pub const STATIC_COLLIDERS_SCHEMA: &str = "simforge.static-map-colliders/v1";
+/// Collider artifact schema per `variants['static-colliders'].schemaVersion`.
+/// v1: 2D footprints (each collider a full-height prism). v2: every collider
+/// also carries its vertical extent, and overhead fixtures are dropped at
+/// ingest. Published v1 artifacts stay loadable with their v1 semantics.
+pub const STATIC_COLLIDERS_SCHEMA_V1: &str = "simforge.static-map-colliders/v1";
+pub const STATIC_COLLIDERS_SCHEMA: &str = "simforge.static-map-colliders/v2";
+
+fn static_colliders_schema(version: u64) -> Option<&'static str> {
+    match version {
+        1 => Some(STATIC_COLLIDERS_SCHEMA_V1),
+        2 => Some(STATIC_COLLIDERS_SCHEMA),
+        _ => None,
+    }
+}
 
 /// Files a complete installed map must carry.
 pub const REQUIRED_FILES: [&str; 5] = [
@@ -268,10 +281,11 @@ fn load_static_colliders_strict(
         .get("outputSha256")
         .and_then(Value::as_str)
         .unwrap_or("");
-    if variant.get("schemaVersion").and_then(Value::as_u64) != Some(1)
-        || file.is_none()
-        || !is_sha256(output_sha)
-    {
+    let schema = variant
+        .get("schemaVersion")
+        .and_then(Value::as_u64)
+        .and_then(static_colliders_schema);
+    if schema.is_none() || file.is_none() || !is_sha256(output_sha) {
         return Err(CompileError::new(
             "static_colliders_missing",
             "Static collision derivative is not published for this map",
@@ -287,7 +301,7 @@ fn load_static_colliders_strict(
     }
     let artifact: Value = serde_json::from_slice(&bytes)
         .map_err(|e| CompileError::new("invalid_json", e.to_string()))?;
-    if artifact.get("schema").and_then(Value::as_str) != Some(STATIC_COLLIDERS_SCHEMA)
+    if artifact.get("schema").and_then(Value::as_str) != schema
         || !artifact.get("mapId").is_some_and(Value::is_string)
     {
         return Err(CompileError::new(
@@ -310,6 +324,26 @@ fn load_static_colliders_strict(
             format!("Static collision artifact has malformed collections: {e}"),
         )
     })?;
+    // v2 publishes every collider's vertical extent; v1 none. A mix would
+    // make half a map's colliders full-height prisms without saying so.
+    let v2 = schema == Some(STATIC_COLLIDERS_SCHEMA);
+    if let Some(bad) = colliders.iter().find(|c| match c.vertical {
+        Some(v) => !v2 || !(v.min_y.is_finite() && v.max_y.is_finite() && v.min_y <= v.max_y),
+        None => v2,
+    }) {
+        return Err(CompileError::new(
+            "static_colliders_schema",
+            format!(
+                "Static collision artifact has malformed collider {}: {} vertical extent",
+                bad.id,
+                if v2 {
+                    "missing or invalid"
+                } else {
+                    "unexpected"
+                }
+            ),
+        ));
+    }
     let sources = artifact
         .get("sources")
         .and_then(Value::as_array)
@@ -657,11 +691,22 @@ mod closure_tests {
     use simforge_core::engine::SceneObb;
     use simforge_core::math::SceneXZ;
 
-    fn collider(id: &str, class: StaticColliderClass, length_m: f64, width_m: f64) -> StaticMapCollider {
+    fn collider(
+        id: &str,
+        class: StaticColliderClass,
+        length_m: f64,
+        width_m: f64,
+    ) -> StaticMapCollider {
         StaticMapCollider {
             id: id.to_owned(),
             class,
-            obb: SceneObb { center: SceneXZ { x: 0.0, z: 0.0 }, length_m, width_m, heading_rad: 0.0 },
+            obb: SceneObb {
+                center: SceneXZ { x: 0.0, z: 0.0 },
+                length_m,
+                width_m,
+                heading_rad: 0.0,
+            },
+            vertical: None,
         }
     }
 
@@ -702,7 +747,10 @@ mod closure_tests {
         let unfiltered = bundle(all.clone());
         assert_eq!(unfiltered.static_colliders().len(), 2);
         assert_eq!(unfiltered.static_collider_diagnostics().ignored, 1);
-        assert_eq!(unfiltered.static_collider_diagnostics().classes["road-boundary"], 1);
+        assert_eq!(
+            unfiltered.static_collider_diagnostics().classes["road-boundary"],
+            1
+        );
         // A host that filtered already (the browser loader) builds the same closure.
         let prefiltered = bundle(all.into_iter().filter(|c| c.id != "slab").collect());
         assert_eq!(unfiltered.closure_digest(), prefiltered.closure_digest());
@@ -710,12 +758,131 @@ mod closure_tests {
 
     #[test]
     fn closure_digest_covers_colliders_and_is_stable() {
-        let a = bundle(vec![collider("b", StaticColliderClass::Building, 40.0, 30.0), collider("k", StaticColliderClass::RoadBoundary, 3.0, 0.4)]);
-        let b = bundle(vec![collider("b", StaticColliderClass::Building, 40.0, 31.0), collider("k", StaticColliderClass::RoadBoundary, 3.0, 0.4)]);
+        let a = bundle(vec![
+            collider("b", StaticColliderClass::Building, 40.0, 30.0),
+            collider("k", StaticColliderClass::RoadBoundary, 3.0, 0.4),
+        ]);
+        let b = bundle(vec![
+            collider("b", StaticColliderClass::Building, 40.0, 31.0),
+            collider("k", StaticColliderClass::RoadBoundary, 3.0, 0.4),
+        ]);
         assert_eq!(a.closure_digest().len(), 64);
         assert_eq!(a.closure_digest(), a.clone().closure_digest());
         assert_ne!(a.closure_digest(), b.closure_digest());
-        let none = MapBundle::from_topology("closure-test", crate::test_support::topology()).expect("bundle");
+        let none = MapBundle::from_topology("closure-test", crate::test_support::topology())
+            .expect("bundle");
         assert_ne!(a.closure_digest(), none.closure_digest());
+    }
+
+    #[test]
+    fn vertical_extents_are_part_of_the_closure_and_absent_ones_serialize_as_v1() {
+        let flat = collider("b", StaticColliderClass::Building, 40.0, 30.0);
+        let v1 = serde_json::to_value(&flat).expect("json");
+        assert!(
+            v1.get("vertical").is_none(),
+            "a v1 collider must serialize exactly as before"
+        );
+        let tall = StaticMapCollider {
+            vertical: Some(simforge_core::engine::ColliderVertical {
+                min_y: 0.0,
+                max_y: 12.0,
+            }),
+            ..flat.clone()
+        };
+        let road = collider("k", StaticColliderClass::RoadBoundary, 3.0, 0.4);
+        assert_ne!(
+            bundle(vec![flat, road.clone()]).closure_digest(),
+            bundle(vec![tall, road]).closure_digest()
+        );
+    }
+
+    /// A published collider derivative in `dir/3d/`, as the map pipeline lays it out.
+    fn publish(dir: &Path, schema_version: u64, schema: &str, colliders: Value) {
+        let three_d = dir.join("3d");
+        std::fs::create_dir_all(three_d.join("variants")).expect("mkdir");
+        let manifest = b"{\"tiles\":[]}\n";
+        std::fs::write(three_d.join("manifest.json"), manifest).expect("manifest");
+        let source = sha256_bytes(manifest);
+        let count = colliders.as_array().map_or(0, Vec::len);
+        let artifact = serde_json::json!({
+            "schema": schema, "mapId": "loader-test", "sourceManifestSha256": source,
+            "sources": [{ "id": "canonical-master", "file": "master.gltf", "declaredBytes": 1 }],
+            "colliders": colliders,
+            "statistics": { "sourceTiles": 1, "accepted": count, "rejectedRoadOverlap": 0, "rejectedOverhead": 0, "ignored": 0,
+                "classes": { "building": 0, "wall": 0, "barrier": 0, "prop": count, "road-boundary": 0 } },
+            "digest": format!("sha256-{}", "0".repeat(64)),
+        });
+        let bytes = serde_json::to_vec(&artifact).expect("artifact");
+        let file = format!("static-colliders-v{schema_version}.json");
+        std::fs::write(three_d.join("variants").join(&file), &bytes).expect("artifact");
+        let variants = serde_json::json!({ "schemaVersion": 1, "sourceManifestSha256": source, "variants": {
+            "static-colliders": { "id": "static-colliders", "schemaVersion": schema_version, "file": file,
+                "digest": format!("sha256-{}", "0".repeat(64)), "outputSha256": sha256_bytes(&bytes) } } });
+        std::fs::write(
+            three_d.join("variants").join("manifest.json"),
+            serde_json::to_vec(&variants).expect("variants"),
+        )
+        .expect("variants");
+    }
+
+    fn scratch_dir(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("simforge-colliders-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        dir
+    }
+
+    #[test]
+    fn loader_reads_v2_vertical_extents_and_still_reads_v1() {
+        let pole = serde_json::json!({ "id": "canonical-master/1", "class": "prop",
+            "obb": { "center": { "x": 1.0, "z": 2.0 }, "lengthM": 0.4, "widthM": 0.4, "headingRad": 0.0 } });
+        let mut pole_v2 = pole.clone();
+        pole_v2["vertical"] = serde_json::json!({ "minY": 0.1, "maxY": 7.0 });
+
+        let v2 = scratch_dir("v2");
+        publish(
+            &v2,
+            2,
+            STATIC_COLLIDERS_SCHEMA,
+            serde_json::json!([pole_v2.clone()]),
+        );
+        let (colliders, diagnostics) = load_static_colliders_strict(&v2).expect("v2 loads");
+        assert_eq!(diagnostics.status, StaticColliderStatus::Ready);
+        assert_eq!(
+            colliders[0].vertical,
+            Some(simforge_core::engine::ColliderVertical {
+                min_y: 0.1,
+                max_y: 7.0
+            })
+        );
+
+        let v1 = scratch_dir("v1");
+        publish(
+            &v1,
+            1,
+            STATIC_COLLIDERS_SCHEMA_V1,
+            serde_json::json!([pole.clone()]),
+        );
+        let (colliders, _) = load_static_colliders_strict(&v1).expect("v1 still loads");
+        assert_eq!(colliders[0].vertical, None);
+
+        // v2 without an extent, v1 with one, and a v2 artifact published as v1 all fail closed.
+        for (name, version, schema, collider) in [
+            ("v2-missing", 2, STATIC_COLLIDERS_SCHEMA, pole.clone()),
+            ("v1-extra", 1, STATIC_COLLIDERS_SCHEMA_V1, pole_v2.clone()),
+            ("v2-as-v1", 1, STATIC_COLLIDERS_SCHEMA, pole_v2.clone()),
+        ] {
+            let dir = scratch_dir(name);
+            publish(&dir, version, schema, serde_json::json!([collider]));
+            let error = load_static_colliders_strict(&dir).expect_err(name);
+            assert_eq!(
+                error.code, "static_colliders_schema",
+                "{name}: {}",
+                error.reason
+            );
+            let _ = std::fs::remove_dir_all(&dir);
+        }
+        let _ = std::fs::remove_dir_all(&v1);
+        let _ = std::fs::remove_dir_all(&v2);
     }
 }

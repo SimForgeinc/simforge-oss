@@ -49,8 +49,15 @@ The build writes only under the selected map's ignored `3d/variants/` folder:
 - Road tiles are emitted only when every complete road node fits a spatial cell.
   Any hierarchy or boundary-crossing sheet blocks tiling rather than cutting
   geometry, lane markings, or ground continuity heuristically.
-- `static-colliders-v1.json` contains compact scene-frame OBBs for every static
-  mesh with real volume. Admission is solid-by-default, because the authored
+- `static-colliders-v2.json` contains compact scene-frame OBBs for every static
+  mesh with real volume, each with its vertical extent (`vertical: {minY,
+  maxY}`, on the ground surface's datum). Fixtures that no body standing on
+  the ground under them can reach (signal and luminaire mast arms, signal
+  heads over the carriageway, bridge soffits: at least 4.6 m over every
+  surface below them) are dropped at ingest; the engine tests the rest against
+  each body's vertical span (docs/engineering/ground-height.md, "Map colliders
+  have heights"). Published `static-colliders-v1.json` artifacts (2D
+  footprints, full-height prisms) stay loadable. Admission is solid-by-default, because the authored
   exports name mesh nodes after the component that emitted them
   (`InstancedStaticMeshComponent_0:7`) rather than after what they are: a name
   list admitted 27 of Belmont's 4869 mesh nodes and no building at all.

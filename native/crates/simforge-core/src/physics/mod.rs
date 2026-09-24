@@ -31,7 +31,7 @@ mod tests;
 
 pub use collision::{
     swept_obb_time_of_impact, CollisionImpulse, ContactPose, ContactRef, PlanarCollisionBody,
-    PlanarContactSolver, PlanarStaticCollider, DEFAULT_CONTACT_FRICTION,
+    PlanarContactSolver, PlanarStaticCollider, VerticalSpan, DEFAULT_CONTACT_FRICTION,
     DEFAULT_CONTACT_RESTITUTION,
 };
 pub use dynamic_v1::{
@@ -39,11 +39,11 @@ pub use dynamic_v1::{
     BALANCE_RECOVERY_DELTA_V_MPS, DYNAMIC_V1_DEFAULT_SUBSTEP_S, DYNAMIC_V1_ID, DYNAMIC_V1_VERSION,
     SLIDING_FRICTION_COEFFICIENT, STANDARD_GRAVITY_MPS2,
 };
+pub use gearbox::{gearbox_for, Gearbox, GEAR_NEUTRAL, GEAR_REVERSE};
 pub use handoff::{
     HandoffActor, HandoffBody, HandoffOrigin, TrafficHandoffWorld, HANDOFF_MIN_IMPACT_SPEED_MPS,
     HANDOFF_RESTITUTION,
 };
-pub use gearbox::{gearbox_for, Gearbox, GEAR_NEUTRAL, GEAR_REVERSE};
 pub use motion::{
     AxleUtilization, BodyIndex, MotionActorInitialization, MotionBackend, MotionDirection,
     MotionInitialState, MotionIntent, MotionStepResult, PhysicsError, PhysicsTelemetrySample,

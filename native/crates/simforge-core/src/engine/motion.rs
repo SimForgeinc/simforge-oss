@@ -10,8 +10,8 @@ use crate::error::{SimEngineError, SimIssue, SimIssueCode};
 use crate::map::LaneId;
 use crate::math::{angle_delta, atan2, cos, hypot, normalize_angle, sin, Vec2};
 use crate::physics::{
-    BodyIndex, MotionBackend, MotionDirection, MotionIntent, VehicleMotionState, WorldContactRef,
-    WorldStaticCollider, BALANCE_RECOVERY_DELTA_V_MPS,
+    BodyIndex, MotionBackend, MotionDirection, MotionIntent, VehicleMotionState, VerticalSpan,
+    WorldContactRef, WorldStaticCollider, BALANCE_RECOVERY_DELTA_V_MPS,
 };
 use crate::trace::metrics::StaticShape;
 use crate::trace::{AbortReason, ActorFrame, PhysicsFrame, ReleasedReason, SignalFrame, SimEvent};
@@ -25,7 +25,6 @@ use super::controllers::{
     heading_with_slip, lateral_progress_rate, lateral_sample_at, lateral_step, limits_for,
     longitudinal_accel, prescribed_speed_step, ConflictHazard, Leader,
 };
-use crate::types::{DynamicsConstraint, DynamicsShape};
 use super::cornering::{cornering_plan, CornerSpeedInput, CorneringPlan};
 use super::gear::{
     gear_of_motion_direction, govern_speed_for_gear, GEAR_ENGAGE_SPEED_MPS,
@@ -42,6 +41,7 @@ use super::world::{
     REACTIVE_MAX_RANGE_M2, REACTIVE_SCAN_RADIUS_M, ROUTE_END_SLACK_M,
 };
 use crate::trace::pairs::along_route_gap_m;
+use crate::types::{DynamicsConstraint, DynamicsShape};
 
 /// One actor's planned next state.
 #[derive(Debug, Clone, Default)]
@@ -721,7 +721,9 @@ impl Simulation {
             // A prescribed profile only needs the cornering envelope as a curve
             // speed check; its own shape decides how it gets to the target
             // (with 0 the envelope would otherwise converge to rest itself).
-            Some(cmd) if cmd.kind == LongitudinalKind::Speed && cmd.prescribed => cmd.v0.max(cmd.target),
+            Some(cmd) if cmd.kind == LongitudinalKind::Speed && cmd.prescribed => {
+                cmd.v0.max(cmd.target)
+            }
             Some(cmd) if cmd.kind == LongitudinalKind::Speed => cmd.target,
             _ => cruise_speed(a, lane_speed_limit),
         };
@@ -946,20 +948,33 @@ impl Simulation {
         plan.accel = accel;
         plan.speed = speed;
         plan.route_s = a.route_s + along;
-        if let Some((station_index, station)) = a.route_stations.iter().enumerate().find(|(idx, station)| {
-            !a.route_station_states[*idx].released
-                && a.route_s <= station.s + 0.05
-                && plan.route_s >= station.s - 0.05
-        }) {
+        if let Some((station_index, station)) =
+            a.route_stations.iter().enumerate().find(|(idx, station)| {
+                !a.route_station_states[*idx].released
+                    && a.route_s <= station.s + 0.05
+                    && plan.route_s >= station.s - 0.05
+            })
+        {
             let state = &a.route_station_states[station_index];
-            let group_ready = station.coordination_id.as_ref().is_none_or(|coordination_id| {
-                self.actors.iter().all(|other| {
-                    other.route_stations.iter().enumerate()
-                        .filter(|(_, peer)| peer.coordination_id.as_ref() == Some(coordination_id))
-                        .all(|(peer_index, peer)| other.route_station_states[peer_index].stopped_since_s
-                            .is_some_and(|stopped| t - stopped >= peer.dwell_s))
-                })
-            });
+            let group_ready = station
+                .coordination_id
+                .as_ref()
+                .is_none_or(|coordination_id| {
+                    self.actors.iter().all(|other| {
+                        other
+                            .route_stations
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, peer)| {
+                                peer.coordination_id.as_ref() == Some(coordination_id)
+                            })
+                            .all(|(peer_index, peer)| {
+                                other.route_station_states[peer_index]
+                                    .stopped_since_s
+                                    .is_some_and(|stopped| t - stopped >= peer.dwell_s)
+                            })
+                    })
+                });
             if state.stopped_since_s.is_none()
                 || t - state.stopped_since_s.unwrap_or(t) < station.dwell_s
                 || !group_ready
@@ -1113,7 +1128,11 @@ impl Simulation {
             if prescribe_long || prescribe_lat {
                 // Re-seat the body on the authored kinematics; physics keeps the
                 // rest of its state (steer, wheels, gear) for when it resumes.
-                let v = if prescribe_long { speed } else { st.longitudinal_velocity_mps.abs() };
+                let v = if prescribe_long {
+                    speed
+                } else {
+                    st.longitudinal_velocity_mps.abs()
+                };
                 let covered = if prescribe_long {
                     path_distance
                 } else {
@@ -1130,17 +1149,31 @@ impl Simulation {
                     plan.position = a.route.point_with_offset(s_new, lat.offset);
                     plan.heading = normalize_angle(
                         a.route.pose_at(s_new).heading_rad
-                            + if lat.rate == 0.0 { 0.0 } else { atan2(lat.rate, v_along.max(1e-6)) },
+                            + if lat.rate == 0.0 {
+                                0.0
+                            } else {
+                                atan2(lat.rate, v_along.max(1e-6))
+                            },
                     );
                     plan.lateral_complete = lat.complete;
                     if lat.complete {
-                        if let Some(cmd) = a.lat_cmd.as_ref().filter(|c| c.kind == LateralKind::ChangeLane) {
+                        if let Some(cmd) = a
+                            .lat_cmd
+                            .as_ref()
+                            .filter(|c| c.kind == LateralKind::ChangeLane)
+                        {
                             plan.swap = cmd.pending.clone();
                         }
                     }
                 } else {
-                    let forward = Vec2 { x: cos(st.yaw_rad), y: sin(st.yaw_rad) };
-                    let moved = Vec2 { x: position.x - a.position.x, y: position.y - a.position.y };
+                    let forward = Vec2 {
+                        x: cos(st.yaw_rad),
+                        y: sin(st.yaw_rad),
+                    };
+                    let moved = Vec2 {
+                        x: position.x - a.position.x,
+                        y: position.y - a.position.y,
+                    };
                     let along_physics = moved.x * forward.x + moved.y * forward.y;
                     let corrected = Vec2 {
                         x: position.x + forward.x * (covered - along_physics),
@@ -1256,18 +1289,30 @@ impl Simulation {
             if !self.actors[index].is_live() {
                 continue;
             }
-            let station_release: Vec<bool> = self.actors[index].route_stations.iter().enumerate().map(|(si, station)| {
-                let state = &self.actors[index].route_station_states[si];
-                if station.coordination_id.is_none() || state.stopped_since_s.is_none() {
-                    return true;
-                }
-                self.actors.iter().all(|other| {
-                    other.route_stations.iter().enumerate().filter(|(_, peer)| peer.coordination_id == station.coordination_id)
-                        .all(|(pi, peer)| other.route_station_states.get(pi).is_some_and(|ps| {
-                            ps.stopped_since_s.is_some() && t - ps.stopped_since_s.unwrap_or(t) >= peer.dwell_s
-                        }))
+            let station_release: Vec<bool> = self.actors[index]
+                .route_stations
+                .iter()
+                .enumerate()
+                .map(|(si, station)| {
+                    let state = &self.actors[index].route_station_states[si];
+                    if station.coordination_id.is_none() || state.stopped_since_s.is_none() {
+                        return true;
+                    }
+                    self.actors.iter().all(|other| {
+                        other
+                            .route_stations
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, peer)| peer.coordination_id == station.coordination_id)
+                            .all(|(pi, peer)| {
+                                other.route_station_states.get(pi).is_some_and(|ps| {
+                                    ps.stopped_since_s.is_some()
+                                        && t - ps.stopped_since_s.unwrap_or(t) >= peer.dwell_s
+                                })
+                            })
+                    })
                 })
-            }).collect();
+                .collect();
             {
                 let a = &mut self.actors[index];
                 a.speed_mps = plan.speed;
@@ -1286,7 +1331,9 @@ impl Simulation {
                     if !state.released && (a.route_s - station.s).abs() <= 0.05 {
                         if state.stopped_since_s.is_none() {
                             state.stopped_since_s = Some(t);
-                        } else if station_release[station_index] && t - state.stopped_since_s.unwrap_or(t) >= station.dwell_s {
+                        } else if station_release[station_index]
+                            && t - state.stopped_since_s.unwrap_or(t) >= station.dwell_s
+                        {
                             state.released = true;
                             state.released_at_s = Some(t);
                         }
@@ -1480,6 +1527,7 @@ impl Simulation {
     fn resolve_dynamic_contacts(&mut self, t: f64) -> EngineResult<()> {
         let dt = self.dt;
         let mut active: Vec<BodyIndex> = Vec::new();
+        let mut body_vertical: Vec<(BodyIndex, VerticalSpan)> = Vec::new();
         let mut speed_before: Vec<(ActorIndex, f64)> = Vec::new();
         let mut static_slots: Vec<u32> = Vec::new();
         let mut shapes = std::mem::take(&mut self.scratch.current_shapes);
@@ -1490,6 +1538,9 @@ impl Simulation {
                 continue;
             }
             active.push(body);
+            if self.statics.has_vertical() {
+                body_vertical.push((body, self.body_vertical_span(a.index.index())));
+            }
             if a.kind.is_knockdown_vulnerable() {
                 if let Some(st) = self.physics.state(body) {
                     speed_before.push((
@@ -1523,7 +1574,10 @@ impl Simulation {
             Vec::with_capacity(static_slots.len() + self.actors.len());
         for &slot in &static_slots {
             let shape = self.statics.shape(slot);
-            colliders.push(WorldStaticCollider::fixed(&shape.id, shape.obb));
+            colliders.push(WorldStaticCollider {
+                vertical: shape.vertical,
+                ..WorldStaticCollider::fixed(&shape.id, shape.obb)
+            });
         }
         for a in &self.actors {
             if a.body.is_some() || !a.is_live() {
@@ -1534,11 +1588,12 @@ impl Simulation {
                 obb: a.obb(),
                 velocity: a.velocity(),
                 angular_velocity: 0.0,
+                vertical: VerticalSpan::UNBOUNDED,
             });
         }
         let backend = &mut self.physics;
         backend
-            .step_world(&active, &colliders, dt)
+            .step_world_vertical(&active, &body_vertical, &colliders, dt)
             .map_err(engine_err)?;
         let backend = &*backend;
         // Knockdowns: normal impulse per actor body, first partner wins.
@@ -1694,25 +1749,7 @@ impl Simulation {
                 self.contact[index] = super::contact::ContactState::default();
                 continue;
             }
-            let wheelbase = a
-                .body
-                .and_then(|body| self.physics.profile(body))
-                .map(|profile| profile.wheelbase_m);
-            let geometry = super::contact::ContactGeometry::for_actor(a.kind, &a.dims, wheelbase);
-            let lane = a.route.pose_at(a.route_s).lane.or_else(|| {
-                if a.route.is_freeform() {
-                    a.freeform_lane_binding.and_then(|b| b.1)
-                } else {
-                    None
-                }
-            });
-            let road_hint = lane.and_then(|lane| {
-                self.graph
-                    .rsl(lane)
-                    .split(':')
-                    .next()
-                    .and_then(|road| road.parse::<i64>().ok())
-            });
+            let (geometry, road_hint) = self.contact_inputs(index);
             let state = super::contact::solve_contact(
                 &ground,
                 geometry,
@@ -1763,6 +1800,80 @@ impl Simulation {
         Ok(())
     }
 
+    /// Actor `index`'s wheel layout and the road its lane belongs to (the
+    /// deck hint of a contact that chooses its surface anew).
+    fn contact_inputs(&self, index: usize) -> (super::contact::ContactGeometry, Option<i64>) {
+        let a = &self.actors[index];
+        let wheelbase = a
+            .body
+            .and_then(|body| self.physics.profile(body))
+            .map(|profile| profile.wheelbase_m);
+        let geometry = super::contact::ContactGeometry::for_actor(a.kind, &a.dims, wheelbase);
+        let lane = a.route.pose_at(a.route_s).lane.or_else(|| {
+            if a.route.is_freeform() {
+                a.freeform_lane_binding.and_then(|b| b.1)
+            } else {
+                None
+            }
+        });
+        let road_hint = lane.and_then(|lane| {
+            self.graph
+                .rsl(lane)
+                .split(':')
+                .next()
+                .and_then(|road| road.parse::<i64>().ok())
+        });
+        (geometry, road_hint)
+    }
+
+    /// A live body's vertical span against the map's static colliders: from
+    /// its ground contact to its roof (`dims.h`), widened by how far the
+    /// ends and sides of its footprint rise and fall on the road's pitch and
+    /// roll. It decides only body/map-collider contact; body/body contact
+    /// stays planar.
+    ///
+    /// Unbounded (every collider is full height, the v1 semantics) when the
+    /// map's colliders carry no vertical extent, or the run has no ground
+    /// surface to give the body a height (reported once at construction as
+    /// `static_collider_heights_unused`).
+    ///
+    /// Collision detection runs before this tick's contact update, so it
+    /// reads the contact of the previous tick (20 ms of travel). A body not
+    /// grounded yet, on its first tick, gets the contact the update is about
+    /// to compute, solved here without committing it.
+    pub(super) fn body_vertical_span(&self, index: usize) -> VerticalSpan {
+        if !self.statics.has_vertical() {
+            return VerticalSpan::UNBOUNDED;
+        }
+        let Some(ground) = self.options.ground.as_deref() else {
+            return VerticalSpan::UNBOUNDED;
+        };
+        let a = &self.actors[index];
+        let state = &self.contact[index];
+        let frame = if state.grounded {
+            state.frame
+        } else {
+            let (geometry, road_hint) = self.contact_inputs(index);
+            match super::contact::solve_contact(
+                ground,
+                geometry,
+                a.position.x,
+                a.position.y,
+                a.heading_rad,
+                &super::contact::ContactState::default(),
+                road_hint,
+                &a.id,
+            ) {
+                Ok(state) => state.frame,
+                // No surface under it: this tick's contact update fails the run.
+                Err(_) => return VerticalSpan::UNBOUNDED,
+            }
+        };
+        let rise = 0.5 * a.dims.l * sin(frame.pitch_rad.abs())
+            + 0.5 * a.dims.w * sin(frame.roll_rad.abs());
+        VerticalSpan::new(frame.z - rise, frame.z + a.dims.h + rise)
+    }
+
     pub(super) fn record_tracks(&mut self, t: f64) -> EngineResult<()> {
         // Resolve freeform lane bindings first (mutable), then borrow for frames.
         for index in 0..self.actors.len() {
@@ -1793,8 +1904,8 @@ impl Simulation {
                     });
                     let physics = a.body.map(|body| {
                         let st = backend.state(body);
-                        let telemetry = self.telemetry[a.index.index()]
-                            .or_else(|| backend.telemetry(body));
+                        let telemetry =
+                            self.telemetry[a.index.index()].or_else(|| backend.telemetry(body));
                         PhysicsFrame {
                             vx_body_mps: st.map_or(0.0, |s| s.longitudinal_velocity_mps),
                             vy_body_mps: st.map_or(0.0, |s| s.lateral_velocity_mps),
@@ -1910,24 +2021,55 @@ pub(super) fn engine_err(e: impl std::fmt::Display) -> crate::error::SimEngineEr
 mod route_station_tests {
     use super::super::actor::{RoadControlRuntimeState, RouteStationRuntime};
 
-    fn released_at(station: &RouteStationRuntime, state: &RoadControlRuntimeState, t: f64, group_ready: bool) -> bool {
-        state.stopped_since_s.is_some_and(|start| group_ready && t - start >= station.dwell_s)
+    fn released_at(
+        station: &RouteStationRuntime,
+        state: &RoadControlRuntimeState,
+        t: f64,
+        group_ready: bool,
+    ) -> bool {
+        state
+            .stopped_since_s
+            .is_some_and(|start| group_ready && t - start >= station.dwell_s)
     }
 
     #[test]
     fn route_station_dwells_exactly_then_resumes() {
-        let station = RouteStationRuntime { id: "stop".into(), s: 4.0, dwell_s: 2.0, coordination_id: None };
-        let state = RoadControlRuntimeState { stopped_since_s: Some(10.0), ..Default::default() };
+        let station = RouteStationRuntime {
+            id: "stop".into(),
+            s: 4.0,
+            dwell_s: 2.0,
+            coordination_id: None,
+        };
+        let state = RoadControlRuntimeState {
+            stopped_since_s: Some(10.0),
+            ..Default::default()
+        };
         assert!(!released_at(&station, &state, 11.999, true));
         assert!(released_at(&station, &state, 12.0, true));
     }
 
     #[test]
     fn coordinated_stations_wait_for_last_dwell() {
-        let a = RouteStationRuntime { id: "a".into(), s: 2.0, dwell_s: 1.0, coordination_id: Some("g".into()) };
-        let b = RouteStationRuntime { id: "b".into(), s: 3.0, dwell_s: 2.0, coordination_id: Some("g".into()) };
-        let sa = RoadControlRuntimeState { stopped_since_s: Some(10.0), ..Default::default() };
-        let sb = RoadControlRuntimeState { stopped_since_s: Some(11.0), ..Default::default() };
+        let a = RouteStationRuntime {
+            id: "a".into(),
+            s: 2.0,
+            dwell_s: 1.0,
+            coordination_id: Some("g".into()),
+        };
+        let b = RouteStationRuntime {
+            id: "b".into(),
+            s: 3.0,
+            dwell_s: 2.0,
+            coordination_id: Some("g".into()),
+        };
+        let sa = RoadControlRuntimeState {
+            stopped_since_s: Some(10.0),
+            ..Default::default()
+        };
+        let sb = RoadControlRuntimeState {
+            stopped_since_s: Some(11.0),
+            ..Default::default()
+        };
         assert!(!released_at(&a, &sa, 12.0, false));
         assert!(released_at(&a, &sa, 13.0, true));
         assert!(released_at(&b, &sb, 13.0, true));
