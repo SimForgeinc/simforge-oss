@@ -428,6 +428,8 @@ fn plan_from_replay(args: &Args) -> Result<Plan> {
             serde_json::json!({
                 "sensorId": s["outputName"], "width": w as u32, "height": h as u32,
                 "fovDeg": vertical_fov(a["horizontalFovDeg"].as_f64().unwrap(), w, h),
+                // Each camera's own planes, as the worker sends them.
+                "nearM": a["nearM"], "farM": a["farM"],
                 "eye": [0.0, 0.0, 0.0], "target": [0.0, 0.0, 1.0],
                 "attach": attachment(s, 0.0),
             })

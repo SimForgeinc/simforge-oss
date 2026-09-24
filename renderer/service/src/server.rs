@@ -1744,6 +1744,24 @@ fn on_road(roads: &RaycastScene, footprint: crate::traffic::Footprint) -> bool {
 fn render_episode(state: &mut ServiceState, i: u64) -> WireResponse {
     let tick = state.scene[0].tick;
     let consumer = state.episode.as_ref().unwrap().consumer.clone();
+    // The episode response names one near plane for decoding its depth.
+    if consumer.depth.is_some() {
+        if let Some(cam) = state
+            .rig
+            .iter()
+            .find(|cam| cam.near_m.is_some_and(|near| near != state.near_m))
+        {
+            return WireResponse::error(
+                i,
+                format!(
+                    "[episode_camera_near_conflict] camera {} renders with near plane {} m but the episode's depth decodes with the scene's {} m",
+                    cam.sensor_id,
+                    cam.near_m.unwrap_or(state.near_m),
+                    state.near_m
+                ),
+            );
+        }
+    }
     let mut passes = vec!["rgb".into()];
     if consumer.depth.is_some() {
         passes.push("depth".into());
@@ -2407,6 +2425,10 @@ fn upsert_rig(state: &mut ServiceState, cam: &ServiceCamera) -> Result<(), Strin
             cam.depth_encoding
         ));
     }
+    let (near, far) = cam.clip_planes(state.near_m, state.far_m);
+    if !(near.is_finite() && far.is_finite() && near > 0.0 && far > near) {
+        return bad(format!("clip planes {near}-{far} m"));
+    }
     match state.rig.iter_mut().find(|c| c.sensor_id == cam.sensor_id) {
         Some(slot) => *slot = cam.clone(),
         None => state.rig.push(cam.clone()),
@@ -2428,13 +2450,14 @@ const SERVICE_PASSES: PassSet = PassSet {
 /// changed since the last request. Cached payloads of a replaced
 /// camera belong to the old target and are dropped.
 fn ensure_camera(state: &mut ServiceState, cam: &ServiceCamera, hdr: bool) {
+    let (near, far) = cam.clip_planes(state.near_m, state.far_m);
     let spec = CameraSpec {
         sensor_id: cam.sensor_id.clone(),
         width: cam.width,
         height: cam.height,
         fov_y_deg: cam.fov_deg,
-        near: state.near_m,
-        far: state.far_m,
+        near,
+        far,
         passes: PassSet {
             hdr,
             ..SERVICE_PASSES
@@ -2650,7 +2673,13 @@ fn plan_camera_passes(
                 "depth32f"
             },
             data: if carla {
-                crate::carla::depth_to_carla(raw, cam.width, cam.height, stride, state.near_m)
+                crate::carla::depth_to_carla(
+                    raw,
+                    cam.width,
+                    cam.height,
+                    stride,
+                    cam.clip_planes(state.near_m, state.far_m).0,
+                )
             } else {
                 raw.to_vec()
             },
@@ -4271,6 +4300,8 @@ mod tests {
             semantic: false,
             depth_encoding: None,
             attach: None,
+            near_m: None,
+            far_m: None,
         };
         let (want, id_output, semantic) =
             parse_bundle_passes(&["rgb".to_string(), "semantic".to_string()]).unwrap();

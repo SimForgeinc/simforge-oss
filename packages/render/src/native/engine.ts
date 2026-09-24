@@ -364,24 +364,21 @@ export function nativeEncoderVersion(ffmpeg: string): string {
 }
 
 /**
- * Near/far planes of the service's cameras. The service has one pair for
- * every camera (`ServiceCamera` carries none), so the RGB cameras must agree
- * on theirs; lidar and radar cast their own rays and never move them.
+ * The scene's clip planes: the nearest near plane and the farthest far plane
+ * of the RGB cameras. Each camera renders with its own planes (the camera
+ * schedule sends them per camera); the scene pair covers them all and is
+ * what the service uses where one value is shared: the prewarm view, the
+ * aerial-perspective LUT's far plane, and the residency plan's near bound
+ * (the nearest plane is the conservative one). Lidar and radar cast their
+ * own rays and never move them.
  */
 export function nativeCameraClipPlanes(sources: readonly RenderSourceV3[]): { nearM: number; farM: number } {
-  const cameras = sources.filter((source) => source.modality === 'rgb');
-  const lead = cameras[0];
-  if (!lead || lead.modality !== 'rgb') throw new RenderInputError('native_render_camera_missing', 'native render requires at least one RGB camera');
-  for (const camera of cameras) {
-    if (camera.modality !== 'rgb') continue;
-    if (camera.attributes.nearM !== lead.attributes.nearM || camera.attributes.farM !== lead.attributes.farM) {
-      throw new RenderInputError(
-        'native_camera_clip_planes_conflict',
-        `cameras ${lead.outputName} (${lead.attributes.nearM}-${lead.attributes.farM} m) and ${camera.outputName} (${camera.attributes.nearM}-${camera.attributes.farM} m) ask for different clip planes; the native service renders every camera with one pair`,
-      );
-    }
-  }
-  return { nearM: lead.attributes.nearM, farM: lead.attributes.farM };
+  const cameras = sources.flatMap((source) => (source.modality === 'rgb' ? [source.attributes] : []));
+  if (cameras.length === 0) throw new RenderInputError('native_render_camera_missing', 'native render requires at least one RGB camera');
+  return {
+    nearM: Math.min(...cameras.map((camera) => camera.nearM)),
+    farM: Math.max(...cameras.map((camera) => camera.farM)),
+  };
 }
 
 /**

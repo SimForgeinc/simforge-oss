@@ -97,6 +97,24 @@ pub struct ServiceCamera {
     /// excluded from this camera's view only.
     #[serde(default)]
     pub attach: Option<CameraAttach>,
+    /// This camera's near and far clip planes (metres). Absent: the scene's
+    /// `nearM`/`farM`. A rig mixes them freely (the wizard's rig cameras at
+    /// 0.05 m and the trailing chase camera at 0.1 m); CARLA depth decodes
+    /// with the camera's own near plane.
+    #[serde(default)]
+    pub near_m: Option<f32>,
+    #[serde(default)]
+    pub far_m: Option<f32>,
+}
+
+impl ServiceCamera {
+    /// The planes this camera renders with: its own, else the scene's.
+    pub fn clip_planes(&self, scene_near_m: f32, scene_far_m: f32) -> (f32, f32) {
+        (
+            self.near_m.unwrap_or(scene_near_m),
+            self.far_m.unwrap_or(scene_far_m),
+        )
+    }
 }
 
 /// Retained spinning lidar declaration for `render_bundle`.
@@ -689,6 +707,20 @@ mod tests {
         )
         .unwrap_err();
         assert!(error.to_string().contains("profile"), "{error}");
+    }
+
+    #[test]
+    fn camera_clip_planes_are_its_own_else_the_scenes() {
+        let base = r#"{
+            "sensorId":"chase-cam-trailing","width":1920,"height":1080,"fovDeg":60,
+            "eye":[0,2,0],"target":[1,2,0]
+        }"#;
+        let camera: ServiceCamera = serde_json::from_str(base).unwrap();
+        assert_eq!(camera.clip_planes(0.05, 1000.0), (0.05, 1000.0));
+        let camera: ServiceCamera =
+            serde_json::from_str(&base.replace("\"eye\"", "\"nearM\":0.1,\"farM\":800,\"eye\""))
+                .unwrap();
+        assert_eq!(camera.clip_planes(0.05, 1000.0), (0.1, 800.0));
     }
 
     #[test]

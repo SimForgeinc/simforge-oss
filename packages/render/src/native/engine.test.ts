@@ -1,4 +1,7 @@
-import type { RenderSourceV3 } from '@simforge-oss/scenario';
+import {
+  PRONTO_CHASE_CAMERA_SENSOR_ID, authoredRenderSensors, backendModalities, buildCanonicalRenderSpec, defaultModalities, instantiateSensorRig,
+} from '@simforge-oss/scenario';
+import type { RenderSourceV3, ScenarioTemplateV2 } from '@simforge-oss/scenario';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -7,6 +10,7 @@ import {
   nativeBundleBytes,
   nativeShmSizeMb,
 } from './engine.js';
+import { createNativeCameraSchedule } from './camera-schedule.js';
 import { stripRgbaPadding } from './service-client.js';
 
 describe('native retained engine adapter', () => {
@@ -90,9 +94,60 @@ describe('native engine input policy', () => {
     expect(nativeCameraClipPlanes([camera('front'), radar, camera('rear')])).toEqual({ nearM: 0.1, farM: 800 });
   });
 
-  it('refuses cameras that ask for different clip planes (the service renders one pair)', () => {
-    expect(() => nativeCameraClipPlanes([camera('front'), camera('rear', { nearM: 0.5 })]))
-      .toThrow(expect.objectContaining({ code: 'native_camera_clip_planes_conflict' }));
+  it('covers cameras with different clip planes: nearest near, farthest far', () => {
+    expect(nativeCameraClipPlanes([camera('front'), camera('rear', { nearM: 0.5, farM: 1_200 })])).toEqual({ nearM: 0.1, farM: 1_200 });
+  });
+
+  it("renders the wizard's default selection (the Pronto rig plus the trailing chase camera) with each camera's own planes", () => {
+    // The Studio render wizard's default: every authored sensor option (the
+    // rig and the chase camera it adds), with its default modalities the
+    // native backend supports (RenderConfigPanel, `render submit`).
+    const sensors = instantiateSensorRig('pronto', { class: 'car', dims: { length: 4.6, width: 1.9, height: 1.5 } });
+    const content = {
+      scenarioVersion: 2,
+      meta: { name: 'Render', description: '', createdAt: '2026-09-24T00:00:00.000Z', modifiedAt: '2026-09-24T00:00:00.000Z', appVersion: 'test', tags: [], negativeControl: false },
+      params: { declarations: [], constraints: [] },
+      environment: { weather: 'clear', timeOfDay: 'noon', surfacePatches: [] },
+      anchor: { id: 'anchor', corridor: {}, features: [], policy: {} },
+      roles: [{ id: 'ego', label: 'Ego', actor: { class: 'car', sensors } }],
+      props: [], trafficControls: [], mapSignalPlans: [],
+      choreography: { warmupSeconds: 0, clipSeconds: 10, interactions: [] },
+      perception: {}, invariants: [], variants: [], reasoningTrace: [],
+    } as unknown as ScenarioTemplateV2;
+    const options = authoredRenderSensors(content);
+    const spec = buildCanonicalRenderSpec({
+      content,
+      selections: options.map((option) => ({
+        actorId: option.actorId, sensorId: option.sensor.id,
+        modalities: defaultModalities(option.sensor).filter((modality) => backendModalities('native', option.sensor).includes(modality)),
+      })).filter((selection) => selection.modalities.length > 0),
+      clip: { startSeconds: 0, endSeconds: 10 },
+      video: { width: 1280, height: 720, fps: 24, container: 'mp4', codec: 'h264', quality: 'standard' },
+      artifacts: ['video', 'manifest'],
+      staticSemantics: false,
+      fidelity: 'review',
+    });
+    const cameras = spec.sources.flatMap((source) => (source.modality === 'rgb' ? [source] : []));
+    const chase = cameras.find((source) => source.sensorId === PRONTO_CHASE_CAMERA_SENSOR_ID);
+    expect(chase?.attributes).toMatchObject({ nearM: 0.1 });
+    expect(cameras.filter((source) => source.attributes.nearM === 0.05).length).toBeGreaterThan(0);
+
+    assertNativeSourcesSupported(spec.sources);
+    const planes = nativeCameraClipPlanes(spec.sources);
+    expect(planes.nearM).toBe(0.05);
+    expect(planes.farM).toBe(Math.max(...cameras.map((source) => source.attributes.farM)));
+
+    const schedule = createNativeCameraSchedule(
+      spec.sources,
+      cameras.map((source) => ({ sourceId: source.outputName, actorId: 'ego', vehicleAsset: { catalogAssetId: 'vehicle.sedan' } })),
+      [{
+        version: 'simforge.scene-state.v1', mapId: 'richmond', tick: 0, tickHz: 24, weather: { preset: 'clear' }, timeOfDay: 12,
+        actors: [{ id: 'ego', kind: 'spawn', catalogId: 'vehicle.sedan', actorClass: 'car', transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1] }, velocity: [0, 0, 0] }],
+      }],
+    );
+    // Every camera goes to the service with its own planes.
+    expect(schedule[0]!.map((scheduled) => [scheduled.sensorId, scheduled.nearM, scheduled.farM]))
+      .toEqual(cameras.map((source) => [source.outputName, source.attributes.nearM, source.attributes.farM]));
   });
 
   it('accepts a rolled camera and refuses a camera larger than the engine renders', () => {

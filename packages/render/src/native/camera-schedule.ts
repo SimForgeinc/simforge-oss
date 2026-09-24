@@ -37,6 +37,9 @@ export interface NativeScheduledCamera {
   readonly width: number;
   readonly height: number;
   readonly fovDeg: number;
+  /** The source's own clip planes: the service renders each camera with its own. */
+  readonly nearM: number;
+  readonly farM: number;
   /** Mount pose at the host's *authored* transform (y as the trajectory says). */
   readonly eye: readonly [number, number, number];
   readonly target: readonly [number, number, number];
@@ -146,6 +149,8 @@ export function createNativeCameraSchedule(
       width: source.attributes.width,
       height: source.attributes.height,
       fovDeg: verticalFov(source.attributes.horizontalFovDeg, source.attributes.width, source.attributes.height),
+      nearM: source.attributes.nearM,
+      farM: source.attributes.farM,
       eye,
       target: [
         eye[0] + TARGET_DISTANCE_M * direction[0],
