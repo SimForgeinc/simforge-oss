@@ -1,6 +1,6 @@
 {
   "schema": "simforge-oss.render-determinism-manifest.v1",
-  "generatedAt": "2026-09-24T09:44:14.347Z",
+  "generatedAt": "2026-09-24T17:45:11.694Z",
   "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
   "mode": "golden-record",
   "renderConfig": {
@@ -16,13 +16,13 @@
   },
   "rendererPath": {
     "engine": "native-bevy",
-    "file": "../../../../../mnt/storage/gpu-deep-scratch/goldens-dapple/simforge-render.golden",
-    "sha256": "e3fc64ba63d8ebac5a7e66c9a94b485fb290255bc1e8dce1e9e756a88826f1bd",
+    "file": "../../../../../mnt/storage/worktrees/cargo-target-tail-lens/release/simforge-render",
+    "sha256": "0d4459c934467c74cbfd873a6b734c5aee05ee76c5e1de0051711ffc4afa64b6",
     "invocation": {
       "args": [
         "job",
         "--job",
-        "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-05-timeline/runA/yale-05-timeline.job.json"
+        "/tmp/claude-1000/-home-path/bb0d75f9-19c6-4010-a03b-2bb79dd806bc/scratchpad/golden-tail2/record/yale-05-timeline/runA/yale-05-timeline.job.json"
       ],
       "job": {
         "schema": "simforge.render-job/v2",
@@ -37,8 +37,8 @@
             "preset": "training"
           },
           "warmupFrames": 20,
-          "vehicleModels": "/home/path/worktrees/sc-road-decals/oss/catalog/vehicles-carla",
-          "pedestrianModels": "/home/path/worktrees/sc-road-decals/oss/catalog/pedestrians-carla",
+          "vehicleModels": "/home/path/worktrees/sc-tail-lens/oss/catalog/vehicles-carla",
+          "pedestrianModels": "/home/path/worktrees/sc-tail-lens/oss/catalog/pedestrians-carla",
           "glbs": [
             "/home/path/.local/share/simforge/maps/.corpus/yale-street/master.gltf"
           ]
@@ -81,8 +81,8 @@
           "rgb",
           "id"
         ],
-        "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-05-timeline/runA/yale-05-timeline",
-        "sceneState": "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-05-timeline/runA/yale-05-timeline.scene-state.json",
+        "outDir": "/tmp/claude-1000/-home-path/bb0d75f9-19c6-4010-a03b-2bb79dd806bc/scratchpad/golden-tail2/record/yale-05-timeline/runA/yale-05-timeline",
+        "sceneState": "/tmp/claude-1000/-home-path/bb0d75f9-19c6-4010-a03b-2bb79dd806bc/scratchpad/golden-tail2/record/yale-05-timeline/runA/yale-05-timeline.scene-state.json",
         "observe": true
       },
       "passesRenderedSequentially": false
@@ -103,7 +103,7 @@
     }
   ],
   "hardware": {
-    "collectedAt": "2026-09-24T09:28:22.927Z",
+    "collectedAt": "2026-09-24T17:29:12.578Z",
     "gpuFingerprint": "c398eadcadbd2754",
     "host": {
       "osPrettyName": "Ubuntu 24.04.4 LTS",
@@ -123,8 +123,8 @@
   "passHashes": {
     "chase.t60.rgb": {
       "file": "chase/00000060.rgb.png",
-      "sha256": "0e3d6b6a9a8766a4c52d2dd336505ec41384009f7def75b66e73a76acc44d108",
-      "bytes": 288739
+      "sha256": "c998fa37252744bf421aef0ecd108a500d9b0468f3ee270a39b6a0e9d949c948",
+      "bytes": 288756
     },
     "chase.t60.id": {
       "file": "chase/00000060.id.png",
@@ -148,7 +148,7 @@
     "maxPitchErrorDeg": 2.555472209197221e-8,
     "maxRollErrorDeg": 1.7359972911141393e-8,
     "presenceMismatches": 0,
-    "timelineSha256": "06f763ad972ca7e5c13dcadd606db0660b5b8df89809503db2025abc750f9aa7"
+    "timelineSha256": "29c02ab788a022342691c657ed4a6c8851ab30cfc70bf6c9721534c1fcfb0af2"
   },
   "sceneStateSha256": "8cdb2ebe90acffc95a63c722b312f67174cfb6a66f68e61d74022d4c2ee631f9",
   "corpusChecksums": [
@@ -159,16 +159,16 @@
     }
   ],
   "timings": {
-    "avgFrameMs": 2827.596232546218,
-    "p50FrameMs": 2581.625872,
-    "p99FrameMs": 4650.296087,
-    "fps": 0.3536572826380913,
+    "avgFrameMs": 2886.2688273445387,
+    "p50FrameMs": 2735.196434,
+    "p99FrameMs": 3652.605538,
+    "fps": 0.3464680734261446,
     "measuredFrames": 119
   },
   "twoRunEvidence": {
     "runsCompared": 2,
     "byteStable": true,
-    "runBTimingsAvgFrameMs": 3037.967870470589
+    "runBTimingsAvgFrameMs": 2919.9296666890755
   },
   "verdict": {
     "byteStable": true,
@@ -178,7 +178,7 @@
   "previousVersions": [
     {
       "schema": "simforge-oss.render-determinism-manifest.v1",
-      "generatedAt": "2026-09-24T08:40:36.433Z",
+      "generatedAt": "2026-09-24T09:44:14.347Z",
       "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
       "mode": "golden-record",
       "renderConfig": {
@@ -194,13 +194,13 @@
       },
       "rendererPath": {
         "engine": "native-bevy",
-        "file": "../../../../../tmp/claude-1000/-home-path/bb0d75f9-19c6-4010-a03b-2bb79dd806bc/scratchpad/goldens-nan/simforge-render.golden",
-        "sha256": "b174732521581a20f1f394d606aef583b238ec49bb3452863a373d417584350c",
+        "file": "../../../../../mnt/storage/gpu-deep-scratch/goldens-dapple/simforge-render.golden",
+        "sha256": "e3fc64ba63d8ebac5a7e66c9a94b485fb290255bc1e8dce1e9e756a88826f1bd",
         "invocation": {
           "args": [
             "job",
             "--job",
-            "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/yale-05-timeline/runA/yale-05-timeline.job.json"
+            "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-05-timeline/runA/yale-05-timeline.job.json"
           ],
           "job": {
             "schema": "simforge.render-job/v2",
@@ -259,8 +259,8 @@
               "rgb",
               "id"
             ],
-            "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/yale-05-timeline/runA/yale-05-timeline",
-            "sceneState": "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/yale-05-timeline/runA/yale-05-timeline.scene-state.json",
+            "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-05-timeline/runA/yale-05-timeline",
+            "sceneState": "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-05-timeline/runA/yale-05-timeline.scene-state.json",
             "observe": true
           },
           "passesRenderedSequentially": false
@@ -281,7 +281,7 @@
         }
       ],
       "hardware": {
-        "collectedAt": "2026-09-24T08:23:32.332Z",
+        "collectedAt": "2026-09-24T09:28:22.927Z",
         "gpuFingerprint": "c398eadcadbd2754",
         "host": {
           "osPrettyName": "Ubuntu 24.04.4 LTS",
@@ -301,8 +301,8 @@
       "passHashes": {
         "chase.t60.rgb": {
           "file": "chase/00000060.rgb.png",
-          "sha256": "84d16f394c98ac785aebdcb2cb3203faa178c3ea799834c6da9dd6d4c21beea5",
-          "bytes": 286022
+          "sha256": "0e3d6b6a9a8766a4c52d2dd336505ec41384009f7def75b66e73a76acc44d108",
+          "bytes": 288739
         },
         "chase.t60.id": {
           "file": "chase/00000060.id.png",
@@ -337,16 +337,16 @@
         }
       ],
       "timings": {
-        "avgFrameMs": 3348.53013084874,
-        "p50FrameMs": 3042.479797,
-        "p99FrameMs": 4740.357183,
-        "fps": 0.29863849537663667,
+        "avgFrameMs": 2827.596232546218,
+        "p50FrameMs": 2581.625872,
+        "p99FrameMs": 4650.296087,
+        "fps": 0.3536572826380913,
         "measuredFrames": 119
       },
       "twoRunEvidence": {
         "runsCompared": 2,
         "byteStable": true,
-        "runBTimingsAvgFrameMs": 2931.545482890756
+        "runBTimingsAvgFrameMs": 3037.967870470589
       },
       "verdict": {
         "byteStable": true,

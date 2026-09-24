@@ -22,8 +22,12 @@ pub const REAR_FRACTION: f32 = 0.12;
 
 /// Triangles lower than this fraction of the model height (reflectors,
 /// licence-plate lamps, exhaust trims sharing the lamp atlas) are not
-/// brake lamps.
+/// brake lamps...
 pub const MIN_HEIGHT_FRACTION: f32 = 0.18;
+
+/// ...but the floor never rises above this height: a box truck's or a
+/// bus's tail lamps sit at bumper height, far below 18% of the body.
+pub const MAX_LAMP_FLOOR_M: f32 = 0.35;
 
 /// How far the lit lens is drawn proud of the modelled lens (metres, model
 /// space), so the two never tie in depth.
@@ -45,6 +49,29 @@ pub fn brake_lamp_emissive() -> LinearRgba {
     let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
     let k = BRAKE_LAMP_LUMINANCE_CDM2 / luminance;
     LinearRgba::rgb(r * k, g * k, b * k)
+}
+
+/// Base colour of an unlit tail lens (sRGB): the dark red of a stop/tail
+/// lamp lens by day.
+pub const TAIL_LENS_BASE_SRGB: [f32; 3] = [0.60, 0.015, 0.015];
+
+/// Whether a lamp material lost its lens colour in the CARLA conversion:
+/// CARLA tints its lamps through light-state material parameters, and some
+/// converted lamp materials kept only the light-state mask: an untextured
+/// white base (`lincoln_mkz_emissive`, `dodge_charger_cop_emissive`), or a
+/// base colour texture that is the emissive mask itself
+/// (`european_hgv_emissive`, `mini_cooper_emissive`). Their rear lamps then
+/// draw as white plastic. The brake-lamp slot of such a material shows a
+/// red tail lens while the brake is off (a recorded substitution); a lamp
+/// material with its own lens colour (textured lamps, tinted glass covers)
+/// is left as authored.
+pub fn lamp_lens_colour_lost(
+    base_srgb: [f32; 3],
+    has_base_texture: bool,
+    base_texture_is_emissive_mask: bool,
+) -> bool {
+    let white = base_srgb.iter().all(|c| *c > 0.9);
+    white && (!has_base_texture || base_texture_is_emissive_mask)
 }
 
 /// Whether a glTF material is a vehicle lamp material. Siren, interior,
@@ -109,7 +136,7 @@ pub fn select_brake_triangles(primitive: &LampPrimitive, extent: ModelExtent) ->
     let length = extent.max_x - extent.min_x;
     let height = extent.max_y - extent.min_y;
     let rear_limit = extent.min_x + REAR_FRACTION * length;
-    let floor = extent.min_y + MIN_HEIGHT_FRACTION * height;
+    let floor = extent.min_y + (MIN_HEIGHT_FRACTION * height).min(MAX_LAMP_FLOOR_M);
     let mut out = Vec::new();
     for tri in primitive.indices.chunks_exact(3) {
         let Some(corners) = tri
@@ -191,6 +218,18 @@ mod tests {
             ..lamp
         };
         assert!(select_brake_triangles(&paint, extent).is_empty());
+    }
+
+    #[test]
+    fn lens_colour_is_lost_only_for_white_mask_materials() {
+        // lincoln_mkz_emissive: untextured white.
+        assert!(lamp_lens_colour_lost([1.0, 1.0, 1.0], false, false));
+        // european_hgv_emissive: the base texture is the emissive mask.
+        assert!(lamp_lens_colour_lost([1.0, 1.0, 1.0], true, true));
+        // citroen_lights_back: a real lamp texture.
+        assert!(!lamp_lens_colour_lost([1.0, 1.0, 1.0], true, false));
+        // lights_patrol2021: a tinted glass cover over textured lamps.
+        assert!(!lamp_lens_colour_lost([0.03, 0.04, 0.05], false, false));
     }
 
     #[test]

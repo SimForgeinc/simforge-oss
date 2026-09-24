@@ -747,6 +747,9 @@ pub(crate) struct SceneEvidence {
     /// Actors with an authored body colour whose model has no tintable
     /// paint slot (an authored livery): actor -> model.
     color_untintable: std::collections::BTreeMap<String, String>,
+    /// Models whose rear lamp material lost its lens colour, drawn with a
+    /// red tail lens ([`render_core::brake_lamps::lamp_lens_colour_lost`]).
+    tail_lens_substituted: std::collections::BTreeSet<String>,
     /// Lamp kind -> actors that lit it; this renderer draws brake lamps only.
     unrendered_lights: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<String>>,
     /// Frames without lamp state for a vehicle (xosc-lowered legacy frames).
@@ -785,6 +788,15 @@ impl SceneEvidence {
                 message: format!(
                     "braking actor(s) whose model has no brake-lamp slot (no rear lamp geometry) render with unlit brake lamps: {}",
                     list(self.brake_lamp_missing.iter().map(|(actor, model)| format!("{actor} ({model})")))
+                ),
+            });
+        }
+        if !self.tail_lens_substituted.is_empty() {
+            out.push(SceneWarning {
+                code: "native_actor_tail_lens_substituted".into(),
+                message: format!(
+                    "model(s) whose rear lamp material carries only a light-state mask (no lens colour; the rear lamps would draw white) draw their brake-lamp slot as a red tail lens: {}",
+                    list(self.tail_lens_substituted.iter().cloned())
                 ),
             });
         }
@@ -2370,6 +2382,14 @@ fn apply_actor_model(
                         actor.id
                     )
                 })?;
+        }
+        if state.app.actor_has_tail_lens_substitution(&actor.id) {
+            state.scene_evidence.tail_lens_substituted.insert(
+                glb_path
+                    .file_name()
+                    .map(|name| name.to_string_lossy().into_owned())
+                    .unwrap_or_default(), // fallback-ok: evidence text only
+            );
         }
         state.actor_model_bindings.insert(actor.id.clone(), binding);
     } else if clip.is_some() {

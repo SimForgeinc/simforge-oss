@@ -1698,6 +1698,16 @@ struct ActorModelRoot;
 #[derive(Component)]
 struct BrakeLens;
 
+/// One brake-lens entity of an attached model.
+#[derive(Clone, Copy)]
+struct BrakeLamp {
+    entity: Entity,
+    /// The source lamp material lost its lens colour
+    /// ([`crate::brake_lamps::lamp_lens_colour_lost`]): the lens is always
+    /// drawn, as a red tail lens while the brake is off.
+    tail: bool,
+}
+
 /// One map signal head: its lens nodes and the lens it currently shows.
 struct SignalHead {
     /// `(lamp, lit lens?, node entity)`.
@@ -1753,7 +1763,14 @@ pub struct SensorTriangle {
 /// model root carries glTF node extras `{"semanticClass": "rider"}`.
 /// The lit-lens mesh of a lamp primitive: the selected triangles, moved
 /// [`crate::brake_lamps::LENS_OFFSET_M`] along their vertex normals.
-fn brake_lens_mesh(positions: &[[f32; 3]], normals: &[[f32; 3]], selected: &[u32]) -> Mesh {
+/// `outward` is the model's rearward axis in the mesh's own frame: a lens
+/// is pushed out of the body even where the modelled normals point in.
+fn brake_lens_mesh(
+    positions: &[[f32; 3]],
+    normals: &[[f32; 3]],
+    selected: &[u32],
+    outward: Vec3,
+) -> Mesh {
     use bevy::mesh::Indices;
     use bevy::render::render_resource::PrimitiveTopology;
     let mut remap: HashMap<u32, u32> = HashMap::new();
@@ -1764,7 +1781,10 @@ fn brake_lens_mesh(positions: &[[f32; 3]], normals: &[[f32; 3]], selected: &[u32
         let next = out_positions.len() as u32;
         let slot = *remap.entry(index).or_insert_with(|| {
             let p = Vec3::from_array(positions[index as usize]);
-            let n = Vec3::from_array(normals[index as usize]).normalize_or_zero();
+            let mut n = Vec3::from_array(normals[index as usize]).normalize_or_zero();
+            if n.dot(outward) < 0.0 {
+                n = -n;
+            }
             out_positions.push((p + n * crate::brake_lamps::LENS_OFFSET_M).to_array());
             out_normals.push(n.to_array());
             next
@@ -2602,9 +2622,9 @@ pub struct SceneApp {
     actor_tint_materials: HashMap<String, Vec<Handle<StandardMaterial>>>,
     /// Per-actor clones of palette-coloured material slots (ridden two-wheelers).
     actor_palette_materials: HashMap<String, Vec<Handle<StandardMaterial>>>,
-    /// Lit brake-lens entities of each attached model ([`crate::brake_lamps`]).
+    /// Brake-lens entities of each attached model ([`crate::brake_lamps`]).
     /// An empty list: the model has no brake-lamp slot.
-    actor_brake_lamps: HashMap<String, Vec<Entity>>,
+    actor_brake_lamps: HashMap<String, Vec<BrakeLamp>>,
     /// Brake state last applied per actor (re-applied after a model rebind).
     actor_brake_on: HashMap<String, bool>,
     /// Brake-lens meshes per source primitive mesh (`None`: no brake
@@ -2612,6 +2632,8 @@ pub struct SceneApp {
     brake_lens_meshes: HashMap<AssetId<Mesh>, Option<Handle<Mesh>>>,
     /// The one lit brake-lens material.
     brake_lens_material: Option<Handle<StandardMaterial>>,
+    /// The one unlit tail-lens material (lamps whose lens colour was lost).
+    tail_lens_material: Option<Handle<StandardMaterial>>,
     /// Map signal heads by GUID ([`crate::signal_heads`]), built at readiness.
     signal_heads: std::collections::BTreeMap<String, SignalHead>,
     /// A ridden two-wheeler's rider: its own instance id (class `rider`) and
@@ -3023,6 +3045,7 @@ impl SceneApp {
             actor_brake_on: HashMap::new(),
             brake_lens_meshes: HashMap::new(),
             brake_lens_material: None,
+            tail_lens_material: None,
             signal_heads: std::collections::BTreeMap::new(),
             actor_riders: HashMap::new(),
             actor_asset_cache: HashMap::new(),
@@ -4596,14 +4619,14 @@ impl SceneApp {
     /// ([`crate::brake_lamps`]): one lit-lens child under every model
     /// primitive that has brake triangles, hidden until a frame brakes.
     /// Returns the lens entities (empty: the model has no brake slot).
-    fn spawn_brake_lenses(&mut self, model_root: Entity) -> Result<Vec<Entity>> {
+    fn spawn_brake_lenses(&mut self, model_root: Entity) -> Result<Vec<BrakeLamp>> {
         use crate::brake_lamps::{select_brake_triangles, LampPrimitive, ModelExtent};
         use bevy::mesh::{Indices, VertexAttributeValues};
         use bevy::render::render_resource::PrimitiveTopology;
         // Model-space transform of every mesh primitive: the local
         // transforms up to (not including) the model root, so the actor's
         // own pose and scale never enter the selection.
-        let primitives: Vec<(Entity, Handle<Mesh>, String, Mat4)> = {
+        let primitives: Vec<(Entity, Handle<Mesh>, String, Mat4, bool)> = {
             let world = self.app.world();
             let mut stack = vec![model_root];
             let mut out = Vec::new();
@@ -4637,9 +4660,22 @@ impl SceneApp {
                     local = t.to_matrix() * local;
                     node = world.get::<ChildOf>(current).map(|c| c.parent());
                 }
-                out.push((entity, mesh.0.clone(), material, local));
+                let lens_colour_lost = world
+                    .get::<MeshMaterial3d<StandardMaterial>>(entity)
+                    .and_then(|m| world.resource::<Assets<StandardMaterial>>().get(&m.0))
+                    .is_some_and(|m| {
+                        let base = m.base_color.to_srgba();
+                        crate::brake_lamps::lamp_lens_colour_lost(
+                            [base.red, base.green, base.blue],
+                            m.base_color_texture.is_some(),
+                            m.base_color_texture.is_some()
+                                && m.base_color_texture.as_ref().map(|h| h.id())
+                                    == m.emissive_texture.as_ref().map(|h| h.id()),
+                        )
+                    });
+                out.push((entity, mesh.0.clone(), material, local, lens_colour_lost));
             }
-            out.sort_by_key(|(entity, _, _, _)| entity.to_bits());
+            out.sort_by_key(|(entity, _, _, _, _)| entity.to_bits());
             out
         };
         let read = |mesh: &Mesh| -> Option<(Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<u32>)> {
@@ -4662,12 +4698,19 @@ impl SceneApp {
             };
             Some((positions.clone(), normals, indices))
         };
-        // (entity, mesh, material, model-space positions, triangle indices)
-        let mut model_space: Vec<(Entity, Handle<Mesh>, String, Vec<[f32; 3]>, Vec<u32>)> =
-            Vec::new();
+        // (entity, mesh, material, model-space positions, triangle indices, lens colour lost)
+        #[allow(clippy::type_complexity)]
+        let mut model_space: Vec<(
+            Entity,
+            Handle<Mesh>,
+            String,
+            Vec<[f32; 3]>,
+            Vec<u32>,
+            (bool, Vec3),
+        )> = Vec::new();
         {
             let meshes = self.app.world().resource::<Assets<Mesh>>();
-            for (entity, handle, material, local) in primitives {
+            for (entity, handle, material, local, lens_colour_lost) in primitives {
                 let mesh = meshes.get(&handle).ok_or_else(|| {
                     anyhow!("actor model mesh {:?} is not resident", handle.path())
                 })?;
@@ -4678,7 +4721,18 @@ impl SceneApp {
                     .iter()
                     .map(|p| local.transform_point3(Vec3::from_array(*p)).to_array())
                     .collect();
-                model_space.push((entity, handle, material, world_space, indices));
+                let outward = local
+                    .inverse()
+                    .transform_vector3(Vec3::NEG_X)
+                    .normalize_or_zero();
+                model_space.push((
+                    entity,
+                    handle,
+                    material,
+                    world_space,
+                    indices,
+                    (lens_colour_lost, outward),
+                ));
             }
         }
         let Some(extent) = ModelExtent::of(model_space.iter().flat_map(|m| m.3.iter())) else {
@@ -4704,7 +4758,30 @@ impl SceneApp {
             }
         };
         let mut lenses = Vec::new();
-        for (entity, handle, material_name, positions_model, indices) in model_space {
+        let tail_material = match &self.tail_lens_material {
+            Some(material) => material.clone(),
+            None => {
+                let [r, g, b] = crate::brake_lamps::TAIL_LENS_BASE_SRGB;
+                let material = self
+                    .app
+                    .world_mut()
+                    .resource_mut::<Assets<StandardMaterial>>()
+                    .add(StandardMaterial {
+                        base_color: Color::srgb(r, g, b),
+                        // A moulded lens, not a mirror: glossy enough to
+                        // catch the sun, rough enough to keep its red.
+                        perceptual_roughness: 0.4,
+                        double_sided: true,
+                        cull_mode: None,
+                        ..default()
+                    });
+                self.tail_lens_material = Some(material.clone());
+                material
+            }
+        };
+        for (entity, handle, material_name, positions_model, indices, (tail, outward)) in
+            model_space
+        {
             let lens_mesh = match self.brake_lens_meshes.get(&handle.id()) {
                 Some(cached) => cached.clone(),
                 None => {
@@ -4732,7 +4809,7 @@ impl SceneApp {
                             self.app
                                 .world_mut()
                                 .resource_mut::<Assets<Mesh>>()
-                                .add(brake_lens_mesh(&source.0, &source.1, &selected)),
+                                .add(brake_lens_mesh(&source.0, &source.1, &selected, outward)),
                         )
                     };
                     self.brake_lens_meshes.insert(handle.id(), lens.clone());
@@ -4749,16 +4826,44 @@ impl SceneApp {
                     BrakeLens,
                     Name::new("brake-lens"),
                     Mesh3d(lens_mesh),
-                    MeshMaterial3d(material.clone()),
+                    MeshMaterial3d(if tail {
+                        tail_material.clone()
+                    } else {
+                        material.clone()
+                    }),
                     Transform::IDENTITY,
-                    Visibility::Hidden,
+                    if tail {
+                        Visibility::Inherited
+                    } else {
+                        Visibility::Hidden
+                    },
                     bevy::light::NotShadowCaster,
                     ChildOf(entity),
                 ))
                 .id();
-            lenses.push(lens);
+            lenses.push(BrakeLamp { entity: lens, tail });
         }
         Ok(lenses)
+    }
+
+    /// Show one brake lens lit or unlit: a lens over a lamp that kept its
+    /// own colour is shown only while lit; a tail lens (lost lens colour) is
+    /// always shown, lit or as the unlit red tail lens.
+    fn show_brake_lamp(&mut self, lamp: BrakeLamp, on: bool) {
+        let lit = self.brake_lens_material.clone();
+        let tail = self.tail_lens_material.clone();
+        let mut entity = self.app.world_mut().entity_mut(lamp.entity);
+        if lamp.tail {
+            if let Some(material) = if on { lit } else { tail } {
+                entity.insert(MeshMaterial3d(material));
+            }
+        } else {
+            entity.insert(if on {
+                Visibility::Inherited
+            } else {
+                Visibility::Hidden
+            });
+        }
     }
 
     /// Light or darken an actor's brake lamps. `Ok(false)`: the actor's
@@ -4773,17 +4878,20 @@ impl SceneApp {
             return Ok(false);
         }
         if previous != Some(on) {
-            let visibility = if on {
-                Visibility::Inherited
-            } else {
-                Visibility::Hidden
-            };
-            for lens in lenses.clone() {
-                self.app.world_mut().entity_mut(lens).insert(visibility);
+            for lamp in lenses.clone() {
+                self.show_brake_lamp(lamp, on);
             }
             self.scene_revision += 1;
         }
         Ok(true)
+    }
+
+    /// Whether this actor's model draws a substituted red tail lens (its
+    /// lamp material lost its lens colour); the service records it.
+    pub fn actor_has_tail_lens_substitution(&self, actor_id: &str) -> bool {
+        self.actor_brake_lamps
+            .get(actor_id)
+            .is_some_and(|lamps| lamps.iter().any(|lamp| lamp.tail))
     }
 
     /// Whether this actor's attached model has a brake-lamp slot.
@@ -5443,12 +5551,8 @@ impl SceneApp {
         // modelled lamp, which the ID pass already draws).
         let lenses = self.spawn_brake_lenses(model_root)?;
         let braking = self.actor_brake_on.get(actor_id).copied().unwrap_or(false); // fallback-ok: a newly attached model starts with its brake lamps off until a frame says otherwise
-        for lens in &lenses {
-            self.app.world_mut().entity_mut(*lens).insert(if braking {
-                Visibility::Inherited
-            } else {
-                Visibility::Hidden
-            });
+        for lamp in &lenses {
+            self.show_brake_lamp(*lamp, braking);
         }
         self.actor_brake_lamps.insert(actor_id.to_string(), lenses);
         self.apply_actor_layers(actor_id);
@@ -10218,6 +10322,63 @@ mod tests {
         app.wait_for_capture_ready().unwrap();
         assert_eq!(capture_after(&mut app, 0, 12.5), off);
         std::mem::forget(app);
+    }
+
+    /// The simplified CARLA Lincoln's lamp material is an untextured white
+    /// light-state mask, so its rear light bar drew as white plastic by day.
+    /// Its brake-lamp slot now draws as a red tail lens while the brake is
+    /// off and as the lit brake lamp while braking; the tinted-glass lamps
+    /// of the Patrol are left as authored. GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn mask_only_lamp_material_draws_a_red_tail_lens() {
+        let red_px = |rgba: &[u8]| {
+            rgba.chunks_exact(4)
+                .filter(|p| {
+                    let (r, g, b) = (p[0] as i32, p[1] as i32, p[2] as i32);
+                    r > 40 && r > g + 20 && r > b + 20
+                })
+                .count()
+        };
+        let mut app = rear_view_of("vehicle_sedan_lincoln_mkz.glb", None);
+        assert!(app.actor_has_tail_lens_substitution("lead"));
+        app.set_pose("cam", &[-5.2, 1.3, 20.0], &[0.0, 0.8, 20.0])
+            .unwrap();
+        // Sun behind the camera, on the car's tail.
+        {
+            use crate::render_config::{Preset, RenderConfig};
+            let lighting = Lighting {
+                sun_elev_deg: 40.0,
+                sun_azim_deg: 270.0,
+                ..Lighting::default()
+            };
+            app.apply_lighting(
+                &lighting,
+                RenderConfig::preset(Preset::Training).profile_config(),
+            )
+            .unwrap();
+        }
+        assert!(app.set_actor_brake("lead", false).unwrap());
+        app.wait_for_capture_ready().unwrap();
+        let off = capture_after(&mut app, 0, 12.5);
+        dump_capture("mkz-tail-off", &off, 320, 192);
+        assert!(
+            red_px(&off) >= 30,
+            "tail lens not red ({} px)",
+            red_px(&off)
+        );
+        assert!(app.set_actor_brake("lead", true).unwrap());
+        app.wait_for_capture_ready().unwrap();
+        let on = capture_after(&mut app, 0, 12.5);
+        dump_capture("mkz-tail-on", &on, 320, 192);
+        assert!(
+            reddened_pixels(&off, &on) >= 20,
+            "brake did not brighten the lens"
+        );
+        std::mem::forget(app);
+        let patrol = rear_view_of("vehicle_suv_nissan_patrol.glb", None);
+        assert!(!patrol.actor_has_tail_lens_substitution("lead"));
+        std::mem::forget(patrol);
     }
 
     /// A model without rear lamp geometry has no brake-lamp slot: the
