@@ -1,6 +1,6 @@
 {
   "schema": "simforge-oss.render-determinism-manifest.v1",
-  "generatedAt": "2026-09-24T08:23:32.025Z",
+  "generatedAt": "2026-09-24T09:28:22.711Z",
   "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
   "mode": "golden-record",
   "renderConfig": {
@@ -16,13 +16,13 @@
   },
   "rendererPath": {
     "engine": "native-bevy",
-    "file": "../../../../../tmp/claude-1000/-home-path/bb0d75f9-19c6-4010-a03b-2bb79dd806bc/scratchpad/goldens-nan/simforge-render.golden",
-    "sha256": "b174732521581a20f1f394d606aef583b238ec49bb3452863a373d417584350c",
+    "file": "../../../../../mnt/storage/gpu-deep-scratch/goldens-dapple/simforge-render.golden",
+    "sha256": "e3fc64ba63d8ebac5a7e66c9a94b485fb290255bc1e8dce1e9e756a88826f1bd",
     "invocation": {
       "args": [
         "job",
         "--job",
-        "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/yale-pronto/runA/yale-pronto.job.json"
+        "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-pronto/runA/yale-pronto.job.json"
       ],
       "job": {
         "schema": "simforge.render-job/v2",
@@ -60,7 +60,7 @@
           "id",
           "semantic"
         ],
-        "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/yale-pronto/runA/yale-pronto",
+        "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-pronto/runA/yale-pronto",
         "sceneState": "/home/path/worktrees/sc-road-decals/oss/qualification/golden-harness/fixtures/yale-pronto.scene-state.json"
       },
       "passesRenderedSequentially": false
@@ -78,7 +78,7 @@
     }
   ],
   "hardware": {
-    "collectedAt": "2026-09-24T08:03:15.454Z",
+    "collectedAt": "2026-09-24T09:11:11.079Z",
     "gpuFingerprint": "c398eadcadbd2754",
     "host": {
       "osPrettyName": "Ubuntu 24.04.4 LTS",
@@ -98,8 +98,8 @@
   "passHashes": {
     "pronto-cam0.rgb": {
       "file": "pronto-cam0/00000000.rgb.png",
-      "sha256": "308d198e5e1a5474272881106e7ebb557b76d27a6724bc942560d5e091717e81",
-      "bytes": 252851
+      "sha256": "ad5223e2977cff0dd56a1cbc424a2e2de694a32c8444d897a43f51691b6c98fc",
+      "bytes": 259786
     },
     "pronto-cam0.depth": {
       "file": "pronto-cam0/00000000.depth.f32.bin",
@@ -148,7 +148,7 @@
   "previousVersions": [
     {
       "schema": "simforge-oss.render-determinism-manifest.v1",
-      "generatedAt": "2026-09-24T01:08:50.570Z",
+      "generatedAt": "2026-09-24T08:23:32.025Z",
       "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
       "mode": "golden-record",
       "renderConfig": {
@@ -164,13 +164,13 @@
       },
       "rendererPath": {
         "engine": "native-bevy",
-        "file": "../../.cache/gpu-deep-target/release/simforge-render",
-        "sha256": "8397e2bc03fde0fc05d121dfb7ce53d9c8cb88f92f3e1871663b7503753f2b04",
+        "file": "../../../../../tmp/claude-1000/-home-path/bb0d75f9-19c6-4010-a03b-2bb79dd806bc/scratchpad/goldens-nan/simforge-render.golden",
+        "sha256": "b174732521581a20f1f394d606aef583b238ec49bb3452863a373d417584350c",
         "invocation": {
           "args": [
             "job",
             "--job",
-            "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/yale-pronto/runA/yale-pronto.job.json"
+            "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/yale-pronto/runA/yale-pronto.job.json"
           ],
           "job": {
             "schema": "simforge.render-job/v2",
@@ -187,12 +187,12 @@
               "warmupFrames": 20,
               "allowPrimitiveActors": true,
               "glbs": [
-                "/home/path/tmp/renderfleet/maps/.corpus/yale-street/master.gltf"
+                "/home/path/.local/share/simforge/maps/.corpus/yale-street/master.gltf"
               ]
             },
             "rig": {
               "pronto": {
-                "program": "/home/path/worktrees/oss-gpu-deep/qualification/render-qualification-program.v1.json",
+                "program": "/home/path/worktrees/sc-road-decals/oss/qualification/render-qualification-program.v1.json",
                 "host": "ego",
                 "width": 736,
                 "height": 416
@@ -208,8 +208,8 @@
               "id",
               "semantic"
             ],
-            "outDir": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/yale-pronto/runA/yale-pronto",
-            "sceneState": "/home/path/worktrees/oss-gpu-deep/qualification/golden-harness/fixtures/yale-pronto.scene-state.json"
+            "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/yale-pronto/runA/yale-pronto",
+            "sceneState": "/home/path/worktrees/sc-road-decals/oss/qualification/golden-harness/fixtures/yale-pronto.scene-state.json"
           },
           "passesRenderedSequentially": false
         },
@@ -226,7 +226,7 @@
         }
       ],
       "hardware": {
-        "collectedAt": "2026-09-24T00:51:41.051Z",
+        "collectedAt": "2026-09-24T08:03:15.454Z",
         "gpuFingerprint": "c398eadcadbd2754",
         "host": {
           "osPrettyName": "Ubuntu 24.04.4 LTS",
@@ -246,8 +246,8 @@
       "passHashes": {
         "pronto-cam0.rgb": {
           "file": "pronto-cam0/00000000.rgb.png",
-          "sha256": "a749d4ab01768d000bbd7a034de3b155ce7ef45ee9b739609a1a6e639b684bb9",
-          "bytes": 252109
+          "sha256": "308d198e5e1a5474272881106e7ebb557b76d27a6724bc942560d5e091717e81",
+          "bytes": 252851
         },
         "pronto-cam0.depth": {
           "file": "pronto-cam0/00000000.depth.f32.bin",

@@ -1,6 +1,6 @@
 {
   "schema": "simforge-oss.render-determinism-manifest.v1",
-  "generatedAt": "2026-09-24T07:56:56.811Z",
+  "generatedAt": "2026-09-24T09:05:03.061Z",
   "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
   "mode": "golden-record",
   "renderConfig": {
@@ -16,13 +16,13 @@
   },
   "rendererPath": {
     "engine": "native-bevy",
-    "file": "../../../../../tmp/claude-1000/-home-path/bb0d75f9-19c6-4010-a03b-2bb79dd806bc/scratchpad/goldens-nan/simforge-render.golden",
-    "sha256": "b174732521581a20f1f394d606aef583b238ec49bb3452863a373d417584350c",
+    "file": "../../../../../mnt/storage/gpu-deep-scratch/goldens-dapple/simforge-render.golden",
+    "sha256": "e3fc64ba63d8ebac5a7e66c9a94b485fb290255bc1e8dce1e9e756a88826f1bd",
     "invocation": {
       "args": [
         "job",
         "--job",
-        "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/richmond-frame0/runA/richmond-frame0.job.json"
+        "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/richmond-frame0/runA/richmond-frame0.job.json"
       ],
       "job": {
         "schema": "simforge.render-job/v2",
@@ -70,7 +70,7 @@
           "id",
           "depth"
         ],
-        "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/richmond-frame0/runA/richmond-frame0"
+        "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/richmond-frame0/runA/richmond-frame0"
       },
       "passesRenderedSequentially": false
     },
@@ -82,7 +82,7 @@
     }
   },
   "hardware": {
-    "collectedAt": "2026-09-24T07:52:35.997Z",
+    "collectedAt": "2026-09-24T09:00:50.539Z",
     "gpuFingerprint": "c398eadcadbd2754",
     "host": {
       "osPrettyName": "Ubuntu 24.04.4 LTS",
@@ -102,8 +102,8 @@
   "passHashes": {
     "cam0.rgb": {
       "file": "cam0/00000009.rgb.png",
-      "sha256": "1689da536c9e9a60b6d393c82be91611f18e7a2247d2a7b185c58545e1d025e9",
-      "bytes": 197196
+      "sha256": "ab494c5dbf2e84494fe10582909e3ee54de0cbd8473e4e260c845ea1cbc76be1",
+      "bytes": 198264
     },
     "cam0.id": {
       "file": "cam0/00000009.id.png",
@@ -130,16 +130,16 @@
     }
   ],
   "timings": {
-    "avgFrameMs": 3592.708977333333,
-    "p50FrameMs": 3589.332634,
-    "p99FrameMs": 3611.938776,
-    "fps": 0.278341498381604,
+    "avgFrameMs": 3548.315368,
+    "p50FrameMs": 3543.376055,
+    "p99FrameMs": 3586.759459,
+    "fps": 0.2818238787392925,
     "measuredFrames": 9
   },
   "twoRunEvidence": {
     "runsCompared": 2,
     "byteStable": true,
-    "runBTimingsAvgFrameMs": 3766.5052774444443
+    "runBTimingsAvgFrameMs": 3534.4532434444445
   },
   "verdict": {
     "byteStable": true,
@@ -149,7 +149,7 @@
   "previousVersions": [
     {
       "schema": "simforge-oss.render-determinism-manifest.v1",
-      "generatedAt": "2026-09-24T00:01:34.587Z",
+      "generatedAt": "2026-09-24T07:56:56.811Z",
       "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
       "mode": "golden-record",
       "renderConfig": {
@@ -165,13 +165,13 @@
       },
       "rendererPath": {
         "engine": "native-bevy",
-        "file": "../../.cache/gpu-deep-target/release/simforge-render",
-        "sha256": "8397e2bc03fde0fc05d121dfb7ce53d9c8cb88f92f3e1871663b7503753f2b04",
+        "file": "../../../../../tmp/claude-1000/-home-path/bb0d75f9-19c6-4010-a03b-2bb79dd806bc/scratchpad/goldens-nan/simforge-render.golden",
+        "sha256": "b174732521581a20f1f394d606aef583b238ec49bb3452863a373d417584350c",
         "invocation": {
           "args": [
             "job",
             "--job",
-            "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/richmond-frame0/runA/richmond-frame0.job.json"
+            "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/richmond-frame0/runA/richmond-frame0.job.json"
           ],
           "job": {
             "schema": "simforge.render-job/v2",
@@ -187,7 +187,7 @@
               },
               "warmupFrames": 20,
               "glbs": [
-                "/home/path/tmp/renderfleet/maps/.corpus/richmond-field-station/master.gltf"
+                "/home/path/.local/share/simforge/maps/.corpus/richmond-field-station/master.gltf"
               ]
             },
             "rig": {
@@ -219,7 +219,7 @@
               "id",
               "depth"
             ],
-            "outDir": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/richmond-frame0/runA/richmond-frame0"
+            "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/richmond-frame0/runA/richmond-frame0"
           },
           "passesRenderedSequentially": false
         },
@@ -231,7 +231,7 @@
         }
       },
       "hardware": {
-        "collectedAt": "2026-09-23T23:56:54.229Z",
+        "collectedAt": "2026-09-24T07:52:35.997Z",
         "gpuFingerprint": "c398eadcadbd2754",
         "host": {
           "osPrettyName": "Ubuntu 24.04.4 LTS",
@@ -251,8 +251,8 @@
       "passHashes": {
         "cam0.rgb": {
           "file": "cam0/00000009.rgb.png",
-          "sha256": "8147195bf94900febbc9309affd2731c8ccf3faed493a6487b3b83d2f99dd3dc",
-          "bytes": 197487
+          "sha256": "1689da536c9e9a60b6d393c82be91611f18e7a2247d2a7b185c58545e1d025e9",
+          "bytes": 197196
         },
         "cam0.id": {
           "file": "cam0/00000009.id.png",
@@ -279,16 +279,16 @@
         }
       ],
       "timings": {
-        "avgFrameMs": 4165.4108312222215,
-        "p50FrameMs": 4168.10537,
-        "p99FrameMs": 4203.440261,
-        "fps": 0.2400723579303169,
+        "avgFrameMs": 3592.708977333333,
+        "p50FrameMs": 3589.332634,
+        "p99FrameMs": 3611.938776,
+        "fps": 0.278341498381604,
         "measuredFrames": 9
       },
       "twoRunEvidence": {
         "runsCompared": 2,
         "byteStable": true,
-        "runBTimingsAvgFrameMs": 5292.942397222223
+        "runBTimingsAvgFrameMs": 3766.5052774444443
       },
       "verdict": {
         "byteStable": true,

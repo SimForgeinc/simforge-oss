@@ -179,9 +179,18 @@ On the Easterbrook chase (tick 100), a white car under dappled canopy read as su
 - The environment probe is an open sky. Glossy paint seen at a grazing angle reflected it at full strength under the canopy, so in HDR the body kept a median 0.71 of its unshadowed luminance.
 - The road-weighted meter lifted the shaded frame by 1.1 EV.
 
-Canopy sky occlusion is a vendored `bevy_pbr` patch. For a shaded fragment it looks up the sun's shadow map at four taps 2.5 m out, 2 m above the fragment; occluders that also cover the point 15 m up (tall buildings) are discounted. The result, weighted by sun elevation, is the overhead cover. Cover removes up to 85% of the environment specular for upward reflections and up to 60% of the environment diffuse for upward normals. It is deterministic: fixed taps, no noise.
+Canopy sky occlusion is a vendored `bevy_pbr` patch. For a shaded fragment it looks up the sun's shadow map at eight fixed taps in two rings (1.5 m axis-aligned, 3 m diagonal), 2 m above the fragment. Occluders that also cover the point 25 m up are discounted, so tall trees still count and only very tall structures are cut. Cover is the covered fraction, scaled by 1.8 (sky view under layered foliage is roughly the gap fraction squared) and weighted by sun elevation. It removes up to 95% of the environment specular for upward reflections and up to 75% of the environment diffuse for upward normals. It is deterministic: fixed taps, no noise.
 - Cost on the Easterbrook 1080p chase (5080): +0.1–0.25 ms per camera. Sunlit fragments skip the lookup.
-- `a_glossy_car_in_canopy_shade_darkens_like_the_road`, a car at a chase-camera angle, lavapipe: under a canopy slab 0.246 → 0.182 of the sunlit car (showcase); in a 12 m building's shadow 0.236 → 0.151. The approximation also dims sky reflections in building shade, by about a third there. A sunlit car changes by ≤ 3%.
+- `a_glossy_car_in_canopy_shade_darkens_like_the_road`, a car at a chase-camera angle, lavapipe, showcase:
+
+  | Car | Occlusion off → on |
+  |---|---|
+  | Under a canopy slab | 0.233 → 0.130 of the sunlit car |
+  | In a 12 m building's shadow | 0.223 → 0.129 |
+  | Sunlit | changes by 3.6% (training: 4.1%) |
+- On the Easterbrook chase (tick 100), car shaded/lit falls from 0.27 to 0.20, and the road beside it from 0.15 to 0.12.
+- **Known limit:** the cover is read from the sun's shadow map, so a building's shadow counts as overhead cover. A car beside a building still sees most of the sky, so its sky reflection comes out about 10% too dark: the building car ends as dark as the canopy car. Telling the two apart needs a sky-visibility estimate that doesn't come from the sun's shadow map.
+- **Dash-cam calibration still holds.** Re-scored against the NVIDIA reference on 4 Belmont scenes × 30 frames: showcase 1.167 → 1.165, training 1.188 → 1.185.
 
 ### Dash-cam calibration defaults (both presets)
 
