@@ -10,7 +10,8 @@
 set -eu
 
 lavapipe_icd() {
-  for f in /usr/share/vulkan/icd.d/lvp_icd.*.json; do
+  # lvp_icd.json on Ubuntu 24.04+; lvp_icd.<arch>.json on older Debian/Ubuntu.
+  for f in /usr/share/vulkan/icd.d/lvp_icd.json /usr/share/vulkan/icd.d/lvp_icd.*.json; do
     [ -e "$f" ] && { echo "$f"; return 0; }
   done
   return 1
@@ -21,7 +22,7 @@ device="${SIMFORGE_DEVICE:-auto}"
 case "$device" in
   gpu)
     if ! nvidia_present; then
-      echo "simforge-container: SIMFORGE_DEVICE=gpu but no NVIDIA driver is mounted (run with --gpus all and the NVIDIA container toolkit)" >&2
+      echo "simforge-container: SIMFORGE_DEVICE=gpu but no NVIDIA driver is mounted (run with --runtime nvidia -e NVIDIA_VISIBLE_DEVICES=all; needs the NVIDIA container toolkit)" >&2
       exit 2
     fi
     export VK_DRIVER_FILES=/opt/simforge/icd/nvidia_icd.json SIMFORGE_CONTAINER_DEVICE=nvidia ;;
@@ -34,7 +35,7 @@ case "$device" in
     else
       VK_DRIVER_FILES="$(lavapipe_icd)" || { echo "simforge-container: lavapipe ICD missing from the image" >&2; exit 2; }
       export VK_DRIVER_FILES SIMFORGE_CONTAINER_DEVICE=lavapipe
-      echo "simforge-container: no GPU mounted; rendering on the CPU (Mesa lavapipe). Use --gpus all for NVIDIA, or SIMFORGE_DEVICE=cpu to silence this." >&2
+      echo "simforge-container: no GPU mounted; rendering on the CPU (Mesa lavapipe). For NVIDIA use --runtime nvidia -e NVIDIA_VISIBLE_DEVICES=all; SIMFORGE_DEVICE=cpu silences this." >&2
     fi ;;
   *)
     echo "simforge-container: SIMFORGE_DEVICE must be auto, gpu or cpu (got '$device')" >&2

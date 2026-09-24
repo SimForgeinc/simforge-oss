@@ -9,7 +9,9 @@
 #   docker/simforge-entrypoint.sh
 #
 # Vulkan device: CPU (Mesa lavapipe) unless an NVIDIA driver is mounted
-# (`docker run --gpus all`); the entrypoint states which one it picked on
+# (`docker run --runtime nvidia -e NVIDIA_VISIBLE_DEVICES=all`; plain `--gpus all`
+# mounted the libraries but no Vulkan device on Docker 29.1 / driver 595.84);
+# the entrypoint states which one it picked on
 # stderr and exports SIMFORGE_CONTAINER_DEVICE, and SIMFORGE_DEVICE=gpu makes a
 # missing GPU a hard error. See docs/src/install/container.md.
 ARG BASE=ubuntu:24.04@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3
@@ -19,13 +21,17 @@ ARG SIMFORGE_VERSION
 ARG SIMFORGE_REVISION
 
 # ffmpeg is a separate system program (GPL build from the Ubuntu archive); the
-# binary never links it. libasound2t64/libudev1/libwayland-client0 are here only
+# binary never links it. libegl1/libgl1/libx11-6/libxkbcommon0: the NVIDIA
+# Vulkan ICD (libGLX_nvidia, mounted by the container toolkit) does not
+# initialise without the GLVND/X11 client libraries (measured on the 5080,
+# driver 595.84; same set as the native render-worker image). libasound2t64/libudev1/libwayland-client0 are here only
 # while the release binary still links them (tracked: the CLI build should be
 # headless); the workflow's `ldd` check fails the image if anything is missing.
 RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates ffmpeg libvulkan1 mesa-vulkan-drivers vulkan-tools tini \
+      libegl1 libgl1 libx11-6 libxkbcommon0 \
       libasound2t64 libudev1 libwayland-client0; \
     rm -rf /var/lib/apt/lists/*; \
     install -d /opt/simforge/icd; \
@@ -46,7 +52,7 @@ ENV NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility \
     XDG_CACHE_HOME=/data/cache
 
 LABEL org.opencontainers.image.title="simforge" \
-      org.opencontainers.image.description="SimForge CLI with the deterministic renderer (Vulkan: NVIDIA via --gpus all, or Mesa lavapipe on CPU)" \
+      org.opencontainers.image.description="SimForge CLI with the deterministic renderer (Vulkan: NVIDIA via --runtime nvidia, or Mesa lavapipe on CPU)" \
       org.opencontainers.image.source="https://github.com/SimForgeinc/simforge-sdk" \
       org.opencontainers.image.url="https://docs.simforge.ai" \
       org.opencontainers.image.licenses="Apache-2.0" \

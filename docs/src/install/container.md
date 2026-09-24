@@ -19,19 +19,24 @@ the message then goes away.
 ## GPU variant (NVIDIA)
 
 The same image renders on an NVIDIA GPU when the driver is mounted by the
-[NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/):
+[NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/)
+through the `nvidia` runtime:
 
 ```sh
-docker run --rm --gpus all \
-  -e NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility \
+docker run --rm --runtime nvidia \
+  -e NVIDIA_VISIBLE_DEVICES=all \
   -e SIMFORGE_DEVICE=gpu \
   -v "$PWD:/work" ghcr.io/simforgeinc/simforge:0.2.0 doctor
 ```
 
-`graphics` is required: without it the toolkit does not mount the driver's
-Vulkan library. `SIMFORGE_DEVICE=gpu` makes a missing GPU a hard error (exit 2)
-instead of a CPU render, which is what you want on a GPU fleet. The adapter a
-render used is recorded in its `results.json` either way.
+The image already sets `NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility`
+(`graphics` is what mounts the driver's Vulkan library). Use the `nvidia`
+runtime as above: with `--gpus all` the toolkit mounted the driver libraries
+but the Vulkan driver did not initialise in our tests (Docker 29.1, driver
+595.84), and `doctor` reports no GPU adapter. `SIMFORGE_DEVICE=gpu` makes a
+missing GPU a hard error (exit 2) instead of a CPU render, which is what you
+want on a GPU fleet. The adapter a render used is recorded in its
+`results.json` either way.
 
 | `SIMFORGE_DEVICE` | Behaviour |
 |---|---|
