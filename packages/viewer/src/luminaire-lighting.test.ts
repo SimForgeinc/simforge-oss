@@ -27,6 +27,9 @@ describe('luminaire lighting', () => {
   it('recognises UUID-glued Datasmith actor names via camel boundaries', () => {
     expect(isLuminaireObjectName('a70aaa6b-6ce4-475f-a4a7-f37a4ed1054bStreetLight_30ft_DefaultSceneRoot')).toBe(true);
     expect(isLuminaireObjectName('Luminaire_Arm_8ft_DefaultSceneRoot')).toBe(true);
+    // RoadRunner: braces around the guid (the native renderer's derivative uses the same rule).
+    expect(isLuminaireObjectName('{a70aaa6b-6ce4-475f-a4a7-f37a4ed1054b}StreetLight_30ft')).toBe(true);
+    expect(isLuminaireObjectName('{94c1874c-ae40-47a5-8b1c-2b3a1d0e9f11}Luminaire_Head02')).toBe(true);
     expect(isLuminaireObjectName('spotLight3_spotLight3_light')).toBe(false);
     expect(isLuminaireObjectName('Small_Electric_Pannel_01_84_StaticMeshComponent')).toBe(false);
   });

@@ -9,12 +9,10 @@ import {
   Vector3,
 } from 'three';
 
-const LUMINAIRE_NAME = /(?:^|[_ .-])(street[_ .-]?lights?|street[_ .-]?lamps?|lamp[_ .-]?posts?|light[_ .-]?poles?|road[_ .-]?lights?|luminaires?)(?:$|[_ .-])/i;
-const LUMINAIRE_HEAD_NAME = /(?:^|[_ .-])(?:luminaire|lamp)[_ .-]?head/i;
-const MIN_FIXTURE_HEIGHT_M = 2;
-const MAX_FIXTURE_HEIGHT_M = 20;
-const MAX_FIXTURE_SPAN_M = 12;
-const BULB_INSET_M = 0.25;
+import {
+  isLuminaireHeadName, isLuminaireName, LUMINAIRE_BULB_INSET_M as BULB_INSET_M, LUMINAIRE_MAX_HEIGHT_M as MAX_FIXTURE_HEIGHT_M,
+  LUMINAIRE_MAX_SPAN_M as MAX_FIXTURE_SPAN_M, LUMINAIRE_MIN_HEIGHT_M as MIN_FIXTURE_HEIGHT_M,
+} from '@simforge-oss/maps/luminaires';
 
 export const DEFAULT_ACTIVE_LUMINAIRE_LIMIT = 12;
 
@@ -35,14 +33,15 @@ interface ActiveLuminaire {
 }
 
 /**
- * Strict semantic-name match; generic words such as `light` never classify geometry.
- *
- * Unreal/Datasmith exports glue a UUID prefix straight onto a camelCase actor
- * name (`a70aaa6bStreetLight_30ft_DefaultSceneRoot`), so camel boundaries are
- * treated as separators before the anchored token match runs.
+ * Strict semantic-name match; generic words such as `light` never classify
+ * geometry. The rule is `@simforge-oss/maps/luminaires`, the same one the
+ * map pipeline's luminaire derivative (what the native renderer lights at
+ * night) uses: camel-case, `_ .-` and braces separate words, so Datasmith's
+ * `a70aaa6bStreetLight_30ft_DefaultSceneRoot` and RoadRunner's
+ * `{<guid>}StreetLight_30ft` both match.
  */
 export function isLuminaireObjectName(name: string): boolean {
-  return LUMINAIRE_NAME.test(splitCamelBoundaries(name));
+  return isLuminaireName(name);
 }
 
 /**
@@ -161,10 +160,6 @@ export class LuminaireLightingController {
 }
 
 /** Camel boundaries become separators so anchored token matches survive Unreal name gluing. */
-function splitCamelBoundaries(name: string): string {
-  return name.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
-}
-
 /**
  * World-space bulb anchor for an accepted fixture.
  *
@@ -176,7 +171,7 @@ function bulbPosition(fixture: Object3D, fixtureBounds: Box3): Vector3 {
   let head: Object3D | null = null;
   fixture.traverse((node) => {
     if (head || node === fixture || !node.name) return;
-    if (LUMINAIRE_HEAD_NAME.test(splitCamelBoundaries(node.name))) head = node;
+    if (isLuminaireHeadName(node.name)) head = node;
   });
   if (head) {
     const headBounds = new Box3().setFromObject(head);

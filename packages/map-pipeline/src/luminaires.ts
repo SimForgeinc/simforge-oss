@@ -24,28 +24,19 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { canonicalJson, sha256 } from './closure.js';
+import {
+  isLuminaireName, LUMINAIRE_BULB_INSET_M as BULB_INSET_M, LUMINAIRE_HEAD_NAME, LUMINAIRE_MAX_HEIGHT_M as MAX_FIXTURE_HEIGHT_M,
+  LUMINAIRE_MAX_SPAN_M as MAX_FIXTURE_SPAN_M, LUMINAIRE_MAX_STANDALONE_HEAD_SPAN_M as MAX_STANDALONE_HEAD_SPAN_M,
+  LUMINAIRE_MIN_HEIGHT_M as MIN_FIXTURE_HEIGHT_M, LUMINAIRE_NAME, splitCamelBoundaries as splitCamel,
+} from '@simforge-oss/maps/luminaires';
+
+export { isLuminaireName };
 
 export const LUMINAIRES_DIR = 'derived/luminaires';
 export const LUMINAIRES_SCHEMA = 'simforge.map-luminaires.v1';
 /** Bumped whenever the classification or the placement changes. */
 export const LUMINAIRES_REVISION = 1;
 
-/**
- * The viewer's rule (packages/viewer/src/luminaire-lighting.ts), with braces
- * as separators too: RoadRunner names a fixture `{<guid>}StreetLight_30ft`,
- * which the viewer's rule (camel-case and `_ .-` boundaries only) misses.
- */
-const LUMINAIRE_NAME = /(?:^|[_ .{}-])(street[_ .-]?lights?|street[_ .-]?lamps?|lamp[_ .-]?posts?|light[_ .-]?poles?|road[_ .-]?lights?|luminaires?)(?:$|[_ .{}-])/i;
-const LUMINAIRE_HEAD_NAME = /(?:^|[_ .{}-])(?:luminaire|lamp)[_ .-]?head/i;
-/** A lamp head exported on its own (a parking-lot or wall head): at most this big. */
-const MAX_STANDALONE_HEAD_SPAN_M = 3;
-const MIN_FIXTURE_HEIGHT_M = 2;
-const MAX_FIXTURE_HEIGHT_M = 20;
-const MAX_FIXTURE_SPAN_M = 12;
-const BULB_INSET_M = 0.25;
-
-const splitCamel = (name: string): string => name.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
-export const isLuminaireName = (name: string): boolean => LUMINAIRE_NAME.test(splitCamel(name));
 
 export interface LuminaireFixture {
   /** Node index path from the scene root, `n<i>/n<j>/...`: stable for a master. */

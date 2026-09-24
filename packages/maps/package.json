@@ -99,6 +99,11 @@
       "development": "./src/coordinate-frame.ts",
       "types": "./dist/coordinate-frame.d.ts",
       "default": "./dist/coordinate-frame.js"
+    },
+    "./luminaires": {
+      "development": "./src/luminaires.ts",
+      "types": "./dist/luminaires.d.ts",
+      "default": "./dist/luminaires.js"
     }
   },
   "files": [
@@ -118,7 +123,7 @@
     "vitest": "^3.0.0"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/opendrive.ts src/node.ts src/topology.ts src/ingest.ts src/camera-rig.ts src/signals.ts src/coordinate-frame.ts --format esm --dts --sourcemap --clean --out-dir dist && cp src/ingest/ktx2-mips.mjs src/ingest/ktx2-mips.d.mts dist/",
+    "build": "tsup src/index.ts src/opendrive.ts src/node.ts src/topology.ts src/ingest.ts src/camera-rig.ts src/signals.ts src/coordinate-frame.ts src/luminaires.ts --format esm --dts --sourcemap --clean --out-dir dist && cp src/ingest/ktx2-mips.mjs src/ingest/ktx2-mips.d.mts dist/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   }
