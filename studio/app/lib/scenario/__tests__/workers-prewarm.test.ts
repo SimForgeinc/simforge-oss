@@ -11,10 +11,10 @@ import { PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID } from "@simf
 
 import { migrate } from "../../../../scripts/migrate";
 import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
-import { execute, queryOne, shutdownDatabase } from "@/app/lib/db/data-api";
+import { execute, queryOne, queryRows, shutdownDatabase } from "@/app/lib/db/data-api";
 import { approveRenderWorker } from "../control-plane-store";
 import { createRenderIntentJob } from "../render-intent-store";
-import { claimResponseV2, registerRenderWorkerV2, signRenderInputsV2 } from "../render-worker-control-store";
+import { claimResponseV2, readRenderIntent, registerRenderWorkerV2, signRenderInputsV2 } from "../render-worker-control-store";
 import { ScenarioRendererCapabilitySchema } from "../render-wire-contracts";
 import { canonicalJsonSha256, sha256 } from "../core";
 import {
@@ -490,10 +490,17 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
     } as Parameters<typeof createRenderIntentJob>[1],
   );
   assert.ok(nativeJob);
-  const nativeIntent = await queryOne<{ intent: { assets: Array<{ assetId: string; sha256: string; sizeBytes: number }> } }>(
+  // The row stores the members by reference to their sets; the intent read back declares them all.
+  const storedIntent = await queryOne<{ intent: { assets: Array<{ assetId: string }>; nativeMapClosureRef?: { nativeMapAssetSetId: string; derivativeSetIds: string[]; count: number } } }>(
     `SELECT render_intent AS intent FROM simforge.render_jobs WHERE id = :id`, { id: nativeJob.id },
   );
-  const declared = new Map(nativeIntent!.intent.assets.map((asset) => [asset.assetId, asset]));
+  assert.deepEqual(
+    [storedIntent!.intent.nativeMapClosureRef?.nativeMapAssetSetId, storedIntent!.intent.nativeMapClosureRef?.derivativeSetIds, storedIntent!.intent.nativeMapClosureRef?.count],
+    ["usnset_prewarm", ["usnset_lod_prewarm"], 5],
+  );
+  assert.ok(storedIntent!.intent.assets.every((asset) => !asset.assetId.startsWith("map.")), "no map member is stored inline");
+  const nativeIntent = await readRenderIntent(queryRows, nativeJob.id);
+  const declared = new Map(nativeIntent!.assets.map((asset) => [asset.assetId, asset]));
   assert.equal(declared.get(`map.resource.${sha256("derived/geometry-lod/lod.bin")}`)?.sha256, lodBinSha);
   assert.equal(declared.get(`map.resource.${sha256("derived/geometry-lod/manifest.json")}`)?.sizeBytes, 4096);
   assert.equal(declared.get("map.tile.000000")?.sha256, DIGEST("a"), "the closure members are still declared");

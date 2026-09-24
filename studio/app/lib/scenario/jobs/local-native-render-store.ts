@@ -35,10 +35,10 @@ import { canonicalJsonSha256, sha256, scenarioId } from "../core";
 import {
   RenderArtifactIdentitySchema,
   RenderProgressRecordSchema,
-  ScenarioRenderIntentSchema,
   type RenderArtifactIdentity,
   type RenderProgressRecord,
 } from "../render-wire-contracts";
+import { rehydrateRenderIntent } from "../render-intent-closure";
 import type { JobTransaction } from "./lifecycle-lock";
 
 /**
@@ -221,7 +221,7 @@ export type LocalNativeClaimPayload = {
 };
 
 export async function localNativeClaimPayload(source: LocalNativeRenderSource): Promise<LocalNativeClaimPayload> {
-  const intent = ScenarioRenderIntentSchema.parse(parseJsonObject(source.render_intent));
+  const intent = await rehydrateRenderIntent(queryRows, parseJsonObject(source.render_intent));
   if (hashRenderIntent(intent) !== source.intent_sha256) throw new Error("render_intent_digest_mismatch");
   const members = await declaredNativeMapMembers(source.map_version_id);
   const actorClosure = nativeActorAssetsInput();
@@ -296,7 +296,8 @@ type ActiveAttempt = {
   map_version_id: string;
   revision_id: string;
   intent_sha256: string;
-  render_intent: string;
+  /** The full intent (a stored closure reference resolved). */
+  render_intent: string | Record<string, unknown>;
   execution_package_control_sha256: string;
   cancel_requested: boolean;
 };
@@ -324,7 +325,9 @@ async function activeAttempt(jobId: string, fence: { attemptId: string; fenceTok
       LIMIT 1`,
     { attempt_id: fence.attemptId, job_id: jobId, fence_token_sha256: sha256(fence.fenceToken) },
   );
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row) return null;
+  return { ...row, render_intent: await rehydrateRenderIntent(queryRows, parseJsonObject(row.render_intent)) };
 }
 
 // Module state that must outlive a Next module reload lives on globalThis under symbol keys.

@@ -44,6 +44,7 @@ import { z } from "zod";
 import { canonicalJsonSha256, sha256, scenarioId } from "./core";
 import { boundMapDerivatives, derivativeMembers, MAP_DERIVATIVE_DESCRIPTOR_SQL, MAP_DERIVATIVE_MEMBERS_JOIN_SQL, mapDerivativeExtraMembers, type MapDerivativeMemberRow } from "./map-derivatives";
 import { expectedNativeClosure } from "./jobs/local-native-render-store";
+import { readRenderIntent } from "./render-intent-closure";
 import {
   ScenarioRenderIntentSchema,
   ScenarioRendererCapabilitySchema,
@@ -264,58 +265,7 @@ function parseRenderIntent(value: unknown): ScenarioRenderIntent {
   );
 }
 
-type RowQuery = <T>(sql: string, params?: SqlParams) => Promise<T[]>;
-
-/**
- * Characters per slice when reading a stored render intent. A native intent
- * declares its whole map closure, so one row reaches megabytes for a large
- * map, while Aurora's Data API caps a single response at 1 MB and its seam can
- * page rows but never split one. 128k characters stays under that cap even if
- * every character came back escaped as a six-byte `\uXXXX`.
- */
-export const RENDER_INTENT_TEXT_SLICE_CHARS = 131_072;
-
-/** Postgres `length()` counts code points; a JS string counts UTF-16 units. */
-function codePointLength(text: string) {
-  let surrogatePairs = 0;
-  for (const _ of text.matchAll(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g)) surrogatePairs += 1;
-  return text.length - surrogatePairs;
-}
-
-/**
- * The stored canonical text of a job's render intent, read in bounded slices
- * and reassembled. The column is written once at submission and never
- * updated, so slices read by separate statements cannot tear; the lease path
- * still verifies the reassembled document against `intent_sha256`.
- * Resolves `null` when the job does not exist.
- */
-export async function readRenderIntentText(
-  query: RowQuery,
-  jobId: string,
-  sliceChars = RENDER_INTENT_TEXT_SLICE_CHARS,
-): Promise<string | null> {
-  const [head] = await query<{ chars: number | string; part: string }>(
-    `SELECT length(render_intent::text) AS chars,
-            substr(render_intent::text, 1, CAST(:size AS integer)) AS part
-       FROM simforge.render_jobs WHERE id = :job_id`,
-    { job_id: jobId, size: sliceChars },
-  );
-  if (!head) return null;
-  const total = Number(head.chars);
-  const parts = [head.part];
-  for (let start = sliceChars + 1; start <= total; start += sliceChars) {
-    const [slice] = await query<{ part: string }>(
-      `SELECT substr(render_intent::text, CAST(:start AS integer), CAST(:size AS integer)) AS part
-         FROM simforge.render_jobs WHERE id = :job_id`,
-      { job_id: jobId, start, size: sliceChars },
-    );
-    if (!slice) throw new Error("render_intent_read_incomplete");
-    parts.push(slice.part);
-  }
-  const text = parts.join("");
-  if (codePointLength(text) !== total) throw new Error("render_intent_read_incomplete");
-  return text;
-}
+export { RENDER_INTENT_TEXT_SLICE_CHARS, readRenderIntent, readRenderIntentText } from "./render-intent-closure";
 
 export function workerCanRun(worker: WorkerRow, candidate: Candidate) {
   const capability = ScenarioRendererCapabilitySchema.safeParse(parseObject(worker.capabilities));
@@ -555,10 +505,10 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
         { job_id: candidate.id, renderer_engine: worker.renderer_engine, contract: RENDER_INTENT_V1_SCHEMA },
       );
       if (!row) return null;
-      // The row is locked above, so its intent is read in slices under that lock.
-      const intentText = await readRenderIntentText((sql, params) => tx.queryRows(sql, params), row.id);
-      if (intentText === null) return null;
-      const intent = ScenarioRenderIntentSchema.parse(JSON.parse(intentText));
+      // The row is locked above, so its intent is read under that lock, with
+      // a stored closure reference resolved from the map registry.
+      const intent = await readRenderIntent((sql, params) => tx.queryRows(sql, params), row.id);
+      if (intent === null) return null;
       if (hashRenderIntent(intent) !== row.intent_sha256) throw new Error("render_intent_digest_mismatch");
       const attempt = Number(row.attempt_count) + 1;
       const attemptId = scenarioId("usat");
@@ -877,7 +827,7 @@ async function activeLease(
   );
   const lease = rows[0];
   if (!lease) return null;
-  const renderIntent = await readRenderIntentText(queryRows, lease.job_id);
+  const renderIntent = await readRenderIntent(queryRows, lease.job_id);
   if (renderIntent === null) return null;
   return { ...lease, render_intent: renderIntent } satisfies ActiveLease;
 }

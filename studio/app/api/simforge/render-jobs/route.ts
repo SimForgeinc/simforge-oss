@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { SubmitScenarioRenderIntentSchema } from "@/app/lib/scenario/render-wire-contracts";
 import { listRenderJobs } from "@/app/lib/scenario/control-plane-store";
 import { createRenderIntentJob } from "@/app/lib/scenario/render-intent-store";
+import { RenderIntentTooLargeError } from "@/app/lib/scenario/render-intent-closure";
 import { resolveRevisionReplay, RevisionReplayError, SimulationFailedError } from "@/app/lib/scenario/sim-result-store";
 import { SimulationClosureUnavailableError } from "@/app/lib/scenario/sim-closure.server";
 import {
@@ -97,6 +98,9 @@ export async function POST(request: Request) {
         { error: "carla_map_not_bound", ...(typeof detail === "string" ? { detail } : {}) },
         { status: 422 },
       );
+    }
+    if (error instanceof RenderIntentTooLargeError) {
+      return NextResponse.json({ error: error.message, detail: error.detail }, { status: 422 });
     }
     if (error instanceof Error && error.message === "uniscenario_render_intent_idempotency_conflict") {
       return NextResponse.json({ error: error.message }, { status: 409 });
