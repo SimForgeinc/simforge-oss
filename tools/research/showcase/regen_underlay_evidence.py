@@ -9,7 +9,7 @@ import json, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-ROOT = Path('/home/path/UniScenarios-training-grade')
+ROOT = Path.home() / 'UniScenarios-training-grade'
 JOBS = ROOT / 'showcase-data' / 'jobs'
 OUT = ROOT / 'showcase-data' / 'evidence-underlay'
 CASES = json.loads((ROOT / 'apps/showcase/campaigns/edge-cases.json').read_text())['cases']

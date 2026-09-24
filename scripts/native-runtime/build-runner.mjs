@@ -12,7 +12,7 @@
 //   the opaque-fd Vulkan->CUDA bridge and does not exist elsewhere)
 // and, only with --providers, wheels under dist/native-runtime/wheels/ for the
 // Python providers (simforge-oss-gym via maturin, -physics, -gpu,
-// -render, -splat via `python -m build`). The baseline bundle carries
+// -render via `python -m build`). The baseline bundle carries
 // no Python, CUDA or research environment.
 //
 // Sky plates: renderer/render-core/assets/sky/*.skytex (gitignored derivatives
@@ -49,7 +49,7 @@ const RENDERER_ROOT = path.join(REPO_ROOT, 'renderer');
 const WHEELS_DIR = path.join(REPO_ROOT, 'dist', 'native-runtime', 'wheels');
 const DEFAULT_SKY_DIR = path.join(RENDERER_ROOT, 'render-core', 'assets', 'sky');
 const SKY_PLATES = ['starmap_2020_8k.skytex', 'moon_lroc_4k.skytex'];
-const PURE_PROVIDER_PACKAGES = ['adapters/physics', 'adapters/gpu', 'renderer/service/python', 'renderer/splat/python'];
+const PURE_PROVIDER_PACKAGES = ['adapters/physics', 'adapters/gpu', 'renderer/service/python'];
 
 function fail(reason) {
   process.stderr.write(`${JSON.stringify({ code: 'runner.build_failed', reason })}\n`);

@@ -20,11 +20,14 @@ import { OpenloopParamsSchema, type OpenloopParams } from './params.js';
 
 export const COMPUTE_JOB_SCHEMA = 'simforge.compute-job/v1';
 
+/**
+ * The job kinds this worker executes. A hosted deployment may run further kinds through its
+ * own entrypoints (scene reconstruction, for one); those are never parsed here.
+ */
 export const JOB_KINDS = [
   'alpamayo.openloop',
   'alpamayo.text',
   'alpamayo.closedloop-episode',
-  'reconstruct.nurec',
 ] as const;
 export type JobKind = (typeof JOB_KINDS)[number];
 

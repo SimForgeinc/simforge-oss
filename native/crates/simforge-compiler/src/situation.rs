@@ -1,4 +1,4 @@
-//! Source-bound situations: an immutable source (authored, NuRec, twin), a
+//! Source-bound situations: an immutable source (authored, reconstruction, twin), a
 //! template over it, participants with authority intervals, observable
 //! events/constraints, bounded knobs and provenance for generated geometry.
 //!
@@ -58,7 +58,7 @@ const STATIC_GEOMETRY_EFFECT_SCHEMA: &str = "simforge.static-geometry-effect/v1"
 #[serde(rename_all = "lowercase")]
 pub enum SourceKind {
     Authored,
-    Nurec,
+    Reconstruction,
     Twin,
 }
 
@@ -3732,11 +3732,11 @@ mod tests {
     #[test]
     fn source_bound_geometry_transactions_keep_authored_identity() {
         let source: Value = serde_json::from_str(include_str!(
-            "../../../../qualification/native-migration/fixtures/generated-geometry/program.json"
+            "../tests/fixtures/generated-geometry/program.json"
         ))
         .unwrap();
         let mut fixture: Value = serde_json::from_str(include_str!(
-            "../../../../qualification/native-migration/fixtures/generated-geometry/fixture.json"
+            "../tests/fixtures/generated-geometry/fixture.json"
         ))
         .unwrap();
         let program = parse_situation(&source).unwrap();
@@ -3750,7 +3750,7 @@ mod tests {
                 .unwrap()
         );
         let mut binding_value: Value = serde_json::from_str(include_str!(
-            "../../../../qualification/native-migration/fixtures/generated-geometry/geometry-binding.json"
+            "../tests/fixtures/generated-geometry/geometry-binding.json"
         ))
         .unwrap();
         binding_value

@@ -1,6 +1,6 @@
 # Scene-provider inventory
 
-Paths below are relative to `/home/path/simforge-oss`. Read-only source investigation; no execution, builds, tests, linting, edits, or runtime verification were performed. Main will persist this report to `/home/path/tmp/scene-providers-inventory.md`; the scout lacks write capability. JevClosedLoopDesign was already sent the decisive answers and native Python integration details.
+Paths below are relative to `~/simforge-oss`. Read-only source investigation; no execution, builds, tests, linting, edits, or runtime verification were performed. Main will persist this report to `~/tmp/scene-providers-inventory.md`; the scout lacks write capability. JevClosedLoopDesign was already sent the decisive answers and native Python integration details.
 
 ## 1. Existing policy / agent step contract
 
@@ -52,7 +52,7 @@ Wire contract:
 - Full capture uses world-space triangle soup for CPU lidar/radar, plus ID/semantic GPU passes: `renderer/sensors/src/capture.rs:14-18,614-617,1113-1165`. Not merely pixel rendering.
 - Browser equivalent supports structured lidar/radar artifacts: `packages/render/src/web/capture.ts:204-205,242-244`; radar samples depth/ID cube with trace-derived velocity: `packages/render/src/web/sensors/radar-pass.ts:58-71,103-114`. Native render-side rasterizers consume PLY/CSV structure: `packages/render/src/native/sensor-video.ts:2-6`.
 - Python camera abstraction `FrameSource.capture` and `ObservationAssembler` create endpoint image windows plus ego history, not Jev-ready object records: `adapters/gym/simforge_oss_gym/frames.py:71-74,335-338`.
-- `BevySensorRig.render` loads latest provider scene-state and returns GPU frame leases or host frames: `adapters/gym/simforge_oss_gym/bevy_sensors.py:53-56,94-99`. `SensorRig` NuRec path feeds committed world ticks and produces tensor-frame leases: `adapters/gym/simforge_oss_gym/sensors.py:29-32,64-67`.
+- `BevySensorRig.render` loads latest provider scene-state and returns GPU frame leases or host frames: `adapters/gym/simforge_oss_gym/bevy_sensors.py:53-56,94-99`.
 - Articulated physics adapter exposes 27-float MuJoCo observations: world chassis position/quaternion/linear and angular velocity, body IMU and wheel channels; per-wheel torque actions. `adapters/physics/README.md:94-102`; authoritative `OBSERVATION_LAYOUT` at `adapters/physics/simforge_oss_physics/workload.py:188-199`; `StepResult`/`BatchStepResult` at `types.py:63-99`. `SceneStateRecorder` additionally exports body truth with proper frame/quaternion conversion: `scene_state.py:1-13,29-35,71`.
 - GPU roadway adapter is state-based Warp/CUDA, not perception rendering. Supports state vector/object list; rejects sensors, perception, signals and BEV; routes restricted to lanePath. `adapters/gpu/README.md:3-8,25-33`. Therefore not the preferable initial Jev provider.
 
@@ -109,17 +109,17 @@ No verified general camera-projected 2D bbox API was found in the searched rende
 
 Documented source-development build:
 ```sh
-cd /home/path/simforge-oss/adapters/gym
+cd ~/simforge-oss/adapters/gym
 maturin develop
 ```
 Rust toolchain and an appropriate Python build environment are required; native extension is built from `native/crates/simforge-bindings-python`. Evidence: `adapters/gym/README.md:3-5,120-126`.
 
 Documented native headless policy run:
 ```sh
-cd /home/path/simforge-oss/adapters/gym
+cd ~/simforge-oss/adapters/gym
 python -m simforge_oss_gym.tools.policy_runner \
   --spec tests/fixtures/synthetic-episode.json \
-  --policy trajectory --seed 42 --steps 40 --out /home/path/tmp/scene-policy-trace.jsonl
+  --policy trajectory --seed 42 --steps 40 --out ~/tmp/scene-policy-trace.jsonl
 ```
 Module and console script are equivalent, default offline-simtime; command flags are actual parser options. `adapters/gym/README.md:74-85`; `adapters/gym/simforge_oss_gym/tools/policy_runner.py:451-467`. This is a documented runnable recipe, **not a claim that this scout ran it or that the extension is currently installed**.
 

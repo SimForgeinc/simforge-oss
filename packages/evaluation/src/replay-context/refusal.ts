@@ -5,7 +5,7 @@
  * never quietly downgraded into a plausible-looking number. A refusal therefore carries a
  * machine-readable list of dotted field paths, which is what the desktop and the web portal
  * render ("this clip needs per-camera intrinsics and an ego history") and what
- * `reconstruct.nurec` returns to the compute control plane as a non-retryable `input_error`.
+ * the reconstruction job returns to the compute control plane as a non-retryable `input_error`.
  *
  * The counterpart promise: a refusal is not the end of the road. `alternatives` names what
  * the input *can* still do — for a video-only upload that is the frame-only text tasks

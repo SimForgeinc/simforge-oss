@@ -10,7 +10,6 @@ involved. Execution profiles with their own providers are explicit extras.
 | `roadway-native` (default) | `SimForgeEnv`, `SimForgeVectorEnv`, `SimForgeWorld`, `PolicyRunner` | none |
 | `roadway-dynamic-gpu-v1` | `gpu.SimForgeGpuVectorEnv` (torch tensors on device) | `gpu` |
 | `articulated-mujoco-v1` | `articulated.ArticulatedEnv`, `articulated.ArticulatedVectorEnv` | `articulated`, `articulated-warp` |
-| sensor tensors (NuRec) | `sensors.SensorRig` over a `SimForgeWorld` | `nurec` |
 | resident Bevy sensors | `bevy_sensors.BevySensorRig`; `ArticulatedEnv(sensors="bevy")` | `bevy` |
 
 Selecting a profile whose provider is missing raises `ProfileUnavailableError`

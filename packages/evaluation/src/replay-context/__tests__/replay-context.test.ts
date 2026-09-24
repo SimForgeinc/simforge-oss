@@ -8,7 +8,7 @@ import { gateG2, gateG5 } from '../gates.js';
 import { LaneContextSchema, bindLane, detectLaneTransitions, summariseBinding, type LaneContext } from '../lanes.js';
 import { classifyEpisodeOutcome, partitionOutcomes } from '../outcome.js';
 import { DrivableAreaSchema, classifyPoint, footprintContainment, pointIsDrivable, scoreOffRoad, type DrivableArea } from '../drivable.js';
-import { loadReplayContext, tryLoadReplayContext } from '../qualify.js';
+import { loadReplayContext, tryLoadReplayContext } from '../bundle-io.js';
 import { ReplayContextSchema, servesProfile, type GateVerdict } from '../schema.js';
 
 const fixture = (name: string): string => fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url));
@@ -152,7 +152,7 @@ describe('bundle invariants', () => {
     // All five gates are recorded, so the only defect is the one failing verdict.
     const claimed = {
       ...bundle,
-      source: { ...bundle.source, kind: 'nurec' as const },
+      source: { ...bundle.source, kind: 'recorded-package' as const },
       validity: {
         ...bundle.validity,
         qualified: true,
@@ -235,7 +235,7 @@ describe('bundle loading', () => {
 describe('G4 against real package shapes', () => {
   it('does not fail a scene for publishing reference frames instead of a timeline', async () => {
     const bundle = await loadReplayContext(fixture('straight-envelope'));
-    // The NuRec AV releases ship one reference frame per camera. Measuring track alignment
+    // Some recorded scene releases ship one reference frame per camera. Measuring track alignment
     // against those instants failed a genuine release by ~20 s; the gate must not care.
     const referenceOnly = {
       ...bundle,
@@ -289,7 +289,7 @@ describe('per-profile qualification', () => {
     // The fixture declares camera 1 only; pretend it passed for that one camera.
     const qualifiedForWide = {
       ...bundle,
-      source: { ...bundle.source, kind: 'nurec' as const },
+      source: { ...bundle.source, kind: 'recorded-package' as const },
       validity: { ...bundle.validity, qualified: true, profileCameraIds: [1] },
     };
 
@@ -308,7 +308,7 @@ describe('per-profile qualification', () => {
 
   it('rejects a bundle qualified over a camera it does not have, or over none', async () => {
     const bundle = await loadReplayContext(fixture('straight-envelope'));
-    const base = { ...bundle, source: { ...bundle.source, kind: 'nurec' as const } };
+    const base = { ...bundle, source: { ...bundle.source, kind: 'recorded-package' as const } };
 
     const phantomCamera = { ...base, validity: { ...base.validity, profileCameraIds: [6] } };
     expect(ReplayContextSchema.safeParse(phantomCamera).success).toBe(false);

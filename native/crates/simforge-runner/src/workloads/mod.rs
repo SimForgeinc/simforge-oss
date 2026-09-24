@@ -7,7 +7,6 @@ pub mod episode_batch;
 pub mod gpu_batch;
 pub mod policy_episodes;
 pub mod render_bundle;
-pub mod render_bundle_nurec;
 pub mod simulate;
 
 use crate::engine::EngineRegistry;
@@ -23,6 +22,5 @@ pub fn registry() -> Result<EngineRegistry> {
     engines.register(Box::new(articulated::ArticulatedEngine))?;
     engines.register(Box::new(gpu_batch::GpuBatchEngine))?;
     engines.register(Box::new(render_bundle::RenderBundleEngine))?;
-    engines.register(Box::new(render_bundle_nurec::NurecRenderBundleEngine))?;
     Ok(engines)
 }

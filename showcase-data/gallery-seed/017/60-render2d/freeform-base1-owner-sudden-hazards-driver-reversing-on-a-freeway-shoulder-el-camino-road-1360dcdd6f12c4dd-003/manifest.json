@@ -6,11 +6,11 @@
   "renderer": "scripts/render-trace.mjs@2",
   "redact": false,
   "underlay": {
-    "mapDir": "/home/path/UniScenarios-training-grade/dev-assets/el-camino-road",
-    "topologyFile": "/home/path/UniScenarios-training-grade/dev-assets/el-camino-road/topology-index.json.gz",
+    "mapDir": "~/UniScenarios-training-grade/dev-assets/el-camino-road",
+    "topologyFile": "~/UniScenarios-training-grade/dev-assets/el-camino-road/topology-index.json.gz",
     "topologySha256": "986a9135415f3b045a7fb5d8f552bea3a1e7bdc9f35aba33e70092ee1dbd91d0",
     "topologyMapName": "el-camino-road_20260416-014537",
-    "locationsFile": "/home/path/UniScenarios-training-grade/dev-assets/el-camino-road/derived/locations.json.gz",
+    "locationsFile": "~/UniScenarios-training-grade/dev-assets/el-camino-road/derived/locations.json.gz",
     "locationsSha256": "fdd45d5595e982e76617d4951707c3d505309ee8691519412fb48e7e4fa75933",
     "laneCount": 1001,
     "crosswalkCount": 5,
@@ -3084,8 +3084,8 @@
     "sha256": "39548c5dbdf99ea8e2175ee4b85a0c761e03e49e32af46d2205c40c5d61f9362"
   },
   "inputs": {
-    "instanceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/017/40-cells/freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003/instance.json",
-    "traceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/017/40-cells/freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003/trace.json.gz",
+    "instanceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/017/40-cells/freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003/instance.json",
+    "traceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/017/40-cells/freeform-base1-owner-sudden-hazards-driver-reversing-on-a-freeway-shoulder-el-camino-road-1360dcdd6f12c4dd-003/trace.json.gz",
     "traceFileSha256": "a2b84992f93e83343536bf48bbfd7ab39c6a53e418d7ad38b50f67a3985da97e"
   }
 }

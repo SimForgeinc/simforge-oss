@@ -9,6 +9,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 const args = process.argv.slice(2);
 assert(args.some(arg => arg.startsWith('--root=')) && args.some(arg => arg.startsWith('--scenario='))
@@ -16,7 +17,8 @@ assert(args.some(arg => arg.startsWith('--root=')) && args.some(arg => arg.start
 const mlScenario = args.find(arg => arg.startsWith('--ml-scenario='))!.slice('--ml-scenario='.length);
 const root = resolve(args.find(arg => arg.startsWith('--root='))!.slice('--root='.length));
 const out = resolve(args.find(arg => arg.startsWith('--out='))?.slice('--out='.length) ?? join(root, 'texture-tier-matrix'));
-assert(![root, out].some(path => path === '/home/path/.local/share/simforge/daemon-data' || path.startsWith('/home/path/.local/share/simforge/daemon-data/')), 'live daemon root is forbidden');
+const liveDaemonRoot = join(homedir(), '.local/share/simforge/daemon-data');
+assert(![root, out].some(path => path === liveDaemonRoot || path.startsWith(`${liveDaemonRoot}/`)), 'live daemon root is forbidden');
 await mkdir(out, { recursive: true });
 const forwarded = args.filter(arg => !arg.startsWith('--out='));
 const matrix = [

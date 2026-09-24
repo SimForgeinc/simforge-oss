@@ -266,7 +266,6 @@ a hashed `checkpoint.json`, `latest.json`), `staging/`, `outputs/`,
 | `simforge.gpu-batch-rollout/v1` | `scenario.input`, `map.topology`, optional `policy.actions` (JSON array of `EnvAction`, cycled) | `rollout.json` (required), `decisions.jsonl.gz` | provider `.npz` checkpoint every `checkpointEveryDecisions` |
 | `simforge.policy-episodes/v1` | `episode.spec` (policy runner spec) | `episodes.json` (required), glob `trace.*.jsonl` (digest-chained per seed) | provider checkpoint every `checkpointEveryDecisions` |
 | `simforge.render-bundle/v1` | `scene-state` (scene-state.v1 stream) | glob contract `frames/*/*/tick-*.<ext>`, `bundles.jsonl`, `results.json` (both required) | provider checkpoint `{nextTick}` every `checkpointEveryTicks` |
-| `simforge.render-bundle-nurec/v1` | `scene-state`; params name scenesRoot/catalog/hoodDir/sourcePackages (sha256-pinned .usdz)/scene/rig/passes/ticks | same layout (`frames/*/*/tick-*.<png|npy>`, `bundles.jsonl`, `results.json`) | provider checkpoint every `checkpointEveryTicks` |
 
 Foreign providers (`src/provider.rs`) run as one supervised child per attempt,
 `<python> -m <module> job --params <params.json> --out-dir <dir> [--resume <checkpoint>]`,
@@ -284,12 +283,12 @@ lines `progress` / `checkpoint{path}` / `done{artifacts[{relativePath,sha256,siz
 params, `2` backend/capacity, `130` canceled after SIGTERM (the provider
 checkpoints first). The runner re-hashes every listed artifact, copies each
 announced checkpoint into its atomic store, and pins the provider's
-`capabilities` report hash (dependency-only `--no-probe` form, except NuRec which must probe) in the execution identity so a solver,
+`capabilities` report hash (dependency-only `--no-probe` form, except for a provider whose availability is only known by probing) in the execution identity so a solver,
 kernel or renderer upgrade is a new identity. Providers: `simforge_oss_physics`
 (`adapters/physics`), `simforge_oss_gpu` (`adapters/gpu`), `simforge_oss_gym`
 (`adapters/gym`, PyO3 native runtime), `simforge_render`
-(`renderer/service/python`); `simforge_splat` (`renderer/splat/python`, NuRec; admission refuses when its
-`capabilities` reports `available: false`).
+(`renderer/service/python`). Admission refuses a provider whose `capabilities`
+reports `available: false`.
 
 Output contracts may be globs (`"glob": true`, `*` within a segment, `**`
 across segments) for tree-shaped outputs such as sensor frames; `required`

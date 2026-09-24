@@ -30,7 +30,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import asdict
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from . import xodr_identity
@@ -155,7 +155,7 @@ def _derived_entries(inputs: Path, entries: list[dict], decisions: dict[str, dic
         original_sha = (report.get("source") or {}).get("xodrSha256")
         original = by_sha.get(original_sha)
         entry: dict[str, Any] = {
-            "sourceFolder": key, "derivedRoot": derived["root"], "derivedFrom": original_sha,
+            "sourceFolder": key, "derivedRoot": root_label(derived["root"]), "derivedFrom": original_sha,
             "glb": None, "xodr": {k: xodr[k] for k in ("name", "sha256", "bytes", "mtime")},
             "extraFiles": [{k: f[k] for k in ("name", "sha256", "bytes", "mtime")} for f in files if f is not xodr],
             "refitReport": {"schema": report.get("schema"), "structuralDiff": report.get("structuralDiff"),
@@ -373,12 +373,22 @@ def generate(inputs: Path, decisions: dict[str, dict], legacy: list[dict] | None
         "schema": SCHEMA,
         "tolerance": {"positionM": xodr_identity.GEOMETRY_TOLERANCE,
                       "headingDeg": round(xodr_identity.HEADING_TOLERANCE * 180 / 3.141592653589793, 6)},
-        "source": {"root": nas["root"]},
+        "source": {"root": root_label(nas["root"])},
         "cookedImage": {k: cooked[k] for k in ("image", "imageId", "repoDigests", "engineBinarySha256", "version")},
         "maps": entries,
         "worlds": worlds,
         "legacySources": [_normalise_legacy(dict(item)) for item in (legacy if legacy is not None else [])],  # fallback-ok: a first generation has no legacy sources
     }
+
+
+def root_label(root: str) -> str:
+    """The export root as a host-independent label (its directory name).
+
+    The collectors run against a host's mount, whose absolute path is an
+    internal detail of that machine; the manifest is published, so it records
+    which export tree was read, not where it was mounted.
+    """
+    return PurePosixPath(root.rstrip("/")).name
 
 
 def dump(manifest: dict) -> str:

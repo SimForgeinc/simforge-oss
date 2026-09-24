@@ -471,7 +471,7 @@ def ego_history_from_trail(
     frame, oldest first; the LAST row is t0. Returns
     ``(xyz[steps][3], rot[steps][3][3], t_s[steps])`` in the FLU ego frame at
     t0 (x forward, y left, z up; t0 at the origin with identity rotation),
-    matching the AlpaSim ``build_ego_history`` convention.
+    matching the upstream closed-loop harness's ``build_ego_history`` convention.
 
     Raises when fewer than ``steps`` real poses exist — the history is never
     padded, extrapolated or zero-filled.

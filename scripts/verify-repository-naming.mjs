@@ -75,9 +75,7 @@ const PRODUCT_ONLY_PATHS = [
  * itself. `allowedIn` lists the only files that may carry it, each for a
  * reason that is not the feature:
  * - the release's third-party record, because 35 bundled catalog models were
- *   made with the service and their CC BY 4.0 licence requires crediting it;
- * - the native-migration qualification manifests, which are sealed records of
- *   what was copied at the time and are not rewritten.
+ *   made with the service and their CC BY 4.0 licence requires crediting it.
  * Matching is case-exact on the three spellings, so an unrelated identifier
  * such as a mesh's Y coordinate (`meshY`) is not a hit.
  */
@@ -89,8 +87,6 @@ export const PRODUCT_ONLY_TERMS = [
     why: 'asset generation is a SimCloud platform feature (server-side, platform-held key)',
     allowedIn: [
       'scripts/release/bundled-components.json',
-      'qualification/native-migration/manifest/intake-manifest.json',
-      'qualification/native-migration/manifest/source-inventory.json',
     ],
   },
 ];

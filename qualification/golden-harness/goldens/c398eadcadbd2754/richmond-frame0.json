@@ -16,13 +16,13 @@
   },
   "rendererPath": {
     "engine": "native-bevy",
-    "file": "../../../../../mnt/storage/gpu-deep-scratch/goldens-dapple/simforge-render.golden",
+    "file": "<storage>/gpu-deep-scratch/goldens-dapple/simforge-render.golden",
     "sha256": "e3fc64ba63d8ebac5a7e66c9a94b485fb290255bc1e8dce1e9e756a88826f1bd",
     "invocation": {
       "args": [
         "job",
         "--job",
-        "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/richmond-frame0/runA/richmond-frame0.job.json"
+        "<storage>/gpu-deep-scratch/golden-artifacts-dapple/record/richmond-frame0/runA/richmond-frame0.job.json"
       ],
       "job": {
         "schema": "simforge.render-job/v2",
@@ -38,7 +38,7 @@
           },
           "warmupFrames": 20,
           "glbs": [
-            "/home/path/.local/share/simforge/maps/.corpus/richmond-field-station/master.gltf"
+            "~/.local/share/simforge/maps/.corpus/richmond-field-station/master.gltf"
           ]
         },
         "rig": {
@@ -70,7 +70,7 @@
           "id",
           "depth"
         ],
-        "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/richmond-frame0/runA/richmond-frame0"
+        "outDir": "<storage>/gpu-deep-scratch/golden-artifacts-dapple/record/richmond-frame0/runA/richmond-frame0"
       },
       "passesRenderedSequentially": false
     },
@@ -171,7 +171,7 @@
           "args": [
             "job",
             "--job",
-            "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/richmond-frame0/runA/richmond-frame0.job.json"
+            "<storage>/gpu-deep-scratch/golden-artifacts/record/richmond-frame0/runA/richmond-frame0.job.json"
           ],
           "job": {
             "schema": "simforge.render-job/v2",
@@ -187,7 +187,7 @@
               },
               "warmupFrames": 20,
               "glbs": [
-                "/home/path/.local/share/simforge/maps/.corpus/richmond-field-station/master.gltf"
+                "~/.local/share/simforge/maps/.corpus/richmond-field-station/master.gltf"
               ]
             },
             "rig": {
@@ -219,7 +219,7 @@
               "id",
               "depth"
             ],
-            "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/richmond-frame0/runA/richmond-frame0"
+            "outDir": "<storage>/gpu-deep-scratch/golden-artifacts/record/richmond-frame0/runA/richmond-frame0"
           },
           "passesRenderedSequentially": false
         },

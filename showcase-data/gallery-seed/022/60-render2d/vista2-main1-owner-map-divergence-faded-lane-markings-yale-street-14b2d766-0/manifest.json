@@ -6,11 +6,11 @@
   "renderer": "scripts/render-trace.mjs@2",
   "redact": false,
   "underlay": {
-    "mapDir": "/home/path/UniScenarios-training-grade/dev-assets/yale-street",
-    "topologyFile": "/home/path/UniScenarios-training-grade/dev-assets/yale-street/topology-index.json.gz",
+    "mapDir": "~/UniScenarios-training-grade/dev-assets/yale-street",
+    "topologyFile": "~/UniScenarios-training-grade/dev-assets/yale-street/topology-index.json.gz",
     "topologySha256": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
     "topologyMapName": "yale-street_20260409-234639",
-    "locationsFile": "/home/path/UniScenarios-training-grade/dev-assets/yale-street/derived/locations.json.gz",
+    "locationsFile": "~/UniScenarios-training-grade/dev-assets/yale-street/derived/locations.json.gz",
     "locationsSha256": "90c66758800c2a43bade4495c947c50c8cf8af4bb9abf9bc2af0c18771cf4f93",
     "laneCount": 1141,
     "crosswalkCount": 12,
@@ -2220,8 +2220,8 @@
     "sha256": "69647b86ba1c33371da6998dd13f855e996d2be9959ac355a9327d92ca19544b"
   },
   "inputs": {
-    "instanceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/022/40-cells/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/instance.json",
-    "traceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/022/40-cells/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/trace.json.gz",
+    "instanceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/022/40-cells/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/instance.json",
+    "traceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/022/40-cells/vista2-main1-owner-map-divergence-faded-lane-markings-yale-street-14b2d766-0/trace.json.gz",
     "traceFileSha256": "3a62b0ad8a2a0429c139baad23f96e036b69dc4c4125a06b959574888904de09"
   }
 }

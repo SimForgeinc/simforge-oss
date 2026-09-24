@@ -367,7 +367,7 @@ describe('off-road v2: footprint containment', () => {
   const AREA = {
     source: 'clipgt-lane-union' as const,
     geometry: 'polygons' as const,
-    frame: 'nurec-source-z-up',
+    frame: 'source-z-up',
     confidence: 'authoritative' as const,
     boundaries: [],
     polygons: [
@@ -532,7 +532,7 @@ describe('off-road v2: footprint containment', () => {
 const AREA_FOR_LANES = {
   source: 'clipgt-road-boundary' as const,
   geometry: 'polygons' as const,
-  frame: 'nurec-source-z-up',
+  frame: 'source-z-up',
   confidence: 'authoritative' as const,
   boundaries: [],
   polygons: [
@@ -576,7 +576,7 @@ describe('lane-departure: rail binding and the lane-change policy', () => {
     schema: 'simforge.lane-context/v1' as const,
     source: 'clipgt-lane-rails' as const,
     sourceSha256: 'f'.repeat(64),
-    frame: 'nurec-source-z-up',
+    frame: 'source-z-up',
     timeSupportUs: null,
     lanes: [lane('L1', 0), lane('L2', 3.4)],
     coverage: { boundsMinXY: [0, -1.7] as [number, number], boundsMaxXY: [200, 5.1] as [number, number] },

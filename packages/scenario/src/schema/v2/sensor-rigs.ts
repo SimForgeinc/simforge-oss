@@ -476,7 +476,7 @@ const ALPAMAYO_PAI = SensorRigPresetSchema.parse({
 
 /**
  * Upstream Alpamayo 1.5 camera-index convention
- * (NVlabs/alpamayo1.5 `load_physical_aiavdataset.py`). The inference wire
+ * (NVlabs/alpamayo1.5's dataset loader). The inference wire
  * (`adapters/alpamayo` `act.obs.cameras[].camera_id`) identifies cameras only
  * by these integers and sorts ascending; sensor ids in the Alpamayo rig
  * presets below are exactly these dataset camera names so bridges can map a
@@ -500,7 +500,7 @@ export type AlpamayoCameraName = keyof typeof ALPAMAYO_CAMERA_INDEX;
  * by the model server (adapters/alpamayo obs.py uses the same constant for
  * its synthetic profiles and latency benchmarks).
  *
- * Honest approximation vs the real PhysicalAI-AV rig: the dataset cameras
+ * Honest approximation vs the real recorded rig: the dataset cameras
  * are 1920x1208 (aspect ~1.589). We keep each camera's HORIZONTAL FoV and
  * render at 4:3, so the authored vertical FoV is wider than the calibrated
  * rig (120° wide/cross: ~104.9° vs ~94.9°; 30° tele: ~22.6° vs ~19.0°) and

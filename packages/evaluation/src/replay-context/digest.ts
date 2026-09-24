@@ -3,7 +3,7 @@
  *
  * Every bundle pins the bytes it was built from, and every gate result is only meaningful
  * against a specific reconstruction, so hashing is on the critical path of both import and
- * qualification. Streaming rather than buffering: NuRec packages are gigabytes.
+ * qualification. Streaming rather than buffering: scene packages are gigabytes.
  */
 
 import { createHash } from 'node:crypto';

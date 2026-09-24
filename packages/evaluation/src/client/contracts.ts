@@ -49,7 +49,6 @@ export type ComputeJobKind =
   | "alpamayo.openloop"
   | "alpamayo.text"
   | "alpamayo.closedloop-episode"
-  | "reconstruct.nurec"
   /**
    * Turning a render this product produced into an evaluation clip bundle.
    * A job rather than an API call because the conversion needs the pinned

@@ -190,7 +190,7 @@ export function LocalRunClient({ runId }: { runId: string }) {
               </dl>
               <p {...stylex.props(styles.xsMutedRelaxed)} >
                 {manifest.scored
-                  ? "Scored against this input's own reference. These are SimForge metric definitions, not an NVIDIA or AlpaSim benchmark number."
+                  ? "Scored against this input's own reference. These are SimForge metric definitions, not an NVIDIA or other upstream benchmark number."
                   : "This run is not scored: no reference future was available, so the numbers above are not a driving score."}
               </p>
             </section>

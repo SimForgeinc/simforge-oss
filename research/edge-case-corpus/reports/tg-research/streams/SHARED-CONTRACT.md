@@ -4,7 +4,7 @@ Lead: `Main` (omp Fable agent on path-pc). Message via hub; incremental reports 
 at every milestone, not at the end.
 
 ## Repo and branch
-- Worktree: `/home/path/UniScenarios-training-grade`, branch **`tg-rethink`** (pushed to
+- Worktree: `~/UniScenarios-training-grade`, branch **`tg-rethink`** (pushed to
   origin). Do NOT touch `~/UniScenarios` (someone else's uncommitted work) and do not
   commit to `training-grade-lane` (the Mac's W8/W9 lane owns it).
 - Your code lives ONLY in `tools/tg-research/<stream>/` (openvocab | instrument |

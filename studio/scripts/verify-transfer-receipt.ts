@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseTemplate } from "@simforge-oss/scenario";
 import type { CrossMapVariationTransferReceiptInput } from "../app/lib/scenario/document-store";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const liveDaemonRoot = "/home/path/.local/share/simforge/daemon-data";
+const liveDaemonRoot = join(homedir(), ".local/share/simforge/daemon-data");
 const targetMigration = "20260917120000_simforge_variation_transfer_receipt_identity.sql";
 const hex = "a".repeat(64);
 

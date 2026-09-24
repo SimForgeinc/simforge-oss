@@ -54,7 +54,7 @@ export interface ClipAdmission {
   readonly openLoopInference: boolean;
   /** A recorded future exists, so the prediction can be scored. */
   readonly openLoopScored: boolean;
-  /** Calibration + ego + seed geometry present: `reconstruct.nurec` may be attempted. */
+  /** Calibration + ego + seed geometry present: reconstruction may be attempted. */
   readonly reconstructionReady: boolean;
   /** A renderable world is already attached: import straight to a replay context. */
   readonly closedLoopReady: boolean;
@@ -248,7 +248,7 @@ export async function loadEvalClip(clipDir: string): Promise<ClipAdmission> {
 }
 
 /**
- * Preconditions for `reconstruct.nurec`, as a refusal rather than a boolean, so the compute
+ * Preconditions for reconstruction, as a refusal rather than a boolean, so the compute
  * worker can hand the user the same field list the desktop would show.
  *
  * The seed point cloud is a hard requirement: 3DGUT training initialises from a point cloud,

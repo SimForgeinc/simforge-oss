@@ -176,8 +176,8 @@ resizing) so a policy runner can import it without an inference environment.
   callers. It replicates the single frame across the history window and says
   so in `frame_history: "replicated-single-tick"` — the cold-start
   approximation, labelled rather than hidden.
-- `ego_history_rot_from_headings(...)` produces the AlpaSim
-  `build_ego_history` rotation convention (FLU, relative to t0).
+- `ego_history_rot_from_headings(...)` produces the upstream closed-loop
+  harness's `build_ego_history` rotation convention (FLU, relative to t0).
 
 ## Preflight and identity
 
@@ -206,15 +206,12 @@ service.
 ```bash
 # latency p50/p95 + VRAM (server must be running)
 scripts/bench_latency.py --iters 12 --out out/bench_nf4.json
-# quant divergence on identical inputs; --clip adds golden-clip open-loop minADE
-scripts/compare_quant.py --modes nf4 fp8 --n 10 --out out/divergence.json
 # render -> bundle -> bridge -> act conformance on a real map tile
 scripts/rig_conformance.py
 ```
 
-Upstream parity scripts for all three families stream
-`nvidia/PhysicalAI-Autonomous-Vehicles`, which is `gated: auto` under a
-12-month non-redistributable licence. Parity runs therefore need a user token
+Upstream parity scripts for all three families stream NVIDIA's gated AV
+dataset, which is `gated: auto` under a 12-month non-redistributable licence. Parity runs therefore need a user token
 with dataset acceptance, we cannot ship golden clips, and only parity
 *outputs* may be cached.
 

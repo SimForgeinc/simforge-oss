@@ -44,13 +44,13 @@ sha256 per image and `corpusHash = sha256(sorted("id:sha256" lines))`
 
 Provenance:
 - **BDD100K det-10k**: labels + boxes from the FiftyOne export inherited in
-  `/home/path/w0-data/real-corpus/bdd-meta/samples.json`; weather /
+  `~/w0-data/real-corpus/bdd-meta/samples.json`; weather /
   scene / timeofday attributes joined by filename from the official 100k label
   release (public archive.org mirror — the 10k split ships no attribute table).
   Images fetched per-file from a public mirror whose filenames are identical to
   the official release. License: BDD100K (non-commercial research/eval use).
 - **nuScenes v1.0-trainval CAM_FRONT keyframes**: metadata + samples rsynced
-  from simforge1's ungated copy (`~/real-corpus/nuscenes`, 34k keyframes).
+  from the training cluster's ungated copy (`~/real-corpus/nuscenes`, 34k keyframes).
   Selection is geometric: annotations transformed into the ego frame via the
   official calibration chain (global→ego quaternion inverse); dart-out = ped
   within 25 m ahead, |lat| < 8 m; cut-in = vehicle within 20 m ahead in the
@@ -68,15 +68,15 @@ labels.
 cd research/bridge-fidelity
 uv sync
 bf-build-corpus \
-  --bdd-samples /home/path/w0-data/real-corpus/bdd-meta/samples.json \
+  --bdd-samples ~/w0-data/real-corpus/bdd-meta/samples.json \
   --bdd-labels-dir .corpus/bdd-labels \
   --nuscenes-meta .corpus/nuscenes/v1.0-trainval \
   --images-root .corpus/images --out corpus-manifest.v1.json
 bf-fetch-images --manifest corpus-manifest.v1.json --images-root .corpus/images
 bf-scorecard \
   --corpus-manifest corpus-manifest.v1.json --corpus-images .corpus/images \
-  --engine-clips /home/path/w0-data/clips-pov \
-  --translated-dir /home/path/w0-data/real-corpus/w0-translated \
+  --engine-clips ~/w0-data/clips-pov \
+  --translated-dir ~/w0-data/real-corpus/w0-translated \
   --work .corpus/work --out bridge-fidelity-scorecard.w0-h3-pov.v1.json
 ```
 
@@ -99,7 +99,7 @@ emitting unanchored detections (hallucination 1.0). parked-row-dartout is the
 one clip where translation *raises* pedestrian recall (0.81 vs 0.40 floor).
 
 This independently reproduces the W0 kill-test audit verdict
-(`simforge1:~/w0-data/W0_REPORT.md`: zero-shot H3 Ref2VA fails as an observation
+(`<training-cluster>:~/w0-data/W0_REPORT.md`: zero-shot H3 Ref2VA fails as an observation
 bridge) with a frozen, versioned instrument instead of ad-hoc probing.
 
 ### Findings

@@ -38,8 +38,8 @@
  *   reference instant outside the recorded window.
  * - **G5 (stock replay).** Bounds taken from this repository's own conventions:
  *   `docs/policy-step.md` bounds the pure-pursuit executor at p95 cross-track ≤ 0.35 m
- *   (measured there: p50 0.14, p95 0.24, max 0.29), and the NuRec importer's own accepted
- *   report records ego open-loop replay at p95 0.0039 m / max 0.163 m. G5 replays the
+ *   (measured there: p50 0.14, p95 0.24, max 0.29), and the recorded-package importer's own
+ *   accepted report records ego open-loop replay at p95 0.0039 m / max 0.163 m. G5 replays the
  *   *recorded* trajectory through the full sim/executor/scoring chain, so it must land
  *   inside the executor's own bound: max ≤ 0.35 m, p95 ≤ 0.10 m, and zero infractions. A
  *   G5 failure indicts our chain, never the model — no model is involved.
@@ -305,9 +305,8 @@ export interface StockReplayMeasurement {
    * source for them, with the missing artifact named. Unavailable is not zero: a category
    * nobody could measure must block the gate rather than silently count as clean.
    *
-   * AlpaSim's own scorer set for these artifacts (CollisionScorer, OffRoadScorer,
-   * MinDistanceToObstacle, OpenLoopCollision, GroundTruth, MinADE, PlanDeviation, Image,
-   * Safety) contains no speed-limit and no wrong-way scorer, and a NuRec package ships no
+   * A reconstructed recorded drive typically carries no speed-limit or wrong-way ground
+   * truth, and its upstream scorer sets do not score either; a scene package that ships no
    * verified speed limits — so on such a scene those categories are unavailable by
    * construction, not passing.
    */

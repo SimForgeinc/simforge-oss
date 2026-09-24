@@ -263,7 +263,7 @@ const DEFAULT_EGO_FOOTPRINT = { l: 4.8, w: 2.0 };
  *
  * Two properties, and neither is "the track sample lands on a clock tick". Rendering places a
  * recorded actor by INTERPOLATING its trajectory at the render instant
- * (`providers/nurec.Traj.at`, position lerp + quaternion nlerp), so exact coincidence with any
+ * (position lerp + quaternion nlerp), so exact coincidence with any
  * clock is irrelevant — what matters is that the samples are dense enough for that
  * interpolation to be faithful, and that the tracks describe the same drive as the ego.
  *
@@ -277,7 +277,8 @@ const DEFAULT_EGO_FOOTPRINT = { l: 4.8, w: 2.0 };
  *                          which would mean the frames and the trajectory are different drives.
  *
  * This replaced a nearest-tick skew measurement, which was doubly wrong on real data: it
- * failed a genuine NuRec release by ~20 s for publishing one reference frame per camera, and
+ * failed a genuine recorded scene release by ~20 s for publishing one reference frame per
+ * camera, and
  * even against the rig clock it could only ever measure half the clock period (~50 ms at
  * 10 Hz), i.e. a property of the sampling grid rather than of the scene.
  */

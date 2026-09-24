@@ -364,7 +364,7 @@ The P3 pre-seed script was exercised against all three requested available roots
 
 ```text
 $ .venv/bin/python tools/research/showcase/preseed.py --limit 24
-{"gallery": "/home/path/UniScenarios-training-grade/showcase-data/jobs/preseed/90-gallery.json", "cards": 24, "failures": 0}
+{"gallery": "~/UniScenarios-training-grade/showcase-data/jobs/preseed/90-gallery.json", "cards": 24, "failures": 0}
 ```
 
 It selected and rendered 24 vision-asserted judged cells in 17.79 s with zero failures. P5's

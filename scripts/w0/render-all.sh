@@ -4,7 +4,7 @@
 set -uo pipefail
 mode="${1:-pov}"
 root="$(cd "$(dirname "$0")/../.." && pwd)"
-data=/home/path/w0-data
+data="${W0_DATA:-$HOME/w0-data}"
 out="$data/clips-$mode"
 render() {
   local name="$1" inst="$2" trace="$3" weather="$4"

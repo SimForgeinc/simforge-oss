@@ -400,10 +400,10 @@
     "excluded": []
   },
   "geometry": {
-    "kind": "nurec-usdz",
+    "kind": "gaussian-usdz",
     "sourcePackage": "geometry/absent.usdz",
     "sourcePackageSha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "renderer": "nurec-splat-renderer"
+    "renderer": "splat-renderer"
   },
   "map": {
     "source": "derived-from-reconstruction",

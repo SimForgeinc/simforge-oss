@@ -15,7 +15,7 @@
  *                                 recorded trajectory are trustworthy.
  *
  * The second is never inferred from the first. An importer produces it from a
- * reconstruction that exists (NuRec/AlpaSim package, or one we reconstructed), and the
+ * reconstruction that exists (a recorded scene package, or one we reconstructed), and the
  * validity block is written by measurement (see `gates.ts`), never by assertion. A bundle
  * whose gates have not run is `validity.qualified === false` and must not be used for a
  * scored model episode.
@@ -55,8 +55,8 @@ const Sha256 = z.string().regex(/^[a-f0-9]{64}$/, 'expected lowercase sha256 hex
 /**
  * Camera intrinsics. Three models are accepted because they are the three we can actually
  * consume end to end: `pinhole` and `opencv` map onto COLMAP `PINHOLE`/`OPENCV` for the
- * reconstruction path, and `ftheta` is the polynomial model the NuRec AV packages ship
- * (`angleToPixeldistPoly` / `pixeldistToAnglePoly` in `camera-rig.json`).
+ * reconstruction path, and `ftheta` is the polynomial model recorded AV camera rigs commonly ship
+ * (`angleToPixeldistPoly` / `pixeldistToAnglePoly`).
  *
  * There is deliberately no "unknown"/"assumed" variant.
  */
@@ -83,10 +83,10 @@ export const IntrinsicsSchema = z.discriminatedUnion('model', [
     cy: Finite,
     /** Polynomial mapping pixel distance from the principal point to incident angle (radians). */
     pixeldistToAnglePoly: z.array(Finite).min(2),
-    /** Inverse polynomial; the NuRec packages ship both and they are not re-derived here. */
+    /** Inverse polynomial; rigs that ship both keep both, and they are not re-derived here. */
     angleToPixeldistPoly: z.array(Finite).min(2),
     maxAngleRad: Finite.positive(),
-    /** Linear c/d/e terms of the f-theta model (NuRec `linearCde`). */
+    /** Linear c/d/e terms of the f-theta model (`linearCde`). */
     linearCde: z.tuple([Finite, Finite, Finite]).optional(),
   }),
 ]);
@@ -94,8 +94,8 @@ export type Intrinsics = z.infer<typeof IntrinsicsSchema>;
 
 /**
  * Rigid transform, camera frame from rig frame. Stored as an explicit 3x4 row-major matrix
- * because that is what both the NuRec packages (`trajectoryCalibration.T_sensor_rig`) and
- * COLMAP export need; Euler triplets are lossy about convention and are not accepted.
+ * because that is what both recorded rig calibrations (`T_sensor_rig`) and COLMAP export
+ * need; Euler triplets are lossy about convention and are not accepted.
  */
 export const ExtrinsicsSchema = z.strictObject({
   /** `T_camera_rig`: 3 rows of [r00 r01 r02 tx]. Maps a point in rig coordinates into camera coordinates. */
@@ -122,8 +122,8 @@ export const CameraTimingSchema = z.union([
   /**
    * Only these capture instants are published, not a complete timeline.
    *
-   * The NuRec AV releases ship a single reference frame per camera rather than the recorded
-   * sequence, so pretending those instants are the camera's timeline would invent a 1-frame
+   * Some recorded scene releases ship a single reference frame per camera rather than the
+   * recorded sequence, so pretending those instants are the camera's timeline would invent a 1-frame
    * recording. They are what G1 compares renders against; the drive's clock is `ego.recordedPath`.
    */
   z.strictObject({
@@ -160,8 +160,8 @@ export const CalibratedCameraSchema = z.strictObject({
   /**
    * Recorded imagery actually available for comparison, with the archive member holding it.
    *
-   * Distinct from `timing`: a NuRec package records a ~30 Hz capture timeline but ships only a
-   * handful of stored frames. Conflating the two makes a 20 s drive look like a four-frame
+   * Distinct from `timing`: a recorded scene package can carry a ~30 Hz capture timeline but ship
+   * only a handful of stored frames. Conflating the two makes a 20 s drive look like a four-frame
    * recording, which is what an earlier version of this importer did. G1 compares renders
    * against these; everything time-related uses `timing`.
    */
@@ -187,7 +187,7 @@ export const EgoPoseSchema = z.strictObject({
 export type EgoPose = z.infer<typeof EgoPoseSchema>;
 
 export const EgoSchema = z.strictObject({
-  /** Name of the metric world frame these poses live in (e.g. `nurec-source-z-up`, `map-enu`). */
+  /** Name of the metric world frame these poses live in (e.g. `source-z-up`, `map-enu`). */
   frame: z.string().min(1),
   originUs: TimestampUs,
   endUs: TimestampUs,
@@ -294,12 +294,22 @@ export type Dynamics = z.infer<typeof DynamicsSchema>;
  * were measured against; the splat backend re-verifies it at load (`LoadedScene`), so a
  * swapped package invalidates the bundle instead of silently rendering something else.
  */
+/**
+ * A provider-defined identifier (`authored-map`, `native-bevy`, `synthetic-fixture`, ...).
+ *
+ * Geometry kinds, renderer roles and source kinds are open sets: this package defines the
+ * bundle contract and the values it produces itself, and a scene provider that ships its own
+ * reconstruction format and renderer names them. Nothing here branches on a provider's value.
+ */
+export const ProviderIdSchema = z.string().regex(/^[a-z0-9][a-z0-9.-]*$/, 'expected a lowercase kebab-case identifier');
+
 export const GeometrySchema = z.strictObject({
-  kind: z.enum(['nurec-usdz', 'authored-map']),
+  /** `authored-map`, or the providing reconstruction format. */
+  kind: ProviderIdSchema,
   /** Path relative to the bundle directory, or an absolute path for an external package. */
   sourcePackage: z.string().min(1),
   sourcePackageSha256: Sha256,
-  /** `volume.nurec` member digest inside the package, when the source is a NuRec archive. */
+  /** Digest of the renderable member inside the package, when the source is an archive. */
   memberDigest: Sha256.optional(),
   /**
    * The reconstruction's own recorded time support.
@@ -312,7 +322,7 @@ export const GeometrySchema = z.strictObject({
    */
   timeSupportUs: z.strictObject({ startUs: TimestampUs, endUs: TimestampUs }).optional(),
   /** Renderer role that can consume this geometry. */
-  renderer: z.enum(['nurec-splat-renderer', 'native-bevy']),
+  renderer: ProviderIdSchema,
 });
 export type Geometry = z.infer<typeof GeometrySchema>;
 
@@ -413,7 +423,11 @@ export type Validity = z.infer<typeof ValiditySchema>;
  * rejects it, and importers refuse to mark such a bundle qualified.
  */
 export const SourceSchema = z.strictObject({
-  kind: z.enum(['nurec', 'alpasim', 'user-bundle', 'reconstructed', 'synthetic-fixture']),
+  /**
+   * `user-bundle`, `reconstructed`, `synthetic-fixture`, or the importing provider's own kind.
+   * Only `synthetic-fixture` carries meaning here: it can never be qualified or scored.
+   */
+  kind: ProviderIdSchema,
   /** Stable id of the originating scene/clip (dataset clip id, user upload id, ...). */
   sceneId: z.string().min(1),
   /** Human-readable origin, e.g. the dataset release or the user upload reference. */

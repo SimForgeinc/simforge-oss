@@ -16,13 +16,13 @@
   },
   "rendererPath": {
     "engine": "native-bevy",
-    "file": "../../../../../mnt/storage/gpu-deep-scratch/goldens-dapple/simforge-render.golden",
+    "file": "<storage>/gpu-deep-scratch/goldens-dapple/simforge-render.golden",
     "sha256": "e3fc64ba63d8ebac5a7e66c9a94b485fb290255bc1e8dce1e9e756a88826f1bd",
     "invocation": {
       "args": [
         "job",
         "--job",
-        "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-pronto/runA/yale-pronto.job.json"
+        "<storage>/gpu-deep-scratch/golden-artifacts-dapple/record/yale-pronto/runA/yale-pronto.job.json"
       ],
       "job": {
         "schema": "simforge.render-job/v2",
@@ -39,12 +39,12 @@
           "warmupFrames": 20,
           "allowPrimitiveActors": true,
           "glbs": [
-            "/home/path/.local/share/simforge/maps/.corpus/yale-street/master.gltf"
+            "~/.local/share/simforge/maps/.corpus/yale-street/master.gltf"
           ]
         },
         "rig": {
           "pronto": {
-            "program": "/home/path/worktrees/sc-road-decals/oss/qualification/render-qualification-program.v1.json",
+            "program": "~/worktrees/sc-road-decals/oss/qualification/render-qualification-program.v1.json",
             "host": "ego",
             "width": 736,
             "height": 416
@@ -60,8 +60,8 @@
           "id",
           "semantic"
         ],
-        "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-pronto/runA/yale-pronto",
-        "sceneState": "/home/path/worktrees/sc-road-decals/oss/qualification/golden-harness/fixtures/yale-pronto.scene-state.json"
+        "outDir": "<storage>/gpu-deep-scratch/golden-artifacts-dapple/record/yale-pronto/runA/yale-pronto",
+        "sceneState": "~/worktrees/sc-road-decals/oss/qualification/golden-harness/fixtures/yale-pronto.scene-state.json"
       },
       "passesRenderedSequentially": false
     },
@@ -170,7 +170,7 @@
           "args": [
             "job",
             "--job",
-            "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/yale-pronto/runA/yale-pronto.job.json"
+            "<storage>/gpu-deep-scratch/golden-artifacts/record/yale-pronto/runA/yale-pronto.job.json"
           ],
           "job": {
             "schema": "simforge.render-job/v2",
@@ -187,12 +187,12 @@
               "warmupFrames": 20,
               "allowPrimitiveActors": true,
               "glbs": [
-                "/home/path/.local/share/simforge/maps/.corpus/yale-street/master.gltf"
+                "~/.local/share/simforge/maps/.corpus/yale-street/master.gltf"
               ]
             },
             "rig": {
               "pronto": {
-                "program": "/home/path/worktrees/sc-road-decals/oss/qualification/render-qualification-program.v1.json",
+                "program": "~/worktrees/sc-road-decals/oss/qualification/render-qualification-program.v1.json",
                 "host": "ego",
                 "width": 736,
                 "height": 416
@@ -208,8 +208,8 @@
               "id",
               "semantic"
             ],
-            "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/yale-pronto/runA/yale-pronto",
-            "sceneState": "/home/path/worktrees/sc-road-decals/oss/qualification/golden-harness/fixtures/yale-pronto.scene-state.json"
+            "outDir": "<storage>/gpu-deep-scratch/golden-artifacts/record/yale-pronto/runA/yale-pronto",
+            "sceneState": "~/worktrees/sc-road-decals/oss/qualification/golden-harness/fixtures/yale-pronto.scene-state.json"
           },
           "passesRenderedSequentially": false
         },

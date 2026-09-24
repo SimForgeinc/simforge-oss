@@ -118,29 +118,6 @@
           ]
         }
       }
-    },
-    {
-      "tier": "nurec-splat-render",
-      "description": "NuRec reconstructed-world rendering via simforge-oss-splat: the wheel installs into <install-root>/venv, but CUDA PyTorch, a compiled 3DGRUT checkout (THREEDGRUT_ROOT), Kaolin, SHA-256 pinned NuRec .usdz packages, imported scene bundles, GLB catalog roots and a hood overlay profile are external prerequisites reported by `capabilities`, never assumed. Optional provider pack; no CUDA on macOS.",
-      "requires": {
-        "cuda": ">=12",
-        "torch": "CUDA build",
-        "3dgrut": "THREEDGRUT_ROOT with compiled tracer",
-        "kaolin": "matching torch/CUDA",
-        "assets": "pinned .usdz packages, scenes root, catalog roots, hood dir"
-      },
-      "requiresByOs": {
-        "darwin": { "cuda": "unavailable on macOS; tier cannot be installed" }
-      },
-      "qualifiedTargets": {
-        "x86_64-unknown-linux-gnu": {
-          "evidence": "nurec-tensor-v5/report.json",
-          "observed": [
-            "Pinned source-observation rendering passed visible RGB/depth/ID, repeated-pixel identity, host-pack identity, bounded tensor-slot exhaustion and retained-view lifetime checks.",
-            "Qualification is for the source-observation tensor adapter on the exercised CUDA host. It does not qualify a native physical counterfactual, whole-scene fidelity, measured twin export or calibration."
-          ]
-        }
-      }
     }
   ],
   "providers": {
@@ -159,10 +136,6 @@
     "simforge-oss-render": {
       "module": "simforge_render",
       "tier": "bevy-sensor-render"
-    },
-    "simforge-oss-splat": {
-      "module": "simforge_splat",
-      "tier": "nurec-splat-render"
     }
   }
 }

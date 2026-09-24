@@ -18,7 +18,7 @@ const effect = z.enum(['bounds', 'ground', 'collision', 'occlusion', 'driveabili
 
 export const SituationSourceSchema = z.strictObject({
   id,
-  kind: z.enum(['authored', 'nurec', 'twin']),
+  kind: z.enum(['authored', 'reconstruction', 'twin']),
   mapId: id,
   artifacts: z.array(z.strictObject({
     id, uri: z.string().min(1), sha256: digest,

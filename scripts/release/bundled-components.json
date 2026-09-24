@@ -239,7 +239,7 @@
   ],
   "neverShipped": [
     "Private map bundles: only richmond-field-station is public, and public/map-bundles is excluded from the stage.",
-    "Model weights, NuRec/splat assets and Python inference environments: resolved into user data after install, never installer payload and never a release asset.",
+    "Model weights, reconstructed-scene assets and Python inference environments: resolved into user data after install, never installer payload and never a release asset.",
     "Cloud credentials, QA fixtures and user datasets."
   ]
 }

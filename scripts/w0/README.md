@@ -2,7 +2,7 @@
 
 Rendered clip set for the Phase-5W W0 H3 translation kill test: 10
 driving-scene clips (5 s @ 12 fps, 736x416 = H3's true 0.3 MP) with per-frame
-engine ground truth, staged for transfer to `simforge1:~/w0-data/`.
+engine ground truth, staged for transfer to `<training-cluster>:~/w0-data/`.
 
 ## Pipeline
 
@@ -10,9 +10,9 @@ engine ground truth, staged for transfer to `simforge1:~/w0-data/`.
    `catalog/simforge-oss-five-map-v2.catalog.json` (500 authored slots,
    template x site x seed identities).
 2. **Instantiate** — `simforge instantiate <template> --map --site --seed`
-   using each slot's recorded matcher site + seed → `/home/path/w0-data/instances/`.
+   using each slot's recorded matcher site + seed → `~/w0-data/instances/`.
 3. **Simulate** — `simforge simulate <instance> --trace …` → deterministic
-   50 Hz engine trace → `/home/path/w0-data/traces/`.
+   50 Hz engine trace → `~/w0-data/traces/`.
 4. **Render** — `scripts/w0/render-clip.mjs` drives the live Studio viewer
    headless via Playwright (`--use-gl=angle --use-angle=vulkan` selects the real
    RTX 5080; default headless lands on SwiftShader on this host), projects every
@@ -20,7 +20,7 @@ engine ground truth, staged for transfer to `simforge1:~/w0-data/`.
    clip camera (CAR POV by default), and screenshots the canvas per frame.
    `scripts/w0/render-all.sh [pov|framing]` batches the full set.
 5. **GT** — `gt.jsonl` written alongside frames (format below).
-6. **Transfer** — `rsync /home/path/w0-data/ simforge1:~/w0-data/`.
+6. **Transfer** — `rsync ~/w0-data/ <training-cluster>:~/w0-data/`.
 
 ## POV re-render (primary set)
 
@@ -33,8 +33,8 @@ and seeds as v1; GT camera fields record the POV solve.
 
 - `render-clip.mjs --camera pov` is the default; `--camera framing` reproduces
   the v1 cinematic solve.
-- Output: `/home/path/w0-data/clips-pov/` mirrored to
-  `simforge1:~/w0-data/clips-pov/` (verified 10/10). The v1 framing set remains
+- Output: `~/w0-data/clips-pov/` mirrored to
+  `<training-cluster>:~/w0-data/clips-pov/` (verified 10/10). The v1 framing set remains
   at `clips/` for comparison.
 - Known drift: the Studio dev server hot-reloads editor-core from the
   training-grade worktree; a mid-batch reload made the renderer throw on
@@ -90,14 +90,14 @@ ordering vs `normalizeSimScenarioInput`) — informational only.
 
 ## Style references
 
-Copied from `simforge1:~/h3-teacher/smoke/assets/` (already-vetted CC0/PD):
+Copied from `<training-cluster>:~/h3-teacher/smoke/assets/` (already-vetted CC0/PD):
 `style-refs/ref1_madison_sb_oakst.jpg`, `ref2_madison_sb_dampier.jpg`,
 `ref3_colin_kelley_marker.jpg`. Use as `<Picture 1-3>` in the canonical 5W
 prompt (see local://rl-plan.md §"Canonical W0/5W prompt").
 
 ## Transfer manifest
 
-`simforge1:~/w0-data/` mirrors `/home/path/w0-data/`:
+`<training-cluster>:~/w0-data/` mirrors `~/w0-data/`:
 - `clips-pov/` — primary POV set, 10 clips x (60 PNG + gt.jsonl + video.mp4 +
   manifest.json), verified 10/10 post-transfer.
 - `clips/` — v1 framing set, same structure, kept for comparison.

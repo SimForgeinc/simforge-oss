@@ -3,7 +3,7 @@
 - bdd10k items come from a public mirror of the BDD100K images
   (HuggingFace dataset ``dgural/bdd100k``, per-file ``data/<name>.jpg``;
   filenames are identical to the official det-10k release).
-- nuscenes-camfront items are rsynced from simforge1's ungated v1.0-trainval
+- nuscenes-camfront items are rsynced from the training cluster's ungated v1.0-trainval
   CAM_FRONT sample directory.
 
 Run AFTER bf-build-corpus produced the manifest (selection does not need the

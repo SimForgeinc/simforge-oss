@@ -6,11 +6,11 @@
   "renderer": "scripts/render-trace.mjs@2",
   "redact": false,
   "underlay": {
-    "mapDir": "/home/path/UniScenarios-training-grade/dev-assets/el-camino-road",
-    "topologyFile": "/home/path/UniScenarios-training-grade/dev-assets/el-camino-road/topology-index.json.gz",
+    "mapDir": "~/UniScenarios-training-grade/dev-assets/el-camino-road",
+    "topologyFile": "~/UniScenarios-training-grade/dev-assets/el-camino-road/topology-index.json.gz",
     "topologySha256": "986a9135415f3b045a7fb5d8f552bea3a1e7bdc9f35aba33e70092ee1dbd91d0",
     "topologyMapName": "el-camino-road_20260416-014537",
-    "locationsFile": "/home/path/UniScenarios-training-grade/dev-assets/el-camino-road/derived/locations.json.gz",
+    "locationsFile": "~/UniScenarios-training-grade/dev-assets/el-camino-road/derived/locations.json.gz",
     "locationsSha256": "fdd45d5595e982e76617d4951707c3d505309ee8691519412fb48e7e4fa75933",
     "laneCount": 1001,
     "crosswalkCount": 5,
@@ -1621,8 +1621,8 @@
     "sha256": "2b7371f61031b0ef95503e9bfaea2d6bffda66c449411fa29e35e18a7aa07037"
   },
   "inputs": {
-    "instanceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/020/40-cells/vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0/instance.json",
-    "traceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/020/40-cells/vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0/trace.json.gz",
+    "instanceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/020/40-cells/vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0/instance.json",
+    "traceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/020/40-cells/vista2-main1-c5-reversing-ped-el-camino-road-7244fda0-0/trace.json.gz",
     "traceFileSha256": "75b9e34e7e86f063d98d5e9c4116d78f834887931919573bba848832bf4dbd50"
   }
 }

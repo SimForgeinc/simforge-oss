@@ -28,7 +28,7 @@ Conditioning contract (fixed): 6 channels = [depth/80m, semantic palette RGB,
 instance/256, valid mask]. Geometry authority lives in the conditioning;
 teacher frames are only the style target.
 
-## Setup (simforge1)
+## Setup (training cluster)
 
 ```bash
 ssh ubuntu@216.151.21.122

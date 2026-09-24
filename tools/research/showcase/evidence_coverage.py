@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-ROOT = Path('/home/path/UniScenarios-training-grade')
+ROOT = Path.home() / 'UniScenarios-training-grade'
 CASES = json.loads((ROOT / 'apps/showcase/campaigns/edge-cases.json').read_text())['cases']
 UN = ROOT / 'showcase-data' / 'evidence-underlay'
 D3 = ROOT / 'showcase-data' / 'evidence-3d'

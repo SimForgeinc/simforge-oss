@@ -28,11 +28,11 @@ import sys
 import numpy as np
 from PIL import Image
 
-E = sys.argv[1] if len(sys.argv) > 1 else '/home/path/tmp/sf-vehicles-work/export'
-OUT = sys.argv[2] if len(sys.argv) > 2 else '/home/path/tmp/sf-vehicles-work/assembled'
+E = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser('~/tmp/sf-vehicles-work/export')
+OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser('~/tmp/sf-vehicles-work/assembled')
 # extras.json: per-vehicle BP-harvested door/glass/emissive static-mesh components
 # (see tools/README.md step 1b): {vid: [{mesh, socket, t, overrides}]}
-EXTRAS_PATH = sys.argv[3] if len(sys.argv) > 3 else '/home/path/tmp/sf-vehicles-work/extras.json'
+EXTRAS_PATH = sys.argv[3] if len(sys.argv) > 3 else os.path.expanduser('~/tmp/sf-vehicles-work/extras.json')
 EXTRAS = json.load(open(EXTRAS_PATH)) if os.path.exists(EXTRAS_PATH) else {}
 
 glbs = {os.path.basename(p)[:-4]: p for p in glob.glob(E + '/**/*.glb', recursive=True)}

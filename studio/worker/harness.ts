@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { gunzipSync } from "node:zlib";
@@ -18,7 +19,7 @@ async function main(argv: readonly string[]): Promise<void> {
   if (!args.instance) throw new Error("--instance is required");
   const instancePath = resolve(args.instance);
   const tracePath = resolve(args.trace ?? join(dirname(instancePath), "trace.json.gz"));
-  const devAssets = resolve(args.devAssets ?? process.env.SCEN_DEV_ASSETS ?? "/home/path/simforge-assets/map-bundles");
+  const devAssets = resolve(args.devAssets ?? process.env.SCEN_DEV_ASSETS ?? join(homedir(), "simforge-assets/map-bundles"));
   const output = resolve(args.output ?? "/tmp/simforge-cloud-worker-harness");
   process.env.SIMFORGE_BROWSER_ENGINE_MODULE ??= pathToFileURL(
     resolve(REPOSITORY_ROOT, "packages/render/dist/index.js"),

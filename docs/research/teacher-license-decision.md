@@ -91,7 +91,7 @@ those outputs to improve any non-H3 model.
 > Any such use outside the Applicable Territory is not authorized by this
 > Agreement."
 
-Our training and serving infrastructure (simforge1, 216.151.21.122, US-hosted;
+Our training and serving infrastructure (the training cluster, US-hosted;
 local workstation in the US) sits inside an Excluded Territory. Even the W0
 translation runs already performed were, strictly read, uses "outside the
 Applicable Territory". This is a second, independent NO-GO that no amount of
@@ -127,7 +127,7 @@ Apache-2.0 text into `THIRD_PARTY_ASSETS.md` at integration time.
 
 ## 4. What happens to the existing H3 artifacts and pipeline
 
-1. **Existing H3 translated clips** (`simforge1:~/w0-data/translated{,-pov}/`,
+1. **Existing H3 translated clips** (`<training-cluster>:~/w0-data/translated{,-pov}/`,
    `~/w0-exp/e*/`): retained strictly as *evaluation references* for the W0/V2
    audits already reported (W0_REPORT.md, V2_RESULTS.md). They are NOT used as
    training targets, style targets, or distillation signal anywhere in
@@ -173,7 +173,7 @@ license NO-GO (§2) is unaffected and remains dispositive for H3 as teacher.
 Original status note: the official H3 website produced
 scene-preserving weather translation on an uploaded driving video, while our
 harness passed the source clip as `{type:"video", role:"reference"}` beside
-style images (`simforge1:~/h3-teacher/h3_smoke.sh`) — which likely conditions
+style images (`<training-cluster>:~/h3-teacher/h3_smoke.sh`) — which likely conditions
 style, not content. The E1 "fundamentally re-generative" conclusion may
 therefore be a **payload bug, not a model property**. A dedicated lane
 (H3Reproduce) is enumerating the SGLang request schema and running a payload
@@ -186,7 +186,7 @@ dispositive gate regardless of how well H3 performs technically.
 Evidence as originally recorded (2026-08-22, AM):
 
 Independent of the license analysis, the V2 isolation experiments
-(`simforge1:~/w0-exp/V2_RESULTS.md`, run 2026-08-22) disqualify zero-shot H3
+(`<training-cluster>:~/w0-exp/V2_RESULTS.md`, run 2026-08-22) disqualify zero-shot H3
 Ref2VA edit-mode as a teacher on *technical* grounds:
 
 - **E1 real-footage control**: feeding REAL dashcam footage (ref2va source

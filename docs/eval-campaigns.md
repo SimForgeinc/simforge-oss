@@ -271,7 +271,7 @@ scored as clean. A drivable-area frame that disagrees with the ego frame is a
 refusal (`drivable_area_frame_mismatch`), not a silent transform.
 
 SimForge driving scores are **our** metric definition, not an NVIDIA benchmark
-score: a number may only be called an AlpaSim (or any upstream) score if that
+score: a number may only be called an upstream benchmark's score if that
 exact benchmark implementation and dataset produced it.
 
 ## One episode without a campaign

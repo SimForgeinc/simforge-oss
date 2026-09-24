@@ -34,8 +34,8 @@ Commands below use the existing workstation paths. They are operating recipes,
 not claims that the commands or benchmark were completed. Preserve every input
 and historical output. A new invocation uses a fresh output directory; do not
 reuse an old result directory to improve its reported result.
-Evidence references beginning `implementation/` are relative to
-`/home/path/tmp/scenario-generation-rethink-2026-09-04/`, not the repository.
+Evidence references beginning `implementation/` are relative to the
+experiment's evidence directory (`$SIMFORGE_EVIDENCE_ROOT`), not the repository.
 
 Required: Linux for the owned supervisor, Node, the repository's pinned pnpm,
 the Rust toolchain for the native runtime addon, working Blender/Cycles GPU
@@ -53,8 +53,10 @@ pnpm --filter @simforge-oss/native-runtime build:node   # the N-API addon; wasm 
 pnpm --filter @simforge-oss/native-runtime build:ts
 pnpm --filter @simforge-oss/compiler... --filter @simforge-oss/asset-catalog... build
 export SIMFORGE_GATEWAY=http://127.0.0.1:4141/v1
-export WORK=$(mktemp -d /home/path/tmp/situation-ops-XXXXXXXX)
-export FROZEN_BRIEFS=/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/benchmark-opus5-high-v1
+export SIMFORGE_EVIDENCE_ROOT=/path/to/evidence   # the experiment's evidence directory, outside this repository
+export SIMFORGE_LIGHTING_MANIFEST=/path/to/renderer-bakeoff/workload.json   # lighting/HDRI-only workload manifest
+export WORK=$(mktemp -d "${TMPDIR:-/tmp}/situation-ops-XXXXXXXX")
+export FROZEN_BRIEFS="$SIMFORGE_EVIDENCE_ROOT/implementation/benchmark-opus5-high-v1"
 ```
 
 Every compile, rehearsal, solve, comparison, replay and scene-state emission
@@ -172,11 +174,11 @@ only lighting/HDRI: no actors, routes or camera scenario are inherited.
 ```sh
 node experiments/agentic-3d/blender-map-workbench.mjs \
   --map yale-street --out "$WORK/maps/yale-street" \
-  --lighting-manifest /home/path/tmp/renderer-bakeoff-2026-09-04/workload.json \
+  --lighting-manifest "$SIMFORGE_LIGHTING_MANIFEST" \
   --lighting-case daylight --lod 2
 node experiments/agentic-3d/blender-map-workbench.mjs \
   --map belmont-research-center --out "$WORK/maps/belmont-research-center" \
-  --lighting-manifest /home/path/tmp/renderer-bakeoff-2026-09-04/workload.json \
+  --lighting-manifest "$SIMFORGE_LIGHTING_MANIFEST" \
   --lighting-case daylight --lod 2
 ```
 
@@ -530,88 +532,18 @@ identity of the replaying process, with `sameRuntime` stating whether they are
 byte-identical. An exact trace match across two different native builds is a
 reproducibility observation about those two builds, not a qualification.
 
-## NuRec and offline-twin sources
+## Reconstruction and offline-twin sources
 
-`experiments/agentic-3d/situation-nurec.mjs` binds an imported NuRec bundle as
-an immutable situation source and executes against it through the same native
-runtime, without launching any renderer or model:
-
-```sh
-export I=/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation
-export BUNDLE="$I/nurec-fixture/<imported-bundle>"   # an existing import, never rebuilt here
-node experiments/agentic-3d/situation-nurec.mjs inspect "$BUNDLE" replay \
-  --source-package "36665d69be03ff99b6e2f44916a6b3712e1b8d74b6dfeb837e10e575a3d592f7=$I/native-source/007a5809-8a56-40b5-8af5-7e0f65229496.usdz" \
-  > "$WORK/nurec-binding.json"
-node experiments/agentic-3d/situation-nurec.mjs fork "$BUNDLE" "$WORK/nurec-fork" "$WORK/patch.json"
-node experiments/agentic-3d/situation-nurec.mjs inspect "$WORK/nurec-fork" > "$WORK/nurec-fork-binding.json"
-# nurec-program.json: a SituationProgram whose `source` is copied verbatim from the fork binding's `source`.
-node experiments/agentic-3d/situation-nurec.mjs rehearse "$WORK/nurec-fork" "$WORK/nurec-program.json" nurec-ops-20260905 \
-  --out "$WORK/nurec-rehearsal"
-node experiments/agentic-3d/situation-nurec.mjs bind "$WORK/nurec-fork" "$WORK/nurec-rehearsal/scene-state.json"
-```
-
-`inspect` verifies every imported artifact hash, the source package identity
-and the fork closure, and returns the frozen binding (`source`, participants
-with recorded/controller/policy authority, time envelope, unsupported
-operations). `fork` composes rigid actor edits and region replacements into a
-NEW directory whose `background.json` carries a `sourcePatch`; capture,
-calibration and the original background identity are copied unchanged and
-re-verified on every load. `rehearse` takes a `SituationProgram` whose
-`source` is exactly the binding's source, builds the executable map bundle from
-the clip-local `map/` artifacts through the compiler's native bundle façade
-(signal catalog, speed limits and derived index are derived natively; location
-intel by the maps producer), runs the native rehearsal, emits the canonical
-scene-state natively, and writes `program.json`, `rehearsal.json`,
-`scene-state.json`, `runtime-identity.json` and `summary.json` (program
-digest, input hash, trace hash, event/constraint witnesses, envelope, and
-`sceneStateBinding`: whether the fork accepted the emitted state, with the
-exact rejection reason otherwise).
-`bind` validates a canonical scene-state document against the immutable fork:
-only pinned rigid-track or fork-mesh actors, ego present, ticks inside the
-half-open envelope. None of these steps renders, closes a loop with the
-reconstruction, or qualifies fidelity; `--source-package` verifies package
-bytes but does not establish GPU support. A program that names a missing
-source, an actor without a pinned track or mesh, or a policy authority is
-rejected by the command, never repaired.
+A situation source may be a reconstruction of a recorded drive
+(`source.kind: "reconstruction"`). Binding one, and starting the renderer that
+draws it, needs licensed recorded-drive data that cannot be redistributed, so
+neither the binding tooling nor its recipe is part of this repository. The
+authored-source workflow above is unaffected.
 
 No measured-twin or calibration data is generated by any of these commands.
 The offline-twin material listed under evidence boundaries below remains a
 lossy API projection; there is no local transaction-consistent export to bind,
 so no twin-backed recipe is provided here.
-
-## Optional native renderer startup
-
-The native renderer uses a separate pinned environment and immutable source
-package. Allocate GPU residency separately; do not launch it beside a Blender
-authoring worker when that exceeds available memory. Never stop unrelated GPU
-workloads. The following is the retained native service launch specification;
-pass the executable and arguments to the owned process manager:
-
-```sh
-export I=/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation
-"$I/native-runtime/env.sh" python -m simforge_splat.service \
-  --socket /tmp/situation-nurec-native.sock \
-  --shm /tmp/situation-nurec-native-ring --shm-size-mb 256 \
-  --scenes-root "$I/nurec-fixture" --max-scenes 1 \
-  --source-package "36665d69be03ff99b6e2f44916a6b3712e1b8d74b6dfeb837e10e575a3d592f7=$I/native-source/007a5809-8a56-40b5-8af5-7e0f65229496.usdz" \
-  --hood-dir "$I/native-source/hoods" \
-  --catalog catalog/vehicles-carla \
-  --catalog catalog/pedestrians-carla
-```
-
-Use repository working directory. Readiness includes the
-`splat-render-service ... listening on ... (protocol 2, ...)` banner and a real
-`NativeRenderClient` hello, not socket-file existence alone:
-
-```sh
-"$I/native-runtime/env.sh" python -c 'from simforge_render.client import NativeRenderClient; c=NativeRenderClient("/tmp/situation-nurec-native.sock"); print(c.hello); c.close()'
-```
-
-`implementation/native-runtime/environment-manifest.json` records source,
-dependency, toolkit and native-render proof identities. The existing source
-package, hood files, environment and matching CUDA/GPU support are prerequisites.
-Do not replace missing packages with mesh proxies or call this startup check a
-closed-loop fidelity pass. The original O2 qualification remains separately open.
 
 ## Evidence boundaries and historical preservation
 
@@ -626,13 +558,9 @@ closed-loop fidelity pass. The original O2 qualification remains separately open
   non-ego governors use world state. Conditional authored actions are separate
   primitives. Do not infer perception-driven participant behavior from a valid
   sensor-channel audit or an offline participant critic.
-- **Native fidelity remains unqualified.** The preserved original-20 inventory
-  records **15/20 (75%)** majority agreement, below 16/20 (80%), with five both-fail
-  cases. See
-  `/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/nurec-fidelity-preparation/historical-v1/inventory.json`.
-  Its corrected cohort is recorded as not run. Do not combine fifteen historical
-  agreements with five new cases, substitute the training-24 cohort, or treat
-  native render repeatability as task-fidelity success.
+- **Native fidelity remains unqualified.** Its fidelity protocols run on licensed
+  recorded-drive data and their evidence is kept privately. Do not treat native
+  render repeatability as task-fidelity success.
 - **Qualified measured-twin evidence is missing.** A bounded public history
   response with 129 actual production observations is preserved under
   `implementation/measured-twin-api-v1`; it is a lossy API projection, not the
@@ -640,7 +568,7 @@ closed-loop fidelity pass. The original O2 qualification remains separately open
   rowids, frame records and calibration lineage are not manufactured. Exact
   production SQLite read access is blocked by Tailscale authorization.
 - Preserve
-  `/home/path/tmp/scenario-generation-rethink-2026-09-04/implementation/frozen-v39.5`,
+  `implementation/frozen-v39.5`,
   the original benchmark-v1, historical native receipts, all old runs/archives,
   benchmark briefs and assets. They remain immutable evidence, never fallback
   generators or acceptance inputs. The v2 amendment keeps original brief identity,
@@ -657,6 +585,5 @@ closed-loop fidelity pass. The original O2 qualification remains separately open
   the native cutover records that runtime, not the native addon. The reporters
   flag such runs as lacking a native runtime identity; do not relabel them,
   re-hash them under the new schema, or mix them into a native-runtime cohort.
-  The frozen reference source at
-  `/mnt/storage/simforge-native-migration/reference-source/packages` is
-  read-only evidence of what those runs executed, never an import target.
+  The frozen reference source packages retained with the native-migration
+  evidence are read-only evidence of what those runs executed, never an import target.

@@ -6,11 +6,11 @@
   "renderer": "scripts/render-trace.mjs@2",
   "redact": false,
   "underlay": {
-    "mapDir": "/home/path/UniScenarios-training-grade/dev-assets/belmont-research-center",
-    "topologyFile": "/home/path/UniScenarios-training-grade/dev-assets/belmont-research-center/topology-index.json.gz",
+    "mapDir": "~/UniScenarios-training-grade/dev-assets/belmont-research-center",
+    "topologyFile": "~/UniScenarios-training-grade/dev-assets/belmont-research-center/topology-index.json.gz",
     "topologySha256": "f7a0c32a33a8f97daca1d0c24aee8022dc2d6d5221c63ccbdf3e6ae6e7e1518f",
     "topologyMapName": "belmont-research-center_20260410-184713",
-    "locationsFile": "/home/path/UniScenarios-training-grade/dev-assets/belmont-research-center/derived/locations.json.gz",
+    "locationsFile": "~/UniScenarios-training-grade/dev-assets/belmont-research-center/derived/locations.json.gz",
     "locationsSha256": "63c129b5103e6bb0dfd8209207dab4d6bd29882ab04e68ea9672fe3acfa79346",
     "laneCount": 970,
     "crosswalkCount": 10,
@@ -355,8 +355,8 @@
     "sha256": "eb033877a0a99bcf49e8137618ea418cc0757220fa62725d631be2a1cc7bd5d2"
   },
   "inputs": {
-    "instanceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/007/40-cells/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/instance.json",
-    "traceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/007/40-cells/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/trace.json.gz",
+    "instanceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/007/40-cells/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/instance.json",
+    "traceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/007/40-cells/emergent-pair1-c11-backing-out.heavy-belmont-research-center-1fdc6c5d-0/trace.json.gz",
     "traceFileSha256": "57abb9ea5247303f28d785abed9b6f5af77ba8c00bf4ed0659435f6dfc94b89d"
   }
 }

@@ -4,8 +4,8 @@
 //   # prepare and inspect; touches nothing remote (the default)
 //   node scripts/release/publish-desktop-release.mjs \
 //     --label preview.1 --channel preview \
-//     --installers /mnt/storage/simforge-native-migration/ci-release-b102 \
-//     --sums /mnt/storage/simforge-native-migration/ci-release-b102/SHA256SUMS \
+//     --installers /path/to/ci-release-b102 \
+//     --sums /path/to/ci-release-b102/SHA256SUMS \
 //     --source-revision b102bceac7b7af0df43b7695c60c4be526753805 \
 //     --cloud-origin https://staging.simforge.ai \
 //     --signing-windows unsigned --signing-macos ad-hoc --signing-linux unsigned \

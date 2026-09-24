@@ -201,7 +201,7 @@ source.
 ## Qualifying a downloaded installer
 
 ```sh
-export TMPDIR=/mnt/storage/<somewhere with room>   # a 1.1 GB artifact fills /tmp
+export TMPDIR=/path/to/<somewhere with room>   # a 1.1 GB artifact fills /tmp
 node scripts/release/qualify-installed-desktop.mjs \
   --artifact <file.AppImage|.deb> --expect-sha256 <digest> [--json] [--keep]
 ```

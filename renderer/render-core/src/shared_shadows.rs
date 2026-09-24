@@ -32,8 +32,8 @@
 //! order) since the first marked view: interleaving an unmarked view keeps
 //! the output correct and only forfeits the saving.
 //!
-//! This originated in the retired sensor-capture harness
-//! (TICK-LATENCY-REPORT.md); it is keyed on an explicit per-view marker.
+//! This originated in the retired sensor-capture harness's tick-latency
+//! qualification; it is keyed on an explicit per-view marker.
 use bevy::camera::visibility::RenderLayers;
 use bevy::light::{
     CascadeShadowConfig, Cascades, DirectionalLight, DirectionalLightShadowMap,

@@ -80,7 +80,7 @@ when `mapId` matches — see §5.
 
 | Artifact | Location | Encodes | Projection consumed via |
 |---|---|---|---|
-| Twin camera poses (×4 channels, shared pole) | `/home/path/V2XCarla/v2x-backend/config/cameras.json` (`site.lat/lon` 37.91560117034595, −122.33478756387032; per-channel `height_m`, `pitch_deg`, `yaw_deg`, `twin_pose` offsets) | pole position in WGS-84; orientation relative to a site survey frame (`frame_heading_deg` 226.3°, provisional joint fit, mean landmark residual 1.09 m) | `gps_to_carla` → **legacy flat-earth**, z snapped to road surface then raised by height |
+| Twin camera poses (×4 channels, shared pole) | `~/V2XCarla/v2x-backend/config/cameras.json` (`site.lat/lon` 37.91560117034595, −122.33478756387032; per-channel `height_m`, `pitch_deg`, `yaw_deg`, `twin_pose` offsets) | pole position in WGS-84; orientation relative to a site survey frame (`frame_heading_deg` 226.3°, provisional joint fit, mean landmark residual 1.09 m) | `gps_to_carla` → **legacy flat-earth**, z snapped to road surface then raised by height |
 | Landmark calibration fit | `apps/perception/calibration/ch*_calibration_errors.csv`, `docs/twin-projection-model.md` | surveyed landmarks scored against road centrelines | fitted against the **deployed lineage's** centreline geometry (0737f3d9) |
 | User zones / geofences | runtime-authored, `[lon, lat]` polygons over WS (`sync_v2x_zones`) | polygon vertices in WGS-84 | `gps_to_carla` → legacy flat-earth (ephemeral; frontend redraws) |
 | GPS trajectory playback | `apps/bridge/trajectories/*.json` (`[{t, lat, lon}]`) | waypoints in WGS-84 | `gps_to_carla` → legacy flat-earth |

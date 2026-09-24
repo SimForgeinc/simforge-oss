@@ -13,7 +13,7 @@ import json, subprocess, time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-ROOT = Path('/home/path/UniScenarios-training-grade')
+ROOT = Path.home() / 'UniScenarios-training-grade'
 JOBS = ROOT / 'showcase-data' / 'jobs'
 UNDER = ROOT / 'showcase-data' / 'evidence-underlay'
 OUT = ROOT / 'showcase-data' / 'evidence-3d'

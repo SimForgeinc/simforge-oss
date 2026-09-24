@@ -67,7 +67,7 @@
         <div class="history-controls"><button id="undo" data-action disabled>Undo <span id="undo-depth">0</span></button><button id="redo" data-action disabled>Redo <span id="redo-depth">0</span></button><button id="reset" class="danger" data-action disabled>Reset scene</button></div>
         <p id="last-edit" class="last-edit subtle"></p>
       </section>
-      <section class="scope-note"><strong>Geometry is not simulation truth</strong><p>Visual geometry and materials only. These edits do not update SimForge physics, road rules, or NuRec splats. Original source meshes and textures remain unchanged.</p><strong>Local isolated worker</strong><p>Worker code has no networking and can read only its snapshot and runtime; writes stay in per-job output. Only inert data enters the renderer. Linux Landlock and seccomp are required. This is not a VM or protection against native Blender/kernel vulnerabilities. Keep the trusted HTTP service loopback-only.</p></section>
+      <section class="scope-note"><strong>Geometry is not simulation truth</strong><p>Visual geometry and materials only. These edits do not update SimForge physics, road rules, or reconstructed splat scenes. Original source meshes and textures remain unchanged.</p><strong>Local isolated worker</strong><p>Worker code has no networking and can read only its snapshot and runtime; writes stay in per-job output. Only inert data enters the renderer. Linux Landlock and seccomp are required. This is not a VM or protection against native Blender/kernel vulnerabilities. Keep the trusted HTTP service loopback-only.</p></section>
     </aside>
   </main>
 </body>

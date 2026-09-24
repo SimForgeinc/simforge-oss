@@ -1,9 +1,9 @@
 # Multi-driver Jev: shared contracts
 
-Read `/home/path/tmp/jev-findings.md` (API contract, measured latency, hard safety rules) and
-`/home/path/tmp/jev-simforge-integration.md` (current design, hook point, schema v2) first.
+Read `~/tmp/jev-findings.md` (API contract, measured latency, hard safety rules) and
+`~/tmp/jev-simforge-integration.md` (current design, hook point, schema v2) first.
 Current package: `adapters/jev-driver/jevdrive/`. The original prototype lived in
-`/home/path/tmp/jevdrive/`; the render launcher now imports this checkout's package.
+`~/tmp/jevdrive/`; the render launcher now imports this checkout's package.
 
 ## What exists and is PROVEN (do not re-derive, do not regress)
 
@@ -99,7 +99,7 @@ candidates, never by disabling collision checking or by letting Jev emit raw con
 
 ## Contract D — code quality bar (this is a first-class deliverable)
 
-- `/home/path/tmp/jevdrive/` becomes a proper package with modules, not a pile of scripts.
+- `~/tmp/jevdrive/` becomes a proper package with modules, not a pile of scripts.
   One `Persona`/question/threshold module remains the single reviewable place for questions and
   thresholds (TypeSafe's own guidance).
 - DRY: the tick loop, candidate generation, feasibility filter, decision latching, logging and

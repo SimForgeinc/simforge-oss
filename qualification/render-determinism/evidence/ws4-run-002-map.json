@@ -140,7 +140,7 @@
       "startedAt": "2026-08-22T21:19:33.212Z",
       "finishedAt": "2026-08-22T21:33:59.569Z",
       "exitCode": 0,
-      "stdoutTail": "> export belmont-research-center\n{\n  \"outDir\": \"/home/path/UniScenarios-ws/ws4-renderer/artifacts/render-determinism/ws4-run-002-map/pass-a\",\n  \"maps\": [\n    \"belmont-research-center\"\n  ],\n  \"diagnostics\": 0\n}\n",
+      "stdoutTail": "> export belmont-research-center\n{\n  \"outDir\": \"~/UniScenarios-ws/ws4-renderer/artifacts/render-determinism/ws4-run-002-map/pass-a\",\n  \"maps\": [\n    \"belmont-research-center\"\n  ],\n  \"diagnostics\": 0\n}\n",
       "stderrTail": ""
     },
     {
@@ -148,7 +148,7 @@
       "startedAt": "2026-08-22T21:33:59.569Z",
       "finishedAt": "2026-08-22T21:49:23.421Z",
       "exitCode": 0,
-      "stdoutTail": "> export belmont-research-center\n{\n  \"outDir\": \"/home/path/UniScenarios-ws/ws4-renderer/artifacts/render-determinism/ws4-run-002-map/pass-b\",\n  \"maps\": [\n    \"belmont-research-center\"\n  ],\n  \"diagnostics\": 0\n}\n",
+      "stdoutTail": "> export belmont-research-center\n{\n  \"outDir\": \"~/UniScenarios-ws/ws4-renderer/artifacts/render-determinism/ws4-run-002-map/pass-b\",\n  \"maps\": [\n    \"belmont-research-center\"\n  ],\n  \"diagnostics\": 0\n}\n",
       "stderrTail": ""
     }
   ]

@@ -29,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="Qwen/Qwen2.5-VL-3B-Instruct")
     ap.add_argument("--dataset", type=Path, default=HERE / "data" / "prompts.jsonl")
-    ap.add_argument("--w0-root", type=Path, default=Path(os.environ.get("W0_ROOT", "/home/path/w0-data")))
+    ap.add_argument("--w0-root", type=Path, default=Path(os.environ.get("W0_ROOT", str(Path.home() / "w0-data"))))
     ap.add_argument("--out-dir", type=Path, required=True)
     ap.add_argument("--split", choices=["train", "all"], default="train")
     ap.add_argument("--max-steps", type=int, default=60)

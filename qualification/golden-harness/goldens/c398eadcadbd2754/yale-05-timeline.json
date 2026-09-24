@@ -16,7 +16,7 @@
   },
   "rendererPath": {
     "engine": "native-bevy",
-    "file": "../../../../../mnt/storage/worktrees/cargo-target-tail-lens/release/simforge-render",
+    "file": "<storage>/worktrees/cargo-target-tail-lens/release/simforge-render",
     "sha256": "0d4459c934467c74cbfd873a6b734c5aee05ee76c5e1de0051711ffc4afa64b6",
     "invocation": {
       "args": [
@@ -37,10 +37,10 @@
             "preset": "training"
           },
           "warmupFrames": 20,
-          "vehicleModels": "/home/path/worktrees/sc-tail-lens/oss/catalog/vehicles-carla",
-          "pedestrianModels": "/home/path/worktrees/sc-tail-lens/oss/catalog/pedestrians-carla",
+          "vehicleModels": "~/worktrees/sc-tail-lens/oss/catalog/vehicles-carla",
+          "pedestrianModels": "~/worktrees/sc-tail-lens/oss/catalog/pedestrians-carla",
           "glbs": [
-            "/home/path/.local/share/simforge/maps/.corpus/yale-street/master.gltf"
+            "~/.local/share/simforge/maps/.corpus/yale-street/master.gltf"
           ]
         },
         "rig": {
@@ -194,13 +194,13 @@
       },
       "rendererPath": {
         "engine": "native-bevy",
-        "file": "../../../../../mnt/storage/gpu-deep-scratch/goldens-dapple/simforge-render.golden",
+        "file": "<storage>/gpu-deep-scratch/goldens-dapple/simforge-render.golden",
         "sha256": "e3fc64ba63d8ebac5a7e66c9a94b485fb290255bc1e8dce1e9e756a88826f1bd",
         "invocation": {
           "args": [
             "job",
             "--job",
-            "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-05-timeline/runA/yale-05-timeline.job.json"
+            "<storage>/gpu-deep-scratch/golden-artifacts-dapple/record/yale-05-timeline/runA/yale-05-timeline.job.json"
           ],
           "job": {
             "schema": "simforge.render-job/v2",
@@ -215,10 +215,10 @@
                 "preset": "training"
               },
               "warmupFrames": 20,
-              "vehicleModels": "/home/path/worktrees/sc-road-decals/oss/catalog/vehicles-carla",
-              "pedestrianModels": "/home/path/worktrees/sc-road-decals/oss/catalog/pedestrians-carla",
+              "vehicleModels": "~/worktrees/sc-road-decals/oss/catalog/vehicles-carla",
+              "pedestrianModels": "~/worktrees/sc-road-decals/oss/catalog/pedestrians-carla",
               "glbs": [
-                "/home/path/.local/share/simforge/maps/.corpus/yale-street/master.gltf"
+                "~/.local/share/simforge/maps/.corpus/yale-street/master.gltf"
               ]
             },
             "rig": {
@@ -259,8 +259,8 @@
               "rgb",
               "id"
             ],
-            "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-05-timeline/runA/yale-05-timeline",
-            "sceneState": "/mnt/storage/gpu-deep-scratch/golden-artifacts-dapple/record/yale-05-timeline/runA/yale-05-timeline.scene-state.json",
+            "outDir": "<storage>/gpu-deep-scratch/golden-artifacts-dapple/record/yale-05-timeline/runA/yale-05-timeline",
+            "sceneState": "<storage>/gpu-deep-scratch/golden-artifacts-dapple/record/yale-05-timeline/runA/yale-05-timeline.scene-state.json",
             "observe": true
           },
           "passesRenderedSequentially": false

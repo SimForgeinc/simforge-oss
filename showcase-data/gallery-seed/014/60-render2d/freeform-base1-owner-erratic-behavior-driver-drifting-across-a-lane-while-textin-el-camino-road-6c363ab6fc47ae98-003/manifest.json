@@ -6,11 +6,11 @@
   "renderer": "scripts/render-trace.mjs@2",
   "redact": false,
   "underlay": {
-    "mapDir": "/home/path/UniScenarios-training-grade/dev-assets/el-camino-road",
-    "topologyFile": "/home/path/UniScenarios-training-grade/dev-assets/el-camino-road/topology-index.json.gz",
+    "mapDir": "~/UniScenarios-training-grade/dev-assets/el-camino-road",
+    "topologyFile": "~/UniScenarios-training-grade/dev-assets/el-camino-road/topology-index.json.gz",
     "topologySha256": "986a9135415f3b045a7fb5d8f552bea3a1e7bdc9f35aba33e70092ee1dbd91d0",
     "topologyMapName": "el-camino-road_20260416-014537",
-    "locationsFile": "/home/path/UniScenarios-training-grade/dev-assets/el-camino-road/derived/locations.json.gz",
+    "locationsFile": "~/UniScenarios-training-grade/dev-assets/el-camino-road/derived/locations.json.gz",
     "locationsSha256": "fdd45d5595e982e76617d4951707c3d505309ee8691519412fb48e7e4fa75933",
     "laneCount": 1001,
     "crosswalkCount": 5,
@@ -3002,8 +3002,8 @@
     "sha256": "7da39143e4149b52640bd91bb1d299e158b10367549ddeda200a3afd06b86ae1"
   },
   "inputs": {
-    "instanceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/014/40-cells/freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003/instance.json",
-    "traceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/014/40-cells/freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003/trace.json.gz",
+    "instanceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/014/40-cells/freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003/instance.json",
+    "traceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/014/40-cells/freeform-base1-owner-erratic-behavior-driver-drifting-across-a-lane-while-textin-el-camino-road-6c363ab6fc47ae98-003/trace.json.gz",
     "traceFileSha256": "3c4f4dabf461c1fbf479ed008c55fc02fbf095c5b4d3d265cfb8b07cfd708e28"
   }
 }

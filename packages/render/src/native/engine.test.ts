@@ -209,7 +209,7 @@ describe('native engine input policy', () => {
 
 describe('native shared-memory ring sizing', () => {
   const rgb = (width: number, height: number) => ({ modality: 'rgb', attributes: { width, height } });
-  // The PhysicalAI-AV rig: 7 x 1920x1080 cameras, 1 lidar, 9 radars.
+  // A full recorded-AV rig: 7 x 1920x1080 cameras, 1 lidar, 9 radars.
   const pai = [...Array.from({ length: 7 }, () => rgb(1920, 1080)), ...Array.from({ length: 10 }, () => ({ modality: 'lidar', attributes: {} }))];
 
   it('sizes the ring from the rig so pipelining is never dropped for a large rig', () => {

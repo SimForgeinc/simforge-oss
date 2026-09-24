@@ -27,7 +27,7 @@ expected to misalign until 0737f3d9 is ingested as a Uni map derivative.
 
 Usage:
   python3 scripts/v2x/generate_twin_rig.py \
-      [--cameras /home/path/V2XCarla/v2x-backend/config/cameras.json] \
+      [--cameras ~/V2XCarla/v2x-backend/config/cameras.json] \
       --out renderer/sensors/rigs/richmond-twin-rig.v1.json
 """
 from __future__ import annotations
@@ -44,8 +44,8 @@ LON_0 = -122.333308830857
 # Uni richmond-field-station bundle XODR digest (map contract: every V2X
 # artifact carries {mapId, xodrSha256} and consumers refuse mismatches).
 UNI_XODR = Path(__file__).resolve().parents[2] / "dev-assets/richmond-field-station/xodr.xodr"
-LEGACY_XODR = Path(
-    "/home/path/V2XCarla/v2x-evidence/calibration/"
+LEGACY_XODR = Path.home() / (
+    "V2XCarla/v2x-evidence/calibration/"
     "20260727T000000Z-map-lineage-vault/A-carla-deployed__Richmond_Field_Station_Richmond_CA.xodr"
 )
 
@@ -76,7 +76,7 @@ def edge_to_edge_fov(near: float, far: float, u1: float, u2: float) -> float:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cameras", default="/home/path/V2XCarla/v2x-backend/config/cameras.json")
+    ap.add_argument("--cameras", default=str(Path.home() / "V2XCarla/v2x-backend/config/cameras.json"))
     ap.add_argument("--out", default="renderer/sensors/rigs/richmond-twin-rig.v1.json")
     args = ap.parse_args()
 

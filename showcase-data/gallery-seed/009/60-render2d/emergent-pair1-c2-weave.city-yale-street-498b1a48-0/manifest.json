@@ -6,11 +6,11 @@
   "renderer": "scripts/render-trace.mjs@2",
   "redact": false,
   "underlay": {
-    "mapDir": "/home/path/UniScenarios-training-grade/dev-assets/yale-street",
-    "topologyFile": "/home/path/UniScenarios-training-grade/dev-assets/yale-street/topology-index.json.gz",
+    "mapDir": "~/UniScenarios-training-grade/dev-assets/yale-street",
+    "topologyFile": "~/UniScenarios-training-grade/dev-assets/yale-street/topology-index.json.gz",
     "topologySha256": "33eb942298b3492266d0582782f020ef121cc1d8da08bcb3080c9b71ea01f95e",
     "topologyMapName": "yale-street_20260409-234639",
-    "locationsFile": "/home/path/UniScenarios-training-grade/dev-assets/yale-street/derived/locations.json.gz",
+    "locationsFile": "~/UniScenarios-training-grade/dev-assets/yale-street/derived/locations.json.gz",
     "locationsSha256": "90c66758800c2a43bade4495c947c50c8cf8af4bb9abf9bc2af0c18771cf4f93",
     "laneCount": 1141,
     "crosswalkCount": 12,
@@ -1505,8 +1505,8 @@
     "sha256": "fc6f89a5019f85a39eff8fa8dd4b3fa116fa0ab44a2b23987310156ce57a78ed"
   },
   "inputs": {
-    "instanceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/009/40-cells/emergent-pair1-c2-weave.city-yale-street-498b1a48-0/instance.json",
-    "traceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/009/40-cells/emergent-pair1-c2-weave.city-yale-street-498b1a48-0/trace.json.gz",
+    "instanceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/009/40-cells/emergent-pair1-c2-weave.city-yale-street-498b1a48-0/instance.json",
+    "traceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/009/40-cells/emergent-pair1-c2-weave.city-yale-street-498b1a48-0/trace.json.gz",
     "traceFileSha256": "7a4c84d8b53338e5ce24bb9467e50811cb580ca5b2d35241b07607f3868fb614"
   }
 }

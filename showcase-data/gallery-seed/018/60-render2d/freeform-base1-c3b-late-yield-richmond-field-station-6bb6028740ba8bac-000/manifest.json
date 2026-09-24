@@ -6,11 +6,11 @@
   "renderer": "scripts/render-trace.mjs@2",
   "redact": false,
   "underlay": {
-    "mapDir": "/home/path/UniScenarios-training-grade/dev-assets/richmond-field-station",
-    "topologyFile": "/home/path/UniScenarios-training-grade/dev-assets/richmond-field-station/topology-index.json.gz",
+    "mapDir": "~/UniScenarios-training-grade/dev-assets/richmond-field-station",
+    "topologyFile": "~/UniScenarios-training-grade/dev-assets/richmond-field-station/topology-index.json.gz",
     "topologySha256": "c7be1a65a96dc814001de69821c8199c34e8a0c68dd08ea25df49ddbcbac8505",
     "topologyMapName": "richmond-field-station_20260410-185647",
-    "locationsFile": "/home/path/UniScenarios-training-grade/dev-assets/richmond-field-station/derived/locations.json.gz",
+    "locationsFile": "~/UniScenarios-training-grade/dev-assets/richmond-field-station/derived/locations.json.gz",
     "locationsSha256": "4f459d52937aedc5ff3410546da00fe6b5872293ff354c17771bea7a00d21a61",
     "laneCount": 370,
     "crosswalkCount": 5,
@@ -1530,8 +1530,8 @@
     "sha256": "dd668e57fc5450e8ff4c8f3c998b644a3c5c928a4f2e4712a75854a2de124ce8"
   },
   "inputs": {
-    "instanceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/018/40-cells/freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000/instance.json",
-    "traceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/018/40-cells/freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000/trace.json.gz",
+    "instanceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/018/40-cells/freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000/instance.json",
+    "traceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/018/40-cells/freeform-base1-c3b-late-yield-richmond-field-station-6bb6028740ba8bac-000/trace.json.gz",
     "traceFileSha256": "2b5530abceee28e9bea434257d9157be70c25ec3c4d923761a42419935c6c61b"
   }
 }

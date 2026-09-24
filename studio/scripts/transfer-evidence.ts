@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runSimulation, type SimTrace } from "@simforge-oss/engine/node";
@@ -19,7 +20,7 @@ import type { ScenarioTemplateV2 } from "@simforge-oss/scenario";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = resolve(appRoot, "..");
-const mapCacheRoot = resolve(process.env.SIMFORGE_MAPS_CACHE_ROOT ?? "/home/path/.local/share/simforge/maps");
+const mapCacheRoot = resolve(process.env.SIMFORGE_MAPS_CACHE_ROOT ?? resolve(homedir(), ".local/share/simforge/maps"));
 const bundleRoot = resolve(mapCacheRoot, "map-bundles");
 const addonPath = resolve(repoRoot, "packages/native-runtime/native/simforge-native-runtime.linux-x64-gnu.node");
 const MAP_IDS = [

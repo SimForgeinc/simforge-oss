@@ -61,13 +61,10 @@ audit expectations change atomically.
 ## Packaged content that a bundler does not emit
 
 `files` lists what is published, but a package only ships what its `build`
-actually writes. `packages/evaluation` carries a Python measurement tool
-(`src/replay-context/python/replay_measure.py`) that tsup does not copy, so
-its `build` script copies it into `dist/replay-context/python/` and the
-default resolution — next to the built module — works from a packed tarball
-with no change to `files: ["dist"]`. `SIMFORGE_REPLAY_MEASURE` remains a
-documented override for a worker image that ships the tool elsewhere; it is
-not required, and it is not the primary mechanism.
+actually writes. `packages/evaluation` copies its `scripts/` directory into
+`dist/scripts/` in its `build` script for that reason, so the default
+resolution (next to the built module) works from a packed tarball with no
+change to `files: ["dist"]`.
 
 The general rule for any package in the stack: if a published entry point
 resolves a non-JS file at runtime, the `build` script must place that file

@@ -157,7 +157,6 @@ export default {
   full: [
     { name: "e2e", run: ["pnpm", "exec", "playwright", "test", "-c", "e2e/playwright.config.ts", "--project=smoke"] },
     { name: "gpu-golden", heavy: true, run: ["node", "qualification/golden-harness/golden.mjs", "verify", "all"] },
-    { name: "native-migration", run: ["node", "qualification/native-migration/harness.mjs", "status"] },
   ],
 
   // Remote cache: Depot Cache when a Depot token is available (CI and dev

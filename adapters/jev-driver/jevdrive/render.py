@@ -30,11 +30,11 @@ def main():
     selection = json.loads((tiles / "selection.json").read_text())
     frames = run / "frames"
     frames.mkdir(exist_ok=True)
-    binary = os.environ.get("SCEN_PLAY", "/home/path/simforge-oss/renderer/target/release/scen-play")
+    binary = os.environ.get("SCEN_PLAY", str(Path(__file__).resolve().parents[3] / "renderer/target/release/scen-play"))
     command = [binary, "--scene-state", str(state), "--glbs", ",".join(selection["glbs"]), "--quality", "high",
                "--out-dir", str(frames), "--ticks", str(args.ticks or doc["tickCount"]),
                "--camera", "follow", "--chase-dist", "18", "--chase-height", "12", "--fov", "70",
-               "--width", "960", "--height", "540", "--vehicle-models", "/home/path/simforge-oss/catalog/vehicles-carla"]
+               "--width", "960", "--height", "540", "--vehicle-models", str(Path(__file__).resolve().parents[3] / "catalog/vehicles-carla")]
     (run / "render-command.json").write_text(json.dumps(command, indent=2))
     with (run / "render.log").open("w") as log:
         subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True)

@@ -181,8 +181,8 @@ def main() -> None:
     client.close()
 
     # Side-by-side vs the real feed, if a reference exists in the V2X repo.
-    real = Path(
-        "/home/path/V2XCarla/v2x-backend-threejs/docs/evidence/"
+    real = Path.home() / (
+        "V2XCarla/v2x-backend-threejs/docs/evidence/"
         "view-align-20260815/ch1-chamfer-after.jpg"
     )
     rendered = out / "frames" / "tick-000000.ch1.rgb.png"

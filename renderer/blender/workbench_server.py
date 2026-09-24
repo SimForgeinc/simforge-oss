@@ -24,7 +24,7 @@ STATE = dict(ready=False, busy=True, progress='Starting Blender workbench', scen
              revision=0, engine='cycles', samples=32, width=960, height=540, renderMs=None,
              frameUrl='/frame.png?revision=0', frameSha256=None, camera=None, selection=None,
              undoDepth=0, redoDepth=0, objectCount=0, meshCount=0, lastEdit=None, lastError=None,
-             capabilities=dict(scope='geometry/material/visual authoring only; does not update SimForge physics, road rules, or NuRec splats',
+             capabilities=dict(scope='geometry/material/visual authoring only; does not update SimForge physics, road rules, or reconstructed splat scenes',
                                codeExecution='Disposable resource-limited Blender worker; Landlock read/write confinement and TSYNC seccomp; inert JSON transfer, no worker blend/code imported'))
 
 

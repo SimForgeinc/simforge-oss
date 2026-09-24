@@ -72,9 +72,9 @@ Jev only picks the discrete maneuver for the current instant.
 
 ## Local environment
 
-- Simforge OSS repo: `/home/path/simforge-oss` (branch `main`, HEAD 285ec812, 40 GB tree).
+- Simforge OSS repo: `~/simforge-oss` (branch `main`, HEAD 285ec812, 40 GB tree).
   - Rust: `renderer/` (`render-core/`, `sensors/`, `ffi/`, `service/`, `splat/`, `blender/`), `native/crates/`.
-  - `adapters/`: `policy-runner/`, `gym/`, `carla-exec/`, `ros2-bridge/`, `physics/`, `alpasim/`,
+  - `adapters/`: `policy-runner/`, `gym/`, `carla-exec/`, `ros2-bridge/`, `physics/`,
     `alpamayo/`, `gpu/`, `auto-e2e/`.
   - `packages/`: ~41 TS packages incl. `render/`, `training-env/`, `playback/`, `evaluation/`,
     `map-registry/`, `ambient-traffic/`, `native-runtime/`, `trace-render/`, `viewer/`.
@@ -82,9 +82,9 @@ Jev only picks the discrete maneuver for the current instant.
   - KEY DOCS, read these first: `docs/policy-step.md`, `docs/truth-stream-wire.md`,
     `docs/renderer-contract.md`, `docs/world-session.md`, `docs/eval-campaigns.md`, `AGENTS.md`.
   - `qualification/`: `policy-eval-runner/`, `policy-eval-suite.v1.json`, `render-determinism/`.
-- Also present: `/home/path/tmp/simforge-oss-map-gallery`, vendored rc61 release packs at
-  `/mnt/storage/simforge-download-profile/*/vendor/simforge-oss/` (incl. `simforge-oss-training-env`,
+- Also present: `~/tmp/simforge-oss-map-gallery`, vendored rc61 release packs at
+  `<storage>/simforge-download-profile/*/vendor/simforge-oss/` (incl. `simforge-oss-training-env`,
   `simforge_oss_gym`, `simforge-oss-evaluation`).
 - CARLA python package installed (`carla` importable); no CARLA server running (port 2000 refused).
 - `typesafe_sdk` is NOT installed. Extra index: `https://pypi.typesafe.ai/`.
-- Nothing has been built yet: `/home/path/tmp/jevdrive/` exists but is EMPTY.
+- Nothing has been built yet: `~/tmp/jevdrive/` exists but is EMPTY.

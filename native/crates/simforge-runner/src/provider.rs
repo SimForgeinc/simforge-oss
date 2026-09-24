@@ -1,6 +1,6 @@
 //! Foreign provider supervision. The Rust runner is the only durable host;
 //! Python providers (MuJoCo physics, Warp GPU batch, policy episodes, the
-//! resident Bevy/NuRec renderers) are foreign components executed one child
+//! resident Bevy renderer) are foreign components executed one child
 //! per attempt under a single job protocol:
 //!
 //! ```text
@@ -121,7 +121,7 @@ fn provider_error(module: &str, reason: impl std::fmt::Display) -> RunnerError {
 
 /// Runs `capabilities <flags>` and returns the JSON report. Callers pass
 /// `--no-probe` when a dependency-only report is enough; providers whose
-/// availability is only known by probing (NuRec) are called without it.
+/// availability is only known by probing are called without it.
 pub fn capabilities(root: &Path, module: &str, flags: &[&str]) -> Result<serde_json::Value> {
     let installed = install_root()?;
     let interpreter = python_in(&installed);

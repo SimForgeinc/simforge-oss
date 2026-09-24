@@ -1,7 +1,7 @@
 {
   "schema": "simforge.scenario-debug/v1",
   "input": {
-    "source": "/home/path/tmp/simforge-native-migration/examples/edge-cases/12-fire-engine-gridlock-escape/scenario.instance.json",
+    "source": "~/tmp/simforge-native-migration/examples/edge-cases/12-fire-engine-gridlock-escape/scenario.instance.json",
     "kind": "instance",
     "mapId": "yale-street",
     "provider": "native",

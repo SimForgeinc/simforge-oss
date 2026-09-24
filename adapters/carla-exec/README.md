@@ -221,8 +221,8 @@ read-only inputs: the RoadRunner source exports (one GLB + XODR folder per map o
 the NAS), the cooked engine image, and the SimForge map registry per environment.
 
 ```bash
-python -m simforge_oss_carla_exec.world_manifest_tools collect-nas --ssh simforge1 --sudo \
-  --root /mnt/nas/a100-data/GLB_Map_Export --inputs build/wm
+python -m simforge_oss_carla_exec.world_manifest_tools collect-nas --ssh <nas-host> --sudo \
+  --root <exports>/GLB_Map_Export --inputs build/wm
 python -m simforge_oss_carla_exec.world_manifest_tools collect-cooked --ssh rtx3080-02 \
   --container sf-engine-cook --image ghcr.io/simforgeinc/carla-rr-maps:0.10.0-prod-graphics --inputs build/wm
 # SimCloud: scripts/carla-world-manifest/carla-world-bindings.mjs export --env dev > build/wm/simforge-dev.json

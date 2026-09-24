@@ -2987,7 +2987,7 @@
    "carlaWorld": "Belmont_Office_Park_Belmont_CA",
    "decisionRequired": [],
    "derivedFrom": "e4ec8cab3f9ce8c7faa4804348e1978e70d52acd5d0dcd0696b30e6d2d498e10",
-   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "derivedRoot": "GLB_Map_Export_corrected",
    "extraFiles": [
     {
      "bytes": 82961,
@@ -3051,7 +3051,7 @@
    "carlaWorld": "Di_Rosa_SF",
    "decisionRequired": [],
    "derivedFrom": "112ad93fdd020c552d3fb6f77fd6732d0671ade6cc1faee8b506cde5c8df9bd6",
-   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "derivedRoot": "GLB_Map_Export_corrected",
    "extraFiles": [
     {
      "bytes": 63748,
@@ -3115,7 +3115,7 @@
    "carlaWorld": "El_Camino_Rd_Palo_Alto_CA",
    "decisionRequired": [],
    "derivedFrom": "e90cc708cc75f9c9eacac8e8831a63b258edf05033d02a22b6d005e4b34213e9",
-   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "derivedRoot": "GLB_Map_Export_corrected",
    "extraFiles": [
     {
      "bytes": 57258,
@@ -3179,7 +3179,7 @@
    "carlaWorld": null,
    "decisionRequired": [],
    "derivedFrom": "09d8e88639a31ad7752c3061cebd1756928c283c86e4446c388f1160388c4c5e",
-   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "derivedRoot": "GLB_Map_Export_corrected",
    "extraFiles": [
     {
      "bytes": 123553,
@@ -3243,7 +3243,7 @@
    "carlaWorld": "Richmond_Field_Station_Richmond_CA",
    "decisionRequired": [],
    "derivedFrom": "5b08367524edbc0c46cfb2f4cd77ef6a204f263bb14cf7e8f90a1fffde1c14d6",
-   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "derivedRoot": "GLB_Map_Export_corrected",
    "extraFiles": [
     {
      "bytes": 20968,
@@ -3322,7 +3322,7 @@
    "cookedXodrSha256": "ca540122c82407b41addf397dd204676ef218e0e052010334ef2aaf363feeffb",
    "decisionRequired": [],
    "derivedFrom": "9098904a93bd40a930c4231442dc32b5b1e132d98c01b073da50e570c54e6bd9",
-   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "derivedRoot": "GLB_Map_Export_corrected",
    "differences": [
     "elevation-only refit of San_Ramon_25_P2"
    ],
@@ -3537,7 +3537,7 @@
    "cookedXodrSha256": "5da6851d276af8131218f10aaa6617682ddce41308295f9ff9a11d460b082f8b",
    "decisionRequired": [],
    "derivedFrom": "eaeebc429898aca03dc8b399e23cef1d7e129784f607350ad974cf0f012ded55",
-   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "derivedRoot": "GLB_Map_Export_corrected",
    "differences": [
     "elevation-only refit of San_Ramon_Phase_1_P1"
    ],
@@ -3784,7 +3784,7 @@
    "carlaWorld": "San_Ramon_Phase_2",
    "decisionRequired": [],
    "derivedFrom": "c40e43731e4b4f5ab7c92e5ed9aec30452d58bfe2f17919fd1bd21fff67a6845",
-   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "derivedRoot": "GLB_Map_Export_corrected",
    "extraFiles": [
     {
      "bytes": 572583,
@@ -3863,7 +3863,7 @@
    "cookedXodrSha256": "ec0e06ca1dfe0391f4e4471acafa93a8c71a809663d434f4bc7e580ca5007bd7",
    "decisionRequired": [],
    "derivedFrom": "ff368b92160bf1d8bc726a39039cb225be81a85518b0630ba8671e69f649c4f6",
-   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "derivedRoot": "GLB_Map_Export_corrected",
    "differences": [
     "elevation-only refit of Saratoga_School_Area"
    ],
@@ -3936,7 +3936,7 @@
    "carlaWorld": "Yale_St_Palo_Alto_CA",
    "decisionRequired": [],
    "derivedFrom": "c8d8401dabdfa9420f3231cdbd7a37bd400cc517f8fa9af8fcaadc489b41d6ae",
-   "derivedRoot": "/mnt/nas/a100-data/GLB_Map_Export_corrected",
+   "derivedRoot": "GLB_Map_Export_corrected",
    "extraFiles": [
     {
      "bytes": 64961,
@@ -3998,7 +3998,7 @@
  ],
  "schema": "simforge.carla-world-manifest/v1",
  "source": {
-  "root": "/mnt/nas/a100-data/GLB_Map_Export"
+  "root": "GLB_Map_Export"
  },
  "tolerance": {
   "headingDeg": 0.1,

@@ -67,7 +67,7 @@ function inputChangeWitnesses(before, after) {
   return { schema: 'simforge.input-change-witness/v1', pathFormat: 'Object keys use dots; keyed arrays use a JSON-quoted ID in braces; other arrays use indices.', changes };
 }
 const SUPPORT = [
-  'Authored local map-bound situations only; NuRec/twin immutable adapters are not supplied by this runner.',
+  'Authored local map-bound situations only; reconstruction/twin immutable adapters are not supplied by this runner.',
   'No implicit meshes, external policies or vertical vehicle contact dynamics. Generated static meshes require adopt_geometry and explicit enclosing opaque planar OBB collision/occlusion semantics.',
   'Unadopted geometry-workbench edits remain visual-only. Source-map modifications cannot be promoted. Rehearsals use immutable ORIGINAL source-map ground plus verified generated-asset offsets.',
   'Actor-relative inspection cameras are diagnostic views, not attested policy sensor pixels.',

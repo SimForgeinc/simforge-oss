@@ -6,11 +6,11 @@
   "renderer": "scripts/render-trace.mjs@2",
   "redact": false,
   "underlay": {
-    "mapDir": "/home/path/UniScenarios-training-grade/dev-assets/easterbrook-discovery-school",
-    "topologyFile": "/home/path/UniScenarios-training-grade/dev-assets/easterbrook-discovery-school/topology-index.json.gz",
+    "mapDir": "~/UniScenarios-training-grade/dev-assets/easterbrook-discovery-school",
+    "topologyFile": "~/UniScenarios-training-grade/dev-assets/easterbrook-discovery-school/topology-index.json.gz",
     "topologySha256": "7006e23d34d3b5c23268f8c21e39fc2adaec303fd5d2e65cb618325fb869f32f",
     "topologyMapName": "easterbrook-discovery-school_20260410-191436",
-    "locationsFile": "/home/path/UniScenarios-training-grade/dev-assets/easterbrook-discovery-school/derived/locations.json.gz",
+    "locationsFile": "~/UniScenarios-training-grade/dev-assets/easterbrook-discovery-school/derived/locations.json.gz",
     "locationsSha256": "86af807f8b9fd79e1c633d86fe4d6f4e97816b1417b23de25b2e1d7ec37aa40a",
     "laneCount": 563,
     "crosswalkCount": 13,
@@ -312,8 +312,8 @@
     "sha256": "f5b147987d363384ad01cd410086ae993ab9bd89f6a1007e6683793e55fa9532"
   },
   "inputs": {
-    "instanceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/023/40-cells/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/instance.json",
-    "traceFile": "/home/path/UniScenarios-training-grade/showcase-data/gallery-seed/023/40-cells/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/trace.json.gz",
+    "instanceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/023/40-cells/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/instance.json",
+    "traceFile": "~/UniScenarios-training-grade/showcase-data/gallery-seed/023/40-cells/vista2-main1-c9-animal-easterbrook-discovery-school-1fb7eb46-1/trace.json.gz",
     "traceFileSha256": "98377437e64783168505f4fc510602b53f8669a7e0ca231c1b8108bc1893c7cf"
   }
 }

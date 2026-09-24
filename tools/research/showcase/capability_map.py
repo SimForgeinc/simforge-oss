@@ -14,7 +14,7 @@ stopClass is read from artifacts, never guessed:
 import json, re
 from pathlib import Path
 
-ROOT = Path('/home/path/UniScenarios-training-grade')
+ROOT = Path.home() / 'UniScenarios-training-grade'
 JOBS = ROOT / 'showcase-data' / 'jobs'
 CASES = json.loads((ROOT / 'apps/showcase/campaigns/edge-cases.json').read_text())['cases']
 ORDER = ['submitted', 'author-ok', 'contract-valid', 'cells-ok', 'gate-pass', 'eligible',

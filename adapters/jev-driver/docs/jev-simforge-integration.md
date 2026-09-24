@@ -2,7 +2,7 @@
 
 ## Verdict and scope
 
-**Use the existing native policy/session interface. No Bevy or other renderer change is required.** The prototype actually ran the Rust Simforge `dynamic-v1` runtime through its Python binding, not a replacement kinematic world. All new code, schemas, scenarios and evidence are under `/home/path/tmp/jevdrive/`; there were **zero writes to `/home/path/simforge-oss`**, no builds, project-wide tests, linters, formatters, commits or branches. This is not a claim that somebody else's shared working tree is clean.
+**Use the existing native policy/session interface. No Bevy or other renderer change is required.** The prototype actually ran the Rust Simforge `dynamic-v1` runtime through its Python binding, not a replacement kinematic world. All new code, schemas, scenarios and evidence are under `~/tmp/jevdrive/`; there were **zero writes to `~/simforge-oss`**, no builds, project-wide tests, linters, formatters, commits or branches. This is not a claim that somebody else's shared working tree is clean.
 
 The evidence has three different strengths, deliberately separated below:
 
@@ -14,7 +14,7 @@ The authored `cpnco-dartout` was materialized and run, with curved geometry and 
 
 ## 1. Sanctioned hook, with source evidence
 
-All repository citations are relative to `/home/path/simforge-oss`.
+All repository citations are relative to `~/simforge-oss`.
 
 | Concern | Evidence and decision |
 |---|---|
@@ -28,18 +28,18 @@ All repository citations are relative to `/home/path/simforge-oss`.
 | Renderer boundary | `docs/renderer-contract.md:16-27,114-128`: Bevy owns native sensor/cinematic artifacts and consumes actor state. `docs/policy-step.md:202-210` makes camera frame bundles optional; pixels do not ride policy messages. The renderer also has structured lidar/radar facilities, so it is not literally only a pixel painter, but none is needed for this text-only policy. |
 | Deterministic time | `AGENTS.md:83-89`: native/WASM, 20 ms fixed step, no retired TS simulator. `packages/training-env/src/types.ts:82-89`: environment decision rate must divide 50. Set that rate to 50 and schedule Jev on integer engine ticks instead of trying to configure an invalid native 3 Hz rate. |
 
-The complete independent inventory is `/home/path/tmp/scene-providers-inventory.md`; the perception literature constraints are `/home/path/tmp/perception-sota.md`. Both informed this design. No renderer, camera-to-box network, SHM image endpoint or multimodal model was introduced.
+The complete independent inventory is `~/tmp/scene-providers-inventory.md`; the perception literature constraints are `~/tmp/perception-sota.md`. Both informed this design. No renderer, camera-to-box network, SHM image endpoint or multimodal model was introduced.
 
 ### Runtime identity
 
-The existing wheel `native/target/wheels/simforge_oss_gym-0.1.0rc61-cp310-abi3-linux_x86_64.whl` was installed into `/home/path/tmp/jevdrive/.venv`; it reports native engine `0.6.0`, ABI `2`. The current source package advertises rc65. Thus the run proves this **installed, pinned wheel**, not that the current checkout has been rebuilt or qualified. The official pooled `typesafe_sdk` is version `0.6.0`. Jev is pinned to the accepted API model string `jev-1.13.0`; `jev-preview` is an untested A/B candidate, not silently substituted.
+The existing wheel `native/target/wheels/simforge_oss_gym-0.1.0rc61-cp310-abi3-linux_x86_64.whl` was installed into `~/tmp/jevdrive/.venv`; it reports native engine `0.6.0`, ABI `2`. The current source package advertises rc65. Thus the run proves this **installed, pinned wheel**, not that the current checkout has been rebuilt or qualified. The official pooled `typesafe_sdk` is version `0.6.0`. Jev is pinned to the accepted API model string `jev-1.13.0`; `jev-preview` is an untested A/B candidate, not silently substituted.
 
 ## 2. Runnable entry and files
 
 Single entry command (choose a fresh output directory; overwriting evidence is refused):
 
 ```sh
-bash /home/path/tmp/jevdrive/run.sh --out /home/path/tmp/jevdrive/my-new-run
+bash ~/tmp/jevdrive/run.sh --out ~/tmp/jevdrive/my-new-run
 ```
 
 Defaults: native inline-topology straight-road episode, schema `scene-observation/v2`, question revision `v3`, lockstep, Jev 3 Hz, 50 Hz tracker, 45 scheduled decision opportunities. `run.sh` sources `~/.config/typesafe/env` with shell tracing disabled; credentials are never copied into artifacts. The already prepared `.venv` supplies the SDK, native wheel, NumPy and Gymnasium.
@@ -47,11 +47,11 @@ Defaults: native inline-topology straight-road episode, schema `scene-observatio
 Other explicit modes, using fresh output paths:
 
 ```sh
-bash /home/path/tmp/jevdrive/run.sh --mode realtime --decisions 15 --inject-delay-at 5 --out /home/path/tmp/jevdrive/my-realtime-run
-bash /home/path/tmp/jevdrive/run.sh --decision-hz 6 --out /home/path/tmp/jevdrive/my-6hz-run
-bash /home/path/tmp/jevdrive/run.sh --spec /home/path/tmp/jevdrive/cpnco-dartout.episodes.json --decisions 48 --out /home/path/tmp/jevdrive/my-dartout-run
+bash ~/tmp/jevdrive/run.sh --mode realtime --decisions 15 --inject-delay-at 5 --out ~/tmp/jevdrive/my-realtime-run
+bash ~/tmp/jevdrive/run.sh --decision-hz 6 --out ~/tmp/jevdrive/my-6hz-run
+bash ~/tmp/jevdrive/run.sh --spec ~/tmp/jevdrive/cpnco-dartout.episodes.json --decisions 48 --out ~/tmp/jevdrive/my-dartout-run
 # Deliberately RELAXED assumption; not the shipping envelope:
-bash /home/path/tmp/jevdrive/run.sh --spec /home/path/tmp/jevdrive/cpnco-dartout.episodes.json --shadow-max-speed-mps 0.1 --shadow-reaction-s 0.3 --decisions 48 --out /home/path/tmp/jevdrive/my-relaxed-run
+bash ~/tmp/jevdrive/run.sh --spec ~/tmp/jevdrive/cpnco-dartout.episodes.json --shadow-max-speed-mps 0.1 --shadow-reaction-s 0.3 --decisions 48 --out ~/tmp/jevdrive/my-relaxed-run
 ```
 
 `--question-version v1|v2|v3` preserves the question experiment; `--schema-version scene-observation/v1` exists for exact historical replay, not as the recommended direction-aware interface. `--policy baseline` runs the deterministic preference rule without calling Jev.
@@ -189,8 +189,8 @@ This advanced **250 ticks / 5 s**, made **13 live requests**, and recorded media
 
 Primary decision logs:
 
-* `/home/path/tmp/jevdrive/evidence-final-lockstep/decisions.jsonl`
-* `/home/path/tmp/jevdrive/evidence-final-realtime/decisions.jsonl`
+* `~/tmp/jevdrive/evidence-final-lockstep/decisions.jsonl`
+* `~/tmp/jevdrive/evidence-final-realtime/decisions.jsonl`
 
 Each corresponding `ticks.jsonl` carries the current scene/hash, last decision-state hash, feasible/rejected set, all raw answers/probabilities/confidence, chosen maneuver, actuation, executor telemetry, overrides, sequence/time, path distance, visibility counts and evaluation-only oracle fields. Current logs also carry actuator provenance and reanchor epochs.
 

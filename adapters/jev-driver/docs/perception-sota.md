@@ -1,6 +1,6 @@
 # 3D driving perception for a provider-agnostic SceneObservation
 
-Research date: 2026-09-16. This is an evidence map, not a claim that a single leaderboard winner supplies all interface fields. Paper finding used the Firecrawl research paper index (semantic search, related papers, and targeted in-body retrieval). Bracketed references give canonical paper IDs and titles; links resolve to the paper. **[DESIGN INFERENCE]** distinguishes proposed interface contracts from measured findings. Jev constraints are taken from `/home/path/tmp/jev-findings.md`: text/JSON only, finite Choice/Score/Noul answers, advisory decisions, no learned visual-token adapter.
+Research date: 2026-09-16. This is an evidence map, not a claim that a single leaderboard winner supplies all interface fields. Paper finding used the Firecrawl research paper index (semantic search, related papers, and targeted in-body retrieval). Bracketed references give canonical paper IDs and titles; links resolve to the paper. **[DESIGN INFERENCE]** distinguishes proposed interface contracts from measured findings. Jev constraints are taken from `~/tmp/jev-findings.md`: text/JSON only, finite Choice/Score/Noul answers, advisory decisions, no learned visual-token adapter.
 
 ## 1. Camera-only 3D detection / BEV perception
 

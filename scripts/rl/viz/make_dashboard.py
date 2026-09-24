@@ -7,7 +7,7 @@ referenced by relative path. Sections:
   2. Curriculum mix over updates + KL / entropy subplots
   3. Held-out eval bars: baseline vs mid(r1) vs end(r2) per scenario class
   4. BEV animations grouped start/middle/end per episode (<video> tags)
-  5. W0 bridge fidelity summary (v2 dashcam-POV table, from simforge1 report)
+  5. W0 bridge fidelity summary (v2 dashcam-POV table, from the training cluster report)
   6. Milestone timeline
 """
 from __future__ import annotations
@@ -396,7 +396,7 @@ follow-cam, 10 fps playback of 5 Hz decisions. Ego is yellow; the trail shows it
 <p class="lede">Why the roadmap stays mid-level-only: zero-shot H3 Ref2VA failed the kill criterion
 (reward-relevant recall &lt;90% on novel classes). v2 dashcam-POV retry improved aesthetics, not
 semantic fidelity — strict IoU≥0.5 recall is 0.000 everywhere below. Source:
-<code>~/w0-data/W0_REPORT.md</code> on simforge1 (2026-08-22).</p>
+<code>~/w0-data/W0_REPORT.md</code> on the training cluster (2026-08-22).</p>
 <table>
   <thead><tr><th>clip (v2 dashcam-POV)</th><th>class</th><th>floor present (orig)</th><th>trans IoU≥0.5</th><th>trans IoU≥0.25</th><th>trans present</th><th>med disp px</th></tr></thead>
   <tbody>{w0_rows}</tbody>

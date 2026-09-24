@@ -2,7 +2,7 @@
 
 The Rust native runtime ships inside this wheel as ``simforge_oss_gym._native``
 (no Node, Studio or subprocess). Execution profiles with their own providers
-(GPU batch, articulated MuJoCo, NuRec sensor tensors) are explicit extras
+(GPU batch, articulated MuJoCo, resident Bevy sensors) are explicit extras
 selected through :mod:`simforge_oss_gym.profiles`.
 """
 

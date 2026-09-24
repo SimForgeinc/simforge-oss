@@ -172,13 +172,6 @@
       "registry": "pypi"
     },
     {
-      "name": "simforge-oss-splat",
-      "version": "0.1.0rc67",
-      "path": "renderer/splat/python",
-      "role": "nurec-splat-renderer",
-      "registry": "pypi"
-    },
-    {
       "name": "simforge-oss-carla-exec",
       "version": "0.1.0rc67",
       "path": "adapters/carla-exec",

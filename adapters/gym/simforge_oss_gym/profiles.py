@@ -12,7 +12,6 @@ for the native core, ``BackendCapabilityError`` for MuJoCo Warp).
 | ``roadway-native``         | Rust core in-process (this wheel)    | none                  |
 | ``roadway-dynamic-gpu-v1`` | Warp/CUDA device batch               | ``gpu``               |
 | ``articulated-mujoco-v1``  | MuJoCo CPU / MuJoCo Warp             | ``articulated[-warp]``|
-| sensor observations        | NuRec in-process tensor renderer     | ``nurec``             |
 """
 
 from __future__ import annotations

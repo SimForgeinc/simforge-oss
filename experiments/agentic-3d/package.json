@@ -2,7 +2,7 @@
   "name": "@simforge-oss/agentic-3d-experiment",
   "version": "0.0.0",
   "private": true,
-  "description": "Situation-first authoring experiment: orchestration, geometry publication, rehearsal/solve/compare, frozen corpus replay and NuRec source binding over the public native-backed SimForge packages. No build step; plain ES modules.",
+  "description": "Situation-first authoring experiment: orchestration, geometry publication, rehearsal/solve/compare, frozen corpus replay over the public native-backed SimForge packages. No build step; plain ES modules.",
   "type": "module",
   "license": "Apache-2.0",
   "scripts": {

@@ -163,7 +163,7 @@ def validate_history_times(
 
     * ``ego_history_t_s`` supplied      -> scorable
     * ``ego_history_rate_hz`` declared  -> scorable, recorded as declared
-      (for a dataset whose rate is documented, e.g. PhysicalAI-AV at 10 Hz)
+      (for a dataset whose rate is documented, e.g. a 10 Hz AV recording)
     * neither                           -> NOT scorable; the run is
       inference-only, and a caller that asked for a metric gets a typed
       ``missing_fields`` refusal naming ``obs.ego_history_t_s``.

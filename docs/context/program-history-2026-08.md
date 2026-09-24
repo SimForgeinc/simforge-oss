@@ -27,7 +27,7 @@ never fired collision termination.
   (`qualification/policy-eval-suite.v1.json`).
 - **WS6**: CARLA-oracled `golden-maneuvers.v2.json` with provenance CI.
 - **WS7 Training economics**: 53 real GRPO steps, OOM boundary table; 100k
-  decisions ≈ 0.6–4.9 GPU-days on the 8×A100 cluster (simforge1).
+  decisions ≈ 0.6–4.9 GPU-days on the 8×A100 cluster (the training cluster).
 
 ## Wave 2 — Bevy native renderer to CARLA-application coverage (WSB1–WSB7)
 
@@ -151,7 +151,7 @@ transformer, no TP/USP path). Package:
 
 - Video models: research scope, licensing explicitly waived by the user.
 - Wan 2.2 removed from the project as our teacher/tooling (87.7 GiB purged
-  from simforge1); third-party pipelines that internally embed Wan components
+  from the training cluster); third-party pipelines that internally embed Wan components
   may still be evaluated for functionality.
 - Conditioning: full source video as reference, never first/last keyframes
   unless a model has no reference path.
@@ -162,7 +162,7 @@ transformer, no TP/USP path). Package:
 ## Standing operational facts
 
 - GPU box: RTX 5080 16 GB locally (user's production V2X twin holds ~9.4 GB —
-  read-only); training cluster simforge1 (8×A100-40 GB, shared).
+  read-only); training cluster (8×A100-40 GB, shared).
 - Artifacts for the user ship via `scp … seablue:~/Downloads/`.
 - Frozen scoring instrument: yolo11s @ ultralytics 8.4.126, conf 0.25 /
   IoU 0.5, weights `tools/bridge-fidelity/.corpus/weights/yolo11s.pt`.

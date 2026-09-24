@@ -4,5 +4,6 @@ set +x
 set -a
 source "$HOME/.config/typesafe/env"
 set +a
-export PYTHONPATH="/home/path/tmp/jevdrive${PYTHONPATH:+:$PYTHONPATH}"
-exec /home/path/tmp/jevdrive/.venv/bin/python -m jevdrive "$@"
+JEVDRIVE_HOME="${JEVDRIVE_HOME:-$HOME/tmp/jevdrive}"
+export PYTHONPATH="$JEVDRIVE_HOME${PYTHONPATH:+:$PYTHONPATH}"
+exec "$JEVDRIVE_HOME/.venv/bin/python" -m jevdrive "$@"

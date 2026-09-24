@@ -74,7 +74,7 @@ Not an agent. Two supervisors were relaunching CARLA within seconds of each kill
   cloudflared tunnels), and
 - a **user unit `uniscenario-render-worker-local.service`** - "UniScenario local CARLA render
   worker", a leftover from the abandoned CARLA render path, `ExecStart=
-  /home/path/simcloud-platform/scripts/uniscenario-worker-local-run.sh`.
+  ~/simcloud-platform/scripts/uniscenario-worker-local-run.sh`.
 
 Our 3D path contains no CARLA reference (`grep -ri carla` over the render path: zero hits); it is
 Chromium + Vulkan + the Studio three.js renderer. Stopped the three GPU/CPU-heavy v2x units and

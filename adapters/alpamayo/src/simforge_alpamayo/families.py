@@ -230,7 +230,7 @@ ALPAMAYO_1 = Family(
         ),
         _QWEN3_VL_2B_PROCESSOR,
     ),
-    # Upstream load_physical_aiavdataset selects exactly [0, 1, 2, 6]; the
+    # The upstream dataset loader selects exactly [0, 1, 2, 6]; the
     # checkpoint has no camera-count conditioning, so a different set is a
     # rejected input rather than a degraded one.
     cameras=Cameras(required=(0, 1, 2, 6), variable=False, default=(0, 1, 2, 6)),
@@ -447,9 +447,8 @@ WEIGHTS_LICENSE_BLOB_SHA = "ec297ac5456384786644013ec196da33b916be97"
 #: Upstream inference code license (all three GitHub repos).
 CODE_LICENSE = "Apache-2.0"
 
-#: The gated dataset every upstream parity script streams from. Needed only
-#: for parity runs, never for product inference.
-PARITY_DATASET = "nvidia/PhysicalAI-Autonomous-Vehicles"
+#: Gating of the dataset every upstream parity script streams from (NVIDIA's
+#: AV dataset). Needed only for parity runs, never for product inference.
 PARITY_DATASET_GATED = "auto"
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # WS7 Poutine-shape GRPO smoke — the one documented command.
 #
-# Runs >=50 real GRPO optimizer steps on simforge1 (A100-40GB) with QLoRA on
+# Runs >=50 real GRPO optimizer steps on the training cluster (A100-40GB) with QLoRA on
 # Qwen/Qwen2.5-VL-3B-Instruct, trajectory-only output, reward = drive (exp(-ADE))
 # + format, per arXiv 2506.11234 eqs. 5-6.
 #

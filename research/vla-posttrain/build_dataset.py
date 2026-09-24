@@ -106,7 +106,7 @@ def build_row(clip: str, rows: list[dict], frame: int, dt: float, horizon_s: flo
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--w0-root", type=Path, default=Path(os.environ.get("W0_ROOT", "/home/path/w0-data")))
+    ap.add_argument("--w0-root", type=Path, default=Path(os.environ.get("W0_ROOT", str(Path.home() / "w0-data"))))
     ap.add_argument("--out", type=Path, default=Path(__file__).parent / "data" / "prompts.jsonl")
     ap.add_argument("--dt", type=float, default=0.5, help="waypoint spacing in seconds")
     ap.add_argument("--horizon", type=float, default=3.0, help="planning horizon in seconds")

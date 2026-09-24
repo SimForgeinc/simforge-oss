@@ -294,8 +294,8 @@ export async function probeFrameTimestamps(tools: EncoderTools, videoPath: strin
 /**
  * Extract every frame of a calibrated camera's video and bind each to a verified timestamp.
  *
- * Output files are named `<absoluteTimestampUs>.png`, the same convention the NuRec packages
- * use for recorded frames, so a downstream reader needs no sidecar to know when a frame was
+ * Output files are named `<absoluteTimestampUs>.png`, the same convention recorded scene packages
+ * commonly use for recorded frames, so a downstream reader needs no sidecar to know when a frame was
  * taken.
  */
 export async function extractVideoFrames(

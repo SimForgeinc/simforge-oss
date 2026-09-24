@@ -2,7 +2,7 @@
 
   # 1. inputs (read-only: list / hash / copy out)
   python -m simforge_oss_carla_exec.world_manifest_tools collect-nas \\
-      --ssh simforge1 --sudo --root /mnt/nas/a100-data/GLB_Map_Export --inputs build/wm
+      --ssh <nas-host> --sudo --root <exports>/GLB_Map_Export --inputs build/wm
   python -m simforge_oss_carla_exec.world_manifest_tools collect-cooked \\
       --ssh rtx3080-02 --container sf-engine-cook \\
       --image ghcr.io/simforgeinc/carla-rr-maps:0.10.0-prod-graphics --inputs build/wm

@@ -24,8 +24,8 @@ const PACKAGES = ['@simforge-oss/native-runtime', '@simforge-oss/engine', '@simf
 /** Published artifact extensions; sources, maps and type declarations are not executed. */
 const ARTIFACT_FILE = /\.(?:js|mjs|cjs|node|wasm|json)$/;
 const AUTHORING_MODULES = ['run-frozen-brief', 'situation-loop', 'situation-ensemble', 'situation-authoring-resources', 'situation-capabilities',
-  'situation-sensing-policy', 'freeze-situation-sensing', 'geometry-binding', 'blender-client', 'gateway', 'asset-library', 'situation-nurec',
-  'nurec-observations', 'situation-corpus', 'runtime-identity'];
+  'situation-sensing-policy', 'freeze-situation-sensing', 'geometry-binding', 'blender-client', 'gateway', 'asset-library',
+  'situation-corpus', 'runtime-identity'];
 
 function walk(root, relative, accept, out) {
   const pending = [relative];

@@ -1,6 +1,6 @@
 {
   "deployed": {
-    "path": "/home/path/carlaCache/0.10.0/Carla/Maps/OpenDrive/Richmond_Field_Station_Richmond_CA.xodr",
+    "path": "~/carlaCache/0.10.0/Carla/Maps/OpenDrive/Richmond_Field_Station_Richmond_CA.xodr",
     "date": "2026-06-11T11:08:50",
     "vendor": "MathWorks",
     "north": 410.96484774503466,

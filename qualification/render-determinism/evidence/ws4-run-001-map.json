@@ -154,7 +154,7 @@
       "startedAt": "2026-08-22T20:58:13.126Z",
       "finishedAt": "2026-08-22T21:03:19.815Z",
       "exitCode": 0,
-      "stdoutTail": "> export yale-street\n{\n  \"outDir\": \"/home/path/UniScenarios-ws/ws4-renderer/artifacts/render-determinism/ws4-run-001-map/pass-a\",\n  \"maps\": [\n    \"yale-street\"\n  ],\n  \"diagnostics\": 0\n}\n",
+      "stdoutTail": "> export yale-street\n{\n  \"outDir\": \"~/UniScenarios-ws/ws4-renderer/artifacts/render-determinism/ws4-run-001-map/pass-a\",\n  \"maps\": [\n    \"yale-street\"\n  ],\n  \"diagnostics\": 0\n}\n",
       "stderrTail": ""
     },
     {
@@ -162,7 +162,7 @@
       "startedAt": "2026-08-22T21:03:19.815Z",
       "finishedAt": "2026-08-22T21:08:30.722Z",
       "exitCode": 0,
-      "stdoutTail": "> export yale-street\n{\n  \"outDir\": \"/home/path/UniScenarios-ws/ws4-renderer/artifacts/render-determinism/ws4-run-001-map/pass-b\",\n  \"maps\": [\n    \"yale-street\"\n  ],\n  \"diagnostics\": 0\n}\n",
+      "stdoutTail": "> export yale-street\n{\n  \"outDir\": \"~/UniScenarios-ws/ws4-renderer/artifacts/render-determinism/ws4-run-001-map/pass-b\",\n  \"maps\": [\n    \"yale-street\"\n  ],\n  \"diagnostics\": 0\n}\n",
       "stderrTail": ""
     }
   ]

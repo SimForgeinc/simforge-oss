@@ -15,7 +15,7 @@
  *
  * Usage:
  *   node scripts/w0/render-clip.mjs --instance a.json --trace a.trace.json.gz \
- *     --out /home/path/w0-data/clips/a [--weather clear|fog|night-rain] \
+ *     --out ~/w0-data/clips/a [--weather clear|fog|night-rain] \
  *     [--seconds 5] [--fps 12] [--center auto|<seconds>]
  */
 

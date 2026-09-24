@@ -1,6 +1,6 @@
 # WS7 ComputeDerisk — VLA post-training feasibility memo
 
-Date: 2026-08-22 · Hardware: simforge1 (NVIDIA A100-SXM4-40GB, single-GPU runs,
+Date: 2026-08-22 · Hardware: training cluster (NVIDIA A100-SXM4-40GB, single-GPU runs,
 CUDA 13.0 / torch 2.13 / transformers 5.15 / TRL 1.10) · Recipe shape:
 [Poutine, arXiv 2506.11234](https://arxiv.org/abs/2506.11234)
 

@@ -305,7 +305,7 @@ def ego_history_rot_from_headings(
     :func:`ego_history_from_positions`. The newest heading defines the t0
     frame, so the last matrix is the identity by construction.
 
-    This is the AlpaSim ``build_ego_history`` convention: x forward, y left,
+    This is the upstream closed-loop harness's ``build_ego_history`` convention: x forward, y left,
     z up (FLU), rotations 3x3 row-major about +z, relative to t0. Histories
     shorter than ``steps`` are padded by replicating the OLDEST heading,
     matching the position padding — the cold-start approximation, applied
