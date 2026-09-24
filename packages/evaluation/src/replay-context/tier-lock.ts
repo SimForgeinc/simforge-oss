@@ -111,7 +111,7 @@ export const BUILD_EVIDENCE: readonly BuildEvidenceItem[] = [
     produced: true,
     evidence:
       'scene 007a5809 (package sha256 36665d69…, verified against its pinned digest) rendered at four '
-      + 'cameras over five probes; G1 19.67 dB worst camera, G2 coverage 0.84/1.59/2.15/6.80% by offset',
+      + 'cameras over five probes; gate results recorded internally (NVIDIA dataset license: not published)',
   },
   {
     item: 'one reconstruction of a calibrated sequence completing training and exporting a NuRec .usdz',

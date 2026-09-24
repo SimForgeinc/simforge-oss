@@ -133,22 +133,10 @@ The reconstruction path has not yet been exercised, which is why the flag stays 
 
 ### Measured on a real scene
 
-Scene `007a5809` (PhysicalAI-AV NuRec; package sha256 verified against the digest pinned in its
-own `background.json`), through the provisioned tier:
-
-| Gate | Measured | Threshold | Verdict |
-|---|---|---|---|
-| G1 on-trajectory | 19.67 dB (30° tele; the three 120° cameras are 22.9–25.3 dB) | ≥ 22 dB | **fail** |
-| G2 off-trajectory | 0.84% at 0.5 m, 1.59% at 1.0 m, 2.15% at 1.5 m, 6.80% at 5° | ≤ 2% | pass, envelope 1.0 m |
-| G3 ego-history parity | 0.000 m | ≤ 0.01 m | pass |
-| G4 dynamics | 197.3 ms | ≤ 200 ms | pass |
-
-The bundle is `qualified: false` with a **zero-width** envelope: the 1.0 m G2 measured is not
-written, because an envelope means nothing on a scene whose on-trajectory renders did not hold
-up. The tele failure was investigated, not excused — rendering at the frames' exact instants
-instead of on the 10 Hz tick grid moved it 0.19 dB, refuting temporal quantisation and leaving
-genuine reconstruction quality at distance. So this scene cannot serve any rig preset
-containing the tele camera. Every superseded measurement is retained in `GATE-CHANGES.md`.
+The tier has been measured on an NVIDIA PhysicalAI-AV NuRec scene (package sha256 verified
+against the digest pinned in its own `background.json`). The dataset license treats
+benchmarking results relating to the dataset as confidential, so the gate results and every
+superseded measurement are recorded internally, not here. The bundle is `qualified: false`.
 
 Absence surfaces as a `capability_error` from `scene reconstruct --preflight-only` and from
 the render tier, before any GPU is allocated — never as a crash or a fake success.

@@ -337,8 +337,9 @@ pub struct WdrConfig {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum CameraProfile {
-    /// The presets' calibration: an automotive front camera (NVIDIA
-    /// PhysicalAI-AV front-wide footage, docs/engineering/native-render-gpu-profile.md).
+    /// The presets' calibration: an automotive front camera, calibrated
+    /// against real automotive front-camera footage (internal dataset;
+    /// results not published; docs/engineering/native-render-gpu-profile.md).
     Automotive,
     /// A Waylens-class consumer dash cam: fitted to KartaView contributors'
     /// photos of the SimForge maps (docs/engineering/camera-profiles.md).
@@ -395,9 +396,9 @@ impl CameraProfile {
             // Calibrated against Waylens-class consumer dash cams (KartaView
             // contributors): fitted on 23 KartaView photos of the SimForge
             // maps, held out from the CEO comparison; on its 8 scored
-            // locations (never searched) the combined distance is 1.92
-            // offline / 1.83 in-engine, against 2.19 / 2.11 for automotive
-            // (docs/engineering/camera-profiles.md).
+            // locations (never searched) the combined distance is 1.83
+            // in-engine, against 2.10 for automotive (EoMT segmentation;
+            // docs/engineering/camera-profiles.md).
             CameraProfile::ConsumerDashcam => {
                 config.camera.exposure.compensation_ev = -1.3;
                 config.camera.exposure.metering = MeteringMode::Dashcam;
@@ -521,9 +522,10 @@ impl RenderConfig {
                 exposure: 0.0,
                 temperature: look.grading_temperature,
                 tint: look.grading_tint,
-                // Calibrated against NVIDIA PhysicalAI-AV front-wide dash
-                // footage (393 frames): sim vegetation and sky chroma run
-                // 2-3x real, and the log curve needs no extra contrast.
+                // Calibrated against real automotive front-camera footage
+                // (internal dataset; results not published): sim vegetation
+                // and sky chroma run well above real, and the log curve
+                // needs no extra contrast.
                 post_saturation: 0.6,
                 contrast: 1.0,
             },

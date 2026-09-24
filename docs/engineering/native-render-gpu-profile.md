@@ -169,9 +169,8 @@ Measured effect of the fix:
 - **GPU time:** Belmont 8×720p on the RTX 5080, beside CARLA, A/B interleaved.
   Showcase 98.2/98.0 → 98.3/97.7 ms; training 61.8/62.4 → 60.9/63.8 ms. The
   differences are within run-to-run noise.
-- **Dash-cam calibration:** re-scored against the NVIDIA PhysicalAI-AV
-  reference on 4 Belmont lighting scenes × 30 frames. Showcase 1.168 → 1.167;
-  training 1.189 → 1.188.
+- **Dash-cam calibration:** re-checked against the internal reference
+  footage (results not published); unchanged.
 
 ### Cars under trees: canopy sky occlusion (`lighting.canopySkyOcclusion`, on in both presets)
 
@@ -190,20 +189,19 @@ Canopy sky occlusion is a vendored `bevy_pbr` patch. For a shaded fragment it lo
   | Sunlit | changes by 3.6% (training: 4.1%) |
 - On the Easterbrook chase (tick 100), car shaded/lit falls from 0.27 to 0.20, and the road beside it from 0.15 to 0.12.
 - **Known limit:** the cover is read from the sun's shadow map, so a building's shadow counts as overhead cover. A car beside a building still sees most of the sky, so its sky reflection comes out about 10% too dark: the building car ends as dark as the canopy car. Telling the two apart needs a sky-visibility estimate that doesn't come from the sun's shadow map.
-- **Dash-cam calibration still holds.** Re-scored against the NVIDIA reference on 4 Belmont scenes × 30 frames: showcase 1.167 → 1.165, training 1.188 → 1.185.
+- **Dash-cam calibration still holds.** Re-checked against the internal reference footage (results not published).
 
 ### Dash-cam calibration defaults (both presets)
 
 These values are the `automotive` camera profile, the default. `camera.profile: consumer-dashcam` swaps in a consumer dash-cam calibration (camera-profiles.md).
 
-These are fitted against NVIDIA PhysicalAI-AV front-wide footage (393 frames) by the dash-cam calibration work:
+These are calibrated against real automotive front-camera footage (internal dataset; results not published):
 - metering `average`, `compensationEv` −1.1, `trim` 0.15
 - `whiteStops` 5.5, `midGrey` 0.12
 - `grading.contrast` 1.0, `postSaturation` 0.6
 - `lens.vignette` 0.3
 - `atmosphere.hazeDensity` 0.5
 
-Combined distance to real footage (real-vs-real floor 0.14, lower is closer): Belmont showcase 2.27 (AgX) → 1.18, training → 1.20; Easterbrook (held out) 1.31 / 1.29; CARLA Epic on the same shot 1.71.
 
 ### Presets vs the reference (clear Belmont, dash-cam look, tree-shadow fix)
 

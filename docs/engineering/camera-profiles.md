@@ -31,14 +31,13 @@ changes no geometry, lighting or sensor model, only the camera.
 ### `automotive`
 
 `automotive` is the presets' own calibration: an automotive front camera,
-fitted to 393 frames of NVIDIA PhysicalAI-AV front-wide footage
-(native-render-gpu-profile.md, "Dash-cam calibration defaults"). It is what
-every render gets unless it sets another profile.
+calibrated against real automotive front-camera footage (internal dataset; results not published). It is what every render gets unless it sets another profile
+(native-render-gpu-profile.md, "Dash-cam calibration defaults").
 
 ### `consumer-dashcam`
 
 **Scope:** calibrated against Waylens-class consumer dash cams (KartaView
-contributors). Held-out score 1.92, against 2.19 for `automotive`.
+contributors). Held-out score 1.83, against 2.10 for `automotive`.
 
 **Fit set.** 23 KartaView photos of the Easterbrook and San Ramon P1 maps.
 They were chosen by the CEO comparison's own selection rule (on-lane,
@@ -59,24 +58,22 @@ photo.
   weights).
 - TPE over the eight keys, with `lens.vignette` capped at 0.8. Stronger
   vignettes scored better only by printing black corners, and that optimum
-  was fragile: rounding its values cost 0.12.
-- The values are the median of the 20 best trials, rounded. Rounding changes
-  the score by 0.003.
+  was fragile under rounding.
+- The values are the median of the 20 best trials, rounded; rounding them
+  leaves the score unchanged.
 
 **Held out: the CEO comparison's 8 scored locations, never searched.**
 
-| | combined | tone | light | color | contrast | haze | sensor |
-|---|---|---|---|---|---|---|---|
-| `automotive`, offline | 2.19 | 2.90 | 1.69 | 0.99 | 2.00 | 2.24 | 3.56 |
-| `consumer-dashcam`, offline | 1.91 | 1.82 | 1.56 | 1.03 | 2.18 | 2.41 | 3.41 |
-| `automotive`, in-engine | 2.11 | 2.84 | 1.68 | 0.99 | 1.93 | 2.20 | 3.19 |
-| `consumer-dashcam`, in-engine | **1.83** | 1.76 | 1.55 | 1.02 | 1.88 | 2.33 | 3.17 |
+Real `simforge-render` output at each location's scored FOV, scored with the
+comparison's metric code and an openly licensed segmenter (EoMT):
 
-- The in-engine rows are real `simforge-render` output at each location's
-  scored FOV, measured the same way.
-- Every one of the 8 locations is closer with `consumer-dashcam`.
+| | combined | brightness & shadows | color | haze & depth | sharpness & noise |
+|---|---|---|---|---|---|
+| `automotive` | 2.10 | 2.23 | 1.01 | 2.20 | 3.14 |
+| `consumer-dashcam` | **1.83** | 1.70 | 1.05 | 2.36 | 3.14 |
+
 - The gain is mostly tone: brighter mid-tones and harder contrast.
-- Haze is slightly worse, and color is unchanged.
+- Haze is slightly worse, and color is about the same.
 
 **Limits.**
 
