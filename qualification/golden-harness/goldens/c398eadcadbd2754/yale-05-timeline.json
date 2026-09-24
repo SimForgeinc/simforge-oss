@@ -1,0 +1,178 @@
+{
+  "schema": "simforge-oss.render-determinism-manifest.v1",
+  "generatedAt": "2026-09-24T00:51:10.621Z",
+  "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
+  "mode": "golden-record",
+  "renderConfig": {
+    "preset": "training"
+  },
+  "scenario": {
+    "instanceId": null,
+    "mapId": "yale-street",
+    "sceneId": "yale-05-timeline",
+    "inputs": {
+      "sceneDefinition": "qualification/golden-harness/scenes/yale-05-timeline.json"
+    }
+  },
+  "rendererPath": {
+    "engine": "native-bevy",
+    "file": "../../.cache/gpu-deep-target/release/simforge-render",
+    "sha256": "8397e2bc03fde0fc05d121dfb7ce53d9c8cb88f92f3e1871663b7503753f2b04",
+    "invocation": {
+      "args": [
+        "job",
+        "--job",
+        "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/yale-05-timeline/runA/yale-05-timeline.job.json"
+      ],
+      "job": {
+        "schema": "simforge.render-job/v2",
+        "scene": {
+          "lighting": {
+            "sun_elev_deg": 38,
+            "sun_azim_deg": 145,
+            "sun_lux": 28000,
+            "ambient": 0.6
+          },
+          "render": {
+            "preset": "training"
+          },
+          "warmupFrames": 20,
+          "vehicleModels": "/home/path/worktrees/oss-gpu-deep/catalog/vehicles-carla",
+          "pedestrianModels": "/home/path/worktrees/oss-gpu-deep/catalog/pedestrians-carla",
+          "glbs": [
+            "/home/path/tmp/renderfleet/maps/.corpus/yale-street/master.gltf"
+          ]
+        },
+        "rig": {
+          "cameras": [
+            {
+              "sensorId": "chase",
+              "width": 640,
+              "height": 360,
+              "fovDeg": 58,
+              "eye": [
+                0,
+                0,
+                0
+              ],
+              "target": [
+                0,
+                0,
+                1
+              ],
+              "attach": {
+                "actorId": "delivery-truck",
+                "offsetM": [
+                  -9,
+                  0,
+                  3
+                ],
+                "pitchDeg": -10.008,
+                "hostVisible": true
+              }
+            }
+          ]
+        },
+        "ticks": {
+          "start": 0,
+          "count": 120
+        },
+        "passes": [
+          "rgb",
+          "id"
+        ],
+        "outDir": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/yale-05-timeline/runA/yale-05-timeline",
+        "sceneState": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/yale-05-timeline/runA/yale-05-timeline.scene-state.json",
+        "observe": true
+      },
+      "passesRenderedSequentially": false
+    },
+    "versions": {
+      "bevy": "0.19.1",
+      "wgpu": "29.0.4",
+      "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+      "backend": "vulkan"
+    }
+  },
+  "actorSubstitutions": [
+    {
+      "actorId": "pedestrian",
+      "kind": "catalog-id",
+      "requested": "pedestrian.adult",
+      "rendered": "walker.pedestrian.0015"
+    }
+  ],
+  "hardware": {
+    "collectedAt": "2026-09-24T00:36:01.593Z",
+    "gpuFingerprint": "c398eadcadbd2754",
+    "host": {
+      "osPrettyName": "Ubuntu 24.04.4 LTS",
+      "kernel": "7.0.0-31-generic",
+      "arch": "x64",
+      "cpuModel": "Intel(R) Core(TM) Ultra 9 285K",
+      "cpuCount": 24,
+      "hostname": "path-pc",
+      "adapter": {
+        "icd": "/usr/share/vulkan/icd.d/lvp_icd.json",
+        "deviceName": "llvmpipe (LLVM 20.1.2, 256 bits)",
+        "driverName": "llvmpipe",
+        "driverInfo": "Mesa 25.2.8-0ubuntu0.24.04.2 (LLVM 20.1.2)"
+      }
+    }
+  },
+  "passHashes": {
+    "chase.t60.rgb": {
+      "file": "chase/00000060.rgb.png",
+      "sha256": "c3fd3bfa6a8342127ed3b633d7cda7b3961b62c04c265159f3382f3e0fa4454f",
+      "bytes": 286189
+    },
+    "chase.t60.id": {
+      "file": "chase/00000060.id.png",
+      "sha256": "6d9ad0a893d232fe6b80a016e0181ba0de9dc7b66f998da8c893d89b3dd7f76c",
+      "bytes": 33894
+    }
+  },
+  "idPasses": {
+    "chase.t60.id": {
+      "distinctIds": 60,
+      "coveredFraction": 0.8489
+    }
+  },
+  "parity": {
+    "schema": "simforge.render-parity/v1",
+    "pass": true,
+    "profile": "bevy",
+    "comparedPoses": 480,
+    "maxPositionErrorM": 0.0000619115838227024,
+    "maxHeadingErrorDeg": 0.0000042344127989493635,
+    "maxPitchErrorDeg": 2.555472209197221e-8,
+    "maxRollErrorDeg": 1.7359972911141393e-8,
+    "presenceMismatches": 0,
+    "timelineSha256": "06f763ad972ca7e5c13dcadd606db0660b5b8df89809503db2025abc750f9aa7"
+  },
+  "sceneStateSha256": "8cdb2ebe90acffc95a63c722b312f67174cfb6a66f68e61d74022d4c2ee631f9",
+  "corpusChecksums": [
+    {
+      "path": "master.gltf",
+      "sha256": "600f824537784bd9ca675ad8156f4ded5a66f5314158112c19cb66a013283495",
+      "bytes": 2364602
+    }
+  ],
+  "timings": {
+    "avgFrameMs": 2737.68697977311,
+    "p50FrameMs": 2609.420355,
+    "p99FrameMs": 2666.601885,
+    "fps": 0.36527185444804816,
+    "measuredFrames": 119
+  },
+  "twoRunEvidence": {
+    "runsCompared": 2,
+    "byteStable": true,
+    "runBTimingsAvgFrameMs": 2841.615276252102
+  },
+  "verdict": {
+    "byteStable": true,
+    "driftedPasses": [],
+    "scope": "render-job pass hashes (pinned capture clock), one lavapipe build on one CPU model (the adapter of record) — cross-adapter reproducibility NOT claimed (docs/determinism-claim.md)"
+  }
+}

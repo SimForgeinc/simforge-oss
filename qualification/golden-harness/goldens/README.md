@@ -41,7 +41,11 @@ gpu fingerprint × renderer binary (`rendererPath.sha256`) × render config
 ## Current status
 
 Recorded 2026-09-23 on lavapipe (`c398eadcadbd2754`) with `simforge-render`
-(perf/gpu-deep). The yale-frame0 and yale-pronto scenes render the
+(perf/gpu-deep: dash-cam camera model with the calibrated defaults, canopy sky
+occlusion, CPU-ordered draws under the pinned clock), each scene rendered twice
+at record time with identical pass hashes and verified by a third render. The
+yale-05 fixtures name the wrong-way rider's class `cyclist` (the scene-state
+vocabulary). The yale-frame0 and yale-pronto scenes render the
 yale-street master (same world frame as the retired spike and WSB1 tiles,
 which no longer exist). The GPU-keyed tables recorded with the retired
 binaries are deleted (git history keeps them).
