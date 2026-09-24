@@ -5,4 +5,5 @@ export {
   isMapDownloadsFirstRunPending,
   markMapDownloadsFirstRunSeen,
   mapDownloadsFirstRunKey,
+  subscribeMapDownloadsFirstRun,
 } from "./first-run";

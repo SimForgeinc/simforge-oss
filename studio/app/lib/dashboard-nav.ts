@@ -50,6 +50,25 @@ export function isSwitcherInlineView(value: string | null | undefined): value is
   return SWITCHER_INLINE_VIEWS.includes(value as SwitcherInlineView);
 }
 
+/** The app switcher as a page (`app/dashboard/apps`). */
+export const APP_SWITCHER_PATH = "/dashboard/apps";
+/**
+ * Routes whose page only redirects to the switcher page (`app/dashboard/page.tsx`,
+ * `app/dashboard/map-library/page.tsx`). A streamed response applies that
+ * redirect in the browser after the dashboard shell has rendered, so the top
+ * bar briefly sees these paths on the way to `/dashboard/apps`.
+ */
+const REDIRECTS_TO_APP_SWITCHER = new Set(["/dashboard", "/dashboard/map-library"]);
+
+/**
+ * Whether this path shows (or is on its way to) the switcher page. That page
+ * already is the switcher, so the top bar's overlay switcher never opens on it.
+ */
+export function isAppSwitcherRoute(pathname: string): boolean {
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  return path === APP_SWITCHER_PATH || REDIRECTS_TO_APP_SWITCHER.has(path);
+}
+
 /**
  * The product is three pages, and the app switcher is those three tabs. Every
  * other surface — assets, model weights, exports, SimCloud, settings — is a

@@ -27,7 +27,8 @@ import { focus, hairline, typography } from "@simforge-oss/studio-ui/stylex/reci
  * page already on it.
  *
  * A person's first sign-in opens it on Map Downloads, once: the record is
- * written the moment the view is shown (`useMapDownloadsFirstRun`).
+ * written the moment the view is shown (`useMapDownloadsFirstRun`), by the
+ * one switcher on screen (the top bar never opens its overlay on the page).
  */
 export function AppSwitcherPanel({
   pathname,
@@ -52,8 +53,13 @@ export function AppSwitcherPanel({
     if (!firstSignIn.pending || initialView !== null || firstRun) return;
     setView("map-downloads");
     setWelcome(true);
-    firstSignIn.markSeen();
-  }, [firstSignIn.pending, firstSignIn.markSeen, initialView, firstRun]);
+  }, [firstSignIn.pending, initialView, firstRun]);
+  // Seen once Map Downloads is on screen, whichever switcher shows it (this
+  // page, or the top-bar overlay a first sign-in opened elsewhere).
+  const showingMapDownloads = view === "map-downloads";
+  useEffect(() => {
+    if (showingMapDownloads && firstSignIn.pending) firstSignIn.markSeen();
+  }, [showingMapDownloads, firstSignIn.pending, firstSignIn.markSeen]);
   const close = () => {
     setView(null);
     setWelcome(false);

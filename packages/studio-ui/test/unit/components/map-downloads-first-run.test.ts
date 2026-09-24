@@ -4,6 +4,7 @@ import {
   mapDownloadsFirstRunKey,
   markMapDownloadsFirstRunSeen,
   resetMapDownloadsFirstRunForTests,
+  subscribeMapDownloadsFirstRun,
 } from "../../../src/map-downloads/first-run";
 
 function memoryStorage() {
@@ -54,5 +55,20 @@ describe("first sign-in map downloads", () => {
     expect(isMapDownloadsFirstRunPending("user-1", null)).toBe(false);
     const unreadable = { getItem: () => { throw new Error("blocked"); } };
     expect(isMapDownloadsFirstRunPending("user-1", unreadable)).toBe(false);
+  });
+
+  it("tells every reader on the page the moment one of them shows the panel", () => {
+    // The top bar and the switcher page each ask; once one shows the panel the
+    // other must stop offering it, or both open it and two switchers stack.
+    const storage = memoryStorage();
+    const readers = [0, 0];
+    const unsubscribe = readers.map((_, index) => subscribeMapDownloadsFirstRun(() => { readers[index] += 1; }));
+    expect(isMapDownloadsFirstRunPending("user-1", storage)).toBe(true);
+    markMapDownloadsFirstRunSeen("user-1", storage);
+    expect(readers).toEqual([1, 1]);
+    expect(isMapDownloadsFirstRunPending("user-1", storage)).toBe(false);
+    unsubscribe.forEach((stop) => stop());
+    markMapDownloadsFirstRunSeen("user-1", storage);
+    expect(readers).toEqual([1, 1]);
   });
 });

@@ -12,6 +12,20 @@
 const PREFIX = "simforge.first-run.map-downloads.v1:";
 /** Seen in this page even when storage refused the write, so it never loops. */
 const seenThisPage = new Set<string>();
+/**
+ * Everything on the page that asks whether the first run is pending (the
+ * top-bar overlay and the switcher page each ask): one answer, so when one of
+ * them shows the panel the other stops offering it in the same render pass.
+ */
+const listeners = new Set<() => void>();
+
+/** Subscribe to "seen" being recorded on this page (`useSyncExternalStore`). */
+export function subscribeMapDownloadsFirstRun(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
 
 type ReadStorage = Pick<Storage, "getItem"> | null | undefined;
 type WriteStorage = Pick<Storage, "setItem"> | null | undefined;
@@ -45,12 +59,12 @@ export function isMapDownloadsFirstRunPending(userId: string | null | undefined,
 export function markMapDownloadsFirstRunSeen(userId: string | null | undefined, storage: WriteStorage = browserStorage()): void {
   if (!userId) return;
   seenThisPage.add(userId);
-  if (!storage) return;
   try {
-    storage.setItem(mapDownloadsFirstRunKey(userId), new Date().toISOString());
+    storage?.setItem(mapDownloadsFirstRunKey(userId), new Date().toISOString());
   } catch {
     // Read-only storage: `isMapDownloadsFirstRunPending` already answers false.
   }
+  for (const listener of [...listeners]) listener();
 }
 
 /** Test seam. */

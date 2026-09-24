@@ -12,7 +12,7 @@ import SimForgeLogo from "./landing/SimForgeLogo";
 import { useTopBarSlotContext } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
 import { layout } from "@simforge-oss/studio-ui/stylex/tokens.stylex";
-import { useDashboardNav } from "@/app/lib/dashboard-nav";
+import { isAppSwitcherRoute, useDashboardNav } from "@/app/lib/dashboard-nav";
 import { cloudPlate, styles } from "./AppTopBar.stylex";
 import { scroll, textLayout } from "@simforge-oss/studio-ui/stylex/recipes.stylex";
 
@@ -25,16 +25,26 @@ export function AppTopBar() {
   const [hasMounted, setHasMounted] = useState(false);
   const slotCtx = useTopBarSlotContext();
   const { activeItem, capabilities } = useDashboardNav(pathname);
+  // The switcher page already is the switcher: the overlay never stacks a
+  // second one on it, whether a first sign-in or the trigger asks.
+  const onSwitcherRoute = isAppSwitcherRoute(pathname);
   // A first sign-in that lands anywhere but the switcher page still starts on
-  // Map Downloads: the switcher opens over the page, once.
+  // Map Downloads: the switcher opens over the page, once. The panel records
+  // it as seen when it shows the view, so arriving on the switcher page before
+  // that leaves the first run to the page.
   const firstSignIn = useMapDownloadsFirstRun(capabilities);
   const [welcome, setWelcome] = useState(false);
   useEffect(() => {
-    if (!firstSignIn.pending || pathname === "/dashboard/apps") return;
+    if (onSwitcherRoute) {
+      setSwitcherOpen(false);
+      setWelcome(false);
+      return;
+    }
+    if (!firstSignIn.pending) return;
     setWelcome(true);
     setSwitcherOpen(true);
-    firstSignIn.markSeen();
-  }, [firstSignIn.pending, firstSignIn.markSeen, pathname]);
+  }, [firstSignIn.pending, onSwitcherRoute]);
+  const overlayOpen = switcherOpen && !onSwitcherRoute;
   const routePageTitle = pathname.startsWith("/dashboard/scenario") ? "Dataset" : activeItem?.label ?? null;
   const header = hasMounted ? slotCtx?.header : null;
   const title = (header?.title || routePageTitle)?.replace(/^SIMFORGE\s*[-—:]\s*/i, "").trim();
@@ -57,7 +67,7 @@ export function AppTopBar() {
     <header {...mergeStyleProps(stylex.props(scroll.clip, styles.header), "app-topbar-native")} data-testid="app-topbar">
       <div aria-hidden="true" {...stylex.props(styles.clouds, cloudPlate.plate)} data-testid="app-topbar-clouds" />
       <div {...stylex.props(styles.row)}>
-        <button ref={switcherTriggerRef} type="button" onClick={() => setSwitcherOpen(true)} aria-label="Open app switcher" aria-haspopup="dialog" aria-expanded={switcherOpen} {...stylex.props(styles.trigger)}>
+        <button ref={switcherTriggerRef} type="button" onClick={() => { if (!onSwitcherRoute) setSwitcherOpen(true); }} aria-label="Open app switcher" aria-haspopup="dialog" aria-expanded={overlayOpen} {...stylex.props(styles.trigger)}>
           <span {...stylex.props(styles.logo)} data-testid="app-topbar-logo"><SimForgeLogo size={30} /></span>
           {/* A download running with the switcher closed shows here; the one mounted instance also resumes a stored job. */}
           <MapDownloadIndicator restore />
@@ -84,7 +94,7 @@ export function AppTopBar() {
       </div>
     </header>
     <AppSwitcherOverlay
-      open={switcherOpen}
+      open={overlayOpen}
       onOpenChange={(open) => { setSwitcherOpen(open); if (!open) setWelcome(false); }}
       pathname={pathname}
       triggerRef={switcherTriggerRef}
