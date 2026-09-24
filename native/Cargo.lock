@@ -688,8 +688,11 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "serde",
+ "serde_json",
  "simforge-bindings-common",
  "simforge-core",
+ "simforge-package",
 ]
 
 [[package]]
@@ -735,6 +738,19 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror",
+]
+
+[[package]]
+name = "simforge-package"
+version = "0.1.0"
+dependencies = [
+ "crc32fast",
+ "flate2",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2",
+ "simforge-core",
 ]
 
 [[package]]

@@ -1,0 +1,19 @@
+[package]
+name = "simforge-package"
+description = "SimForge scenario packages (simforge.scenario-package/v1): manifest schema, canonical encoding, strict ZIP reader and writer, verifier"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "simforge_package"
+
+[dependencies]
+simforge-core = { path = "../simforge-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+flate2 = { workspace = true }
+crc32fast = "1"
+semver = "1"

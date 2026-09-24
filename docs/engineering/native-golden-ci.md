@@ -228,6 +228,7 @@ golden file.) Three gates per run:
 |---|---|---|---|
 | `richmond-06-timeline` | richmond-field-station | 4 (car, motorcycle, bus, wrong-way sedan) | `0c79cc9fe7b267f4` (RTX 3080, driver 595.91.07) |
 | `yale-05-timeline` | yale-street | 4 (truck, car, cyclist, pedestrian) | `0c79cc9fe7b267f4` |
+| `package-smoke-richmond` | richmond-field-station (public release 11) | 1 (ambulance), from the release smoke package `fixtures/scenario-package/smoke/richmond-public.scenario.zip` | none yet: the scene declares `recording: "unrecorded"`, so `verify` fails with exit 10 until the first lavapipe record (which clears the field) |
 
 Corpus roots: `SIMFORGE_CORPUS_RICHMOND` / `SIMFORGE_CORPUS_YALE` →
 `${SIMFORGE_MAPS_CACHE_ROOT:-~/.local/share/simforge/maps}/.corpus/<map>`.

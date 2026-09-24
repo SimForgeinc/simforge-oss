@@ -1,0 +1,44 @@
+{
+  "actors": {
+    "catalogIds": [
+      "vehicle.ambulance"
+    ],
+    "closureDigest": "218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f",
+    "closureUrl": "https://da3tufozhdsvl.cloudfront.net/actor-assets/closures/218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f.json"
+  },
+  "form": "thin",
+  "map": {
+    "blobOrigin": "https://da3tufozhdsvl.cloudfront.net/blobs/sha256/<aa>/<sha256>",
+    "browserClosureSha256": "f08173b844b41b34e12e44fabafaaface1672174fb6be0352def8330b8bb5d03",
+    "mapVersionId": "usmap_caa8ecb111be3a4ab63513d773e7e62f",
+    "nativeClosureSha256": "164d419617d9efea06aed90e5d8b33f52d64259eacd35a7ee3a18d013335abb9",
+    "registryReleaseDigest": "818c2b8a80f6706f8647b2eda1a2bb75b910cbaa7a0c23f62d34d89141206e13",
+    "registryVersion": 11
+  },
+  "package": "richmond-public.scenario.zip",
+  "packageId": "f4f0e045cc192c66b0c06b4872c909be242be1fdfc27c7cdadc0fe518732726e",
+  "placeholders": [
+    "document.json (archive-corpus rc73-doc-child-reveal, not this trace's scenario)",
+    "simulation/resolution.json.gz",
+    "scenario.simContentSha256",
+    "simulation.simKey"
+  ],
+  "readerCli": "0.2.0",
+  "render": {
+    "goldenScene": "package-smoke-richmond",
+    "note": "Frame hashes live in the golden store (qualification/golden-harness/goldens/<fingerprint>/package-smoke-richmond.json), keyed by renderer sha. Until recorded the scene declares recording: unrecorded and golden.mjs verify fails with exit 10."
+  },
+  "schema": "simforge.scenario-package-smoke/v1",
+  "timeline": {
+    "actorIds": [
+      "vehicle-muasiqo3-6wehouy0"
+    ],
+    "samplerVersion": "simforge.timeline-sampler/3",
+    "timelineKey": "43788e095970edc494c097760eb280f55ba644b6e17965128412edf7380d4845",
+    "timelineSha256": "6d9504bb2cf270ca4a8b03e07c83514040988e5eb6ba64a1fbe8ade5f0e165b5"
+  },
+  "trace": {
+    "archiveCorpusId": "rc72-engine070-richmond-commit",
+    "traceSha256": "7f73ef33ce690eacf08dd731b76bc47610314644f1d7ec5cbbe2596bb8bcd96c"
+  }
+}

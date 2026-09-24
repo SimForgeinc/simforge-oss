@@ -1,0 +1,88 @@
+{
+  "sceneId": "package-smoke-richmond",
+  "mapId": "richmond-field-station",
+  "description": "Release smoke: the thin scenario package fixtures/scenario-package/smoke/richmond-public.scenario.zip, whose map and actor closures resolve from the public registry (Richmond Field Station release 11; actor closure 218209f5), rendered through `simforge-render job`. Its render timeline (sampler /3, one ambulance decelerating from 7 m/s) is sampled at 24 fps over 0..1 s by `simforge render scene-state` into the committed scene-state; the corpus is the release's native asset set (master.gltf 2303ba35..., served by digest from the public origin). Chase camera 9 m behind and 3 m above the ambulance. Ticks 0..23 render; tick 12 is hashed. `recording: unrecorded` until the first lavapipe record (SPLIT/R records it with the v0.2.0-rc.0 renderer); while unrecorded, verify fails with exit 10, never passes.",
+  "recording": "unrecorded",
+  "package": {
+    "path": "fixtures/scenario-package/smoke/richmond-public.scenario.zip",
+    "packageId": "f4f0e045cc192c66b0c06b4872c909be242be1fdfc27c7cdadc0fe518732726e",
+    "timelineSha256": "6d9504bb2cf270ca4a8b03e07c83514040988e5eb6ba64a1fbe8ade5f0e165b5",
+    "timelineKey": "43788e095970edc494c097760eb280f55ba644b6e17965128412edf7380d4845"
+  },
+  "corpusRootEnv": "SIMFORGE_CORPUS_RICHMOND",
+  "corpusFiles": [
+    "master.gltf"
+  ],
+  "sceneState": {
+    "gz": "qualification/golden-harness/fixtures/package-smoke-richmond.scene-state.json.gz"
+  },
+  "job": {
+    "scene": {
+      "lighting": {
+        "sun_elev_deg": 38,
+        "sun_azim_deg": 145,
+        "sun_lux": 28000,
+        "ambient": 0.6
+      },
+      "render": {
+        "preset": "training"
+      },
+      "warmupFrames": 20,
+      "vehicleModels": "{repo}/catalog/vehicles-carla",
+      "pedestrianModels": "{repo}/catalog/pedestrians-carla"
+    },
+    "rig": {
+      "cameras": [
+        {
+          "sensorId": "chase",
+          "width": 640,
+          "height": 360,
+          "fovDeg": 58,
+          "eye": [
+            0,
+            0,
+            0
+          ],
+          "target": [
+            0,
+            0,
+            1
+          ],
+          "attach": {
+            "actorId": "vehicle-muasiqo3-6wehouy0",
+            "offsetM": [
+              -9.0,
+              0.0,
+              3.0
+            ],
+            "pitchDeg": -10.008,
+            "hostVisible": true
+          }
+        }
+      ]
+    },
+    "ticks": {
+      "start": 0,
+      "count": 24
+    },
+    "passes": [
+      "rgb",
+      "id"
+    ]
+  },
+  "expectedPasses": [
+    "chase.t12.rgb",
+    "chase.t12.id"
+  ],
+  "passPaths": {
+    "chase.t12.rgb": "chase/00000012.rgb.png",
+    "chase.t12.id": "chase/00000012.id.png"
+  },
+  "idPass": {
+    "keys": [
+      "chase.t12.id"
+    ],
+    "minInstances": 5,
+    "minCoverage": 0.1
+  }
+}

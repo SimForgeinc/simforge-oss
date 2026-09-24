@@ -10,6 +10,8 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
+mod package;
+
 use simforge_bindings_common::runtime::{
     self as rt, Batch, Compiled, Env, Handoff, MapAsset, Policy, PolicyOutcome, RouteHandle,
     Scenario, Sim, Site, StepView, Trace, World,
@@ -299,7 +301,10 @@ impl JsRoute {
     #[napi]
     pub fn project_point_with_step(&self, x: f64, y: f64, step_m: f64) -> Result<Float64Array> {
         Ok(Float64Array::new(
-            self.inner.project_point_with_step(x, y, step_m).js()?.to_vec(),
+            self.inner
+                .project_point_with_step(x, y, step_m)
+                .js()?
+                .to_vec(),
         ))
     }
     /// Lane width at arc length `s` (clamped).
@@ -519,31 +524,68 @@ impl JsMapBundle {
     }
     #[napi]
     pub fn control_plan_json_with_catalog(&self, catalog_json: String) -> Result<String> {
-        self.inner.control_plan_json_with_catalog(&catalog_json).js()
+        self.inner
+            .control_plan_json_with_catalog(&catalog_json)
+            .js()
     }
     #[napi]
     pub fn signal_control_index_json_with_catalog(&self, catalog_json: String) -> Result<String> {
-        self.inner.signal_control_index_json_with_catalog(&catalog_json).js()
+        self.inner
+            .signal_control_index_json_with_catalog(&catalog_json)
+            .js()
     }
     #[napi]
-    pub fn signal_control_index_json_with_programs(&self, programs_json: String, catalog_json: String) -> Result<String> {
-        self.inner.signal_control_index_json_with_programs(&programs_json, &catalog_json).js()
+    pub fn signal_control_index_json_with_programs(
+        &self,
+        programs_json: String,
+        catalog_json: String,
+    ) -> Result<String> {
+        self.inner
+            .signal_control_index_json_with_programs(&programs_json, &catalog_json)
+            .js()
     }
     #[napi]
-    pub fn expand_map_signal_movements_json(&self, programs_json: String, plans_json: String) -> Result<String> {
-        self.inner.expand_map_signal_movements_json(&programs_json, &plans_json).js()
+    pub fn expand_map_signal_movements_json(
+        &self,
+        programs_json: String,
+        plans_json: String,
+    ) -> Result<String> {
+        self.inner
+            .expand_map_signal_movements_json(&programs_json, &plans_json)
+            .js()
     }
     #[napi]
-    pub fn compile_signal_plans_json(&self, programs_json: String, plans_json: String, options_json: String, catalog_json: String) -> Result<String> {
-        self.inner.compile_signal_plans_json(&programs_json, &plans_json, &options_json, &catalog_json).js()
+    pub fn compile_signal_plans_json(
+        &self,
+        programs_json: String,
+        plans_json: String,
+        options_json: String,
+        catalog_json: String,
+    ) -> Result<String> {
+        self.inner
+            .compile_signal_plans_json(&programs_json, &plans_json, &options_json, &catalog_json)
+            .js()
     }
     #[napi]
-    pub fn select_signal_reference_json(&self, index_json: String, reference_json: String) -> Result<Option<String>> {
-        self.inner.select_signal_reference_json(&index_json, &reference_json).js()
+    pub fn select_signal_reference_json(
+        &self,
+        index_json: String,
+        reference_json: String,
+    ) -> Result<Option<String>> {
+        self.inner
+            .select_signal_reference_json(&index_json, &reference_json)
+            .js()
     }
     #[napi]
-    pub fn evaluate_signal_reference_json(&self, index_json: String, selection_json: String, options_json: String) -> Result<String> {
-        self.inner.evaluate_signal_reference_json(&index_json, &selection_json, &options_json).js()
+    pub fn evaluate_signal_reference_json(
+        &self,
+        index_json: String,
+        selection_json: String,
+        options_json: String,
+    ) -> Result<String> {
+        self.inner
+            .evaluate_signal_reference_json(&index_json, &selection_json, &options_json)
+            .js()
     }
     /// The matcher's `DerivedMapIndex`.
     #[napi]
@@ -842,14 +884,21 @@ pub fn materialize_ambient_traffic(
 
 /// The document's Studio content applied to a materialised input: paint tags on role actors, then baked parked cars.
 #[napi]
-pub fn studio_concrete_input(input: &JsScenarioInput, template_json: String) -> Result<JsScenarioInput> {
-    rt::studio_concrete_input(&input.inner, &template_json).map(|inner| JsScenarioInput { inner }).js()
+pub fn studio_concrete_input(
+    input: &JsScenarioInput,
+    template_json: String,
+) -> Result<JsScenarioInput> {
+    rt::studio_concrete_input(&input.inner, &template_json)
+        .map(|inner| JsScenarioInput { inner })
+        .js()
 }
 
 /// The refinements every executor applies to the input it runs (stable high-speed world routes, cruise restoration).
 #[napi]
 pub fn execution_refinements(input: &JsScenarioInput) -> Result<JsScenarioInput> {
-    rt::execution_refinements(&input.inner).map(|inner| JsScenarioInput { inner }).js()
+    rt::execution_refinements(&input.inner)
+        .map(|inner| JsScenarioInput { inner })
+        .js()
 }
 
 /// Ambient turn-feasibility verdicts held for `graph` (`simforge.ambient-turn-verdicts/v1`); persist beside the map closure.

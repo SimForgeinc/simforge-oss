@@ -480,6 +480,76 @@ export declare function replayWorldLog(logJson: string, input: ScenarioInput, gr
 /** Run a whole clip; returns the `SimResult` JSON document. */
 export declare function runSimulation(input: ScenarioInput, graph: LaneGraph, optionsJson?: string | undefined | null): string
 
+/** One blob (full form): bytes in memory, or a file whose sha256 is given. */
+export interface ScenarioPackageBlob {
+  data?: Uint8Array
+  sha256?: string
+  file?: string
+}
+
+export interface ScenarioPackageBlobOut {
+  sha256: string
+  data: Buffer
+}
+
+export interface ScenarioPackageContents {
+  manifestJson: string
+  receiptJson?: string
+  /** `Verification` as JSON. */
+  reportJson: string
+  members: Array<ScenarioPackageMemberOut>
+  blobs: Array<ScenarioPackageBlobOut>
+}
+
+/** Structure, manifest and version checks only (no member hashing). */
+export declare function scenarioPackageInspect(bytes: Uint8Array, cliVersion?: string | undefined | null): string
+
+/** One listed member: its path (`document.json`, `timeline/<sha>.json`, ...) and bytes. */
+export interface ScenarioPackageMember {
+  path: string
+  data: Uint8Array
+}
+
+export interface ScenarioPackageMemberOut {
+  path: string
+  data: Buffer
+}
+
+/** Verify, then return every member and blob (each re-proven as it is read). */
+export declare function scenarioPackageRead(bytes: Uint8Array, cliVersion?: string | undefined | null): ScenarioPackageContents
+
+export interface ScenarioPackageReceipt {
+  exportedAt: string
+  exporterRelease: string
+  textureTier?: string
+}
+
+/**
+ * Fully verify a container (bytes, or a file path). Returns the
+ * `Verification` report as JSON. `cliVersion` is the reading CLI's version
+ * for the `producer.minCli` check; `null` when a producer re-checks its own
+ * output (the report then says `cliCheck: "not-evaluated"`).
+ */
+export declare function scenarioPackageVerify(bytes?: Uint8Array | undefined | null, path?: string | undefined | null, cliVersion?: string | undefined | null): string
+
+/**
+ * Write a package. `manifestDraftJson` is the whole v1 manifest except
+ * `members`, which the writer computes. With `outPath` the container is
+ * written to that file (via a temporary sibling) instead of returned.
+ */
+export declare function scenarioPackageWrite(manifestDraftJson: string, members: Array<ScenarioPackageMember>, blobs: Array<ScenarioPackageBlob>, receipt?: ScenarioPackageReceipt | undefined | null, outPath?: string | undefined | null): ScenarioPackageWritten
+
+export interface ScenarioPackageWritten {
+  packageId: string
+  form: string
+  /** `manifest.json`: the exact canonical bytes whose sha256 is the package id. */
+  manifestJson: string
+  /** `WriteOutcome` as JSON (form, sizes, content report). */
+  reportJson: string
+  /** The container, when no `outPath` was given. */
+  bytes?: Buffer
+}
+
 export declare function sha256Hex(data: Uint8Array): string
 
 /** `SituationSolveResult` JSON; `onEvaluation` receives each `{program, rehearsal}` JSON. Options add `maxEvaluations?`, `relativeResolution?`. */

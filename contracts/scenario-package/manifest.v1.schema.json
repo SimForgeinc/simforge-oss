@@ -1,0 +1,1084 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simforge.ai/contracts/scenario-package/manifest.v1.schema.json",
+  "title": "simforge.scenario-package/v1 manifest",
+  "description": "manifest.json of a SimForge scenario package (docs/engineering/scenario-package.md). The file holds exactly canonicalJson(manifest) (simforge.canonical-json/v1) and its sha256 is the package id. This schema is the shape; the reader (the simforge-package crate) also enforces the cross-field rules this schema cannot express: documentSchema names scenarioVersion, traceSchema names traceFormat, groundDigest is set exactly from trace format 5, members[] is sorted by path and names every required role, member digests equal their typed digest fields, timelines[] and the timeline/ members name the same timelines, and render is set exactly when render/pin.json is a member.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "catalog",
+    "engine",
+    "executionPackage",
+    "extensions",
+    "map",
+    "members",
+    "producer",
+    "provenance",
+    "render",
+    "scenario",
+    "schema",
+    "simulation",
+    "timelines"
+  ],
+  "properties": {
+    "schema": {
+      "const": "simforge.scenario-package/v1"
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "description": "Producing application, e.g. simcloud, simforge-cli."
+        },
+        "appVersion": {
+          "$ref": "#/$defs/semver"
+        },
+        "minCli": {
+          "$ref": "#/$defs/semver",
+          "description": "The oldest simforge CLI that reads this package; older readers refuse it (package_version_unsupported, dimension cli)."
+        }
+      },
+      "required": [
+        "app",
+        "appVersion",
+        "minCli"
+      ]
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+        },
+        "documentSchema": {
+          "type": "string",
+          "pattern": "^simforge\\.scenario\\.v[1-9][0-9]*$"
+        },
+        "scenarioVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295
+        },
+        "contentSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "simContentSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "origin": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "documentId": {
+              "$ref": "#/$defs/id"
+            },
+            "revisionId": {
+              "$ref": "#/$defs/id"
+            },
+            "revisionNumber": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            "committedAt": {
+              "$ref": "#/$defs/timestamp"
+            }
+          },
+          "required": [
+            "committedAt",
+            "documentId",
+            "revisionId",
+            "revisionNumber"
+          ]
+        }
+      },
+      "required": [
+        "contentSha256",
+        "documentSchema",
+        "scenarioVersion",
+        "simContentSha256",
+        "title"
+      ]
+    },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "engineSemVer": {
+          "$ref": "#/$defs/semver"
+        },
+        "solverVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+        },
+        "pipelineRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "build": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "engineVersion": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+            },
+            "abiVersion": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            "buildDigest": {
+              "$ref": "#/$defs/sha256"
+            },
+            "addonSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "sourceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+            }
+          },
+          "required": []
+        },
+        "release": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+        }
+      },
+      "required": [
+        "build",
+        "engineSemVer",
+        "pipelineRevision",
+        "release",
+        "solverVersion"
+      ]
+    },
+    "simulation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "simKey": {
+          "$ref": "#/$defs/sha256"
+        },
+        "traceFormat": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295
+        },
+        "traceSchema": {
+          "type": "string",
+          "pattern": "^simforge\\.trace/v[1-9][0-9]*$"
+        },
+        "traceSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "traceGzipSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "authoredTraceSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "resolvedInputDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "resolutionSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "trafficProvider": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "trafficStepKey": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9._:-]+$"
+            }
+          ]
+        },
+        "trafficSha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/sha256"
+            }
+          ]
+        },
+        "sumo": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "networkSha256": {
+                  "$ref": "#/$defs/sha256"
+                },
+                "runtimeVersion": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+                },
+                "wasmSha256": {
+                  "$ref": "#/$defs/sha256"
+                }
+              },
+              "required": [
+                "networkSha256",
+                "runtimeVersion",
+                "wasmSha256"
+              ]
+            }
+          ]
+        },
+        "groundDigest": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/sha256"
+            }
+          ]
+        },
+        "producerKind": {
+          "enum": [
+            "inline",
+            "runner",
+            "cli",
+            "editor"
+          ]
+        },
+        "simulatedAt": {
+          "$ref": "#/$defs/timestamp"
+        }
+      },
+      "required": [
+        "authoredTraceSha256",
+        "groundDigest",
+        "producerKind",
+        "resolutionSha256",
+        "resolvedInputDigest",
+        "simKey",
+        "simulatedAt",
+        "sumo",
+        "traceFormat",
+        "traceGzipSha256",
+        "traceSchema",
+        "traceSha256",
+        "trafficProvider",
+        "trafficSha256",
+        "trafficStepKey"
+      ]
+    },
+    "timelines": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+          },
+          "samplerVersion": {
+            "type": "string",
+            "pattern": "^simforge\\.timeline-sampler/[1-9][0-9]*$"
+          },
+          "timelineKey": {
+            "$ref": "#/$defs/sha256"
+          },
+          "timelineSha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "heightFieldDigest": {
+            "$ref": "#/$defs/sha256"
+          },
+          "catalogDigest": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/sha256"
+              }
+            ]
+          }
+        },
+        "required": [
+          "catalogDigest",
+          "heightFieldDigest",
+          "samplerVersion",
+          "timelineKey",
+          "timelineSha256",
+          "version"
+        ]
+      }
+    },
+    "executionPackage": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "contract": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+            },
+            "xoscSha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          },
+          "required": [
+            "contract",
+            "xoscSha256"
+          ]
+        }
+      ]
+    },
+    "map": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mapVersionId": {
+          "$ref": "#/$defs/id"
+        },
+        "sourceMapId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+        },
+        "xodrSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "coordinateSystemSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "mapClosureDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "pinClosureSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "browserClosureSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "heightSourceDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "groundDigest": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/sha256"
+            }
+          ]
+        },
+        "closure": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "memberCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "bytes",
+            "memberCount"
+          ]
+        }
+      },
+      "required": [
+        "browserClosureSha256",
+        "closure",
+        "coordinateSystemSha256",
+        "groundDigest",
+        "heightSourceDigest",
+        "label",
+        "mapClosureDigest",
+        "mapVersionId",
+        "pinClosureSha256",
+        "sourceMapId",
+        "xodrSha256"
+      ]
+    },
+    "catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "assetCatalogVersionId": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/id"
+            }
+          ]
+        },
+        "catalogSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "actorClosureDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "actorClosureSchema": {
+          "const": "simforge.actor-assets-closure/v1"
+        },
+        "catalogIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          }
+        },
+        "referencedActorBlobs": {
+          "$ref": "#/$defs/countBytes"
+        }
+      },
+      "required": [
+        "actorClosureDigest",
+        "actorClosureSchema",
+        "assetCatalogVersionId",
+        "catalogIds",
+        "catalogSha256",
+        "referencedActorBlobs"
+      ]
+    },
+    "members": {
+      "type": "array",
+      "minItems": 7,
+      "uniqueItems": true,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "const": "document.json"
+              },
+              "role": {
+                "const": "document"
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "mediaType": {
+                "const": "application/vnd.simforge.scenario+json"
+              },
+              "schema": {
+                "type": "string",
+                "pattern": "^simforge\\.scenario\\.v[1-9][0-9]*$"
+              }
+            },
+            "required": [
+              "mediaType",
+              "path",
+              "role",
+              "schema",
+              "sha256",
+              "size"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "const": "simulation/trace.json.gz"
+              },
+              "role": {
+                "const": "trace"
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "mediaType": {
+                "const": "application/vnd.simforge.trace+json+gzip"
+              },
+              "schema": {
+                "type": "string",
+                "pattern": "^simforge\\.trace/v[1-9][0-9]*$"
+              }
+            },
+            "required": [
+              "mediaType",
+              "path",
+              "role",
+              "schema",
+              "sha256",
+              "size"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "const": "simulation/resolution.json.gz"
+              },
+              "role": {
+                "const": "resolution"
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "mediaType": {
+                "const": "application/vnd.simforge.sim-resolution+json+gzip"
+              },
+              "schema": {
+                "const": "simforge.sim-resolution/v1"
+              }
+            },
+            "required": [
+              "mediaType",
+              "path",
+              "role",
+              "schema",
+              "sha256",
+              "size"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "const": "simulation/materialized-traffic.json"
+              },
+              "role": {
+                "const": "traffic"
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "mediaType": {
+                "const": "application/vnd.uniscenarios.materialized-traffic+json"
+              }
+            },
+            "required": [
+              "mediaType",
+              "path",
+              "role",
+              "sha256",
+              "size"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^timeline/[0-9a-f]{64}\\.json$"
+              },
+              "role": {
+                "const": "timeline"
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "mediaType": {
+                "const": "application/vnd.simforge.render-timeline+json"
+              },
+              "schema": {
+                "const": "simforge.render-timeline.v1"
+              }
+            },
+            "required": [
+              "mediaType",
+              "path",
+              "role",
+              "schema",
+              "sha256",
+              "size"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "const": "map/closure.json"
+              },
+              "role": {
+                "const": "map-closure"
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "mediaType": {
+                "const": "application/vnd.simforge.browser-asset-set+json"
+              },
+              "schema": {
+                "const": "uniscenario.browser-asset-set/v1"
+              }
+            },
+            "required": [
+              "mediaType",
+              "path",
+              "role",
+              "schema",
+              "sha256",
+              "size"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "const": "actors/closure.json"
+              },
+              "role": {
+                "const": "actor-closure"
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "mediaType": {
+                "const": "application/vnd.simforge.actor-assets-closure+json"
+              },
+              "schema": {
+                "const": "simforge.actor-assets-closure/v1"
+              }
+            },
+            "required": [
+              "mediaType",
+              "path",
+              "role",
+              "schema",
+              "sha256",
+              "size"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "const": "catalog/entries.json"
+              },
+              "role": {
+                "const": "catalog"
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "mediaType": {
+                "const": "application/json"
+              }
+            },
+            "required": [
+              "mediaType",
+              "path",
+              "role",
+              "sha256",
+              "size"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "const": "export/scenario.xosc"
+              },
+              "role": {
+                "const": "xosc"
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "mediaType": {
+                "const": "application/xml"
+              }
+            },
+            "required": [
+              "mediaType",
+              "path",
+              "role",
+              "sha256",
+              "size"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "const": "render/pin.json"
+              },
+              "role": {
+                "const": "render-pin"
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "mediaType": {
+                "const": "application/vnd.simforge.render-pin+json"
+              },
+              "schema": {
+                "const": "simforge.render-pin/v1"
+              }
+            },
+            "required": [
+              "mediaType",
+              "path",
+              "role",
+              "schema",
+              "sha256",
+              "size"
+            ]
+          }
+        ]
+      },
+      "description": "Every member except manifest.json, receipt.json and blobs/, sorted by path. Blobs are listed by the two closure documents."
+    },
+    "render": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "const": "reproduce-exactly"
+            },
+            "renderer": {
+              "enum": [
+                "native-bevy",
+                "carla"
+              ]
+            },
+            "imageDigest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "runtimeVersion": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+            },
+            "rendererBuild": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+            },
+            "gpu": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "model": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+                },
+                "driverVersion": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+                },
+                "vramGiB": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "driverVersion",
+                "model",
+                "vramGiB"
+              ]
+            },
+            "profile": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+                },
+                "width": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                "fps": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                "capturePolicy": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+                },
+                "textureTier": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+                }
+              },
+              "required": [
+                "capturePolicy",
+                "fps",
+                "height",
+                "id",
+                "textureTier",
+                "width"
+              ]
+            },
+            "timelineSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "sourceOutputs": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "frameManifestSha256": {
+                      "$ref": "#/$defs/sha256"
+                    },
+                    "videoSha256": {
+                      "oneOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "$ref": "#/$defs/sha256"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "frameManifestSha256",
+                    "videoSha256"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "gpu",
+            "imageDigest",
+            "mode",
+            "profile",
+            "renderer",
+            "rendererBuild",
+            "runtimeVersion",
+            "sourceOutputs",
+            "timelineSha256"
+          ]
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "installationKind": {
+          "enum": [
+            "local-studio",
+            "simcloud",
+            "cli"
+          ]
+        },
+        "installationId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "authorDisplayName": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$"
+            }
+          ]
+        }
+      },
+      "required": [
+        "authorDisplayName",
+        "installationId",
+        "installationKind"
+      ]
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9-]+\\.[A-Za-z0-9._:-]{1,128}$"
+      },
+      "description": "The only place for additive fields within v1; keys are <vendor>.<name>. Readers ignore unknown extensions."
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Lowercase hex sha256."
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
+      "description": "RFC 3339, UTC."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "countBytes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "bytes",
+        "count"
+      ]
+    }
+  }
+}

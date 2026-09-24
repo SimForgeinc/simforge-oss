@@ -18,6 +18,7 @@ import type * as Native from '../native/index.js';
 import { ABI_VERSION } from './shared.js';
 
 export * from './shared.js';
+export * from './scenario-package.js';
 export {
   ABI_VERSION, ACTION_WIDTH, ACTOR_ROW, DEFAULT_MAX_OBJECTS,
   ENGINE_HZ, HANDOFF_ACTOR_ROW, HANDOFF_BODY_ROW, OBJECT_FEATURES, STATE_VECTOR_SIZE,

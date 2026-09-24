@@ -33,6 +33,8 @@
  * 8 observed actor transforms fail parity with the render timeline ·
  * 9 non-finite (NaN/inf) pixels in a frame before tone mapping (a shading
  * bug that prints as black; a golden of it would enshrine it) ·
+ * 10 the scene declares `recording: "unrecorded"` (it has no hashes on any
+ * adapter yet; verifying it is a failure, never a pass) ·
  * 1 usage/environment error.
  *
  * Scene definition (scenes/<sceneId>.json):
@@ -58,6 +60,9 @@
  *   default to expectedPasses ending in `.id`) must encode at least
  *   `minInstances` distinct non-background ids (default 2) covering at least
  *   `minCoverage` of the frame (default 0.05), on record and on verify.
+ * - `recording: "unrecorded"` — an explicit state for a scene added before
+ *   its first record (e.g. the release smoke scene): `verify` fails with
+ *   exit 10 and says so; `record` writes the golden and removes the field.
  * - `parity: {timeline, observed, profile}` — grade the renderer's observed
  *   transforms (`<outDir>/observed-frames.jsonl`, written by the job when
  *   `observe` is set) against the render timeline's shared sampler
@@ -431,6 +436,16 @@ function goldenPath(hardware, sceneId) {
   return path.join(GOLDENS_DIR, hardware.gpuFingerprint, `${sceneId}.json`);
 }
 
+/** A first record ends a scene's explicit `unrecorded` state (the scene file is rewritten without it). */
+function clearUnrecorded(sceneId) {
+  const p = path.join(SCENES_DIR, `${sceneId}.json`);
+  const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+  if (raw.recording === undefined) return;
+  delete raw.recording;
+  fs.writeFileSync(p, `${JSON.stringify(raw, null, 2)}\n`);
+  console.log(`[golden-harness] ${sceneId}: recording state cleared in ${path.relative(repoRoot, p)} (commit it with the golden)`);
+}
+
 function fail(code, msg) {
   console.error(`[golden-harness] ERROR: ${msg}`);
   process.exit(code);
@@ -525,6 +540,7 @@ async function cmdRecord(args) {
   fs.writeFileSync(gp, JSON.stringify(golden, null, 2));
   writeManifest(golden, path.join(artifacts, 'manifest.json'));
   console.log(`[golden-harness] RECORDED golden for ${sceneId} @ ${hardware.gpuFingerprint}`);
+  clearUnrecorded(sceneId);
   if (golden.timings) console.log(`  baseline avg_frame_ms=${golden.timings.avgFrameMs.toFixed(3)} p50=${golden.timings.p50FrameMs.toFixed(3)} (lavapipe; informational unless GOLDEN_FRAME_BUDGET is set)`);
   else console.log('  (no timing instrumentation — frame-time gate disabled for this scene)');
   for (const [k, v] of Object.entries(golden.passHashes)) console.log(`  ${k.padEnd(7)} ${v.sha256.slice(0, 16)}…  ${v.bytes}B`);
@@ -540,8 +556,9 @@ async function cmdVerify(args) {
     try {
       await verifyOne(args, id);
     } catch (e) {
-      if (e.exitCode) failed = Math.max(failed, e.exitCode);
-      else throw e;
+      if (!e.exitCode) throw e;
+      console.error(`[golden-harness] ERROR: ${e.message}`);
+      failed = Math.max(failed, e.exitCode);
     }
   }
   if (failed) process.exit(failed);
@@ -553,6 +570,9 @@ class GateFailure extends Error {
 
 async function verifyOne(args, sceneId) {
   const scene = applyOverrides(loadScene(sceneId), args.overrides);
+  if (scene.recording === 'unrecorded') {
+    throw new GateFailure(10, `UNRECORDED: scene ${sceneId} has no recorded pass hashes on any adapter (scene declares recording: "unrecorded"). This is a failure, not a pass: record it with \`node qualification/golden-harness/golden.mjs record ${sceneId}\` on the adapter of record.`);
+  }
   const { glbs, corpusRoot } = resolvePaths(scene);
   const binPath = resolveBinary(args);
 
@@ -667,7 +687,7 @@ function cmdPlan(args) {
       const frames = JSON.parse(fs.readFileSync(invocation.job.sceneState, 'utf8'));
       ticks = ` sceneState ${Array.isArray(frames) ? frames.length : frames.frames.length} ticks,`;
     }
-    console.log(`[golden-harness] plan ${id}:${ticks} ${invocation.job.ticks ? `ticks ${JSON.stringify(invocation.job.ticks)}, ` : ''}passes ${invocation.job.passes.join(',')}${missing.length ? `, MISSING corpus ${missing.join(', ')}` : ''}`);
+    console.log(`[golden-harness] plan ${id}:${scene.recording === 'unrecorded' ? ' UNRECORDED (verify fails, exit 10),' : ''}${ticks} ${invocation.job.ticks ? `ticks ${JSON.stringify(invocation.job.ticks)}, ` : ''}passes ${invocation.job.passes.join(',')}${missing.length ? `, MISSING corpus ${missing.join(', ')}` : ''}`);
     console.log(`  ${binPath} ${invocation.args.join(' ')}`);
     for (const sub of invocation.substitutions) console.log(`  substitution: ${JSON.stringify(sub)}`);
   }

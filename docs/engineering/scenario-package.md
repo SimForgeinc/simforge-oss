@@ -1,7 +1,10 @@
 # Scenario Package (`simforge.scenario-package/v1`)
 
-Status: proposed 2026-09-22 (playability phase 2). Builds on phase 1: replay
-by default (`motionSource`), timelines keyed by `timelineKey`, the trace
+Status: proposed 2026-09-22 (playability phase 2); container, manifest and
+verifier **implemented** 2026-09-24 in the `simforge-package` Rust crate
+(SDK split track P), with the thin/full dedupe rules and the `producer`
+field resolved in section 8.1 and section 4.3. Builds on phase 1: replay by
+default (`motionSource`), timelines keyed by `timelineKey`, the trace
 upgrader chain, exact map resolution on JSON import, and the archive corpus.
 This page does not re-specify any of those.
 
@@ -10,14 +13,16 @@ scenario revision: the document, the motion it was simulated to, and every
 digest needed to replay that motion on any later release, on this
 installation or another one.
 
-| Piece | Where (proposed) |
+| Piece | Where |
 |---|---|
-| Manifest schema, canonical encoding, verifier | `@simforge-oss/scenario/package` (isomorphic: Node and browser) |
-| Container reader and writer (strict ZIP subset) | same subpath, over Web Streams |
-| CLI | `simforge package export \| inspect \| verify \| import` (`@simforge-oss/cli`) |
-| Studio routes | `POST /api/simforge/revisions/:id/package` (export), `POST /api/simforge/packages` (import) |
-| Tables | `simforge.scenario_packages`, new `origin` values on `sim_results` / `revision_simulations` |
-| Tests | `fixtures/archive-corpus/<release>/packages/`, `packages/scenario/src/package/__tests__/` |
+| Manifest types, canonical encoding, strict ZIP reader and writer, verifier | `native/crates/simforge-package` (Rust; the one implementation) |
+| JSON Schema | `contracts/scenario-package/manifest.v1.schema.json`, `receipt.v1.schema.json` |
+| Fixtures | `fixtures/scenario-package/` (valid packages and one hostile package per rule, with `expectations.json`) |
+| Node (hosted exporter) | `simforge-bindings-node` `scenarioPackage*` functions, wrapped by `@simforge-oss/native-runtime` (`writeScenarioPackage`, `verifyScenarioPackage`, ...): byte-identical to the CLI's containers |
+| CLI | `simforge package inspect \| verify \| import` (Rust `simforge` CLI, over the crate) |
+| Studio routes (proposed) | `POST /api/simforge/revisions/:id/package` (export), `POST /api/simforge/packages` (import) |
+| Tables (proposed) | `simforge.scenario_packages`, new `origin` values on `sim_results` / `revision_simulations` |
+| Tests | the crate's `tests/` (fixtures, archive-corpus round trips, schema agreement), `native-runtime` `scenario-package.test.ts` (binding byte identity); later `fixtures/archive-corpus/<release>/packages/` |
 
 ## 1. What a package promises
 
@@ -166,6 +171,7 @@ contract string where it has one (for example `simforge.sim-resolution/v1`).
 ```jsonc
 {
   "schema": "simforge.scenario-package/v1",
+  "producer": { "app": "simcloud", "appVersion": "0.2.0", "minCli": "0.2.0" },
   "scenario": {
     "title": "Unprotected left, opposing sedan",
     "documentSchema": "simforge.scenario.v2", "scenarioVersion": 2,
@@ -215,6 +221,9 @@ contract string where it has one (for example `simforge.sim-resolution/v1`).
 | Field | Type | Meaning / source |
 |---|---|---|
 | `schema` | const | `simforge.scenario-package/v1`. The manifest version. |
+| `producer.app` | `^[a-z][a-z0-9-]{0,63}$` | The writing application (`simcloud`, `simforge-cli`, ...). Display only. |
+| `producer.appVersion` | semver | The writing application's version. Display only. |
+| `producer.minCli` | semver | The oldest `simforge` CLI that reads this package. A reader whose version is lower refuses it (`package_version_unsupported`, dimension `cli`, section 5.4). The hosted exporter takes it from a table the release agent bumps only when a contract changes (PLAN section 4.2). |
 | `scenario.title` | string ≤ 200 | Display only. Plain text, never interpreted. |
 | `scenario.documentSchema`, `scenarioVersion` | string, int | Document contract (`SCENARIO_TEMPLATE_VERSION`, now 2). Drives the document upgrader chain. |
 | `scenario.contentSha256` | sha256 | `canonicalJsonSha256(content)`, the revision's `content_sha256`. |
@@ -222,7 +231,7 @@ contract string where it has one (for example `simforge.sim-resolution/v1`).
 | `scenario.origin.*` | optional | Source document and revision ids, revision number and commit time. Provenance only. Never looked up on another installation. |
 | `engine.engineSemVer` | semver | `ENGINE_SEM_VER` that produced the trace. Shown to the user. **Not** a skew gate (section 5.4). |
 | `engine.solverVersion`, `pipelineRevision` | string, int | As in `sim_results.solver_ver` and `SIMULATION_PIPELINE_REVISION`. |
-| `engine.build` | object | `sim_results.engine_build` verbatim: `buildDigest`, `abiVersion`, `addonSha256`, `sourceRevision` where recorded. Provenance only. |
+| `engine.build` | object | From `sim_results.engine_build`: exactly the recorded ones of `engineVersion`, `abiVersion`, `buildDigest`, `addonSha256`, `sourceRevision` (absent when not recorded; any other key is refused). Provenance only. |
 | `engine.release` | string | The SimForge stack version (`0.1.0-rc.N` or stable) that produced the trace. |
 | `simulation.simKey` | sha256 | `simforge.sim-key/v1`. Reused as the memo key on import (section 5.3). |
 | `simulation.traceFormat`, `traceSchema` | int, string | `header.traceVersion` and `sim_results.trace_schema`. Drives the trace upgrader chain. |
@@ -258,7 +267,23 @@ contract string where it has one (for example `simforge.sim-resolution/v1`).
 
 Everything else is strict. An unknown top-level or nested field is a v1
 violation (`package_manifest_invalid`). A field that must be understood
-bumps the manifest to v2.
+bumps the manifest to v2. An optional field is either present with a value
+or absent: `null` where the table does not allow it is refused, not dropped.
+
+Cross-field rules the reader enforces (the JSON Schema cannot express them):
+`documentSchema = simforge.scenario.v<scenarioVersion>`;
+`traceSchema = simforge.trace/v<traceFormat>`; `simulation.groundDigest`
+and `map.groundDigest` are equal, set from trace format 5 and null before;
+`members[]` is sorted by path, names every required role, and each
+member's `sha256` equals its typed field (`document.json` =
+`scenario.contentSha256`, trace = `traceGzipSha256`, resolution =
+`resolutionSha256`, traffic = `trafficSha256`, `map/closure.json` =
+`browserClosureSha256`, `actors/closure.json` = `actorClosureDigest`,
+`catalog/entries.json` = `catalogSha256`, xosc = `executionPackage.xoscSha256`);
+`timelines[]` and the `timeline/` members name the same timelines;
+`render` is set exactly when `render/pin.json` is a member, and
+`render/pin.json` holds `canonicalJson(render)`. Each member's `mediaType`
+and `schema` are fixed by its role (section 4.1).
 
 ## 5. Import
 
@@ -384,11 +409,19 @@ package, the message lists every dimension that is ahead.
 | `engineSemVer` | **Not a gate.** Replay needs no engine | **Not a gate** |
 | `groundDigest` present, reader pre-v5 | n/a | Refused through `traceFormat` |
 
-The refusal text is: *"This package was made by SimForge 0.1.0-rc.81 (trace
-format 5). This installation reads trace format up to 4. Update SimForge to
-0.1.0-rc.81 or later to import it."* The error code is
-`package_version_unsupported`, with `{dimension, found, supported}` per
-entry.
+Two more dimensions come first, before any member is read:
+
+| Dimension | Rule |
+|---|---|
+| `manifest` | A manifest whose `schema` is `simforge.scenario-package/v<N>` with N > 1 is refused as `package_version_unsupported`, not as a schema error, and the message still names the producer and `minCli` when the newer manifest carries them. |
+| `cli` | `producer.minCli` greater than the reading CLI's version is refused. (This is PLAN section 4.2's `package_reader_too_old`, expressed as one dimension of the one skew code.) A producer re-checking its own output passes no CLI version; the report then says `cliCheck: "not-evaluated"`. |
+
+The refusal text is: *"This package was made by simcloud 0.3.0 and needs
+simforge 0.3.0 or later; this is simforge 0.2.0. Ahead of this reader:
+traceFormat 5 (this reader supports <= 4). Update simforge to 0.3.0 or later
+to read it."* The error code is `package_version_unsupported`, with
+`{dimension, found, supported}` per entry, every dimension that is ahead
+listed.
 
 The archive corpus (section 11) is what makes "older → upgraders" a
 guarantee rather than a hope.
@@ -478,6 +511,58 @@ requested by digest only, and the list never comes from the package.
 | Referenced actor blobs | 60 MB | 10–300 MB (the whole closure is 1.29 GiB over 165 entries) |
 | **Full package, 256-uastc tier** | **≈ 250 MB** | 120 MB (El Camino) – 1 GB (San Ramon phase 1) |
 
+### 8.1 Forms and dedupe (resolved 2026-09-24)
+
+These rules close open question 1 and the container half of open question 2.
+
+1. **One id.** The form is a property of the container, never of the
+   manifest. Thin and full exports of one revision have byte-identical
+   `manifest.json` and one `packageId`.
+2. **Two forms, nothing in between.** A container with no `blobs/` entry is
+   thin. A container with any blob is full, and must then hold every blob
+   of the full set (rule 5). Anything else is refused as
+   `package_form_incomplete` (rule `blob_missing`, naming the first missing
+   path), so "partial" packages cannot circulate.
+3. **Every blob is named.** Each `blobs/sha256/<aa>/<sha256>` must be a
+   digest listed by `map/closure.json` or `actors/closure.json`
+   (`blob_unreferenced` otherwise), its name must be the sha256 of its bytes
+   (`blob_name`), and its size must be the listed size (`blob_size`).
+4. **Stored once.** A digest listed several times, within one closure or
+   across both (a model shared by map and actors, two paths with one
+   content), is one entry. All its listings must agree on the size
+   (`package_closure_invalid`, `closure_size_conflict`). The writer dedupes
+   blobs it is given twice. Role members (`document.json`, timelines, ...)
+   are never deduplicated against blobs: they are always present by path.
+5. **The full set.** Every member of the map closure whose `role` is not
+   `texture` (simulation members, render geometry, runtime, environment,
+   manifests and metadata, so the embedded closure installs and verifies as
+   a map publication does), plus the actor blobs reachable from
+   `catalog.catalogIds` through the closure's `catalog-models.json` (that
+   file itself, each id's `model.glbPath` and every
+   `animations.<motion>.glbPath`; an id the table does not list is
+   procedural and reaches nothing). Other listed blobs (unbound actor
+   models, texture members) may be embedded and are verified like any blob.
+6. **Textures.** A full package embeds the texture members of the tier(s)
+   its exporter selected; `receipt.textureTier` names the tier for display.
+   The container verifier does not decide tier completeness (it cannot tell
+   tiers apart from the listing); the map installer does, exactly as for a
+   map publication, and marks texture members that were not embedded
+   `unavailable`. A render that needs an unavailable member fails loudly;
+   it never substitutes another tier.
+7. **`referencedActorBlobs`** is `{count, bytes}` over the *distinct
+   digests* of the reachable set in rule 5 (including
+   `catalog-models.json`). A full package proves it; a thin package cannot
+   (it carries no `catalog-models.json`) and its verification report lists
+   it under `notVerifiable` instead of skipping it silently.
+8. **Import may skip bytes it already has.** Because every entry's size,
+   CRC and position are proven from the central directory before any data
+   is read, an importer may leave a blob unread when its content store
+   already holds that digest. `simforge package verify` never skips: it
+   hashes every member and every blob.
+9. **Limits by form.** The container-size limit is chosen by the form the
+   container has (thin: 64 MiB, full: 4 GiB); the writer refuses to produce
+   a container the default reader would refuse.
+
 **Default: thin.** It is small enough to attach to an issue or an email, and
 it is complete as a record: every digest needed to prove what played is
 inside it. It also plays on this installation for as long as R1–R8 hold,
@@ -538,6 +623,16 @@ shows the size of each form before download.
 **Error states** (each with a copyable detail block, per the studio style
 guide):
 
+Every refusal carries a stable `code` (below) and the exact `rule` that
+failed (for example `package_container_invalid` / `duplicate_name`); the
+fixture corpus pins one hostile package to each code and rule. Codes added
+by the implementation: `package_identity_mismatch` (two digests that must
+agree do not: trace header, timeline identity, map, resolution record),
+`package_member_invalid` (a member does not decode as its role),
+`package_closure_invalid` (a closure listing is malformed or contradicts
+itself), `package_form_incomplete` (section 8.1), and, for writers,
+`package_argument_invalid` and `package_io_error`.
+
 | Code | User sees | Offered action |
 |---|---|---|
 | `package_container_invalid` | "This file is not a valid SimForge scenario package." + first violation | none |
@@ -579,6 +674,17 @@ completes.
   closure listing) declares. Inflation stops at the declared size, and one
   more byte is an error.
 
+The reader also requires the writer's exact subset, which makes every
+accepted container canonical for its content: entries tile the file from
+offset 0 in the order of section 3.2 (manifest, receipt, members by role
+then path, blobs by digest); "version made by" Unix and "version needed"
+2.0 (4.5 with ZIP64); flags exactly bit 11; time and date 1980-01-01 00:00;
+mode `0100644`; no extra field other than ZIP64; ZIP64 exactly when section
+3.2's rule requires it (`zip64_required`: more than 65,535 entries or at
+least 4 GiB - 64 MiB of entry data, the margin keeping every 32-bit field
+safe), and then on every entry; the end records exactly at the end of the
+file with the central directory immediately before them.
+
 **Limits** (host-configurable; the defaults are shown):
 
 | Limit | Default |
@@ -588,7 +694,7 @@ completes.
 | Entry count | 100,000 |
 | `manifest.json` | 1 MiB |
 | Any single non-blob member | 256 MiB |
-| DEFLATE ratio per entry | ≤ 200:1 |
+| DEFLATE ratio per entry | ≤ 200:1 (for entries over 1 MiB; smaller entries cannot be bombs) |
 | Total inflated bytes | ≤ 1.05 × declared total |
 | Concurrent imports per workspace | 2 |
 
@@ -652,12 +758,12 @@ packages start with stage B and grow every release.
 
 ## 13. Open questions
 
-1. **One id for thin and full.** This spec makes the form a container
-   property, so both share `packageId`. The alternative puts `form` in the
-   manifest and gives two ids. Confirm.
-2. **Texture tiers in full packages.** Embed one tier (proposed default
-   `256-uastc`, the smallest portable one) or all tiers (2–4× larger)? And may
-   an installed map version have render tiers marked `unavailable`?
+1. ~~**One id for thin and full.**~~ Resolved: one id; the form is a
+   container property (section 8.1).
+2. **Texture tiers in full packages.** The container rules are resolved
+   (section 8.1, rule 6: any selected tier, the installer marks the rest
+   `unavailable` and renders fail loudly on them). Still open: the default
+   tier (proposed `256-uastc`) and whether exporters may embed several.
 3. **Newer sampler.** Refuse (as specified), or accept and render with a
    timeline the reader derives from the trace with its own sampler? Poses x,
    y and heading are identical either way; z, pitch, roll and lights may
