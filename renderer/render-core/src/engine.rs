@@ -4361,6 +4361,12 @@ impl SceneApp {
             });
         }
 
+        // Geometry LOD selects for this view's own focal length.
+        let lod_scale =
+            crate::geometry_lod::view_range_scale(spec.fov_y_deg.to_radians(), spec.height);
+        for entity in std::iter::once(rgb_entity).chain(id_entity) {
+            self.app.world_mut().entity_mut(entity).insert(lod_scale);
+        }
         self.groups.push(GroupEntities {
             spec,
             rgb_entity,
@@ -6199,6 +6205,10 @@ impl SceneApp {
                 crate::geometry_lod::spawn_levels(self.app.world_mut(), lods, &self.id_clone_of)?;
             eprintln!("geometry-lod: {masters} master primitives, {levels} level entities");
         }
+        // The levels just spawned carry no ranges yet.
+        if let Some(lods) = &mut self.geometry_lods {
+            lods.applied_f_px = None;
+        }
         if let Some(decals) = self.road_decals.clone() {
             let touched = self.apply_road_decal_opacity(&decals)?;
             eprintln!(
@@ -6354,19 +6364,16 @@ impl SceneApp {
         Ok(())
     }
 
-    /// Recompute LOD ranges for the most demanding RGB camera of the rig
-    /// (largest focal length in pixels). No-op without LODs or cameras, or
-    /// when the rig's focal length did not change.
+    /// Compute the LOD ranges for [`crate::geometry_lod::REFERENCE_F_PX`]
+    /// (each view scales its distance to its own focal length). No-op
+    /// without LODs, or when they are already applied for the current
+    /// pixel-error budget.
     fn refresh_lod_ranges(&mut self) {
         let Some(lods) = &self.geometry_lods else {
             return;
         };
-        let f_px = self
-            .groups
-            .iter()
-            .map(|g| crate::geometry_lod::focal_px(g.spec.fov_y_deg.to_radians(), g.spec.height))
-            .fold(0.0f32, f32::max);
-        if f_px <= 0.0 || lods.applied_f_px == Some(f_px) {
+        let f_px = crate::geometry_lod::REFERENCE_F_PX;
+        if lods.applied_f_px == Some(f_px) {
             return;
         }
         let pixel_error = lods.pixel_error_px;

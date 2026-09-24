@@ -112,8 +112,9 @@ pub struct SceneSpec {
     pub lidar_backend: Option<String>,
     /// The map's geometry LOD derivative (`derived/geometry-lod/manifest.json`
     /// of the master in `glbs[0]`). Cameras and the ID pass then draw each
-    /// heavy mesh at the coarsest level within one pixel of error for the
-    /// rig's most demanding camera; lidar/radar keep full detail.
+    /// heavy mesh at the coarsest level within the pixel budget for that
+    /// camera's own focal length (render_core::geometry_lod); lidar/radar
+    /// keep full detail.
     #[serde(default)]
     pub geometry_lod: Option<String>,
     /// Absolute path of the map's `derived/road-decals/manifest.json`: the

@@ -40,6 +40,7 @@ edition = "2021"
 #   selected differently cast no shadow at all).
 # Every other Bevy crate stays pinned to crates.io 0.19.1.
 [patch.crates-io]
+bevy_camera = { path = "vendor/bevy_camera" }
 bevy_gltf = { path = "vendor/bevy_gltf" }
 bevy_mesh = { path = "vendor/bevy_mesh" }
 bevy_pbr = { path = "vendor/bevy_pbr" }

@@ -13,8 +13,14 @@
 //! ```
 //!
 //! with `e_L` the level's geometric error, `s` the instance's largest axis
-//! scale, `f_px` the focal length in pixels of the most demanding RGB camera
-//! of the rig and `px` the pixel-error budget (1 by default). Ranges are
+//! scale, `f_px` the view's own focal length in pixels (at least
+//! [`REFERENCE_F_PX`]) and `px` the
+//! pixel-error budget (1 by default). The ranges are computed once for
+//! [`REFERENCE_F_PX`]; each camera carries a [`VisibilityRangeScale`] of
+//! `REFERENCE_F_PX / f_px` (vendored `bevy_camera`), so it selects exactly as
+//! ranges computed for its own focal length would. A camera's levels never
+//! depend on which other cameras the rig has (a trailing chase camera, a
+//! narrow telephoto). Ranges are
 //! abrupt (no dithered cross-fade), so a frame is a pure function of the
 //! camera pose: deterministic, with a bounded, documented error. Distance is
 //! measured, as the manifest defines it, to the world-space centre of the
@@ -28,7 +34,7 @@
 //! lidar/radar scene is built from the masters only (full detail, see
 //! `SceneApp::static_sensor_meshes`): level entities carry no `InstanceId`.
 use anyhow::{Context, Result};
-use bevy::camera::visibility::{RenderLayers, VisibilityRange};
+use bevy::camera::visibility::{RenderLayers, VisibilityRange, VisibilityRangeScale};
 use bevy::gltf::Gltf;
 use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
@@ -166,6 +172,22 @@ pub fn switch_distance(error_m: f32, scale: f32, f_px: f32, pixel_error_px: f32)
 /// Focal length in pixels of a perspective view.
 pub fn focal_px(fov_y_rad: f32, height_px: u32) -> f32 {
     height_px as f32 / (2.0 * (fov_y_rad * 0.5).tan())
+}
+
+/// Focal length (px) the shared ranges are computed for, and the least
+/// demanding focal length any view selects at (1080 px at about 57 degrees
+/// vertical). A view without a [`VisibilityRangeScale`] selects here.
+///
+/// The floor is there because the levels' geometric error understates what
+/// a foliage level changes on screen (it drops leaf cards): selected at its
+/// own 370 px, a 120-degree 720p camera visibly thinned the canopy overhead.
+pub const REFERENCE_F_PX: f32 = 1000.0;
+
+/// The distance scale that makes a view of this projection select levels for
+/// its own focal length, never below [`REFERENCE_F_PX`]. It depends on the
+/// view alone, never on the rest of the rig.
+pub fn view_range_scale(fov_y_rad: f32, height_px: u32) -> VisibilityRangeScale {
+    VisibilityRangeScale(REFERENCE_F_PX / focal_px(fov_y_rad, height_px).max(REFERENCE_F_PX))
 }
 
 fn range_for(member: &LodMember, scale: f32, f_px: f32, pixel_error_px: f32) -> VisibilityRange {
@@ -381,6 +403,90 @@ pub(crate) fn apply_ranges(world: &mut World, f_px: f32, pixel_error_px: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Which chain members each camera draws at `distance`, with the ranges
+    /// computed once for the reference focal length and every camera scaled
+    /// by its own projection (the vendored `bevy_camera` range check).
+    fn drawn_per_camera(cameras: &[(f32, u32)], distance: f32) -> Vec<Vec<usize>> {
+        use bevy::camera::visibility::{VisibilityRangePlugin, VisibleEntityRanges};
+        let mut app = App::new();
+        app.add_plugins((bevy::transform::TransformPlugin, VisibilityRangePlugin));
+        let members = [
+            LodMember {
+                start_error_m: 0.0,
+                end_error_m: Some(0.02),
+            },
+            LodMember {
+                start_error_m: 0.02,
+                end_error_m: Some(0.2),
+            },
+            LodMember {
+                start_error_m: 0.2,
+                end_error_m: None,
+            },
+        ];
+        let entities: Vec<Entity> = members
+            .iter()
+            .map(|member| {
+                app.world_mut()
+                    .spawn((
+                        Transform::from_xyz(0.0, 0.0, -distance),
+                        range_for(member, 1.0, REFERENCE_F_PX, 1.0),
+                    ))
+                    .id()
+            })
+            .collect();
+        let views: Vec<Entity> = cameras
+            .iter()
+            .map(|&(fov_y_deg, height)| {
+                app.world_mut()
+                    .spawn((
+                        Camera::default(),
+                        Transform::IDENTITY,
+                        view_range_scale(fov_y_deg.to_radians(), height),
+                    ))
+                    .id()
+            })
+            .collect();
+        app.update();
+        let ranges = app.world().resource::<VisibleEntityRanges>();
+        views
+            .iter()
+            .map(|&view| {
+                (0..entities.len())
+                    .filter(|&i| ranges.entity_is_in_range_of_view(entities[i], view))
+                    .collect()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn each_camera_selects_levels_for_its_own_focal_length_whatever_the_rig() {
+        // A 120-degree 720p rig camera (f 370 px, floored to the reference)
+        // and a narrow 1080p camera (f ~3600 px).
+        let wide = (88.5, 720);
+        let tele = (17.1, 1080);
+        for distance in [5.0f32, 12.0, 25.0, 60.0, 150.0, 400.0] {
+            let alone = drawn_per_camera(&[wide], distance);
+            let with_tele = drawn_per_camera(&[wide, tele], distance);
+            // Exactly one level per camera, and the wide camera's level does
+            // not change when a narrower camera joins the rig.
+            assert_eq!(alone[0].len(), 1, "distance {distance}");
+            assert_eq!(with_tele[1].len(), 1, "distance {distance}");
+            assert_eq!(alone[0], with_tele[0], "distance {distance}");
+        }
+        // The narrow camera keeps a finer level where the wide one switched.
+        let both = drawn_per_camera(&[wide, tele], 60.0);
+        assert!(both[1][0] < both[0][0], "{both:?}");
+    }
+
+    #[test]
+    fn a_view_never_selects_below_the_reference_focal_length() {
+        assert_eq!(view_range_scale(88.5f32.to_radians(), 720).0, 1.0);
+        let tele = view_range_scale(17.1f32.to_radians(), 1080).0;
+        assert!((tele - REFERENCE_F_PX / focal_px(17.1f32.to_radians(), 1080)).abs() < 1e-6);
+        assert!(tele < 0.3);
+    }
 
     #[test]
     fn impostor_material_loads_the_standard_material_sub_asset() {
