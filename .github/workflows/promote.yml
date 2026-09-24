@@ -99,6 +99,9 @@ jobs:
   homebrew:
     needs: [eligibility, stable]
     runs-on: simforge-build
+    # HOMEBREW_TAP_DEPLOY_KEY is an environment secret (write deploy key on
+    # SimForgeinc/homebrew-tap), readable only by jobs in this environment.
+    environment: homebrew
     env:
       GH_TOKEN: ${{ github.token }}
       TAG: ${{ needs.eligibility.outputs.tag }}

@@ -21,9 +21,8 @@ cargo about generate --manifest-path "$SIMFORGE_CLI_MANIFEST" --locked \
 
 attribution_args=()
 for catalog in $SIMFORGE_ASSET_CATALOGS; do attribution_args+=(--catalog-dir "$catalog"); done
-if [[ -f "$SIMFORGE_ACTOR_CLOSURE_PIN_FILE" ]]; then
-  attribution_args+=(--closure "$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["digest"])' "$SIMFORGE_ACTOR_CLOSURE_PIN_FILE")")
-fi
+[[ -f "$SIMFORGE_CLOSURES_LOCK" ]] || { echo "notices.sh: $SIMFORGE_CLOSURES_LOCK is missing" >&2; exit 1; }
+attribution_args+=(--closure-lock "$SIMFORGE_CLOSURES_LOCK")
 python3 scripts/release/check-attribution.py "${attribution_args[@]}" --markdown "$out/assets.md" >&2
 
 cat "$out/crates.md" "$out/assets.md" > "$out/THIRD_PARTY_NOTICES.md"

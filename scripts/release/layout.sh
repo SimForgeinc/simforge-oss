@@ -18,9 +18,9 @@ SIMFORGE_PY_DISTS="adapters/gym:native adapters/timeline:native adapters/gpu:pur
 # In-repo asset catalogs whose ATTRIBUTION.json must be complete (track X moves
 # the models out of git; the manifests and ATTRIBUTION.json stay).
 SIMFORGE_ASSET_CATALOGS="catalog/vehicles-carla catalog/pedestrians-carla"
-# The actor closure the CLI pulls by default ({"digest": ...}), checked on every
-# release. Proposed path; track X/C decide where the CLI's pin lives.
-SIMFORGE_ACTOR_CLOSURE_PIN_FILE=contracts/pins/actor-assets.json
+# The asset closures the SDK pins (simforge.asset-closures-lock/v1, track X):
+# every closure in it is attribution-checked on every release.
+SIMFORGE_CLOSURES_LOCK=catalog/closures.lock.json
 # The fixture the release smoke renders with lavapipe: a full-form (air-gapped)
 # scenario package, so the smoke needs no registry. Proposed path (track P).
 SIMFORGE_SMOKE_PACKAGE=fixtures/scenario-package/smoke/richmond-06.full.zip

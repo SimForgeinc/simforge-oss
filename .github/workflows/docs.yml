@@ -1,7 +1,8 @@
 name: docs
 # mdBook site for docs.simforge.ai (GitHub Pages, deployed by Actions).
-# Deployed on main (the /dev/ tree), on dispatch, and by promote.yml when a
-# release goes stable (the root tree). PRs are checked by the merger's local
+# Deployed on dispatch (refreshes /dev/ from main) and by promote.yml when a
+# release goes stable (the root tree). The self-hosted runner's job hook takes
+# only tags, workflow_dispatch and schedule, so there is no push trigger. PRs are checked by the merger's local
 # SDK gate (scripts/release/check.sh docs), not here: no PR ever runs on the
 # self-hosted runner.
 #
@@ -9,9 +10,6 @@ name: docs
 #   docs.simforge.ai. CNAME simforgeinc.github.io.
 # (Actions-deployed Pages ignore a CNAME file; the domain is a repo setting.)
 on:
-  push:
-    branches: [main]
-    paths: ["docs/**", "scripts/docs/**", ".github/workflows/docs.yml"]
   workflow_dispatch:
     inputs:
       deploy:
@@ -61,7 +59,7 @@ jobs:
 
   deploy:
     needs: build
-    if: github.event_name == 'push' || inputs.deploy
+    if: inputs.deploy
     runs-on: simforge-build
     permissions:
       pages: write
