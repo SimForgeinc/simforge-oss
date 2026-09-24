@@ -27,10 +27,14 @@ export function createMapServer(root) {
   return http.createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', 'http://localhost');
     const pathname = decodeURIComponent(url.pathname);
-    const file = pathname.startsWith('/basis/')
-      ? path.join(basisDir, pathname.slice('/basis/'.length))
+    // The studio serves the pack-inflate workers' two modules beside the
+    // transcoder (studio/scripts/sync-studio-assets.mjs); so does this server.
+    const runtime = pathname.startsWith('/basis/') ? pathname.slice('/basis/'.length) : null;
+    const runtimeDir = runtime === 'ktx-parse.module.js' || runtime === 'zstddec.module.js' ? path.dirname(basisDir) : basisDir;
+    const file = runtime !== null
+      ? path.join(runtimeDir, runtime)
       : path.join(path.resolve(root), pathname);
-    const base = pathname.startsWith('/basis/') ? basisDir : path.resolve(root);
+    const base = runtime !== null ? runtimeDir : path.resolve(root);
     const cors = { 'Access-Control-Allow-Origin': '*' };
     if (!file.startsWith(base)) { response.writeHead(403, cors); response.end(); return; }
     let info;

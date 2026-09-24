@@ -360,7 +360,15 @@ export class CityViewer {
   private packReader: MapPackReader | null = null;
   private packStatus: { state: 'packed' | 'missing'; tier: string; reason: string | null } | null = null;
   /** Where the variant envelope came from: the closure, or a published derivative set. */
-  private variantSource: 'closure' | 'derived' | null = null;
+  private variantSource: 'closure' | 'derived' | 'scene' | null = null;
+  /**
+   * Which web scene is drawn: a published version's `derived/browser-scene`
+   * (the closure scene plus coarse vegetation levels, with its own tiers and
+   * packs) when one is bound to the closure manifest, else the closure's own.
+   * A bound scene that cannot be used is drawn from the closure and says why
+   * (console + `getStats().loadDiagnostics.scene`), never silently.
+   */
+  private sceneStatus: { source: 'closure' | 'derived'; reason: string | null } | null = null;
   private inflatePool: Ktx2InflatePool | null = null;
   private sourceManifestSha256 = '';
   private textureBudgetRecovery: Promise<void> | null = null;
@@ -707,18 +715,23 @@ export class CityViewer {
   private async loadMapInner(manifestUrl: string): Promise<void> {
     const url = this.options.baseUrl ? resolveUrl(this.options.baseUrl, manifestUrl) : manifestUrl;
     this.assetBase = url.replace(/[^/]*$/, '');
-    const manifestBuffer = await this.fetchBuffer(url, this.abort.signal);
+    const [closureBuffer, sceneEnvelope] = await Promise.all([
+      this.fetchBuffer(url, this.abort.signal),
+      this.options.variantManifestUrl ? Promise.resolve(null) : this.readOptionalVariantManifest(this.mapRootUrl('derived/browser-scene/manifest.json')),
+    ]);
+    const scene = await this.selectScene(closureBuffer, sceneEnvelope);
     let manifest: CityManifest;
-    try { manifest = JSON.parse(new TextDecoder().decode(manifestBuffer)) as CityManifest; }
+    try { manifest = JSON.parse(new TextDecoder().decode(scene.buffer)) as CityManifest; }
     catch { throw new ViewerInputError('map.manifest', 'expected a nonblank JSON manifest'); }
     requireRenderableManifest(manifest);
-    this.sourceManifestSha256 = await sha256BytesAsync(manifestBuffer);
+    this.sourceManifestSha256 = scene.sha256;
     if (this.disposed) return;
     this.manifest = manifest;
     const [staticSemantics, variantManifest] = await Promise.all([
       this.loadStaticSemantics(manifest),
-      this.loadVariantManifest(),
+      scene.variants ? Promise.resolve(scene.variants) : this.loadVariantManifest(),
     ]);
+    if (scene.variants) this.variantSource = 'scene';
     this.staticSemantics = staticSemantics;
     this.variantManifest = variantManifest;
     this.capabilities = staticSemanticsCapabilities(this.staticSemantics);
@@ -1127,6 +1140,61 @@ export class CityViewer {
     const value: unknown = JSON.parse(new TextDecoder().decode(buffer));
     decoded();
     return value;
+  }
+
+  /** A map-root-relative member (`derived/...`) beside the `3d/` asset base. */
+  private mapRootUrl(file: string): string {
+    return `${this.assetBase.replace(/[^/]*\/$/, '')}${file}`;
+  }
+
+  private async readOptionalVariantManifest(url: string): Promise<CityAssetVariantManifest | null> {
+    try {
+      const response = await this.fetchAssetResponse(url, this.abort.signal);
+      if (!response.ok) {
+        void response.body?.cancel().catch(() => undefined);
+        return null;
+      }
+      const value = await this.readJsonResponse(response);
+      return isCityAssetVariantManifest(value) ? value : null;
+    } catch (error) {
+      if ((error as { name?: string } | null)?.name === 'AbortError') throw error;
+      return null;
+    }
+  }
+
+  /**
+   * The scene to draw: `derived/browser-scene/scene.json` when its envelope
+   * is bound to this closure manifest and the scene matches its digest, else
+   * the closure manifest (reported when a bound scene was refused).
+   */
+  private async selectScene(closureBuffer: ArrayBuffer, envelope: CityAssetVariantManifest | null): Promise<{ buffer: ArrayBuffer; sha256: string; variants: CityAssetVariantManifest | null }> {
+    const closureSha256 = await sha256BytesAsync(closureBuffer);
+    const closure = { buffer: closureBuffer, sha256: closureSha256, variants: null };
+    if (!envelope) {
+      this.sceneStatus = { source: 'closure', reason: null };
+      return closure;
+    }
+    const refuse = (reason: string) => {
+      console.warn(`[map-scene] ${reason}; drawing the closure scene`);
+      this.sceneStatus = { source: 'closure', reason };
+      return closure;
+    };
+    const binding = (envelope as { scene?: { file?: unknown; sha256?: unknown; baseManifestSha256?: unknown } }).scene;
+    if (!binding || typeof binding.file !== 'string' || !/^derived\/browser-scene\/[a-z0-9._-]+\.json$/.test(binding.file)
+      || typeof binding.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(binding.sha256)) return refuse('derived/browser-scene names no valid scene');
+    if (binding.baseManifestSha256 !== closureSha256) return refuse('derived/browser-scene extends another closure manifest');
+    if (envelope.sourceManifestSha256 !== binding.sha256) return refuse('derived/browser-scene tiers are bound to another scene');
+    let buffer: ArrayBuffer;
+    try {
+      buffer = await this.fetchBuffer(this.mapRootUrl(binding.file), this.abort.signal);
+    } catch (error) {
+      if ((error as { name?: string } | null)?.name === 'AbortError') throw error;
+      return refuse(`derived/browser-scene scene unavailable (${error instanceof Error ? error.message : String(error)})`);
+    }
+    const sha256 = await sha256BytesAsync(buffer);
+    if (sha256 !== binding.sha256) return refuse('derived/browser-scene scene digest mismatch');
+    this.sceneStatus = { source: 'derived', reason: null };
+    return { buffer, sha256, variants: envelope };
   }
 
   /**
@@ -1881,6 +1949,14 @@ export class CityViewer {
     this.vegLayer?.evictionCandidates(candidates);
     // Worst score first: out-of-range tiles, then overshoot, then distance.
     candidates.sort((a, b) => b.score - a.score);
+    // An admission that could not fit even after giving up everything cheaper
+    // than itself evicts nothing: stripping farther tiles bare (their coarse
+    // levels are a few KB each) to then refuse the load anyway leaves holes.
+    if (priority !== -Infinity) {
+      let freeable = 0;
+      for (const candidate of candidates) if (candidate.score > priority) freeable += candidate.bytes;
+      if (total - freeable > limit) return false;
+    }
     for (const candidate of candidates) {
       if (total <= limit) break;
       if (candidate.score <= priority) break; // nothing cheaper left to give up
@@ -1983,6 +2059,7 @@ export class CityViewer {
         },
         residencyDeadline: this.residencyDeadline,
         mapPack: this.packStatus ? { ...this.packStatus, variantSource: this.variantSource, ...(this.packReader?.stats() ?? {}) } : null,
+        scene: this.sceneStatus,
         actorModels: externalModelDiagnostics(),
       },
       usable,
@@ -2397,11 +2474,14 @@ export class CityViewer {
       25,
       5000,
     );
+    // Vegetation levels carry their geometric error in metres, so this is a
+    // projected error in device pixels (Medium 2, Low 4): 0 pins every cell to
+    // full detail, and 100 px already shows impostors a few metres away.
     this.options.vegetationScreenSpaceError = finite(
       next.vegetationScreenSpaceError,
       this.options.vegetationScreenSpaceError,
+      0,
       100,
-      10000,
     );
     const previousByteBudget = this.options.byteBudget;
     const previousVegetationDistance = this.options.vegetationMaxDistance;

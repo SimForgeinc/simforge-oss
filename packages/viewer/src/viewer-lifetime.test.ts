@@ -126,12 +126,54 @@ it('refuses a manifest with no renderable city or road members', async () => {
   } finally { viewer.dispose(); }
 });
 
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+it('draws a bound derived/browser-scene and reports why a bound scene is refused', async () => {
+  const closure = JSON.stringify({ scene: { bounds: { min: [0, 0, 0], max: [10, 10, 10] } }, tiles: [] });
+  const scene = JSON.stringify({ scene: { bounds: { min: [0, 0, 0], max: [10, 10, 10] }, lodLevels: 2 }, tiles: [] });
+  const closureSha = await sha256Hex(closure);
+  const sceneSha = await sha256Hex(scene);
+  const envelope = (base: string) => JSON.stringify({ schemaVersion: 1, sourceManifestSha256: sceneSha, variants: {},
+    scene: { file: 'derived/browser-scene/scene.json', sha256: sceneSha, baseManifestSha256: base } });
+  for (const [base, source, reason] of [[closureSha, 'derived', null], ['0'.repeat(64), 'closure', 'derived/browser-scene extends another closure manifest']] as const) {
+    const viewer = contractViewer();
+    const fetched: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      fetched.push(url);
+      if (url.endsWith('/map/derived/browser-scene/manifest.json')) return new Response(envelope(base));
+      if (url.endsWith('/map/derived/browser-scene/scene.json')) return new Response(scene);
+      if (url.endsWith('/map/3d/manifest.json')) return new Response(closure);
+      return new Response('', { status: 404 });
+    }));
+    try {
+      // Both scenes are empty, so the load ends refusing them; the choice is already made.
+      await expect(viewer.loadMap('/map/3d/manifest.json')).rejects.toMatchObject({ field: 'map.members' });
+      expect(viewer.getStats().loadDiagnostics.scene).toEqual({ source, reason });
+      expect(fetched.some((url) => url.endsWith('/map/derived/browser-scene/scene.json'))).toBe(source === 'derived');
+    } finally { viewer.dispose(); }
+  }
+});
+
 it('rejects invalid live exposure without changing the applied exposure', () => {
   const viewer = contractViewer();
   try {
     expect(() => viewer.setExposure(0)).toThrowError(expect.objectContaining({ name: 'ViewerInputError' }));
     expect(viewer.renderer.toneMappingExposure).toBe(1);
     expect(() => viewer.setLiveQuality({ exposure: NaN })).toThrowError(expect.objectContaining({ name: 'ViewerInputError' }));
+  } finally { viewer.dispose(); }
+});
+
+it('applies the vegetation level threshold in device pixels (Medium 2, Low 4, 0 = full detail)', () => {
+  const viewer = contractViewer();
+  try {
+    expect(viewer.setLiveQuality({ vegetationScreenSpaceError: 2 }).vegetationScreenSpaceError).toBe(2);
+    expect(viewer.setLiveQuality({ vegetationScreenSpaceError: 4 }).vegetationScreenSpaceError).toBe(4);
+    expect(viewer.setLiveQuality({ vegetationScreenSpaceError: 0 }).vegetationScreenSpaceError).toBe(0);
+    expect(viewer.setLiveQuality({ vegetationScreenSpaceError: 2000 }).vegetationScreenSpaceError).toBe(100);
   } finally { viewer.dispose(); }
 });
 

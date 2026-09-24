@@ -134,6 +134,52 @@ describe('essential streaming assets', () => {
     layer.dispose();
   });
 
+  it('keeps an optional tile on screen at a coarser level when the budget evicts what it showed', async () => {
+    // Vegetation cells carry coarse levels: losing the displayed level to the
+    // budget (a nearer cell's full detail) must not leave a hole.
+    const build = vi.fn(async () => emptyAsset());
+    let maxSse = 9999;
+    const layer = new TileStreamLayer({
+      name: 'vegetation-layer', renderer: { compileAsync: async () => undefined } as never, scene: new Scene(),
+      defs: [{ id: 'cell', box: new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1)),
+        // Coarse first, as the viewer normalizes them.
+        lods: [
+          { level: 1, file: 'cell.lod1.glb', triangles: 10, fileSize: 1, geometricError: 1 },
+          { level: 0, file: 'cell.lod0.glb', triangles: 100, fileSize: 1, geometricError: 0 },
+        ] }],
+      build, maxConcurrent: 1, pinCoarsest: false, required: () => false,
+      memory: { admit: () => true, maxAssetBytes: () => 100, pendingBytes: () => 0 },
+    });
+    const settle = async () => {
+      layer.update(new Vector3(0, 0, 10), 1, maxSse);
+      await Promise.resolve();
+      layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
+      await layer.whenCompilationIdle();
+    };
+    // Coarse level first...
+    await settle();
+    expect(layer.stats().residentAssets).toBe(1);
+    // ...while full detail is wanted, the coarse level on screen is not reclaimable.
+    maxSse = 0;
+    layer.update(new Vector3(0, 0, 10), 1, maxSse);
+    const upgrading: Parameters<typeof layer.evictionCandidates>[0] = [];
+    layer.evictionCandidates(upgrading);
+    expect(upgrading).toEqual([]);
+    await Promise.resolve();
+    layer.pumpUploads(performance.now() + 100, { remaining: 1 }, {} as never);
+    await layer.whenCompilationIdle();
+    // Full detail on screen, then evicted for budget: the cell reloads its coarse level.
+    const candidates: Parameters<typeof layer.evictionCandidates>[0] = [];
+    layer.evictionCandidates(candidates);
+    expect(candidates.map((candidate) => candidate.index)).toEqual([1]);
+    layer.evict(candidates[0]!);
+    expect(layer.stats().residentAssets).toBe(0);
+    await settle();
+    expect(layer.stats().residentAssets).toBe(1);
+    expect(build.mock.calls.map((call) => ((call as unknown[])[1] as { file: string }).file)).toEqual(['cell.lod1.glb', 'cell.lod0.glb', 'cell.lod1.glb']);
+    layer.dispose();
+  });
+
   it('does not report an unaffordable optional LOD as endlessly queued', () => {
     const build = vi.fn(async () => emptyAsset());
     const layer = new TileStreamLayer({

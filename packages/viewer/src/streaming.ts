@@ -52,6 +52,12 @@ interface Entry {
   preparing: number | null;
   /** The current desired LOD cannot fit without evicting another desired LOD. */
   budgetBlocked: boolean;
+  /**
+   * Finest LOD index allowed after the budget evicted the level this tile had
+   * on screen: it falls back to a coarser level instead of going blank.
+   * Cleared when the view changes, like `budgetBlocked`.
+   */
+  evictedCap: number | null;
   failures: number;
   /** Pixels of error we would win by loading `desired`. */
   gain: number;
@@ -212,6 +218,7 @@ export class TileStreamLayer {
         loading: null,
         preparing: null,
         budgetBlocked: false,
+        evictedCap: null,
         failures: 0,
         gain: Infinity,
         distance: Infinity,
@@ -347,8 +354,10 @@ export class TileStreamLayer {
         if (this.opts.maxDesiredIndex) desired = Math.min(desired, this.opts.maxDesiredIndex(entry.def));
         if (!this.bootstrapped || (this.opts.pinCoarsest && !entry.resident.has(0))) desired = 0;
       }
-      if (desired !== entry.desired
-        || (Number.isFinite(previousDistance) && Math.abs(distance - previousDistance) > Math.max(10, previousDistance * 0.2))) {
+      const viewMoved = Number.isFinite(previousDistance) && Math.abs(distance - previousDistance) > Math.max(10, previousDistance * 0.2);
+      if (viewMoved || desired < 0) entry.evictedCap = null;
+      if (entry.evictedCap !== null && desired > entry.evictedCap) desired = entry.evictedCap;
+      if (desired !== entry.desired || viewMoved) {
         entry.budgetBlocked = false;
       }
       if (entry.budgetBlocked && this.opts.pinCoarsest && !entry.resident.has(0)
@@ -599,6 +608,7 @@ export class TileStreamLayer {
       entry.loading = null;
       entry.preparing = null;
       entry.budgetBlocked = false;
+      entry.evictedCap = null;
       for (const asset of entry.resident.values()) {
         this.group.remove(asset.object);
         asset.dispose?.();
@@ -669,6 +679,9 @@ export class TileStreamLayer {
         // endless fetch -> upload -> eviction loop. Refuse the new admission
         // instead; a camera/quality change will make it eligible later.
         if (index === entry.desired && entry.required) continue;
+        // The level on screen while a finer one is on its way is all this tile
+        // shows: evicting it leaves a hole for the few bytes a coarse level holds.
+        if (entry.wanted && index === entry.displayed && index < entry.desired) continue;
         const unwanted = entry.desired < 0 ? 100 : index > entry.desired ? 5 : 1;
         out.push({
           layer: this,
@@ -688,8 +701,12 @@ export class TileStreamLayer {
     entry.resident.delete(candidate.index);
     this.bytes -= asset.bytes;
     // A budget-evicted prefetch must not compete for the same bytes again until
-    // the view changes or it becomes required.
-    if (!entry.required && entry.wanted) entry.budgetBlocked = true;
+    // the view changes or it becomes required. A tile that loses the level it
+    // had on screen falls back to a coarser one rather than going blank.
+    if (!entry.required && entry.wanted) {
+      if (entry.displayed === candidate.index && candidate.index > 0) entry.evictedCap = candidate.index - 1;
+      else entry.budgetBlocked = true;
+    }
     this.group.remove(asset.object);
     if (entry.displayed === candidate.index) {
       const fallback = entry.resident.get(0);

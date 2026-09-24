@@ -24,6 +24,11 @@
  *   envelope at `derived/browser-variants/manifest.json`
  *   (packages/map-pipeline/src/browser-variants.ts), kept in browser asset
  *   tables (`browser_asset_sets` with the derivative-set contract).
+ * - `browserScene`: the closure's web scene with the geometry derivative's
+ *   coarse vegetation levels (`derived/browser-scene/scene.json`, new
+ *   `3d/tiles/veg_*.lod<k>.glb` and impostor `images/`), with its own tiers and
+ *   packs bound to that scene (packages/map-pipeline/src/browser-scene.ts).
+ *   The viewer draws it when its envelope extends the closure manifest.
  *
  * Member lists never live in the descriptor: a texture tier has up to ~14k
  * members, and descriptors are read in bulk through the Data API (1 MB cap).
@@ -33,7 +38,7 @@ export const MAP_DERIVATIVE_SET_CONTRACT = "simforge.map-derivative-set.v1";
 
 export interface MapDerivativeKind {
   /** `map_versions.descriptor` key of the binding. */
-  key: "geometryLod" | "texturesFullBc7" | "browserVariants";
+  key: "geometryLod" | "texturesFullBc7" | "browserVariants" | "browserScene";
   /** Which closure the members extend. */
   profile: "native" | "browser";
   /** Directory of the derivative's `manifest.json`. */
@@ -47,6 +52,7 @@ export const MAP_DERIVATIVES: readonly MapDerivativeKind[] = [
   { key: "geometryLod", profile: "native", directory: "derived/geometry-lod", prefixes: ["derived/geometry-lod/"], schema: "simforge.map-geometry-lod.v1" },
   { key: "texturesFullBc7", profile: "native", directory: "derived/textures-full-bc7", prefixes: ["derived/textures-full-bc7/"], schema: "simforge.map-texture-variant.v1" },
   { key: "browserVariants", profile: "browser", directory: "derived/browser-variants", prefixes: ["derived/browser-variants/", "3d/variants/", "3d/packs/"], schema: "simforge.map-browser-variants.v1" },
+  { key: "browserScene", profile: "browser", directory: "derived/browser-scene", prefixes: ["derived/browser-scene/", "3d/tiles/", "images/", "3d/variants/", "3d/packs/"], schema: "simforge.map-browser-scene.v1" },
 ];
 
 /** SQL: the descriptor bindings of `mv` as one JSON object (small summaries only). */

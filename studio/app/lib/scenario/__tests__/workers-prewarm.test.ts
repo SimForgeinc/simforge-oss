@@ -30,6 +30,9 @@ import {
 } from "../workers-prewarm-store";
 import { CONTROL_FEATURE_PREWARM_DERIVATIVES, PrewarmManifestResponseSchema } from "@simforge-oss/render";
 import { getRegisteredMap, invalidateRegisteredMap } from "../../cloud/map-registry";
+import { LOCAL_SESSION } from "../../auth/session";
+import { getAppContext } from "../../db/app-context";
+import { getScenarioMapBrowserAssets } from "../document-store";
 
 process.env[LOCAL_HOST_TOKEN_ENV] = "test-local-host-token";
 
@@ -409,6 +412,23 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   assert.equal(registered?.browser.get("3d/packs/objects/x.bin")?.byteLength, 16_000_000);
   // Browser derivatives never reach the native lease or prewarm digest.
   assert.equal((await listPrewarmSets(new Set([CONTROL_FEATURE_PREWARM_DERIVATIVES]))).sets[0]!.derivativesSha256, undefined);
+  // The cloud download plan resolves derivative members too (closure first).
+  const planned = await getScenarioMapBrowserAssets(getAppContext(LOCAL_SESSION), [
+    { mapVersionId: "usmapv_prewarm", relativePath: "derived/browser-variants/manifest.json" },
+    { mapVersionId: "usmapv_prewarm", relativePath: "3d/packs/objects/missing.bin" },
+  ]);
+  assert.deepEqual(planned.map((asset) => [asset.relativePath, asset.sha256]), [["derived/browser-variants/manifest.json", envelopeSha]]);
+  // A backfill rebinding a running server's memoized map is picked up without
+  // a restart (bindings are re-checked every 30 s).
+  await execute(`UPDATE simforge.map_versions SET descriptor = descriptor - 'browserVariants' WHERE id = 'usmapv_prewarm'`);
+  assert.equal((await getRegisteredMap("usmapv_prewarm"))?.browser.has("3d/packs/objects/x.bin"), true, "memoized between checks");
+  const realNow = Date.now;
+  Date.now = () => realNow() + 60_000;
+  try {
+    assert.equal((await getRegisteredMap("usmapv_prewarm"))?.browser.has("3d/packs/objects/x.bin"), false, "an unbound derivative leaves the memo");
+  } finally {
+    Date.now = realNow;
+  }
   await execute(`UPDATE simforge.map_versions SET descriptor = descriptor || jsonb_build_object('browserVariants', CAST(:binding AS jsonb)) WHERE id = 'usmapv_prewarm'`, { binding: browserBinding(3) });
   invalidateRegisteredMap("usmapv_prewarm");
   assert.equal((await getRegisteredMap("usmapv_prewarm"))?.browser.has("3d/packs/objects/x.bin"), false, "an incomplete browser derivative is not served");

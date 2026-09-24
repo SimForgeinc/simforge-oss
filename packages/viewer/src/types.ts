@@ -128,7 +128,10 @@ export interface CityViewerOptions {
   antialias?: boolean;
   /** Screen-space-error threshold in pixels; smaller = more aggressive streaming. */
   maxScreenSpaceError?: number;
-  /** Separate threshold for vegetation tiles (their errors use a different scale). */
+  /**
+   * Largest projected error, in device pixels, a vegetation cell level may
+   * show (its geometric error is in metres). Default 2; 0 = full detail.
+   */
   vegetationScreenSpaceError?: number;
   /** Resident geometry+texture budget in bytes (estimated GPU footprint). */
   byteBudget?: number;
@@ -253,7 +256,9 @@ export interface CityViewerStats {
     residencyBytes: Record<string, { resident: number; pending: number }>;
     residencyDeadline: { missedAtMs: number; recoveredAtMs: number | null } | null;
     /** Browser pack of the selected tier: `missing` means members load one request at a time. */
-    mapPack?: ({ state: 'packed' | 'missing'; tier: string; reason: string | null; variantSource?: 'closure' | 'derived' | null } & Partial<import('./map-pack').MapPackStats>) | null;
+    mapPack?: ({ state: 'packed' | 'missing'; tier: string; reason: string | null; variantSource?: 'closure' | 'derived' | 'scene' | null } & Partial<import('./map-pack').MapPackStats>) | null;
+    /** Web scene drawn: `derived` = a published version's browser scene (coarse vegetation levels); `reason` says why a bound one was refused. */
+    scene?: { source: 'closure' | 'derived'; reason: string | null } | null;
     actorModels: Readonly<Record<string, { state: 'idle' | 'loading' | 'ready' | 'failed'; url: string; downgradeReason: string }>>;
   };
   /** Required visible geometry is resident, independently of final texture quality. */

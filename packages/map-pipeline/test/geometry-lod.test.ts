@@ -215,7 +215,9 @@ describe('geometry-lod mesh operations', () => {
   });
 });
 
-describe('buildGeometryLod', () => {
+// Each build of the fixture takes a few seconds, and CI runs every package's
+// suite at once; the default 5 s test timeout is a load test, not a check.
+describe('buildGeometryLod', { timeout: 60_000 }, () => {
   let manifest: GeometryLodManifest;
   let files: Record<string, { sha256: string; bytes: number }>;
   const out = () => path.join(root, 'out-a');
@@ -224,7 +226,7 @@ describe('buildGeometryLod', () => {
     const result = await buildGeometryLod({ masterDir, outputDir: out(), skipKtx2: true, selection });
     manifest = result.manifest;
     files = result.files;
-  });
+  }, 60_000);
 
   it('writes a manifest that satisfies the declared schema and names every file by digest', async () => {
     const parsed = parseGeometryLodManifest(JSON.parse(await readFile(path.join(out(), 'manifest.json'), 'utf8')));
@@ -340,7 +342,7 @@ describe('substituteLods', () => {
   });
 });
 
-describe('impostor textures from KTX2', () => {
+describe('impostor textures from KTX2', { timeout: 60_000 }, () => {
   // Published closures carry only the KTX2 (KHR_texture_basisu) encodings; the
   // bake must decode them. Needs the pinned KTX-Software.
   const ktx = process.env['SIMFORGE_KTX_BIN_DIR'];

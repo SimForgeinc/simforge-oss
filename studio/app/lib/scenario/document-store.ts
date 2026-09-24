@@ -26,6 +26,7 @@ import {
   MAP_GRAPH_SIDECARS,
 } from "./contracts";
 import { canonicalContentSha256, scenarioId } from "./core";
+import { BROWSER_DERIVATIVE_MEMBERS_JOIN_SQL, MAP_DERIVATIVE_SET_CONTRACT } from "./map-derivatives";
 import {
   linkRevisionSimulation,
   readSimulationRecord,
@@ -1614,6 +1615,8 @@ export async function getScenarioMapBrowserAssets(
   requests: ScenarioMapBrowserAssetRequest[],
 ): Promise<Array<ScenarioMapBrowserAssetRequest & ScenarioMapBrowserAsset>> {
   if (requests.length === 0) return [];
+  // Closure members first; members of the version's ready browser derivative
+  // sets (map-derivatives.ts) answer the paths the closure does not have.
   return queryRows<
     ScenarioMapBrowserAssetRequest & ScenarioMapBrowserAsset
   >(
@@ -1621,8 +1624,8 @@ export async function getScenarioMapBrowserAssets(
        SELECT map_version_id, relative_path
        FROM jsonb_to_recordset(:requests::jsonb)
          AS entry(map_version_id text, relative_path text)
-     )
-     SELECT requested.map_version_id AS "mapVersionId",
+     ), resolved AS (
+     SELECT 0 AS rank, requested.map_version_id AS "mapVersionId",
        requested.relative_path AS "relativePath",
        b.storage_bucket AS bucket, b.storage_key AS key,
        b.object_version_id AS "objectVersionId", b.sha256,
@@ -1636,7 +1639,20 @@ export async function getScenarioMapBrowserAssets(
      JOIN simforge.browser_asset_members m ON m.asset_set_id = s.id
        AND m.relative_path = requested.relative_path
      JOIN simforge.browser_asset_blobs b ON b.id = m.blob_id
-       AND b.verification_state = 'verified'`,
+       AND b.verification_state = 'verified'
+     UNION ALL
+     SELECT 1 AS rank, requested.map_version_id, requested.relative_path,
+       db.storage_bucket, db.storage_key, db.object_version_id, db.sha256, db.byte_length, db.media_type
+     FROM requested
+     JOIN simforge.map_versions mv ON mv.id = requested.map_version_id
+       AND mv.retired_at IS NULL
+     ${BROWSER_DERIVATIVE_MEMBERS_JOIN_SQL}
+     WHERE dm.relative_path = requested.relative_path
+     )
+     SELECT DISTINCT ON ("mapVersionId", "relativePath") "mapVersionId", "relativePath",
+       bucket, key, "objectVersionId", sha256, "byteLength", "mediaType"
+     FROM resolved
+     ORDER BY "mapVersionId", "relativePath", rank`,
     // `jsonb_to_recordset` matches record columns by key name, so the bound
     // array must use the snake_case names the AS clause declares. Binding the
     // camelCase request objects made every column NULL, so nothing joined and
@@ -1718,6 +1734,46 @@ export async function listScenarioBrowserCacheInventory(
     afterMapVersionId = last.map_version_id;
     afterRelativePath = last.relative_path;
   }
+  // Members of each version's preferred ready browser derivative set: the
+  // browser scene (vegetation levels with its own tiers and packs) when bound,
+  // else the browser variants. The closure's own member wins on a shared path.
+  const derived: CacheInventoryRow[] = [];
+  afterMapVersionId = "";
+  afterRelativePath = "";
+  while (true) {
+    const page = await queryRows<CacheInventoryRow>(
+      `SELECT mv.id AS map_version_id, bs.closure_sha256, dm.relative_path,
+         db.sha256, db.byte_length, db.media_type, dm.required
+       FROM simforge.map_versions mv
+       JOIN simforge.browser_asset_sets bs ON bs.id = mv.browser_asset_set_id
+         AND bs.workspace_id = mv.workspace_id AND bs.map_version_id = mv.id
+         AND bs.asset_set_state = 'available'
+       JOIN simforge.browser_asset_sets ds ON ds.map_version_id = mv.id AND ds.workspace_id = mv.workspace_id
+         AND ds.asset_set_state = 'available' AND ds.contract_version = '${MAP_DERIVATIVE_SET_CONTRACT}'
+         AND ds.id = COALESCE(
+           CASE WHEN mv.descriptor->'browserScene'->>'state' = 'ready' THEN mv.descriptor->'browserScene'->>'assetSetId' END,
+           CASE WHEN mv.descriptor->'browserVariants'->>'state' = 'ready' THEN mv.descriptor->'browserVariants'->>'assetSetId' END)
+       JOIN simforge.browser_asset_members dm ON dm.asset_set_id = ds.id
+       JOIN simforge.browser_asset_blobs db ON db.id = dm.blob_id
+         AND db.verification_state = 'verified'
+       WHERE mv.retired_at IS NULL
+         AND (
+           mv.id > :after_map_version_id
+           OR (mv.id = :after_map_version_id AND dm.relative_path > :after_relative_path)
+         )
+       ORDER BY mv.id, dm.relative_path
+       LIMIT ${pageSize}`,
+      { after_map_version_id: afterMapVersionId, after_relative_path: afterRelativePath },
+    );
+    derived.push(...page);
+    if (page.length < pageSize) break;
+    const last = page.at(-1);
+    if (!last) break;
+    afterMapVersionId = last.map_version_id;
+    afterRelativePath = last.relative_path;
+  }
+  const closurePaths = new Set(rows.map((row) => `${row.map_version_id}\0${row.relative_path}`));
+  for (const row of derived) if (!closurePaths.has(`${row.map_version_id}\0${row.relative_path}`)) rows.push(row);
   const maps = new Map<string, ScenarioBrowserCacheMap>();
   for (const row of rows) {
     const current = maps.get(row.map_version_id) ?? {

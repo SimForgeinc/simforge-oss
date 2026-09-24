@@ -147,5 +147,20 @@ Rebuilds are byte-identical.
   - Closures that already carry packs are `not-applicable`. Nothing a
     simulation reads is replaced.
   - Coarse vegetation cells (`tiles/veg_*.lod<k>.glb`, built by the web stage
-    from `derived/geometry-lod`) change `3d/manifest.json`, so they reach
-    newly built maps only. They are not backfilled.
+    from `derived/geometry-lod`) change `3d/manifest.json`, which simulation
+    pins, so published versions get them as a separate derivative:
+    `derived/browser-scene` (`simforge.map-browser-scene.v1`,
+    `packages/map-pipeline/src/browser-scene.ts`,
+    `reconcile-map-derivatives.ts --derivative browser-scene`).
+    - The backfill rebuilds the web tier from the version's master and bound
+      geometry-lod set. It refuses the version if any file the closure already
+      has comes out different.
+    - It publishes the new cells and impostor atlases, `scene.json` (the
+      closure manifest with each cell's coarser levels), and all eight tiers
+      and packs bound to that scene. `manifest.json` names the scene and the
+      closure manifest it extends (`scene.baseManifestSha256`).
+    - The viewer draws the scene only when that binding matches the closure
+      manifest it loaded. Otherwise it draws the closure scene and reports why
+      in `loadDiagnostics.scene`.
+    - `descriptor.browserScene` binds it next to `browserVariants`. Viewers
+      that predate it keep using `browserVariants`.

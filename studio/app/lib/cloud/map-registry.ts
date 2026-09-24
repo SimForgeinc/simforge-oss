@@ -66,6 +66,7 @@ type MemberRow = {
 type MapRow = {
   id: string;
   derivatives?: unknown;
+  derivatives_key?: string | null;
   provenance_kind: string | null;
   provenance_origin: string | null;
   provenance_visibility: string | null;
@@ -76,6 +77,13 @@ type MapRow = {
 const REGISTRY_KEY = Symbol.for("simforge.local-map-registry");
 type RegistryState = {
   maps: Map<string, Promise<RegisteredMap | null>>;
+  /**
+   * Descriptor bindings of browser derivatives each memoized map was loaded
+   * with, and when they were last compared with the database. A backfill binds
+   * derivatives to a published version while servers are running; without
+   * this the memo would serve the pre-backfill member set until a restart.
+   */
+  bindings?: Map<string, { key: string; checkedAt: number; checking: Promise<void> | null }>;
   /** Members known from an upstream plan before the map is registered locally. */
   upstream: Map<string, RegisteredMap>;
 };
@@ -106,7 +114,8 @@ async function loadRegisteredMap(mapVersionId: string): Promise<RegisteredMap | 
        mv.descriptor->'provenance'->>'visibility' AS provenance_visibility,
        mv.descriptor->>'registryReleaseDigest' AS registry_release_digest,
        ns.canonical_digest,
-       ${MAP_DERIVATIVE_DESCRIPTOR_SQL} AS derivatives
+       ${MAP_DERIVATIVE_DESCRIPTOR_SQL} AS derivatives,
+       (${MAP_DERIVATIVE_DESCRIPTOR_SQL})::text AS derivatives_key
      FROM simforge.map_versions mv
      LEFT JOIN simforge.native_map_asset_sets ns ON ns.id = mv.native_map_asset_set_id
        AND ns.workspace_id = mv.workspace_id AND ns.asset_set_state = 'available'
@@ -135,6 +144,7 @@ async function loadRegisteredMap(mapVersionId: string): Promise<RegisteredMap | 
     { map_version_id: mapVersionId },
   )]);
   const downloaded = map.provenance_kind === CLOUD_DOWNLOAD_PROVENANCE;
+  (registry.bindings ??= new Map()).set(mapVersionId, { key: map.derivatives_key ?? "", checkedAt: Date.now(), checking: null });
   const browser = memberMap(browserRows);
   // Browser derivatives a backfill bound to this version (browser texture
   // tiers and packs, map-derivatives.ts) are served beside the closure; the
@@ -260,8 +270,37 @@ export async function loadRegisteredMapSummaries(mapVersionIds: readonly string[
 }
 
 
+const BINDING_RECHECK_MS = 30_000;
+
+async function browserBindingsKey(mapVersionId: string): Promise<string> {
+  const [row] = await queryRows<{ bindings: string | null }>(
+    `SELECT (${MAP_DERIVATIVE_DESCRIPTOR_SQL})::text AS bindings FROM simforge.map_versions mv WHERE mv.id = :map_version_id`,
+    { map_version_id: mapVersionId },
+  );
+  return row?.bindings ?? "";
+}
+
+/**
+ * The memoized map, reloaded when its browser derivative bindings changed
+ * since it was loaded (checked at most every 30 s per map).
+ */
+async function revalidateBindings(mapVersionId: string): Promise<void> {
+  const bindings = (registry.bindings ??= new Map());
+  const entry = bindings.get(mapVersionId);
+  if (!entry || Date.now() - entry.checkedAt < BINDING_RECHECK_MS) return;
+  entry.checking ??= browserBindingsKey(mapVersionId).then((key) => {
+    entry.checkedAt = Date.now();
+    if (key !== entry.key) {
+      registry.maps.delete(mapVersionId);
+      bindings.delete(mapVersionId);
+    }
+  }).finally(() => { entry.checking = null; });
+  await entry.checking;
+}
+
 /** The locally registered map, memoized per process once registered; null when not registered. */
-export function getRegisteredMap(mapVersionId: string): Promise<RegisteredMap | null> {
+export async function getRegisteredMap(mapVersionId: string): Promise<RegisteredMap | null> {
+  if (registry.maps.has(mapVersionId)) await revalidateBindings(mapVersionId);
   let pending = registry.maps.get(mapVersionId);
   if (!pending) {
     pending = loadRegisteredMap(mapVersionId).then(
@@ -283,6 +322,7 @@ export function getRegisteredMap(mapVersionId: string): Promise<RegisteredMap | 
 /** Forget the memoized rows after registration changes them. */
 export function invalidateRegisteredMap(mapVersionId: string): void {
   registry.maps.delete(mapVersionId);
+  registry.bindings?.delete(mapVersionId);
 }
 
 /**
