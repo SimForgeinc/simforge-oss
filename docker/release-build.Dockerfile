@@ -48,14 +48,20 @@ RUN set -eux; \
     printf '#!/bin/sh\nexec /opt/python/cp312-cp312/bin/python -m ziglang "$@"\n' > /usr/local/bin/zig; \
     chmod +x /usr/local/bin/zig; zig version
 
+# The build host is shared: cap cargo's parallelism for the tool installs.
+ARG CARGO_BUILD_JOBS=4
 RUN set -eux; \
+    export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS}"; \
     cargo install --locked "cargo-zigbuild@${CARGO_ZIGBUILD_VERSION}"; \
     cargo install --locked "cargo-auditable@${CARGO_AUDITABLE_VERSION}"; \
     cargo install --locked "cargo-cyclonedx@${CARGO_CYCLONEDX_VERSION}"; \
-    cargo install --locked "cargo-about@${CARGO_ABOUT_VERSION}"; \
+    cargo install --locked --features cli "cargo-about@${CARGO_ABOUT_VERSION}"; \
     cargo install --locked "cargo-deny@${CARGO_DENY_VERSION}"; \
     rm -rf /opt/cargo/registry /opt/cargo/git; \
-    chmod -R a+rwX /opt/cargo
+    chmod -R a+rwX /opt/cargo; \
+    # cargo install only warns when a binary needs a feature: fail here instead.
+    cargo-zigbuild --version; cargo-cyclonedx cyclonedx --help >/dev/null; \
+    cargo-about --version; cargo-deny --version; test -x /opt/cargo/bin/cargo-auditable
 
 LABEL org.opencontainers.image.source="https://github.com/SimForgeinc/simforge-sdk" \
       org.opencontainers.image.description="SimForge release build environment (manylinux_2_28, Rust, zig, dist helpers)" \
