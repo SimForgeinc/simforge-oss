@@ -7,7 +7,7 @@ process.env.SIMFORGE_ENV = "dev";
 
 import { LOCAL_HOST_TOKEN_ENV } from "@simforge-oss/studio-host/node";
 import { CONTROL_FEATURES_V1, loadBuiltinRenderEngine } from "@simforge-oss/render";
-import { PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID } from "@simforge-oss/scenario";
+import { hashRenderIntent, PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID } from "@simforge-oss/scenario";
 
 import { migrate } from "../../../../scripts/migrate";
 import { LOCAL_ORGANIZATION_ID, LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from "@/app/lib/auth/session";
@@ -572,6 +572,35 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
     } as Parameters<typeof createRenderIntentJob>[1],
   );
   assert.ok(job);
+  // A timeline render: the intent declares `render.timeline`, whose bytes live
+  // in sim_timelines (not artifacts or native map blobs). Batch signing must
+  // serve it like the single-input path does.
+  const timelineSha = "7e".repeat(32);
+  // The simulation result the timeline was derived for.
+  await execute(
+    `INSERT INTO simforge.sim_results (workspace_id, sim_key, trace_sha256, authored_trace_sha256, engine_sem_ver, solver_ver,
+       trace_schema, resolved_input_digest, map_closure_digest, traffic_provider, map_version_id, producer, storage_bucket,
+       trace_storage_key, trace_byte_length, trace_gzip_sha256, resolution_storage_key, resolution_byte_length, resolution_sha256)
+     VALUES (:ws, :sim, :trace, :trace, '0.0.0', 'test', 'test', :digest, :digest, 'off', 'usmapv_prewarm', 'test', 'local-artifacts',
+       'traces/prewarm-lease-test', 1, :digest, 'resolutions/prewarm-lease-test', 1, :digest)`,
+    { ws: LOCAL_WORKSPACE_ID, sim: "7c".repeat(32), trace: "7d".repeat(32), digest: "7b".repeat(32) },
+  );
+  await execute(
+    `INSERT INTO simforge.sim_timelines (workspace_id, timeline_key, trace_sha256, height_field_digest, sampler_version,
+       timeline_sha256, byte_length, storage_bucket, storage_key, stored_byte_length, stored_sha256, source_sim_key, producer)
+     VALUES (:ws, :key, :trace, 'test-height', 'simforge.timeline-sampler/test', :sha, 321, 'local-artifacts', 'timelines/prewarm-lease-test', 321, :sha, :sim, 'test')`,
+    { ws: LOCAL_WORKSPACE_ID, key: "7f".repeat(32), trace: "7d".repeat(32), sha: timelineSha, sim: "7c".repeat(32) },
+  );
+  await execute(
+    `UPDATE simforge.render_jobs
+        SET timeline_sha256 = :sha, trace_sha256 = :trace, sim_key = :sim,
+            render_intent = jsonb_set(render_intent, '{assets}', (render_intent->'assets') || jsonb_build_array(jsonb_build_object(
+              'assetId', 'render.timeline', 'kind', 'other', 'sha256', CAST(:sha AS text), 'sizeBytes', 321)))
+      WHERE id = :id`,
+    { id: job.id, sha: timelineSha, trace: "7d".repeat(32), sim: "7c".repeat(32) },
+  );
+  const timelineIntent = await readRenderIntent(queryRows, job.id);
+  await execute(`UPDATE simforge.render_jobs SET intent_sha256 = :sha WHERE id = :id`, { id: job.id, sha: hashRenderIntent(timelineIntent!) });
   const lease = await claimResponseV2(registration.registrationId, WORKER_NODE_ID);
   assert.equal(lease.type, "job.leased");
   if (lease.type !== "job.leased") return;
@@ -588,6 +617,16 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
   });
   assert.ok(urls);
   assert.deepEqual(Object.keys(urls.downloads).sort(), inputs.map((input) => input.inputId).sort());
+  assert.ok(inputs.some((input) => input.inputId === "render.timeline"), "the timeline is a leased input");
+  assert.match(urls.downloads["render.timeline"]!.url, /timelines\/prewarm-lease-test/, "signed from sim_timelines");
+  // Only the timeline the job bound is signed: with no stored timeline of
+  // the declared digest there is nothing to serve.
+  await execute(`UPDATE simforge.render_jobs SET timeline_sha256 = :other WHERE id = :id`, { id: job.id, other: "7a".repeat(32) });
+  const unbound = await signRenderInputsV2({
+    jobId: job.id, leaseId: lease.lease.leaseId, fenceToken: lease.lease.fenceToken, workerNodeId: WORKER_NODE_ID, inputIds: ["render.timeline"],
+  });
+  assert.deepEqual(unbound?.downloads, {});
+  await execute(`UPDATE simforge.render_jobs SET timeline_sha256 = :sha WHERE id = :id`, { id: job.id, sha: timelineSha });
   assert.equal(await signRenderInputsV2({
     jobId: job.id, leaseId: lease.lease.leaseId, fenceToken: "wrong-fence", workerNodeId: WORKER_NODE_ID, inputIds: ["scenario.xosc"],
   }), null);
