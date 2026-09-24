@@ -3,7 +3,7 @@
 Releases are prepared by the release agent (`.claude/agents/release.md`) and
 approved by a maintainer:
 
-1. **Release PR.** Version bump (CLI crate and wheel), `CHANGELOG.md` from the
+1. **Release PR.** Version bump (the CLI crate and the five Python dists), `CHANGELOG.md` from the
    commits since the last tag, the `minCli` table if a contract changed,
    refreshed `THIRD_PARTY_NOTICES.md`. `cargo deny`, the notices check and the
    version check must be green.

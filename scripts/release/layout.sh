@@ -8,9 +8,13 @@
 SIMFORGE_CLI_PACKAGE=simforge
 SIMFORGE_CLI_MANIFEST=native/crates/simforge-cli/Cargo.toml
 # Every Cargo workspace whose crates ship (cargo deny runs over each).
-SIMFORGE_CARGO_WORKSPACES="renderer native"
+SIMFORGE_CARGO_WORKSPACES="renderer native native/crates/simforge-timeline-python"
 SIMFORGE_GYM_DIR=adapters/gym
 SIMFORGE_GYM_DIST_NAME=simforge_oss_gym
+# The Python distributions released together at the CLI's version (PEP 440
+# spelling), each dir:kind. `native` = maturin abi3 extension (one wheel per
+# platform), `pure` = one py3-none-any wheel. Sibling pins between them are ==.
+SIMFORGE_PY_DISTS="adapters/gym:native adapters/timeline:native adapters/gpu:pure adapters/physics:pure renderer/service/python:pure"
 # In-repo asset catalogs whose ATTRIBUTION.json must be complete (track X moves
 # the models out of git; the manifests and ATTRIBUTION.json stay).
 SIMFORGE_ASSET_CATALOGS="catalog/vehicles-carla catalog/pedestrians-carla"

@@ -1,6 +1,6 @@
 name: release-sbom
-# dist global-artifacts job: CycloneDX SBOMs for the CLI binary and the gym's
-# native extension. Uploaded as `artifacts-sbom`, so dist's host step attaches
+# dist global-artifacts job: CycloneDX SBOMs for the CLI binary and each native
+# Python extension (gym, timeline). Uploaded as `artifacts-sbom`, so dist's host step attaches
 # them to the release (and release-sign.yml signs them).
 on:
   workflow_call:
@@ -34,10 +34,14 @@ jobs:
           cargo cyclonedx --manifest-path "$SIMFORGE_CLI_MANIFEST" --format json --spec-version 1.5 \
             --target all --override-filename simforge.cdx
           mv "$(dirname "$SIMFORGE_CLI_MANIFEST")/simforge.cdx.json" "sbom/simforge-${version}.cdx.json"
-          native_manifest="$(python3 -c 'import sys,tomllib,pathlib;d=pathlib.Path(sys.argv[1]);print(d/tomllib.loads((d/"pyproject.toml").read_text())["tool"]["maturin"]["manifest-path"])' "$SIMFORGE_GYM_DIR")"
-          cargo cyclonedx --manifest-path "$native_manifest" --format json --spec-version 1.5 \
-            --target all --override-filename gym.cdx
-          mv "$(dirname "$native_manifest")/gym.cdx.json" "sbom/simforge-oss-gym-${version}.cdx.json"
+          # One SBOM per native Python dist (the Rust linked into its extension).
+          for entry in $SIMFORGE_PY_DISTS; do
+            dir="${entry%%:*}"; [[ "${entry##*:}" == native ]] || continue
+            read -r name manifest < <(python3 -c 'import sys,tomllib,pathlib;d=pathlib.Path(sys.argv[1]);t=tomllib.loads((d/"pyproject.toml").read_text());print(t["project"]["name"], d/t["tool"]["maturin"]["manifest-path"])' "$dir")
+            cargo cyclonedx --manifest-path "$manifest" --format json --spec-version 1.5 \
+              --target all --override-filename py.cdx
+            mv "$(dirname "$manifest")/py.cdx.json" "sbom/${name}-${version}.cdx.json"
+          done
           ls -la sbom
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

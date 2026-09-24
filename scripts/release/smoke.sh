@@ -115,12 +115,22 @@ m = re.match(r"(\d+\.\d+\.\d+)(?:-(alpha|beta|rc)\.(\d+))?$", sys.argv[1])
 print(m.group(1) + ({"alpha": "a", "beta": "b", "rc": "rc"}[m.group(2)] + m.group(3) if m.group(2) else ""))
 PY
 )"
-    # Dependencies from PyPI; the gym itself only from this release's files.
+    # Only this release's files for the five dists (no index); the gym's and
+    # timeline's native extensions must import; every dist must report the
+    # release version. Third-party deps (warp, mujoco, torch) are not smoked.
+    dists="simforge-oss-gym simforge-oss-timeline simforge-oss-gpu simforge-oss-physics simforge-oss-render"
+    for d in $dists; do
+      "$vpy" -m pip install -q --no-index --no-deps --find-links "$work/wheels" "$d==$pyver" \
+        || fail "pip install of the release wheel $d==$pyver"
+    done
     "$vpy" -m pip install -q gymnasium numpy >/dev/null || fail "installing gymnasium/numpy"
-    "$vpy" -m pip install -q --no-index --no-deps --find-links "$work/wheels" "simforge-oss-gym==$pyver" \
-      || fail "pip install of the release wheel simforge-oss-gym==$pyver"
-    "$vpy" -c "import simforge_oss_gym, simforge_oss_gym._native" || fail "import simforge_oss_gym"
-    report "$check" pass "$("$vpy" -m pip show simforge-oss-gym | grep -E '^Version' )" ;;
+    "$vpy" -c "import simforge_oss_gym._native, simforge_oss_timeline._native" || fail "native extensions do not import"
+    "$vpy" - "$pyver" $dists <<'PY' || fail "a dist reports the wrong version"
+import importlib.metadata as m, sys
+bad = [d for d in sys.argv[2:] if m.version(d) != sys.argv[1]]
+sys.exit(1 if bad else 0)
+PY
+    report "$check" pass "5 dists at $pyver from the release; gym and timeline extensions import" ;;
 
   native)
     check="native-$(plat)"

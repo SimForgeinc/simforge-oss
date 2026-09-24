@@ -36,7 +36,8 @@ cosign verify-attestation --type cyclonedx "$IMAGE" \
 ## SBOMs
 
 `simforge-<version>.cdx.json` (the CLI's Rust dependency graph),
-`simforge-oss-gym-<version>.cdx.json` (the wheel's native extension) and
+`simforge-oss-gym-<version>.cdx.json` and `simforge-oss-timeline-<version>.cdx.json`
+(the Rust in each native wheel) and
 `simforge-image-<version>.cdx.json` (the container, from syft) are CycloneDX
 1.5 documents attached to each release. The binary also embeds its dependency
 list (`cargo auditable`), so `cargo audit bin $(which simforge)` works offline.

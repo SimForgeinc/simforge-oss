@@ -1,8 +1,10 @@
 name: release-wheels
-# dist local-artifacts job: the simforge-oss-gym wheels (abi3: one wheel per
-# platform covers CPython >= 3.10) and the sdist. Uploaded as `artifacts-wheels-*`,
-# so dist's host step attaches them to the GitHub release. PyPI gets them only
-# when the release goes stable (promote.yml, trusted publishing).
+# dist local-artifacts job: the release's Python dists (layout.sh
+# SIMFORGE_PY_DISTS: gym, timeline, gpu, physics, render) at the CLI's version.
+# Native dists (maturin abi3: one wheel per platform covers CPython >= 3.10) on
+# every platform; pure wheels and all sdists once, on Linux x86_64. Uploaded as
+# `artifacts-wheels-*`, so dist's host step attaches them to the GitHub
+# release. PyPI gets them only when the release goes stable (promote.yml).
 on:
   workflow_call:
     inputs:
@@ -23,7 +25,6 @@ jobs:
         include:
           - { name: linux-x86_64, target: "", test: true }
           - { name: linux-aarch64, target: aarch64-unknown-linux-gnu, test: false }
-          - { name: sdist, target: sdist, test: false }
     name: wheel (${{ matrix.name }})
     runs-on: simforge-build
     container: ghcr.io/simforgeinc/simforge-release-build:2026-09-24
@@ -36,15 +37,16 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          if [[ "${{ matrix.target }}" == sdist ]]; then scripts/release/build-wheel.sh wheels --sdist
-          elif [[ -n "${{ matrix.target }}" ]]; then scripts/release/build-wheel.sh wheels --target "${{ matrix.target }}"
-          else scripts/release/build-wheel.sh wheels; fi
+          if [[ -n "${{ matrix.target }}" ]]; then scripts/release/build-wheels.sh wheels --target "${{ matrix.target }}"
+          else scripts/release/build-wheels.sh wheels --all; fi
       - name: Import test
         if: matrix.test
         shell: bash
         run: |
-          python3 -m venv /tmp/venv && /tmp/venv/bin/pip install -q wheels/*.whl
-          /tmp/venv/bin/python -c "import simforge_oss_gym, simforge_oss_gym._native as n; print(simforge_oss_gym.__name__, n.__name__)"
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install -q --no-deps wheels/*.whl
+          /tmp/venv/bin/pip install -q gymnasium numpy
+          /tmp/venv/bin/python -c "import simforge_oss_gym._native, simforge_oss_timeline._native; print('native extensions import')"
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: wheels/*
@@ -80,14 +82,15 @@ jobs:
           cargo install --locked cargo-about@0.9.2
       - name: Build
         shell: bash
-        run: scripts/release/build-wheel.sh wheels
+        run: scripts/release/build-wheels.sh wheels
       - name: Import test
         shell: bash
         run: |
           python -m venv venv
           if [[ -x venv/bin/python ]]; then py=venv/bin/python; else py=venv/Scripts/python.exe; fi
-          "$py" -m pip install -q wheels/*.whl
-          "$py" -c "import simforge_oss_gym, simforge_oss_gym._native as n; print(simforge_oss_gym.__name__, n.__name__)"
+          "$py" -m pip install -q --no-deps wheels/*.whl
+          "$py" -m pip install -q gymnasium numpy
+          "$py" -c "import simforge_oss_gym._native, simforge_oss_timeline._native; print('native extensions import')"
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: wheels/*

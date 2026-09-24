@@ -41,8 +41,13 @@ host's storage volume, per the operator runbook), branch `release/v<version>`.
 1. **Version.** Semver `0.y.z`; a contract change or new command bumps `y`, fixes
    bump `z`. Candidates are `X.Y.Z-rc.N`. Set it in the CLI crate
    (`$SIMFORGE_CLI_MANIFEST` in `scripts/release/layout.sh`, or
-   `[workspace.package].version`) and in the gym's `pyproject.toml` in PEP 440
-   spelling (`0.2.0rc0`). Run `cargo update -w` so `Cargo.lock` agrees.
+   `[workspace.package].version`) and in all five Python dists
+   (`SIMFORGE_PY_DISTS` in layout.sh: gym, timeline, gpu, physics, render) in
+   PEP 440 spelling (`0.2.0rc0`), including the gym's `==` pins on its
+   siblings. Run `cargo update -w` in each Cargo workspace so the locks agree.
+   Nothing goes to crates.io: the CLI and renderer ship as cargo-dist binaries
+   only (the renderer's patched Bevy cannot be published); crates.io holds the
+   `simforge` name reservation.
 2. **minCli.** If a contract changed so that older CLIs cannot read new
    packages, raise the `minCli` table the hosted exporter reads (in
    simcloud-platform; say so in the PR and hand the pin-bump PR to the merger).
@@ -113,9 +118,9 @@ re-run from the Actions page if the cause was transient.
   prerelease 48 h after it was published if the smoke and GPU smoke passed and
   no P1 / release-blocker issue is open. The user can veto by opening one.
 - Promotion flips the release to latest, tags the image `:X.Y` and `:latest`,
-  publishes the wheels to PyPI (trusted publishing), commits the formula to
+  publishes the five Python dists to PyPI (trusted publishing), commits the formula to
   SimForgeinc/homebrew-tap and deploys the docs. Check each landed:
-  `pip index versions simforge-oss-gym`, `brew info simforgeinc/tap/simforge`,
+  `pip index versions simforge-oss-gym` (and the other four), `brew info simforgeinc/tap/simforge`,
   `docker buildx imagetools inspect ghcr.io/simforgeinc/simforge:latest`,
   docs.simforge.ai.
 - Then open the pin-bump PR in simcloud-platform (Cargo/uv git deps to the new

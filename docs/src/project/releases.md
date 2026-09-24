@@ -2,8 +2,9 @@
 
 ## Versions
 
-The CLI and the wheel share one version, semver `0.y.z`, starting at 0.2.0.
-Release candidates are `vX.Y.Z-rc.N` (`X.Y.ZrcN` on PyPI).
+The CLI and the five Python packages share one version, semver `0.y.z`,
+starting at 0.2.0. Release candidates are `vX.Y.Z-rc.N` (`X.Y.ZrcN` on PyPI).
+The Rust crates are not published to crates.io; the CLI ships as binaries.
 
 Contract identities travel inside the artifacts, not in the version number:
 the package schema (`simforge.scenario-package/v1`), the trace format and its

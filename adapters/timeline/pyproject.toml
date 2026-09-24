@@ -32,6 +32,7 @@ strip = true
 include = [
     { path = "simforge_oss_timeline/py.typed", format = ["sdist", "wheel"] },
     { path = "simforge_oss_timeline/_native.pyi", format = ["sdist", "wheel"] },
+    { path = "simforge_oss_timeline/THIRD_PARTY_NOTICES", format = ["sdist", "wheel"] },
     { path = "tests/**/*", format = "sdist" },
 ]
 

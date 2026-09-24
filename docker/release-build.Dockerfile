@@ -42,7 +42,7 @@ RUN set -eux; \
     chmod -R a+rwX /opt/rustup /opt/cargo
 
 RUN set -eux; \
-    /opt/python/cp312-cp312/bin/pip install --no-cache-dir "ziglang==${ZIG_VERSION}" "maturin==${MATURIN_VERSION}"; \
+    /opt/python/cp312-cp312/bin/pip install --no-cache-dir "ziglang==${ZIG_VERSION}" "maturin==${MATURIN_VERSION}" "build==1.6.1"; \
     ln -s /opt/python/cp312-cp312/bin/python-zig /usr/local/bin/python-zig 2>/dev/null || true; \
     ln -s /opt/python/cp312-cp312/bin/maturin /usr/local/bin/maturin; \
     printf '#!/bin/sh\nexec /opt/python/cp312-cp312/bin/python -m ziglang "$@"\n' > /usr/local/bin/zig; \

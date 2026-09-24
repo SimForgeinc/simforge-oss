@@ -1,7 +1,8 @@
 name: promote
 # Prerelease -> stable. Flips the GitHub release to latest, tags the image
 # :X.Y and :latest, publishes the wheels to PyPI (trusted publishing: this
-# workflow + the `pypi` environment are the registered publisher), commits the
+# workflow + the `pypi` environment are the registered publisher of each of the
+# five simforge-oss-* projects), commits the
 # Homebrew formula to SimForgeinc/homebrew-tap, and deploys the docs.
 #
 #   v0.2.x-v0.4.x: the user runs this by hand (workflow_dispatch); the job waits
@@ -133,11 +134,14 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       TAG: ${{ needs.eligibility.outputs.tag }}
     steps:
-      - name: Wheels and sdist from the release (the signed, smoked bytes)
+      - name: Wheels and sdists of the five dists from the release (the signed, smoked bytes)
         run: |
           mkdir -p dist
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist -p '*.whl' -p 'simforge_oss_gym-*.tar.gz'
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist -p '*.whl' -p 'simforge_oss_*.tar.gz'
           ls -la dist
+          for d in gym timeline gpu physics render; do
+            ls dist/simforge_oss_${d}-*.tar.gz >/dev/null || { echo "missing the simforge-oss-$d sdist" >&2; exit 1; }
+          done
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
 
   docs:

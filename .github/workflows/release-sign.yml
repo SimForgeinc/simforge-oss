@@ -50,7 +50,7 @@ jobs:
             assets/*.ps1
             assets/*.rb
             assets/simforge-[0-9]*.cdx.json
-            assets/simforge-oss-gym-*.cdx.json
+            assets/simforge-oss-*.cdx.json
             assets/sha256.sum
             assets/source.tar.gz
       - name: Upload the signature bundles
