@@ -47,9 +47,9 @@ export const RENDER_TIMELINE_HELP = [
   },
   {
     name: 'scene-state',
-    summary: 'sample the timeline into a scene-state.v1 document at a fixed frame rate (scen-play, goldens)',
+    summary: 'sample the timeline into a scene-state.v1 document at a fixed frame rate (simforge-render job sceneState, goldens)',
     usage: ['simforge render scene-state <timeline.json[.gz]> --fps <n> [--start <s>] [--end <s>] [--yaw-only] --out <scene-state.json>'],
-    notes: ['frame k is sampled at start + k/fps; heights are the baked timeline z (play with scen-play --authored-height)'],
+    notes: ['frame k is sampled at start + k/fps; heights are the baked timeline z'],
   },
   {
     name: 'parity',

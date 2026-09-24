@@ -109,6 +109,29 @@ export const RenderSensorSourceHostSchema = z.strictObject({
   }),
 });
 
+/** The two native render presets (`render_core::render_config::Preset`). */
+export const RENDER_PRESETS = ['training', 'showcase'] as const;
+export type RenderPreset = typeof RENDER_PRESETS[number];
+
+/**
+ * The native render configuration a job asks for: one of the two presets
+ * plus dotted `RenderConfig` overrides (`simforge-render serve
+ * --print-render-config` lists every key; the renderer refuses unknown keys
+ * and invalid values). `geometryLod`: `auto` (default) draws distant heavy
+ * meshes from the map's geometry LOD derivative when the map carries one;
+ * `off` renders every mesh at full detail. Both are recorded in the run's
+ * evidence.
+ */
+export const RenderRequestSchema = z.strictObject({
+  preset: z.enum(RENDER_PRESETS).optional(),
+  set: z.record(
+    z.string().regex(/^[a-z][A-Za-z0-9]*(\.[a-z][A-Za-z0-9]*)+$/),
+    z.union([z.string().max(64), z.number().finite(), z.boolean(), z.record(z.string(), z.union([z.string().max(64), z.number().finite()]))]),
+  ).optional(),
+  geometryLod: z.enum(['auto', 'off']).optional(),
+});
+export type RenderRequest = z.infer<typeof RenderRequestSchema>;
+
 // Bounds untrusted declaration size and linear validation work, not a GPU
 // descriptor table. Garching has 27,879 source-inclusive members; 65,536 leaves
 // >2x headroom including the three non-map native assets.
@@ -154,6 +177,8 @@ export const RenderIntentV1Schema = z.strictObject({
    * refuses an intent that also declares a timeline.
    */
   motionSource: z.enum(RENDER_MOTION_SOURCES).optional(),
+  /** Native render configuration (preset, overrides, geometry LOD); absent is the `showcase` preset with LOD `auto`. */
+  render: RenderRequestSchema.optional(),
 }).check((ctx) => {
   const ids = new Set<string>();
   ctx.value.assets.forEach((asset, index) => {

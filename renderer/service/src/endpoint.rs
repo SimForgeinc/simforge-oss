@@ -40,7 +40,10 @@ impl Listener {
     pub fn bind(endpoint: &str) -> Result<Self> {
         let inner = imp::Listener::bind(endpoint)
             .with_context(|| format!("bind {}", describe(endpoint)))?;
-        Ok(Self { inner, endpoint: endpoint.to_owned() })
+        Ok(Self {
+            inner,
+            endpoint: endpoint.to_owned(),
+        })
     }
 
     /// The endpoint as given on the command line.
@@ -117,7 +120,9 @@ mod imp {
                 Err(err) if err.kind() == io::ErrorKind::NotFound => {}
                 Err(err) => return Err(err),
             }
-            Ok(Self { listener: UnixListener::bind(path)? })
+            Ok(Self {
+                listener: UnixListener::bind(path)?,
+            })
         }
 
         pub fn accept(&mut self) -> io::Result<Connection> {
@@ -272,13 +277,17 @@ mod imp {
 
         let mut needed = 0u32;
         // SAFETY: a zero-length query only reports the required size.
-        let probe = unsafe { GetTokenInformation(token.0, TokenUser, ptr::null_mut(), 0, &mut needed) };
+        let probe =
+            unsafe { GetTokenInformation(token.0, TokenUser, ptr::null_mut(), 0, &mut needed) };
         // SAFETY: GetLastError is always safe to call.
         if probe == 0 && unsafe { GetLastError() } != ERROR_INSUFFICIENT_BUFFER {
             return Err(io::Error::last_os_error());
         }
         if needed == 0 {
-            return Err(io::Error::new(io::ErrorKind::Other, "token user query reported no size"));
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "token user query reported no size",
+            ));
         }
         // u64 cells keep TOKEN_USER's pointer field aligned.
         let mut buffer = vec![0u64; (needed as usize).div_ceil(std::mem::size_of::<u64>())];
@@ -322,7 +331,11 @@ mod imp {
         pub fn bind(endpoint: &str) -> io::Result<Self> {
             validate_pipe_name(endpoint)?;
             let descriptor = SecurityDescriptor::for_sid(&current_user_sid()?)?;
-            let mut listener = Self { name: wide(endpoint), descriptor, pending: None };
+            let mut listener = Self {
+                name: wide(endpoint),
+                descriptor,
+                pending: None,
+            };
             let first = listener.create_instance(true)?;
             listener.pending = Some(first);
             Ok(listener)

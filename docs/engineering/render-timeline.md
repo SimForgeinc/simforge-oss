@@ -371,7 +371,7 @@ failure.
 simforge render timeline trace.json.gz --map <mapId> --out scenario.timeline.json   # prints the key and digests
 simforge render sample scenario.timeline.json --t 3.04 [--actor <id>]
 simforge render scene-state scenario.timeline.json --fps 24 --out scene.json          # scene-state.v1 projection
-scen-play --scene-state scene.json --authored-height ...                             # Bevy playback of it
+simforge-render job --job job.json                                                  # Bevy playback of it (render-job/v2, sceneState: scene.json)
 simforge render parity scenario.timeline.json observed-frames.jsonl --profile bevy
 ```
 

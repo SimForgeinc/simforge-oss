@@ -604,7 +604,7 @@ Use repository working directory. Readiness includes the
 `NativeRenderClient` hello, not socket-file existence alone:
 
 ```sh
-"$I/native-runtime/env.sh" python -c 'from simforge_native.client import NativeRenderClient; c=NativeRenderClient("/tmp/situation-nurec-native.sock"); print(c.hello); c.close()'
+"$I/native-runtime/env.sh" python -c 'from simforge_render.client import NativeRenderClient; c=NativeRenderClient("/tmp/situation-nurec-native.sock"); print(c.hello); c.close()'
 ```
 
 `implementation/native-runtime/environment-manifest.json` records source,

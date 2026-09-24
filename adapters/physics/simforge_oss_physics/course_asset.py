@@ -217,7 +217,7 @@ def write_course_resources(workload: Workload, resource_dir: Path) -> dict[str, 
     return manifest
 
 
-def render_scene_spec(manifest: dict[str, Any], resource_dir: Path, *, profile: str = "sensor") -> dict[str, Any]:
+def render_scene_spec(manifest: dict[str, Any], resource_dir: Path, *, preset: str = "training") -> dict[str, Any]:
     """Renderer service prewarm ``SceneSpec`` (camelCase, absolute GLB paths)
     for the course. Lighting is left to the renderer's declared defaults; the
     exported scene-state carries weather/timeOfDay per tick."""
@@ -227,7 +227,7 @@ def render_scene_spec(manifest: dict[str, Any], resource_dir: Path, *, profile: 
     goal = manifest["geometry"]["goalXM"]
     return {
         "glbs": glbs,
-        "profile": profile,
+        "render": {"preset": preset},
         "nearM": 0.05,
         "farM": float(math.ceil(goal + 2.0 * GROUND_HALF_EXTENT_M)),
         "warmupFrames": 10,

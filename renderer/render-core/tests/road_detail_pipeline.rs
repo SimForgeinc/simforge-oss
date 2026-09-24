@@ -30,7 +30,11 @@ fn tiny_image(rgba: [u8; 4], srgb: bool) -> Image {
         TextureFormat::Rgba8Unorm
     };
     Image::new(
-        Extent3d { width: 4, height: 4, depth_or_array_layers: 1 },
+        Extent3d {
+            width: 4,
+            height: 4,
+            depth_or_array_layers: 1,
+        },
         TextureDimension::D2,
         rgba.repeat(16),
         format,
@@ -49,7 +53,10 @@ fn road_detail_material_pipelines_compile() {
     let mut app = App::new();
     app.add_plugins((
         DefaultPlugins
-            .set(bevy::asset::AssetPlugin { file_path: "/".into(), ..default() })
+            .set(bevy::asset::AssetPlugin {
+                file_path: "/".into(),
+                ..default()
+            })
             .set(WindowPlugin {
                 primary_window: None,
                 exit_condition: ExitCondition::DontExit,
@@ -58,7 +65,10 @@ fn road_detail_material_pipelines_compile() {
             .disable::<bevy::winit::WinitPlugin>()
             .disable::<bevy::audio::AudioPlugin>()
             .disable::<bevy::render::pipelined_rendering::PipelinedRenderingPlugin>()
-            .set(LogPlugin { filter: "warn,wgpu_core=warn,wgpu_hal=warn,naga=warn".into(), ..default() }),
+            .set(LogPlugin {
+                filter: "warn,wgpu_core=warn,wgpu_hal=warn,naga=warn".into(),
+                ..default()
+            }),
         ScheduleRunnerPlugin::run_loop(Duration::ZERO),
         render_core::road_detail::RoadDetailPlugin,
     ));
@@ -109,20 +119,30 @@ fn road_detail_material_pipelines_compile() {
         };
         app.world_mut()
             .resource_mut::<Assets<RoadDetailMaterial>>()
-            .add(RoadDetailMaterial { base: StandardMaterial::default(), extension })
+            .add(RoadDetailMaterial {
+                base: StandardMaterial::default(),
+                extension,
+            })
     };
     let plane = {
         let mut meshes = app.world_mut().resource_mut::<Assets<Mesh>>();
         meshes.add(Plane3d::default().mesh().size(20.0, 20.0))
     };
-    app.world_mut().spawn((Mesh3d(plane), MeshMaterial3d(material)));
+    app.world_mut()
+        .spawn((Mesh3d(plane), MeshMaterial3d(material)));
     app.world_mut().spawn((
-        DirectionalLight { illuminance: 50_000.0, ..default() },
+        DirectionalLight {
+            illuminance: 50_000.0,
+            ..default()
+        },
         Transform::IDENTITY.looking_to(Dir3::new(Vec3::new(0.3, -1.0, 0.2)).unwrap(), Vec3::Y),
     ));
     app.world_mut().spawn((
         Camera3d::default(),
-        Camera { order: 0, ..default() },
+        Camera {
+            order: 0,
+            ..default()
+        },
         Msaa::Off,
         Transform::from_xyz(0.0, 8.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
         RenderTarget::Image(target.into()),

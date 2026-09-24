@@ -1,0 +1,101 @@
+[
+  {
+    "version": "simforge.scene-state.v1",
+    "mapId": "yale-street",
+    "tick": 300,
+    "tickHz": 50.0,
+    "weather": {
+      "preset": "clear"
+    },
+    "timeOfDay": 12.0,
+    "actors": [
+      {
+        "id": "bus",
+        "kind": "spawn",
+        "catalogId": "vehicle.bus",
+        "actorClass": "truck",
+        "dims": {
+          "l": 8.0,
+          "w": 2.5,
+          "h": 3.2
+        },
+        "transform": {
+          "position": [
+            813.8829,
+            0.0,
+            -1635.2395
+          ],
+          "rotation": [
+            0.0,
+            0.2870434820652008,
+            0.0,
+            0.9579175710678101
+          ]
+        },
+        "velocity": [
+          0.0,
+          0.0,
+          -0.0
+        ]
+      },
+      {
+        "id": "ego",
+        "kind": "spawn",
+        "catalogId": "vehicle.ego",
+        "actorClass": "car",
+        "dims": {
+          "l": 4.8,
+          "w": 1.9,
+          "h": 1.5
+        },
+        "transform": {
+          "position": [
+            813.9555,
+            0.0,
+            -1640.6259
+          ],
+          "rotation": [
+            0.0,
+            0.28857722878456116,
+            0.0,
+            0.957456648349762
+          ]
+        },
+        "velocity": [
+          8.357499999999796,
+          0.0,
+          5.542500000001501
+        ]
+      },
+      {
+        "id": "ped",
+        "kind": "spawn",
+        "catalogId": "walker.ped",
+        "actorClass": "pedestrian",
+        "dims": {
+          "l": 0.6,
+          "w": 0.6,
+          "h": 1.75
+        },
+        "transform": {
+          "position": [
+            830.4833,
+            0.0,
+            -1630.4552
+          ],
+          "rotation": [
+            0.0,
+            -0.43640074133872986,
+            0.0,
+            0.8997523784637451
+          ]
+        },
+        "velocity": [
+          1.4049999999997753,
+          0.0,
+          -1.7825000000016569
+        ]
+      }
+    ]
+  }
+]

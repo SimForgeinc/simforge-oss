@@ -1,45 +1,67 @@
 {
   "sceneId": "yale-frame0",
   "mapId": "yale-street",
-  "profile": "sensor",
-  "description": "Spike corpus yale-street tiles 2_4/2_5/2_6/3_5 (lod0) + road layer at the W0 baseline-midblock frame-0 POV; the golden scene from scripts/renderer-spike/FINDINGS.md.",
+  "description": "Yale-street master (the same map world frame the retired spike tiles 2_4/2_5/2_6/3_5 + road layer came from) at the W0 baseline-midblock frame-0 POV (scripts/renderer-spike/FINDINGS.md): one explicit service camera, static scene, training preset. Ticks 0..9 render; the last one is hashed.",
+  "corpusRootEnv": "SIMFORGE_CORPUS_YALE",
   "corpusFiles": [
-    "tile_2_4.glb",
-    "tile_2_5.glb",
-    "tile_2_6.glb",
-    "tile_3_5.glb",
-    "road.glb"
+    "master.gltf"
   ],
-  "rendererArgs": {
-    "eye": [
-      580.45,
-      14.44,
-      -1655.66
-    ],
-    "target": [
-      590.4,
-      14.35,
-      -1648.96
-    ],
-    "fov": 58,
-    "width": 736,
-    "height": 416,
-    "warmup": 20,
-    "frames": 30,
-    "cameras": 1,
-    "sunElev": 38,
-    "sunAzim": 145,
-    "lux": 28000,
-    "ambient": 0.6
+  "job": {
+    "scene": {
+      "lighting": {
+        "sun_elev_deg": 38,
+        "sun_azim_deg": 145,
+        "sun_lux": 28000,
+        "ambient": 0.6
+      },
+      "render": {
+        "preset": "training"
+      },
+      "warmupFrames": 20
+    },
+    "rig": {
+      "cameras": [
+        {
+          "sensorId": "cam0",
+          "width": 736,
+          "height": 416,
+          "fovDeg": 58,
+          "eye": [
+            580.45,
+            14.44,
+            -1655.66
+          ],
+          "target": [
+            590.4,
+            14.35,
+            -1648.96
+          ]
+        }
+      ]
+    },
+    "ticks": {
+      "start": 0,
+      "count": 10
+    },
+    "passes": [
+      "rgb",
+      "id",
+      "depth"
+    ]
   },
   "expectedPasses": [
-    "rgb0",
-    "id0",
-    "depth0"
+    "cam0.rgb",
+    "cam0.id",
+    "cam0.depth"
   ],
+  "passPaths": {
+    "cam0.rgb": "cam0/00000009.rgb.png",
+    "cam0.id": "cam0/00000009.id.png",
+    "cam0.depth": "cam0/00000009.depth.f32.bin"
+  },
   "idPass": {
     "keys": [
-      "id0"
+      "cam0.id"
     ],
     "minInstances": 20,
     "minCoverage": 0.2

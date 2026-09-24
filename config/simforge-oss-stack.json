@@ -165,7 +165,7 @@
       "registry": "pypi"
     },
     {
-      "name": "simforge-oss-native-renderer",
+      "name": "simforge-oss-render",
       "version": "0.1.0rc67",
       "path": "renderer/service/python",
       "role": "native-renderer-client",

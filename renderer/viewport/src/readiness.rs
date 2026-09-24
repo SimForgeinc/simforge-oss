@@ -120,7 +120,11 @@ impl GpuSettle {
         let sample = pending.samples();
         if sample != self.last_sample {
             self.last_sample = sample;
-            self.idle_frames = if pending.is_idle() { self.idle_frames + 1 } else { 0 };
+            self.idle_frames = if pending.is_idle() {
+                self.idle_frames + 1
+            } else {
+                0
+            };
         }
         self.idle_frames >= GPU_IDLE_FRAMES
     }

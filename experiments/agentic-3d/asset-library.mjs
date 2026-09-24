@@ -8,11 +8,11 @@
 // Generator exports are ~1.9-unit center-origin cubes whatever the object is. Every
 // gallery/generated GLB the renderer sees is a NORMALIZED derivative: y-up,
 // +X-forward, ground-origin, TRUE SCALE from the declared dims (normalize-glb.mjs).
-// scen-play draws them with scaleToDims:false, so what the catalog says is what
+// the renderer (simforge-render) draws them with scaleToDims:false, so what the catalog says is what
 // is drawn — no runtime length lookup that silently degrades to scale 1.0.
 //
 // Every generated asset is QA'd BEFORE authors may rely on it: a deterministic
-// scen-play render of the asset beside the ego sedan (ground-plane world, chase
+// `simforge-render job` render of the asset beside the ego sedan (ground-plane world, chase
 // camera + top view) is judged by a vision model against the label and dims;
 // the verdict is persisted next to the asset and drives status:
 //   candidate -> approved | rejected   (search ranks approved first; rejected
@@ -39,7 +39,7 @@ export const GENERATED_ASSETS = process.env.SIMFORGE_GENERATED_ASSETS ?? path.jo
 export const MODELS_DIR = path.join(A3D, 'models');
 export const PED_MODELS = path.join(A3D, 'ped-models');
 export const ASSETS_DIR = path.join(A3D, 'assets');
-export const SCEN_PLAY = path.join(ROOT, 'renderer/target/release/scen-play');
+export const SIMFORGE_RENDER = process.env.SIMFORGE_RENDER_BIN ?? path.join(ROOT, 'renderer/target/release/simforge-render');
 const GATEWAY = process.env.SIMFORGE_GATEWAY ?? 'http://127.0.0.1:4141/v1/chat/completions';
 const QA_MODEL = process.env.SIMFORGE_ASSET_QA_MODEL ?? 'openai-codex/gpt-5.6-sol';
 const CARLA_CATALOG = path.join(ROOT, 'catalog/vehicles-carla/catalog-models.json');
@@ -71,7 +71,7 @@ export const resolveEngineId = (id) => { try { return engineCatalog.resolveCatal
  *
  * Three kinds of entry:
  *   engine  — actor ids from the engine catalog (roles). `render` says what
- *             scen-play draws for it: a CARLA GLB, a QA'd gallery derivative,
+ *             the renderer draws for it: a CARLA GLB, a QA'd gallery derivative,
  *             or the procedural primitive. (pass b1/rr1 burned 55 iterations on
  *             CARLA blueprint ids that exist as render models but NOT as engine
  *             actor ids — those are never offered as actor ids again.)
@@ -220,7 +220,7 @@ function ensureGalleryDerivative(e) {
   return out;
 }
 
-/** One flat catalog-models.json over the whole library for scen-play, plus the pedestrian catalog. */
+/** One flat catalog-models.json over the whole library for the renderer, plus the pedestrian catalog. */
 export function rebuildModelsDir(lib) {
   fs.mkdirSync(MODELS_DIR, { recursive: true });
   const out = {};
@@ -259,8 +259,8 @@ export function rebuildModelsDir(lib) {
   } catch { /* no overrides file */ }
   const stable = (obj) => Object.fromEntries(Object.keys(obj).sort().map((k) => [k, obj[k]]));
   fs.writeFileSync(path.join(MODELS_DIR, 'catalog-models.json'), JSON.stringify(stable(out), null, 2));
-  // Pedestrian catalog: walker ids for exact matches + generic entries; scen-play assigns
-  // generic pedestrians deterministically across this list.
+  // Pedestrian catalog: walker ids plus the exact library ids. The renderer resolves
+  // exact catalog ids only (it never substitutes a walker for an unknown id).
   fs.mkdirSync(PED_MODELS, { recursive: true });
   const walkers = {};
   const humans = Object.entries(ped).filter(([id]) => /pedestrian\.(adult|child|elderly|worker|teen)/.test(id));
@@ -294,50 +294,111 @@ export function libraryDigest() {
 // Asset QA: render beside the ego sedan, vision verdict, status promotion
 // ---------------------------------------------------------------------------
 
-/** Minimal simforge.scene-state.v1: ego sedan at the origin heading +X, the asset BESIDE it on the
- *  left (same distance from the chase camera, so size compares directly). Deterministic. */
+/** Flat 1200 m ground plane at y = 0 (what the retired playback binary's `--ground-plane` drew):
+ *  a self-contained glTF (one quad, embedded buffer, matte grey), written once. */
+function groundPlaneGltf() {
+  const file = path.join(MODELS_DIR, 'qa-ground-plane.gltf');
+  if (fs.existsSync(file)) return file;
+  const h = 600;
+  const positions = new Float32Array([-h, 0, -h, h, 0, -h, h, 0, h, -h, 0, h]);
+  const normals = new Float32Array([0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]);
+  const indices = new Uint16Array([0, 2, 1, 0, 3, 2]); // counter-clockwise seen from +Y
+  const bytes = Buffer.concat([Buffer.from(positions.buffer), Buffer.from(normals.buffer), Buffer.from(indices.buffer)]);
+  const gltf = {
+    asset: { version: '2.0', generator: 'experiments/agentic-3d asset QA' },
+    scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0, name: 'qa-ground-plane' }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0, NORMAL: 1 }, indices: 2, material: 0 }] }],
+    materials: [{ name: 'ground', pbrMetallicRoughness: { baseColorFactor: [0.0953, 0.1022, 0.1144, 1], metallicFactor: 0, roughnessFactor: 0.95 } }],
+    buffers: [{ byteLength: bytes.length, uri: `data:application/octet-stream;base64,${bytes.toString('base64')}` }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: 48, target: 34962 },
+      { buffer: 0, byteOffset: 48, byteLength: 48, target: 34962 },
+      { buffer: 0, byteOffset: 96, byteLength: 12, target: 34963 },
+    ],
+    accessors: [
+      { bufferView: 0, componentType: 5126, count: 4, type: 'VEC3', min: [-h, 0, -h], max: [h, 0, h] },
+      { bufferView: 1, componentType: 5126, count: 4, type: 'VEC3' },
+      { bufferView: 2, componentType: 5123, count: 6, type: 'SCALAR' },
+    ],
+  };
+  fs.mkdirSync(MODELS_DIR, { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(gltf));
+  return file;
+}
+
+/** The render service's scene-state stream (one simforge.scene-state.v1 document per tick): ego sedan
+ *  at the origin heading +X, the asset BESIDE it on the left (same distance from the chase camera, so
+ *  size compares directly). Deterministic. */
 function qaScene(entry, ticks = 3) {
   const d = entry.dims ?? { l: 1, w: 1, h: 1 };
   const aheadM = Math.max(0, (d.l - 4.7) / 2) + 1.5; // long assets edge forward so nothing hides behind the ego
   const leftM = 1.82 / 2 + 1.6 + d.w / 2; // left of a +X-heading ego is -Z
-  const asset = { id: 'asset', catalogId: entry.id, actorClass: entry.class === 'pedestrian' ? 'pedestrian' : 'car', dims: { l: d.l, w: d.w, h: d.h } };
-  const frames = [];
+  const actor = (id, kind, catalogId, actorClass, dims, position) => ({
+    id, kind, catalogId, actorClass, dims, transform: { position, rotation: [0, 0, 0, 1] }, velocity: [0, 0, 0],
+  });
+  const stream = [];
   for (let t = 0; t < ticks; t++) {
-    frames.push({ tick: t, t: t * 0.1, actors: [
-      { id: 'ego', kind: t === 0 ? 'spawn' : 'update', position: [0, 0, 0], rotation: [0, 0, 0, 1], yawRad: 0, velocity: [0, 0, 0], acceleration: [0, 0, 0] },
-      { id: 'asset', kind: t === 0 ? 'spawn' : 'update', position: [aheadM, 0, -leftM], rotation: [0, 0, 0, 1], yawRad: 0, velocity: [0, 0, 0], acceleration: [0, 0, 0] },
-    ] });
+    const kind = t === 0 ? 'spawn' : 'update';
+    stream.push({
+      version: 'simforge.scene-state.v1', mapId: 'asset-qa', tick: t, tickHz: 10,
+      weather: { preset: 'clear' }, timeOfDay: 12, groundY: 0,
+      actors: [
+        actor('ego', kind, 'vehicle.sedan', 'car', { l: 4.7, w: 1.82, h: 1.45 }, [0, 0, 0]),
+        actor('asset', kind, entry.id, entry.class === 'pedestrian' ? 'pedestrian' : 'car', { l: d.l, w: d.w, h: d.h }, [aheadM, 0, -leftM]),
+      ],
+    });
   }
-  return { version: 'simforge.scene-state.v1', mapId: 'asset-qa', frame: 'scene-yup', dt: 0.1, tickHz: 10, tickCount: ticks,
-    weather: { preset: 'clear', fogDensity: 0, rainIntensity: 0, wetness: 0 }, timeOfDay: 12, profile: 'sensor', groundY: 0,
-    actors: [{ id: 'ego', catalogId: 'vehicle.sedan', actorClass: 'car', dims: { l: 4.7, w: 1.82, h: 1.45 } }, asset], frames };
+  return { stream, aheadM, leftM };
 }
 
-/** Render the QA views for one entry. Returns { chase, top, visuals } paths or throws. */
+/**
+ * Render the QA views for one entry with `simforge-render job`: a chase
+ * camera 9 m behind / 3 m above the ego aimed 8 m ahead of it (the retired
+ * playback follow camera) and a top-down view centred between ego and asset (image
+ * up = ego forward). The service never draws a proxy for a model it cannot
+ * load (no allowPrimitiveActors), so a finished render drew the asset's GLB.
+ * Returns { chase, top } PNG paths or throws.
+ */
 export function renderAssetQa(entry, outDir) {
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
-  const scenePath = path.join(outDir, 'scene.json');
-  fs.writeFileSync(scenePath, JSON.stringify(qaScene(entry)));
-  const args = ['--ground-plane', '--scene-state', scenePath, '--out-dir', outDir, '--camera', 'follow', '--ticks', '3', '--warmup', '40',
-    '--no-id-pass', '--jpeg', '92', '--top-every', '1', '--top-dist', '4', '--top-height', '14', '--ground-y', '0',
-    '--vehicle-models', MODELS_DIR, '--pedestrian-models', PED_MODELS, '--strict-models'];
-  let r = run(SCEN_PLAY, args, { timeout: 180_000, killSignal: 'SIGKILL' });
-  if (r.status !== 0 && /unexpected argument '--strict-models'/.test(r.stderr)) {
-    r = run(SCEN_PLAY, args.filter((a) => a !== '--strict-models'), { timeout: 180_000, killSignal: 'SIGKILL' });
-  }
+  const { stream, aheadM, leftM } = qaScene(entry);
+  const scenePath = path.join(outDir, 'scene-state.json');
+  fs.writeFileSync(scenePath, JSON.stringify(stream));
+  const attach = (offsetM, pitchDeg) => ({ actorId: 'ego', offsetM, pitchDeg, hostVisible: true });
+  const job = {
+    schema: 'simforge.render-job/v2',
+    scene: {
+      glbs: [groundPlaneGltf()],
+      lighting: { sun_elev_deg: 38, sun_azim_deg: 145, sun_lux: 28000, ambient: 0.6 },
+      render: { preset: 'training' },
+      warmupFrames: 40,
+      vehicleModels: MODELS_DIR,
+      pedestrianModels: PED_MODELS,
+    },
+    sceneState: scenePath,
+    rig: { cameras: [
+      { sensorId: 'chase', width: 736, height: 416, fovDeg: 58, eye: [0, 0, 0], target: [0, 0, 1],
+        attach: attach([-9, 0, 3], -Math.atan2(3, 17) * 180 / Math.PI) },
+      { sensorId: 'top', width: 736, height: 416, fovDeg: 58, eye: [0, 0, 0], target: [0, 0, 1],
+        attach: attach([aheadM / 2, -leftM / 2, 14], -90) },
+    ] },
+    ticks: { start: 0, count: stream.length },
+    passes: ['rgb'],
+    outDir,
+  };
+  const jobPath = path.join(outDir, 'job.json');
+  fs.writeFileSync(jobPath, JSON.stringify(job, null, 2));
+  const r = run(SIMFORGE_RENDER, ['job', '--job', jobPath], { timeout: 180_000, killSignal: 'SIGKILL' });
   if (r.status !== 0) throw new Error(`asset QA render failed: ${r.stderr.slice(-600)}`);
-  const chase = path.join(outDir, 'frame-0002.rgb.jpg');
-  const top = path.join(outDir, 'frame-0002.top.jpg');
+  const last = String(stream.length - 1).padStart(8, '0');
+  const chase = path.join(outDir, 'chase', `${last}.rgb.png`);
+  const top = path.join(outDir, 'top', `${last}.rgb.png`);
   if (!fs.existsSync(chase)) throw new Error('asset QA render produced no chase frame');
-  let visuals = null;
-  try { visuals = readJson(path.join(outDir, 'actor-visuals.json')); } catch { /* older binary */ }
-  const drawn = visuals?.actors?.[entry.id]?.path?.kind ?? null;
-  if (drawn && drawn !== 'glb') throw new Error(`asset QA: renderer drew ${drawn} for ${entry.id} (GLB not loaded)`);
-  return { chase, top: fs.existsSync(top) ? top : null, visuals };
+  return { chase, top: fs.existsSync(top) ? top : null };
 }
 
-const imgPart = (p) => ({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${fs.readFileSync(p).toString('base64')}` } });
+const imgPart = (p) => ({ type: 'image_url', image_url: { url: `data:image/${p.endsWith('.png') ? 'png' : 'jpeg'};base64,${fs.readFileSync(p).toString('base64')}` } });
 
 async function llm(model, messages, extra = {}) {
   for (let attempt = 1; ; attempt++) {
@@ -431,7 +492,7 @@ export async function qaAsset(lib, entry) {
     }
     result = { at: new Date().toISOString(), verdict: judged.verdict, model: judged.model, reasons: judged.reasons,
       chase: path.relative(ROOT, views.chase), top: views.top ? path.relative(ROOT, views.top) : null,
-      drawn: views.visuals?.actors?.[entry.id]?.path ?? null, sha256: entry.sha256 ?? null };
+      sha256: entry.sha256 ?? null };
   } catch (e) {
     result = { at: new Date().toISOString(), verdict: 'rejected', error: String(e).slice(0, 600) };
   }

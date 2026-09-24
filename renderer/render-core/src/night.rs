@@ -32,25 +32,61 @@ const MOON_RADIUS_KM: f64 = 1_737.4;
 /// Inclination of the lunar equator to the ecliptic (Cassini), degrees.
 const LUNAR_EQUATOR_INCLINATION_DEG: f64 = 1.54242;
 
-fn default_year() -> i32 { 2026 }
-fn default_day() -> u16 { 172 }
+fn default_year() -> i32 {
+    2026
+}
+fn default_day() -> u16 {
+    172
+}
 // 06:25 PDT at the corpus site, the Lookdev Lab's canonical hour.
-fn default_minutes() -> f32 { 805.0 }
-fn default_lat() -> f64 { 37.4419 }
-fn default_lon() -> f64 { -122.1430 }
-fn default_natural_lux() -> f32 { 0.002 }
-fn default_skyglow_lux() -> f32 { 0.05 }
-fn default_star_mag() -> f32 { 6.5 }
-fn default_fixture_budget() -> usize { 12 }
-fn default_cloud_quality() -> CloudQuality { CloudQuality::Scalable }
-fn default_wind() -> [f32; 2] { [12.0, 4.0] }
-fn default_cloud_density() -> f32 { 1.0 }
-fn default_cloud_kind() -> f32 { 0.85 }
-fn default_cloud_base() -> f32 { 1_200.0 }
-fn default_cloud_top() -> f32 { 2_800.0 }
-fn default_sky_lift() -> f32 { 120.0 }
-fn default_exposure_offset() -> f32 { 0.0 }
-fn default_window_mode() -> WindowMode { WindowMode::SyntheticFacade }
+fn default_minutes() -> f32 {
+    805.0
+}
+fn default_lat() -> f64 {
+    37.4419
+}
+fn default_lon() -> f64 {
+    -122.1430
+}
+fn default_natural_lux() -> f32 {
+    0.002
+}
+fn default_skyglow_lux() -> f32 {
+    0.05
+}
+fn default_star_mag() -> f32 {
+    6.5
+}
+fn default_fixture_budget() -> usize {
+    12
+}
+fn default_cloud_quality() -> CloudQuality {
+    CloudQuality::Scalable
+}
+fn default_wind() -> [f32; 2] {
+    [12.0, 4.0]
+}
+fn default_cloud_density() -> f32 {
+    1.0
+}
+fn default_cloud_kind() -> f32 {
+    0.85
+}
+fn default_cloud_base() -> f32 {
+    1_200.0
+}
+fn default_cloud_top() -> f32 {
+    2_800.0
+}
+fn default_sky_lift() -> f32 {
+    120.0
+}
+fn default_exposure_offset() -> f32 {
+    0.0
+}
+fn default_window_mode() -> WindowMode {
+    WindowMode::SyntheticFacade
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -235,10 +271,18 @@ pub struct NightFixture {
     #[serde(default)]
     pub rule: String,
 }
-fn default_fixture_lumens() -> f32 { 4_000.0 }
-fn default_fixture_cct() -> f32 { 2_700.0 }
-fn default_fixture_range() -> f32 { 70.0 }
-fn default_fixture_cone() -> f32 { 70.0 }
+fn default_fixture_lumens() -> f32 {
+    4_000.0
+}
+fn default_fixture_cct() -> f32 {
+    2_700.0
+}
+fn default_fixture_range() -> f32 {
+    70.0
+}
+fn default_fixture_cone() -> f32 {
+    70.0
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MoonState {
@@ -455,8 +499,8 @@ fn solve(d: f64) -> SolarSystem {
         sun_ecl.y * ob.sin() as f32 + sun_ecl.z * ob.cos() as f32,
     );
     let sun_ra = (sun_geo.y as f64).atan2(sun_geo.x as f64);
-    let sun_dec = (sun_geo.z as f64)
-        .atan2(((sun_geo.x * sun_geo.x + sun_geo.y * sun_geo.y) as f64).sqrt());
+    let sun_dec =
+        (sun_geo.z as f64).atan2(((sun_geo.x * sun_geo.x + sun_geo.y * sun_geo.y) as f64).sqrt());
 
     // Moon (Schlyter, principal periodic terms).
     let n = wrap((125.1228 - 0.0529538083 * d) * DEG, 2.0 * PI);
@@ -487,8 +531,7 @@ fn solve(d: f64) -> SolarSystem {
     let lm = wrap(m + w + n, 2.0 * PI);
     let dm = wrap(lm - ls, 2.0 * PI);
     let f = wrap(lm - n, 2.0 * PI);
-    ecl_lon += (-1.274 * (m - 2.0 * dm).sin()
-        + 0.658 * (2.0 * dm).sin()
+    ecl_lon += (-1.274 * (m - 2.0 * dm).sin() + 0.658 * (2.0 * dm).sin()
         - 0.186 * m_s.sin()
         - 0.059 * (2.0 * m - 2.0 * dm).sin()
         - 0.057 * (m - 2.0 * dm + m_s).sin()
@@ -545,11 +588,7 @@ fn optical_libration_longitude(sys: &SolarSystem) -> f64 {
     wrap(a - sys.arg_latitude + PI, 2.0 * PI) - PI
 }
 
-fn topocentric(
-    sys: &SolarSystem,
-    c: &NightControls,
-    lst: f64,
-) -> (f64, f64, f64) {
+fn topocentric(sys: &SolarSystem, c: &NightControls, lst: f64) -> (f64, f64, f64) {
     let lat = c.latitude_deg * DEG;
     let h = wrap(lst - sys.moon_ra + PI, 2.0 * PI) - PI;
     let u = (0.99664719 * lat.tan()).atan();
@@ -557,14 +596,13 @@ fn topocentric(
     let rho_cos = u.cos() + (c.elevation_m as f64 / 6_378_137.0) * lat.cos();
     let parallax = (1.0 / sys.moon_distance_er).asin();
     let dec = sys.moon_dec;
-    let dra = (-rho_cos * parallax.sin() * h.sin())
-        .atan2(dec.cos() - rho_cos * parallax.sin() * h.cos());
+    let dra =
+        (-rho_cos * parallax.sin() * h.sin()).atan2(dec.cos() - rho_cos * parallax.sin() * h.cos());
     let ra_topo = sys.moon_ra + dra;
     let dec_topo = ((dec.sin() - rho_sin * parallax.sin()) * dra.cos())
         .atan2(dec.cos() - rho_cos * parallax.sin() * h.cos());
     // Topocentric distance from the same parallax triangle.
-    let dist = sys.moon_distance_er
-        * (dec.cos() * h.cos() - rho_cos).hypot(dec.sin() - rho_sin)
+    let dist = sys.moon_distance_er * (dec.cos() * h.cos() - rho_cos).hypot(dec.sin() - rho_sin)
         / sys.moon_distance_er.max(1e-9);
     let dist = if dist.is_finite() && dist > 0.0 {
         (sys.moon_geo
@@ -580,7 +618,11 @@ fn topocentric(
     (ra_topo, dec_topo, dist)
 }
 
-pub fn resolve_night(c: &NightControls, internal_scale: f32, moon_shadows: bool) -> NightEnvironment {
+pub fn resolve_night(
+    c: &NightControls,
+    internal_scale: f32,
+    moon_shadows: bool,
+) -> NightEnvironment {
     let jd = julian_day(c);
     let d = jd - 2451543.5;
     let sys = solve(d);
@@ -843,11 +885,9 @@ pub fn celestial_ibl_cubemap(
                     let transmit = (-tau).exp();
                     // Overcast redistributes the moon's beam into a broad
                     // diffuse source and reflects the city back down.
-                    let lit = Vec3::new(0.94, 0.96, 1.0)
-                        * moon_lux
-                        * 0.06
-                        * moon_dir.dot(dir).max(0.0)
-                        + Vec3::new(0.78, 0.80, 0.88) * urban * 2.2;
+                    let lit =
+                        Vec3::new(0.94, 0.96, 1.0) * moon_lux * 0.06 * moon_dir.dot(dir).max(0.0)
+                            + Vec3::new(0.78, 0.80, 0.88) * urban * 2.2;
                     col = col * transmit + lit * (1.0 - transmit);
                 }
                 col += twilight_here;
@@ -935,11 +975,16 @@ mod tests {
         let by_matrix = world_from_equ * equatorial_unit(sys.moon_ra, sys.moon_dec);
 
         let h = wrap(lst - sys.moon_ra + PI, 2.0 * PI) - PI;
-        let elev = (lat.sin() * sys.moon_dec.sin() + lat.cos() * sys.moon_dec.cos() * h.cos()).asin();
+        let elev =
+            (lat.sin() * sys.moon_dec.sin() + lat.cos() * sys.moon_dec.cos() * h.cos()).asin();
         let az = (-h.sin()).atan2(sys.moon_dec.tan() * lat.cos() - lat.sin() * h.cos());
         let by_horizon = horizontal_dir(wrap(az / DEG, 360.0) as f32, (elev / DEG) as f32);
 
-        let sep = by_matrix.normalize().dot(by_horizon).clamp(-1.0, 1.0).acos();
+        let sep = by_matrix
+            .normalize()
+            .dot(by_horizon)
+            .clamp(-1.0, 1.0)
+            .acos();
         assert!(
             sep.to_degrees() < 0.01,
             "equatorial rotation disagrees with the horizon solution by {} deg",

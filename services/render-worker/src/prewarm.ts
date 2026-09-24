@@ -34,15 +34,6 @@ export interface PrewarmConfig {
   readonly actorAssets: boolean;
 }
 
-/**
- * Per-map work a worker precomputes once a closure is fully cached (the
- * native static sensor scenes). Runs only while the worker is idle; the
- * implementation must stop promptly when `signal` aborts.
- */
-export interface PrewarmMapDerivatives {
-  build(set: { readonly closureSha256: string; readonly mapVersionId: string; readonly members: readonly PrewarmMember[] }, signal: AbortSignal): Promise<'built' | 'cached' | 'skipped'>;
-}
-
 interface WantedBlob {
   readonly sha256: string;
   readonly sizeBytes: number;
@@ -101,7 +92,6 @@ export class Prewarmer {
     private readonly config: PrewarmConfig,
     private readonly registrationId: () => string | undefined,
     private readonly log: (event: Record<string, unknown>) => void = (event) => console.error(JSON.stringify(event)),
-    private readonly derivatives?: PrewarmMapDerivatives,
   ) {
     this.usageFile = path.join(store.root, 'prewarm', 'usage.json');
     this.statusValue = {
@@ -250,15 +240,6 @@ export class Prewarmer {
       });
       demand.push(...measured);
       this.update({ maps: { ready: readySets, total: planned.length }, demand: [...demand] }, false);
-      if (this.derivatives && !signal.aborted) {
-        const started = Date.now();
-        try {
-          const outcome = await this.derivatives.build({ closureSha256: plan.set.closureSha256, mapVersionId: plan.set.mapVersionId, members: plan.members }, signal);
-          if (outcome !== 'cached') this.log({ event: 'prewarm.map_derivatives', mapVersionId: plan.set.mapVersionId, outcome, elapsedMs: Date.now() - started });
-        } catch (error) {
-          this.log({ event: 'prewarm.map_derivatives_failed', mapVersionId: plan.set.mapVersionId, error: errorMessage(error), elapsedMs: Date.now() - started });
-        }
-      }
     }
     const final = await countStatus();
     this.update({

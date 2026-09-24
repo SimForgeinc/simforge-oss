@@ -1,7 +1,6 @@
-//! Per-camera render profiles. The sensor path deliberately remains a small,
-//! fixed, non-temporal stack; the cinematic path is driven by serializable
-//! settings so campaign cameras can use the expensive pipeline alongside a
-//! byte-stable sensor rig.
+//! The camera look. Every RGB camera renders one stack, driven by the
+//! serializable [`CinematicFx`] settings the render config resolves; the
+//! presets differ only in its quality levels.
 
 use anyhow::{bail, Result};
 use bevy::anti_alias::fxaa::Fxaa;
@@ -25,11 +24,9 @@ use bevy::render::camera::{MipBias, TemporalJitter};
 use bevy::render::view::{ColorGrading, ColorGradingGlobal, ColorGradingSection};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, bevy::prelude::Resource)]
-pub enum RenderProfile {
-    Sensor,
-    Cinematic,
-}
+/// The one camera look: every RGB camera renders through it. Its knobs are
+/// [`CinematicFx`], resolved from the render config's preset.
+pub struct RenderProfile;
 
 /// Mutually exclusive anti-aliasing mode for a cinematic camera.
 ///
@@ -114,9 +111,7 @@ impl AntiAlias {
             .ok_or_else(|| {
                 anyhow::anyhow!(
                     "unknown anti-aliasing mode '{s}' ({})",
-                    Self::ALL
-                        .map(AntiAlias::as_str)
-                        .join("|")
+                    Self::ALL.map(AntiAlias::as_str).join("|")
                 )
             })
     }
@@ -162,6 +157,9 @@ pub enum ToneMap {
     SomewhatBoringDisplayTransform,
     /// Bypass the display transform (linear).
     None,
+    /// The dash-cam camera model: per-frame metering and a WDR log curve
+    /// (`crate::camera_model`). Bevy's own tone mapping is off.
+    DashcamWdr,
 }
 
 impl ToneMap {
@@ -173,10 +171,8 @@ impl ToneMap {
             ToneMap::BlenderFilmic => Tonemapping::BlenderFilmic,
             ToneMap::Reinhard => Tonemapping::Reinhard,
             ToneMap::ReinhardLuminance => Tonemapping::ReinhardLuminance,
-            ToneMap::SomewhatBoringDisplayTransform => {
-                Tonemapping::SomewhatBoringDisplayTransform
-            }
-            ToneMap::None => Tonemapping::None,
+            ToneMap::SomewhatBoringDisplayTransform => Tonemapping::SomewhatBoringDisplayTransform,
+            ToneMap::None | ToneMap::DashcamWdr => Tonemapping::None,
         }
     }
 }
@@ -192,6 +188,14 @@ pub struct CinematicFx {
     pub ssr: bool,
     pub ssao: bool,
     pub ssao_ultra: bool,
+    /// GTAO quality level; `None` keeps the legacy `ssao_ultra` switch
+    /// (Ultra or High). Set by `RenderConfig`.
+    pub ssao_quality: Option<crate::render_config::SsaoQuality>,
+    /// Screen-space contact shadows alongside SSAO.
+    pub contact_shadows: bool,
+    pub contact_shadow_steps: u32,
+    pub ssr_linear_steps: u32,
+    pub ssr_bisection_steps: u32,
     pub chromatic_aberration: f32,
     pub vignette_intensity: f32,
     pub lens_distortion: f32,
@@ -210,6 +214,10 @@ pub struct CinematicFx {
     pub grading_contrast: f32,
     /// Display transform. Defaults to the campaign's AgX.
     pub tone_map: ToneMap,
+    /// The camera model when `tone_map` is `DashcamWdr` (set by the render
+    /// config; a legacy `profileConfig` gets the model's defaults).
+    #[serde(skip)]
+    pub camera: Option<crate::camera_model::CameraModel>,
 }
 
 impl Default for CinematicFx {
@@ -223,6 +231,11 @@ impl Default for CinematicFx {
             ssr: true,
             ssao: true,
             ssao_ultra: true,
+            ssao_quality: None,
+            contact_shadows: true,
+            contact_shadow_steps: 16,
+            ssr_linear_steps: 10,
+            ssr_bisection_steps: 5,
             // UE's default film camera is nearly rectilinear and does not
             // visibly fringe high-contrast edges.
             chromatic_aberration: 0.0,
@@ -246,6 +259,7 @@ impl Default for CinematicFx {
             grading_post_saturation: 0.98,
             grading_contrast: 1.02,
             tone_map: ToneMap::AgX,
+            camera: None,
         }
     }
 }
@@ -279,14 +293,6 @@ pub struct RenderProfileConfig {
 }
 
 impl RenderProfile {
-    pub fn parse(s: &str) -> anyhow::Result<Self> {
-        match s.to_ascii_lowercase().as_str() {
-            "sensor" => Ok(RenderProfile::Sensor),
-            "cinematic" | "cine" => Ok(RenderProfile::Cinematic),
-            other => anyhow::bail!("unknown profile '{other}' (sensor|cinematic)"),
-        }
-    }
-
     /// Remove every component [`Self::apply`] may have inserted.
     ///
     /// Re-applying alone is not enough to change a look: turning TAA, SSAO,
@@ -308,6 +314,7 @@ impl RenderProfile {
             .entity(entity)
             .remove::<Hdr>()
             .remove::<Tonemapping>()
+            .remove::<crate::camera_model::CameraModel>()
             .remove::<Exposure>()
             .remove::<ColorGrading>()
             .remove::<Vignette>()
@@ -337,7 +344,6 @@ impl RenderProfile {
     /// carry their own skybox brightness (night dims it).
     #[allow(clippy::too_many_arguments)]
     pub fn apply(
-        self,
         commands: &mut bevy::prelude::Commands,
         entity: bevy::prelude::Entity,
         // Fixed exposure from the resolved `LightingPlan` (`ev100_fixed`),
@@ -347,99 +353,105 @@ impl RenderProfile {
         skybox_brightness: f32,
         fx: CinematicFx,
     ) {
-        match self {
-            RenderProfile::Sensor => {
-                commands.entity(entity).insert((
-                    Tonemapping::None,
-                    Exposure { ev100 },
-                ));
-                if let Some(sky) = sky.clone() {
-                    commands.entity(entity).insert(Skybox {
-                        image: Some(sky),
-                        brightness: skybox_brightness,
-                        ..Default::default()
-                    });
-                }
-                // Deliberately no temporal/post components in this branch.
-            }
-            RenderProfile::Cinematic => {
-                let grading_section = ColorGradingSection {
-                    contrast: fx.grading_contrast,
+        let grading_section = ColorGradingSection {
+            contrast: fx.grading_contrast,
+            ..Default::default()
+        };
+        let mut cam = commands.entity(entity);
+        if fx.tone_map == ToneMap::DashcamWdr {
+            // The camera model owns exposure, grading and the curve.
+            let mut model = fx
+                .camera
+                .unwrap_or_else(crate::camera_model::CameraModel::dashcam); // fallback-ok: a legacy profileConfig names no camera model; it gets the documented dash-cam defaults
+            model.grading_exposure_ev = fx.grading_exposure;
+            model.saturation = fx.grading_post_saturation;
+            model.contrast = fx.grading_contrast;
+            cam.insert(model);
+        }
+        cam.insert((
+            Hdr,
+            fx.tone_map.bevy(),
+            Exposure { ev100 },
+            ColorGrading {
+                global: ColorGradingGlobal {
+                    exposure: fx.grading_exposure,
+                    temperature: fx.grading_temperature,
+                    tint: fx.grading_tint,
+                    post_saturation: fx.grading_post_saturation,
                     ..Default::default()
-                };
-                let mut cam = commands.entity(entity);
-                cam.insert((
-                    Hdr,
-                    fx.tone_map.bevy(),
-                    Exposure { ev100 },
-                    ColorGrading {
-                        global: ColorGradingGlobal {
-                            exposure: fx.grading_exposure,
-                            temperature: fx.grading_temperature,
-                            tint: fx.grading_tint,
-                            post_saturation: fx.grading_post_saturation,
-                            ..Default::default()
-                        },
-                        shadows: grading_section,
-                        midtones: grading_section,
-                        highlights: grading_section,
-                    },
-                    Vignette {
-                        intensity: fx.vignette_intensity,
-                        ..Default::default()
-                    },
-                    LensDistortion {
-                        intensity: fx.lens_distortion,
-                        ..Default::default()
-                    },
-                    ChromaticAberration {
-                        intensity: fx.chromatic_aberration,
-                        ..Default::default()
-                    },
-                ));
-                if fx.bloom_intensity > 0.0 {
-                    cam.insert(Bloom {
-                        intensity: fx.bloom_intensity,
-                        ..Bloom::NATURAL
-                    });
-                }
-                if fx.dof_enabled {
-                    cam.insert(DepthOfField {
-                        mode: DepthOfFieldMode::Bokeh,
-                        focal_distance: fx.dof_focal_distance_m,
-                        aperture_f_stops: fx.dof_aperture_f_stops,
-                        max_depth: 950.0,
-                        ..Default::default()
-                    });
-                }
-                if fx.motion_shutter_angle > 0.0 {
-                    cam.insert(MotionBlur {
-                        shutter_angle: fx.motion_shutter_angle,
-                        samples: fx.motion_samples,
-                    });
-                }
-                if let Some(sky) = sky {
-                    cam.insert(Skybox {
-                        image: Some(sky),
-                        brightness: skybox_brightness,
-                        ..Default::default()
-                    });
-                }
-                fx.aa.insert(&mut cam);
-                if fx.ssr {
-                    cam.insert(ScreenSpaceReflections::default());
-                }
-                if fx.ssao {
-                    cam.insert(ScreenSpaceAmbientOcclusion {
-                        quality_level: if fx.ssao_ultra {
-                            ScreenSpaceAmbientOcclusionQualityLevel::Ultra
-                        } else {
-                            ScreenSpaceAmbientOcclusionQualityLevel::High
-                        },
-                        ..Default::default()
-                    });
-                    cam.insert(ContactShadows::default());
-                }
+                },
+                shadows: grading_section,
+                midtones: grading_section,
+                highlights: grading_section,
+            },
+            Vignette {
+                intensity: fx.vignette_intensity,
+                ..Default::default()
+            },
+            LensDistortion {
+                intensity: fx.lens_distortion,
+                ..Default::default()
+            },
+            ChromaticAberration {
+                intensity: fx.chromatic_aberration,
+                ..Default::default()
+            },
+        ));
+        if fx.bloom_intensity > 0.0 {
+            cam.insert(Bloom {
+                intensity: fx.bloom_intensity,
+                ..Bloom::NATURAL
+            });
+        }
+        if fx.dof_enabled {
+            cam.insert(DepthOfField {
+                mode: DepthOfFieldMode::Bokeh,
+                focal_distance: fx.dof_focal_distance_m,
+                aperture_f_stops: fx.dof_aperture_f_stops,
+                max_depth: 950.0,
+                ..Default::default()
+            });
+        }
+        if fx.motion_shutter_angle > 0.0 {
+            cam.insert(MotionBlur {
+                shutter_angle: fx.motion_shutter_angle,
+                samples: fx.motion_samples,
+            });
+        }
+        if let Some(sky) = sky {
+            cam.insert(Skybox {
+                image: Some(sky),
+                brightness: skybox_brightness,
+                ..Default::default()
+            });
+        }
+        fx.aa.insert(&mut cam);
+        if fx.ssr {
+            cam.insert(ScreenSpaceReflections {
+                linear_steps: fx.ssr_linear_steps,
+                bisection_steps: fx.ssr_bisection_steps,
+                ..Default::default()
+            });
+        }
+        if fx.ssao {
+            use crate::render_config::SsaoQuality;
+            let quality_level = match fx.ssao_quality {
+                Some(SsaoQuality::Low) => ScreenSpaceAmbientOcclusionQualityLevel::Low,
+                Some(SsaoQuality::Medium) => ScreenSpaceAmbientOcclusionQualityLevel::Medium,
+                Some(SsaoQuality::High) => ScreenSpaceAmbientOcclusionQualityLevel::High,
+                Some(SsaoQuality::Ultra) => ScreenSpaceAmbientOcclusionQualityLevel::Ultra,
+                None if fx.ssao_ultra => ScreenSpaceAmbientOcclusionQualityLevel::Ultra,
+                None => ScreenSpaceAmbientOcclusionQualityLevel::High,
+            };
+            cam.insert(ScreenSpaceAmbientOcclusion {
+                quality_level,
+                ..Default::default()
+            });
+            if fx.contact_shadows {
+                cam.insert(ContactShadows {
+                    linear_steps: fx.contact_shadow_steps,
+                    ..Default::default()
+                });
             }
         }
     }
@@ -461,10 +473,9 @@ mod tests {
 
     #[test]
     fn partial_profile_config_preserves_unspecified_campaign_defaults() {
-        let cfg: RenderProfileConfig = serde_json::from_str(
-            r#"{"cinematic":{"dofEnabled":true,"dofFocalDistanceM":12.5}}"#,
-        )
-        .unwrap();
+        let cfg: RenderProfileConfig =
+            serde_json::from_str(r#"{"cinematic":{"dofEnabled":true,"dofFocalDistanceM":12.5}}"#)
+                .unwrap();
         assert!(cfg.cinematic.dof_enabled);
         assert_eq!(cfg.cinematic.dof_focal_distance_m, 12.5);
         assert_eq!(cfg.cinematic.aa, AntiAlias::Taa);
@@ -521,7 +532,7 @@ mod tests {
             {
                 let mut commands = world.commands();
                 RenderProfile::strip(&mut commands, cam);
-                RenderProfile::Cinematic.apply(
+                RenderProfile::apply(
                     &mut commands,
                     cam,
                     12.0,
@@ -580,23 +591,14 @@ mod tests {
     }
 
     #[test]
-    fn sensor_profile_has_no_stochastic_screen_space_components() {
+    fn default_look_carries_the_screen_space_stack() {
         let mut world = bevy::prelude::World::new();
-        let sensor = world.spawn_empty().id();
-        let cinematic = world.spawn_empty().id();
+        let camera = world.spawn_empty().id();
         {
             let mut commands = world.commands();
-            RenderProfile::Sensor.apply(
+            RenderProfile::apply(
                 &mut commands,
-                sensor,
-                12.0,
-                None,
-                1.0,
-                CinematicFx::default(),
-            );
-            RenderProfile::Cinematic.apply(
-                &mut commands,
-                cinematic,
+                camera,
                 12.0,
                 None,
                 1.0,
@@ -604,11 +606,8 @@ mod tests {
             );
         }
         world.flush();
-        assert!(world.get::<TemporalAntiAliasing>(sensor).is_none());
-        assert!(world.get::<ScreenSpaceAmbientOcclusion>(sensor).is_none());
-        assert!(world.get::<ContactShadows>(sensor).is_none());
-        assert!(world.get::<TemporalAntiAliasing>(cinematic).is_some());
-        assert!(world.get::<ScreenSpaceAmbientOcclusion>(cinematic).is_some());
-        assert!(world.get::<ContactShadows>(cinematic).is_some());
+        assert!(world.get::<TemporalAntiAliasing>(camera).is_some());
+        assert!(world.get::<ScreenSpaceAmbientOcclusion>(camera).is_some());
+        assert!(world.get::<ContactShadows>(camera).is_some());
     }
 }

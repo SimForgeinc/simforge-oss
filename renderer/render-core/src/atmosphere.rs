@@ -295,6 +295,10 @@ pub struct AtmosphereInputs {
     /// for the celestial probe. Costs ~20-60 ms; the engine asks for it only
     /// below the probe handover.
     pub sky_cube: bool,
+    /// Multiplier on the boundary-layer haze the weather's visibility calls
+    /// for (`RenderConfig.atmosphere.hazeDensity`): 0 leaves the clean
+    /// Rayleigh + aerosol column, 1 is the weather's meteorological range.
+    pub haze_density: f32,
 }
 
 /// The camera the exposure meter reads the sky through.
@@ -339,6 +343,7 @@ impl Default for AtmosphereInputs {
             ground_albedo: GROUND_ALBEDO,
             meter_view: None,
             sky_cube: false,
+            haze_density: 1.0,
         }
     }
 }
@@ -366,6 +371,7 @@ impl AtmosphereInputs {
                     && v.aspect.is_finite()
             }),
             sky_cube: self.sky_cube,
+            haze_density: self.haze_density,
         }
     }
 
@@ -402,7 +408,7 @@ impl AtmosphereInputs {
         // luma-weighted background extinction at the ground.
         let background = luma(RAYLEIGH_SCATTERING * self.air_density)
             + MIE_EXTINCTION * self.aerosol_multiplier();
-        let extra = target - background;
+        let extra = (target - background) * self.haze_density.max(0.0);
         (extra > 1.0e-9).then_some(extra)
     }
 
@@ -824,7 +830,9 @@ fn transmittance_to_space_n(
     for i in 0..steps {
         let t = (i as f32 + 0.5) * dt;
         // Law of cosines in the spherical shell.
-        let r_i = (r * r + t * t + 2.0 * r * t * mu).max(INNER_RADIUS_M * INNER_RADIUS_M).sqrt();
+        let r_i = (r * r + t * t + 2.0 * r * t * mu)
+            .max(INNER_RADIUS_M * INNER_RADIUS_M)
+            .sqrt();
         let (absorption, scattering) = density_at(terms, r_i - INNER_RADIUS_M);
         optical_depth += (absorption + scattering) * dt;
     }
@@ -933,7 +941,15 @@ fn single_scattered_radiance(
     sun_mu: f32,
     sun_illuminance_lx: f32,
 ) -> Vec3 {
-    single_scattered_radiance_n(terms, view_mu, cos_scatter, sun_mu, sun_illuminance_lx, 384, 256)
+    single_scattered_radiance_n(
+        terms,
+        view_mu,
+        cos_scatter,
+        sun_mu,
+        sun_illuminance_lx,
+        384,
+        256,
+    )
 }
 
 /// [`single_scattered_radiance`] at chosen step counts along the view ray
@@ -1358,12 +1374,8 @@ pub fn resolve(
     // The GPU medium is the deck-free air; the column closure adds the slab.
     let terms = earth_terms(&inputs);
     let column = column_terms(&inputs);
-    let medium = ScatteringMedium::new(
-        MEDIUM_LUT_RESOLUTION,
-        MEDIUM_LUT_RESOLUTION,
-        terms.clone(),
-    )
-    .with_label("simforge_earth_atmosphere");
+    let medium = ScatteringMedium::new(MEDIUM_LUT_RESOLUTION, MEDIUM_LUT_RESOLUTION, terms.clone())
+        .with_label("simforge_earth_atmosphere");
 
     let elev = inputs.sun_elevation_deg;
     let elev_rad = elev.to_radians();
@@ -1393,7 +1405,10 @@ pub fn resolve(
     } else {
         Vec3::ZERO
     };
-    let slab = column.iter().rev().find(|t| matches!(t.falloff, Falloff::Curve(_)));
+    let slab = column
+        .iter()
+        .rev()
+        .find(|t| matches!(t.falloff, Falloff::Curve(_)));
     let slab_beam_t = match slab {
         Some(term) => term_slant_transmittance(term, sun_mu.max(0.0)),
         None => 1.0,
@@ -1438,10 +1453,8 @@ pub fn resolve(
         // alone: the curve is cut off between -20 and -16 deg, where it is
         // below the airglow anyway.
         let astronomical = ((elev + 20.0) / 4.0).clamp(0.0, 1.0);
-        let twilight_lx = 700.0
-            * 10.0f32.powf(-0.4 * (-elev).max(0.0))
-            * (t_diff / 0.85)
-            * astronomical;
+        let twilight_lx =
+            700.0 * 10.0f32.powf(-0.4 * (-elev).max(0.0)) * (t_diff / 0.85) * astronomical;
         if mu <= 0.0 {
             twilight_lx
         } else {
@@ -1498,8 +1511,7 @@ pub fn resolve(
     // between the view ray and the sun ray.
     let cos_anti = horizon_mu * sun_mu - (1.0 - horizon_mu * horizon_mu).sqrt() * elev_rad.cos();
 
-    let zenith_single =
-        single_scattered_radiance(&terms, 1.0, sun_mu, sun_mu, SOLAR_CONSTANT_LX);
+    let zenith_single = single_scattered_radiance(&terms, 1.0, sun_mu, sun_mu, SOLAR_CONSTANT_LX);
     let horizon_single =
         single_scattered_radiance(&terms, horizon_mu, cos_anti, sun_mu, SOLAR_CONSTANT_LX);
     let zenith_moon = Vec3::ZERO;
@@ -1530,17 +1542,14 @@ pub fn resolve(
             floor_luminance,
         )
     });
-    let sky_cube = inputs.sky_cube.then(|| {
-        sky_radiance_cube(&terms, sun_dir, sun_mu, diffuse_budget, floor_luminance, 8)
-    });
-    let zenith = zenith_single
-        + zenith_moon
-        + Vec3::splat(zenith_diffuse + floor_luminance);
-    let horizon = horizon_single
-        + horizon_moon
-        + Vec3::splat(horizon_diffuse + floor_luminance);
+    let sky_cube = inputs
+        .sky_cube
+        .then(|| sky_radiance_cube(&terms, sun_dir, sun_mu, diffuse_budget, floor_luminance, 8));
+    let zenith = zenith_single + zenith_moon + Vec3::splat(zenith_diffuse + floor_luminance);
+    let horizon = horizon_single + horizon_moon + Vec3::splat(horizon_diffuse + floor_luminance);
 
-    let solid_angle = std::f32::consts::PI * 0.25
+    let solid_angle = std::f32::consts::PI
+        * 0.25
         * SUN_ANGULAR_DIAMETER_DEG.to_radians()
         * SUN_ANGULAR_DIAMETER_DEG.to_radians();
 
@@ -1602,7 +1611,11 @@ pub fn resolve(
         total_horizontal_illuminance_lx: e_total_h,
         sun_color: sun_color_norm.to_array(),
         // A colour temperature for a sun that is not shining is a fiction.
-        sun_cct_k: if t_luma > 0.0 { cct_k(sun_color_norm) } else { 0.0 },
+        sun_cct_k: if t_luma > 0.0 {
+            cct_k(sun_color_norm)
+        } else {
+            0.0
+        },
         zenith_luminance_cdm2: luma(zenith),
         horizon_luminance_cdm2: luma(horizon),
         view_sky,
@@ -1626,8 +1639,7 @@ pub fn resolve(
         cloud_deck: inputs.deck.label().to_string(),
         cloud_beam_transmittance: cloud_beam_t,
         cloud_beam_source: cloud_beam_source.to_string(),
-        cloud_continuous: inputs.cloud_cover >= OVERCAST_COVER
-            && inputs.deck != CloudDeck::None,
+        cloud_continuous: inputs.cloud_cover >= OVERCAST_COVER && inputs.deck != CloudDeck::None,
         deck_diffuse_gain,
         deck_sun_transmittance: deck_sun_transmittance.to_array(),
         zenith_radiance: zenith.to_array(),
@@ -1706,7 +1718,9 @@ mod tests {
         let e_inv = std::f32::consts::E.recip();
 
         let rayleigh = &terms[0];
-        let r_ratio = rayleigh.falloff.sample(1.0 - RAYLEIGH_SCALE_HEIGHT_M / ATMOSPHERE_HEIGHT_M)
+        let r_ratio = rayleigh
+            .falloff
+            .sample(1.0 - RAYLEIGH_SCALE_HEIGHT_M / ATMOSPHERE_HEIGHT_M)
             / rayleigh.falloff.sample(1.0);
         assert!(
             (r_ratio - e_inv).abs() < 0.01,
@@ -1715,7 +1729,9 @@ mod tests {
         );
 
         let mie = &terms[1];
-        let m_ratio = mie.falloff.sample(1.0 - MIE_SCALE_HEIGHT_M / ATMOSPHERE_HEIGHT_M)
+        let m_ratio = mie
+            .falloff
+            .sample(1.0 - MIE_SCALE_HEIGHT_M / ATMOSPHERE_HEIGHT_M)
             / mie.falloff.sample(1.0);
         assert!(
             (m_ratio - e_inv).abs() < 0.01,
@@ -1725,7 +1741,10 @@ mod tests {
         // Ozone tent must peak at 25 km and vanish by 40 km.
         let ozone = &terms[2];
         assert!(ozone.falloff.sample(1.0 - 25_000.0 / ATMOSPHERE_HEIGHT_M) > 0.99);
-        assert_eq!(ozone.falloff.sample(1.0 - 41_000.0 / ATMOSPHERE_HEIGHT_M), 0.0);
+        assert_eq!(
+            ozone.falloff.sample(1.0 - 41_000.0 / ATMOSPHERE_HEIGHT_M),
+            0.0
+        );
     }
 
     #[test]
@@ -2060,7 +2079,10 @@ mod tests {
     #[test]
     fn illuminance_and_exposure_rank_the_conditions_correctly() {
         let ev = |inputs: AtmosphereInputs| resolve(&inputs, 195.0, 2000.0).1.ev100;
-        let noon = ev(AtmosphereInputs { sun_elevation_deg: 74.6, ..Default::default() });
+        let noon = ev(AtmosphereInputs {
+            sun_elevation_deg: 74.6,
+            ..Default::default()
+        });
         let cloudy = ev(AtmosphereInputs {
             sun_elevation_deg: 74.6,
             deck: CloudDeck::Cumulus,
@@ -2073,9 +2095,18 @@ mod tests {
             cloud_cover: 0.95,
             ..Default::default()
         });
-        let sunrise = ev(AtmosphereInputs { sun_elevation_deg: 6.6, ..Default::default() });
-        let twilight = ev(AtmosphereInputs { sun_elevation_deg: -3.0, ..Default::default() });
-        let night = ev(AtmosphereInputs { sun_elevation_deg: -25.0, ..Default::default() });
+        let sunrise = ev(AtmosphereInputs {
+            sun_elevation_deg: 6.6,
+            ..Default::default()
+        });
+        let twilight = ev(AtmosphereInputs {
+            sun_elevation_deg: -3.0,
+            ..Default::default()
+        });
+        let night = ev(AtmosphereInputs {
+            sun_elevation_deg: -25.0,
+            ..Default::default()
+        });
         assert!(noon > cloudy, "{noon} !> {cloudy}");
         assert!(cloudy > overcast, "{cloudy} !> {overcast}");
         assert!(overcast > sunrise, "{overcast} !> {sunrise}");

@@ -1,9 +1,30 @@
 # Native golden store + regression gate (WSB6)
 
-Status: implemented 2026-08-22. Enforces the byte-exactness policy measured and
-documented in `determinism-claim.md` (WSB4): Bevy/wgpu sensor-profile
-passes are byte-stable on one pinned GPU; Chrome RGB is provably not
-goldenable (0/8 and 5/6 frames byte-equal) and is excluded from this suite.
+Status: implemented 2026-08-22. Since 2026-09-23 the goldens are recorded and
+verified on **Mesa lavapipe** (the CPU Vulkan driver), the adapter of record.
+Pass hashes are compared exactly, never with a tolerance. Chrome RGB is
+provably not goldenable (0/8 and 5/6 frames byte-equal) and is excluded from
+this suite.
+
+Why lavapipe:
+- With every draw order made a function of the scene, two identical runs on an
+  RTX 3080 still differed by 1 LSB in a few pixels (2 px in 1 of 64 RGB
+  frames, Belmont 8 cameras). That is driver-level, not ours.
+- The fixes for draw order (vendored bevy_render: sorted phases tie-break by
+  entity, entity-ordered bins; CPU-ordered ID-pass draws) made the ID pass
+  identical between runs on the 3080.
+- Lavapipe renders byte-identical runs (richmond-06, 120 ticks, twice).
+
+The NVIDIA residual, measured on an RTX 3080 (driver 595.91), Belmont 8 cameras × 24 ticks. Each row is two identical runs:
+
+| Configuration | RGB frames that differ between runs |
+|---|---|
+| showcase preset | 7 / 216 |
+| SSR off | 6 / 216 |
+| SSAO and contact shadows off | 2 / 216 |
+| SSAO, contact shadows, SSR, bloom and AA all off | 8 / 216 |
+
+Differences are at most 1 LSB in a handful of pixels. They survive with every screen-space effect off and every draw order fixed, while the same code on lavapipe is byte-identical. What remains on the GPU is forward shading, shadow rasterization and the atmosphere/sky compute passes. The residual is treated as driver-level floating-point nondeterminism and is not chased further; goldens stay on lavapipe.
 
 ## Components
 
@@ -13,29 +34,32 @@ goldenable (0/8 and 5/6 frames byte-equal) and is excluded from this suite.
 | `qualification/golden-harness/scenes/*.json` | scene definitions (corpus files + renderer args + expected passes) |
 | `qualification/golden-harness/goldens/<gpuFingerprint>/<scene>.json` | the golden store (committed) |
 | `qualification/golden-harness/ci-local.sh` | local execution of the exact CI steps |
-| `.github/workflows/native-golden.yml` | self-hosted 5080 runner workflow |
+| `.github/workflows/native-golden.yml` | self-hosted runner workflow (lavapipe; the recorded CPU model) |
 
 Renderer binary resolution order: `--bin` flag → `scene.binary` →
-`renderer/target/release/native-render-job` (`renderer/render-core`). Scenes
-with `rendererArgs` are turned into a `simforge.native-render-job/v1` job file
-(one sensor camera per `cameras`, `frames` scheduled captures after `warmup`
-warmup iterations); the hashed passes are the last scheduled frame's
-`rgb.png` / `id.png` / `depth.f32.bin`. Every capture is a single GPU
+`renderer/target/release/simforge-render` (the one renderer binary,
+`cargo build --release -p simforge-render`). Every scene is turned into a
+`simforge.render-job/v2` job file (scene spec, optional `sceneState`, one
+camera per `cameras`, `ticks`, `passes`) and rendered with
+`simforge-render job --job <file>`; the hashed passes are the
+`<sensor>/<tick>.rgb.png` / `.id.png` / `.depth.f32.bin` artifacts listed with
+their sha256 in the job's `results.json`. The harness runs the job with
+`VK_ICD_FILENAMES=<lvp_icd.json>` and `SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1`.
+Every capture is a single
 submission with its copies ordered after the camera passes, so consecutive
 frames never carry the previous frame's pixels. The former `native-render`
 spike CLI (AgX output, unordered readback) is removed; goldens recorded
 against it are retired and must be re-recorded (see `goldens/README.md`).
 
-## GPU fingerprint policy
+## Adapter fingerprint policy
 
-`gpuFingerprint` = first 16 hex of `sha256(canonical_json({gpus:[{name,
-driverVersion, vbiosVersion, pciBusId}], kernel, arch}))`, with GPU facts from
-the **same nvidia-smi query** as WSB4's
-`qualification/render-determinism/gpu-fingerprint.mjs`
-so fingerprint facts are comparable across Chrome evidence manifests and native goldens.
-Rationale: same-device wgpu is empirically bitwise-stable; cross-driver/
-cross-vendor equality is NOT claimed → goldens are keyed per fingerprint, never
-universal. A new GPU/driver means: `record` on that host first, then verify.
+`gpuFingerprint` = first 16 hex of `sha256(json({adapter: {deviceName,
+driverInfo}, cpuModel, arch}))`. `deviceName` and `driverInfo` come from
+`vulkaninfo --summary` on the lavapipe ICD (for example `llvmpipe (LLVM 20.1.2,
+256 bits)`, `Mesa 25.2.8 (LLVM 20.1.2)`). The CPU model is included because
+llvmpipe's generated code depends on the CPU's features. A new Mesa, LLVM or
+CPU model means: `record` on that host first, then verify
+(`qualification/golden-harness/lib/fingerprint.mjs`).
 
 ## Golden store layout
 
@@ -59,7 +83,7 @@ compatible. Additions:
   "profile": "sensor",                    // render profile; only sensor is goldenable today
   "rendererPath": {
     "engine": "native-bevy",              // was chrome/three.js in WSB4 manifests
-    "file": "renderer/target/release/native-render",
+    "file": "renderer/target/release/simforge-render",
     "sha256": "…",                        // binary pin
     "invocation": { "args": ["…"] },
     "versions": { "bevy": "0.19.1", "wgpu": "29.0.4", "rustc": "…", "backend": "vulkan" }
@@ -99,21 +123,17 @@ re-record.
 
 | Exit | Meaning |
 |---|---|
-| 0 | all passes match golden, frame-time within budget |
+| 0 | all passes match golden (and frame time within budget when `GOLDEN_FRAME_BUDGET` is set) |
 | 2 | pass-hash drift on any non-diagnostic pass |
-| 3 | avg frame time regressed >10% vs recorded baseline (`GOLDEN_FRAME_BUDGET` overrides factor) |
+| 3 | avg frame time regressed beyond `GOLDEN_FRAME_BUDGET` (e.g. 1.10) vs the recorded baseline; opt-in, since lavapipe times measure the CPU host (GPU performance is gated by `scripts/bench`) |
 | 4 | record-mode nondeterminism: two runs disagreed — no golden written |
-| 5 | no golden exists for this GPU fingerprint — record first |
+| 5 | no golden exists for this adapter fingerprint — record first |
 | 1 | environment/usage error (missing binary/corpus) |
-| 6 | GPU busy — co-tenant load makes timings/hash evidence unreliable (`GOLDEN_GPU_WAIT` seconds to wait for a quiet window); CI sets it to 300 |
 | 7 | vacuous ID pass — an ID pass encodes fewer than `idPass.minInstances` distinct ids or covers less than `idPass.minCoverage` of the frame (checked on record and verify) |
 | 8 | observed actor transforms fail parity with the render timeline (`parity` scenes; Bevy profile 1e-3 m / 0.05°) |
 
 Record runs the scene twice and refuses to write a golden unless the two runs
-agree byte-for-byte (the determinism evidence itself). Record/verify only run
-on a quiet GPU (see exit 6): co-tenant load was measured to inflate frame
-times ~5x (4 ms → 19 ms) and occasionally destabilize the lit RGB path. Verify runs once and
-applies both gates. Frame-time uses the renderer-reported steady-state
+agree byte-for-byte (the determinism evidence itself). Verify runs once. Frame-time uses the renderer-reported steady-state
 `avg_frame_ms` over ≥30 measured frames after warmup.
 
 ## Measured findings baked into this gate (2026-08-22)
@@ -139,7 +159,7 @@ applies both gates. Frame-time uses the renderer-reported steady-state
    decoded (`lib/png.mjs`) and must encode real instances (`idPass`
    thresholds, exit 7), so a hash of a blank pass can no longer be recorded
    or pass verify. `yale-frame0`'s retired spike golden fails this gate by
-   construction until it is re-recorded with `native-render-job`.
+   construction until it is re-recorded with `simforge-render job`.
 4. **Perf baselines are load-sensitive.** The recorded baseline (19.45 ms avg)
    was taken under co-tenant load; quiet-GPU steady state is ~4–5 ms (FINDINGS:
    4.33 ms). Re-record during a quiet window before trusting the +10% budget;
@@ -166,7 +186,7 @@ Invalidation triggers — any of these means the golden must be re-recorded:
 Re-record procedure:
 
 ```sh
-cargo build --release -p render-core --bin native-render-job --manifest-path renderer/Cargo.toml
+cargo build --release -p simforge-render --manifest-path renderer/Cargo.toml
 SIMFORGE_SENSOR_CORPUS=<corpus-root> node qualification/golden-harness/golden.mjs record yale-frame0
 node qualification/golden-harness/golden.mjs verify all
 ```
@@ -192,9 +212,11 @@ Registration steps are documented at the top of the workflow file.
 Actor scenes replay the render contract (`docs/engineering/render-timeline.md`):
 a committed `simforge.scene-state.v1` document sampled from a render
 timeline (`fixtures/<scene>.scene-state.json.gz`, from
-`simforge render scene-state --fps 24`) is played by `scen-play
---authored-height`, so every body sits at the timeline's baked XODR height
-with its road + body attitude. Three gates per run:
+`simforge render scene-state --fps 24`) is played by `simforge-render job
+--job` (the job's `sceneState`), so every body sits at the timeline's baked
+XODR height with its road + body attitude. (These goldens were recorded with
+the former `scen-play --authored-height` binary; its binary sha is in each
+golden file.) Three gates per run:
 
 1. pass hashes (`frame60.rgb`, `frame60.id`), two-run byte stability on record;
 2. the ID pass encodes the map's and actors' instances (`idPass`, exit 7);
@@ -214,7 +236,7 @@ yale max 6.2e-5 m / 6.3e-6° heading (f32 world coordinates at ~1.8 km).
 
 ### Instance-ID assignment was not deterministic (fixed 2026-09-22)
 
-`richmond-frame0` (static `native-render-job` over the richmond master) was
+`richmond-frame0` (static job render over the richmond master) was
 not byte-stable in `id0`: 6 of 306,176 pixels carried a different instance
 id from run to run while RGB and depth were identical. It was not a depth
 tie. `SceneApp::finalize_scene` numbers every mesh by sorting on
@@ -232,10 +254,10 @@ duplicates, and unnamed meshes are named `unnamed_mesh`. Evidence on the RTX
 | before (entity-bit order) | 3 (`b82aee85…`, `713742cf…` ×4, `92d28b92…`) | 1 | 1 |
 | after | 1 (`b3feedec…`, 12/12 runs) | 1 | 1 |
 
-The same ordering now applies to `scen-play` (`playback.rs`) and the
-sensor-capture registry no longer names unnamed meshes after their entity.
+The same ordering now applies to scene-state playback (`playback.rs`, then
+the `scen-play` binary, now `simforge-render job --job` with `sceneState`).
 Instance ids of existing scenes are renumbered once by this change: goldens
 that hash an ID pass must be re-recorded (the two render-timeline goldens
-above were recorded before it; scen-play id0 is 3/3 stable after it on the
-5080). `richmond-frame0` is committed as a
+above were recorded before it; scene-state playback id0 was 3/3 stable
+after it on the 5080). `richmond-frame0` is committed as a
 scene; record its golden per GPU with a quiet window.

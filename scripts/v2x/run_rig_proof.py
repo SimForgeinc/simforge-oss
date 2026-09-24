@@ -10,7 +10,7 @@ Outputs (default run/evidence/v4-rig-proof/):
                       (when a reference frame exists in the V2X repo)
 
 Usage:
-  native-render-service --socket ... --scene <scene.json> &   # separate
+  simforge-render serve --socket ... --scene <scene.json> &   # separate
   python3 scripts/v2x/run_rig_proof.py --socket /tmp/v4.sock \
       --rig renderer/sensors/rigs/richmond-twin-rig.v1.json \
       --scene-state /tmp/richmond-scene-state.json \
@@ -26,7 +26,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "renderer/service/python"))
-from simforge_native.client import NativeRenderClient  # noqa: E402
+from simforge_render.client import NativeRenderClient  # noqa: E402
 
 TICK_S = 0.05  # product cadence: 20 Hz (CARLA sensor_tick 0.05 analogue)
 

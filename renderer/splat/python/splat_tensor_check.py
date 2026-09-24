@@ -219,7 +219,7 @@ def main() -> None:
 
     # -- 7. host parity through the running service ------------------------------------------
     if args.socket:
-        from simforge_native import BundleRingReader, NativeRenderClient
+        from simforge_render import BundleRingReader, NativeRenderClient
 
         client = NativeRenderClient(args.socket)
         assert client.hello["protocol"] == 5, client.hello

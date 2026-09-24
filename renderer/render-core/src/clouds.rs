@@ -194,7 +194,13 @@ mod tests {
             cover: 0.0,
             ..Default::default()
         };
-        let t = f.transmittance(Vec2::ZERO, 0.0, Vec3::new(0.2, 0.9, 0.1).normalize(), &p, 24);
+        let t = f.transmittance(
+            Vec2::ZERO,
+            0.0,
+            Vec3::new(0.2, 0.9, 0.1).normalize(),
+            &p,
+            24,
+        );
         assert!((t - 1.0).abs() < 1e-6);
     }
 
@@ -206,7 +212,13 @@ mod tests {
             density: 1.0,
             ..Default::default()
         };
-        let t = f.transmittance(Vec2::ZERO, 0.0, Vec3::new(0.0, 1.0, 0.0).normalize(), &p, 32);
+        let t = f.transmittance(
+            Vec2::ZERO,
+            0.0,
+            Vec3::new(0.0, 1.0, 0.0).normalize(),
+            &p,
+            32,
+        );
         assert!(t < 0.02, "overcast zenith transmittance {t} is too high");
     }
 
@@ -251,7 +263,10 @@ mod tests {
             let tb = f.optical_depth(Vec2::ZERO, 0.0, dir, &b, 32);
             moved += (ta - tb).abs();
         }
-        assert!(moved > 1e-3, "three seconds of wind changed nothing: {moved}");
+        assert!(
+            moved > 1e-3,
+            "three seconds of wind changed nothing: {moved}"
+        );
     }
 
     /// Fraction of zenith rays across one tile that meet optically thick
@@ -325,7 +340,11 @@ mod tests {
         let q = |p: f32| bests[((bests.len() - 1) as f32 * p) as usize];
         eprintln!(
             "column-max quantiles: 0%{:.3} 10%{:.3} 50%{:.3} 90%{:.3} 100%{:.3}",
-            q(0.0), q(0.1), q(0.5), q(0.9), q(1.0)
+            q(0.0),
+            q(0.1),
+            q(0.5),
+            q(0.9),
+            q(1.0)
         );
     }
 }

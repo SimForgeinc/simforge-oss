@@ -3,7 +3,7 @@
 
 Builds a scene-state.v1 doc for one imported scene at a recorded timestamp (ego + recorded
 actors from actor-trajectories.json), asks for rgb/depth/id (+ rgb8 policy output), reads the
-bundle back with `simforge_native.BundleRingReader`, verifies CRCs, and compares the
+bundle back with `simforge_render.BundleRingReader`, verifies CRCs, and compares the
 front-wide frame to the Phase-0 NRE reference render of the same timestamp when present.
 """
 from __future__ import annotations
@@ -19,8 +19,8 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(REPO / "renderer/service/python"), str(Path(__file__).resolve().parent)]
-from simforge_native import NativeRenderClient  # noqa: E402
-from simforge_native.bundles import BundleRingReader  # noqa: E402
+from simforge_render import NativeRenderClient  # noqa: E402
+from simforge_render.bundles import BundleRingReader  # noqa: E402
 
 
 def interp(samples, t_s):

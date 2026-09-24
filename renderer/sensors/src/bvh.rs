@@ -59,7 +59,13 @@ const PARALLEL_MIN_TRIS: usize = 65_536;
 const SORT_CHUNKS: usize = 32;
 
 impl Node {
-    const PLACEHOLDER: Node = Node { min: Vec3::ZERO, max: Vec3::ZERO, left_first: 0, count: 0, right: 0 };
+    const PLACEHOLDER: Node = Node {
+        min: Vec3::ZERO,
+        max: Vec3::ZERO,
+        left_first: 0,
+        count: 0,
+        right: 0,
+    };
 }
 
 /// Centroid lexicographic order (the historical comparator, NaN as equal).
@@ -139,7 +145,13 @@ fn fill_nodes(nodes: &mut [Node], base: u32, tris: &mut [Tri], first: u32, depth
     let count = tris.len();
     let (bmin, bmax) = tri_bounds(tris);
     if count <= 4 {
-        nodes[0] = Node { min: bmin, max: bmax, left_first: first, count: count as u32, right: 0 };
+        nodes[0] = Node {
+            min: bmin,
+            max: bmax,
+            left_first: first,
+            count: count as u32,
+            right: 0,
+        };
         return;
     }
     let half = median_split(tris, bmin, bmax);
@@ -157,7 +169,9 @@ fn fill_nodes(nodes: &mut [Node], base: u32, tris: &mut [Tri], first: u32, depth
     let right_first = first + half as u32;
     if depth < PARALLEL_DEPTH && count >= PARALLEL_MIN_TRIS {
         std::thread::scope(|scope| {
-            scope.spawn(move || fill_nodes(right_nodes, right_base, right_tris, right_first, depth + 1));
+            scope.spawn(move || {
+                fill_nodes(right_nodes, right_base, right_tris, right_first, depth + 1)
+            });
             fill_nodes(left_nodes, base + 1, left_tris, first, depth + 1);
         });
     } else {
@@ -226,11 +240,12 @@ impl RaycastScene {
         out.write_all(&(self.tris.len() as u64).to_le_bytes())?;
         out.write_all(&(self.nodes.len() as u64).to_le_bytes())?;
         let mut buffer = Vec::with_capacity(1 << 20);
-        let mut flush = |buffer: &mut Vec<u8>, out: &mut dyn std::io::Write| -> std::io::Result<()> {
-            out.write_all(buffer)?;
-            buffer.clear();
-            Ok(())
-        };
+        let mut flush =
+            |buffer: &mut Vec<u8>, out: &mut dyn std::io::Write| -> std::io::Result<()> {
+                out.write_all(buffer)?;
+                buffer.clear();
+                Ok(())
+            };
         for tri in &self.tris {
             for v in [tri.a, tri.b, tri.c] {
                 for c in v.to_array() {
@@ -264,7 +279,10 @@ impl RaycastScene {
         let mut magic = [0u8; 8];
         input.read_exact(&mut magic)?;
         if &magic != BVH_FILE_MAGIC {
-            return Err(Error::new(ErrorKind::InvalidData, "not a sensor BVH file (or another format version)"));
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "not a sensor BVH file (or another format version)",
+            ));
         }
         let mut word = [0u8; 8];
         input.read_exact(&mut word)?;
@@ -272,12 +290,21 @@ impl RaycastScene {
         input.read_exact(&mut word)?;
         let node_count = u64::from_le_bytes(word) as usize;
         if node_count > 2 * tri_count.max(1) {
-            return Err(Error::new(ErrorKind::InvalidData, "sensor BVH node count exceeds its triangle bound"));
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "sensor BVH node count exceeds its triangle bound",
+            ));
         }
         let mut bytes = vec![0u8; tri_count * TRI_BYTES];
         input.read_exact(&mut bytes)?;
-        let f = |chunk: &[u8], index: usize| f32::from_bits(u32::from_le_bytes(chunk[index * 4..index * 4 + 4].try_into().unwrap()));
-        let u = |chunk: &[u8], index: usize| u32::from_le_bytes(chunk[index * 4..index * 4 + 4].try_into().unwrap());
+        let f = |chunk: &[u8], index: usize| {
+            f32::from_bits(u32::from_le_bytes(
+                chunk[index * 4..index * 4 + 4].try_into().unwrap(),
+            ))
+        };
+        let u = |chunk: &[u8], index: usize| {
+            u32::from_le_bytes(chunk[index * 4..index * 4 + 4].try_into().unwrap())
+        };
         let tris = bytes
             .chunks_exact(TRI_BYTES)
             .map(|c| Tri {
@@ -301,7 +328,10 @@ impl RaycastScene {
             .collect();
         let mut trailing = [0u8; 1];
         if input.read(&mut trailing)? != 0 {
-            return Err(Error::new(ErrorKind::InvalidData, "sensor BVH file has trailing bytes"));
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "sensor BVH file has trailing bytes",
+            ));
         }
         Ok(Self { tris, nodes })
     }
@@ -326,12 +356,24 @@ impl RaycastScene {
         let range = first as usize..(first + count) as usize;
         let (bmin, bmax) = tri_bounds(&self.tris[range.clone()]);
         if count <= 4 {
-            self.nodes.push(Node { min: bmin, max: bmax, left_first: first, count, right: 0 });
+            self.nodes.push(Node {
+                min: bmin,
+                max: bmax,
+                left_first: first,
+                count,
+                right: 0,
+            });
             return node_index;
         }
         let half = median_split(&mut self.tris[range], bmin, bmax) as u32;
         let mid = first + half;
-        self.nodes.push(Node { min: bmin, max: bmax, left_first: 0, count: 0, right: 0 });
+        self.nodes.push(Node {
+            min: bmin,
+            max: bmax,
+            left_first: 0,
+            count: 0,
+            right: 0,
+        });
         let left = self.subdivide(first, mid - first);
         let right = self.subdivide(mid, first + count - mid);
         self.nodes[node_index as usize].left_first = left;
@@ -412,13 +454,37 @@ fn ray_aabb(origin: Vec3, inv_dir: Vec3, t_max: f32, min: Vec3, max: Vec3) -> bo
     tmax >= 0.0 && tmin <= t_max
 }
 
+/// Minimum |cos(incidence)| of an accepted hit (incidence measured from the
+/// triangle normal): rays within ~2.9 degrees of grazing are misses.
+///
+/// Near grazing, f32 Möller–Trumbore in world coordinates cancels
+/// catastrophically: the barycentrics of a ray that misses the triangle by
+/// metres can land inside [0, 1] and produce a ghost return (the parity
+/// test for the hardware backend found them at ~0.1% of adversarial rays).
+/// Bounding the incidence bounds the positional error of every accepted
+/// hit by about `eps * |coord| / cos`, a few millimetres at map scale,
+/// which is what lets both the CPU trees ([`Blas`] slack) and the hardware
+/// backend (triangle inflation) be provably conservative. Real returns at
+/// such incidence are negligible (the modelled intensity is already at its
+/// floor) and a physical lidar does not report them either.
+pub const MIN_INCIDENCE_COS: f32 = 0.05;
+const MIN_INCIDENCE_COS2: f32 = MIN_INCIDENCE_COS * MIN_INCIDENCE_COS;
+
 /// Möller–Trumbore. Distance is along the unnormalized `dir`.
+///
+/// The operation order is part of the contract: `crate::gpu_rays` re-runs
+/// exactly these IEEE f32 operations on the GPU to stay bit-identical.
 fn ray_tri_distance(origin: Vec3, dir: Vec3, tri: &Tri) -> Option<f32> {
     let e1 = tri.b - tri.a;
     let e2 = tri.c - tri.a;
     let pvec = dir.cross(e2);
     let det = e1.dot(pvec);
     if det.abs() < EPS {
+        return None;
+    }
+    // |det| = |e1 x e2| |dir| |cos|: compare squares, no square roots.
+    let normal = e1.cross(e2);
+    if det * det < MIN_INCIDENCE_COS2 * (normal.dot(normal) * dir.dot(dir)) {
         return None;
     }
     let inv_det = 1.0 / det;
@@ -494,7 +560,10 @@ impl Blas {
         // Roundoff allowance is a property of the bounds, not work to repeat
         // for every node visited by every beam.
         for node in &mut mesh.nodes {
-            let slack = node.min.abs().max(node.max.abs()) * 1e-5 + Vec3::splat(1e-3);
+            // Covers the ray's local-space rounding and the positional error
+            // an accepted hit can have (see MIN_INCIDENCE_COS): a tree must
+            // never cull a triangle the exact leaf test would accept.
+            let slack = node.min.abs().max(node.max.abs()) * 1e-5 + Vec3::splat(5e-2);
             node.min -= slack;
             node.max += slack;
         }
@@ -503,6 +572,11 @@ impl Blas {
 
     pub fn tri_count(&self) -> usize {
         self.0.tri_count()
+    }
+
+    /// The tree's model-local triangles, in leaf order.
+    pub fn tris(&self) -> &[Tri] {
+        &self.0.tris
     }
 
     /// Whether two handles share one built tree (cache tests).
@@ -523,7 +597,45 @@ impl InstancedScene {
     }
 
     pub(crate) fn gpu_instances(&self) -> impl Iterator<Item = (usize, Mat4, u32)> + '_ {
-        self.instances.iter().map(|instance| (instance.mesh, instance.world, instance.instance_id))
+        self.instances
+            .iter()
+            .map(|instance| (instance.mesh, instance.world, instance.instance_id))
+    }
+
+    /// Every instance in the order [`Self::cast`] indexes them (after
+    /// [`Self::build`]): `(mesh, world, instance_id, order)`. The hardware
+    /// ray backend (`crate::gpu_rays`) mirrors exactly this table.
+    pub(crate) fn instance_records(&self) -> impl Iterator<Item = (usize, Mat4, u32, u32)> + '_ {
+        self.instances.iter().map(|instance| {
+            (
+                instance.mesh,
+                instance.world,
+                instance.instance_id,
+                instance.order,
+            )
+        })
+    }
+
+    /// The hit [`Self::cast`] reports for triangle `triangle_index` of
+    /// instance `instance_index` at distance `t` along `origin + t * dir`:
+    /// one constructor shared by the CPU walk and the hardware ray backend,
+    /// so normals and points are the same bytes whichever found the winner.
+    pub fn hit_from(
+        &self,
+        instance_index: usize,
+        triangle_index: usize,
+        origin: Vec3,
+        dir: Vec3,
+        t: f32,
+    ) -> Hit {
+        let instance = &self.instances[instance_index];
+        let tri = transformed_triangle(&self.meshes[instance.mesh].tris[triangle_index], instance);
+        Hit {
+            distance: t,
+            point: origin + dir * t,
+            instance_id: instance.instance_id,
+            normal: (tri.b - tri.a).cross(tri.c - tri.a).normalize(),
+        }
     }
 
     pub(crate) fn gpu_hit_triangle(&self, instance: usize, primitive: usize) -> Tri {
@@ -531,12 +643,23 @@ impl InstancedScene {
         transformed_triangle(&self.meshes[instance.mesh].tris[primitive], instance)
     }
 
-    pub(crate) fn closest_triangle_in_instance(&self, id: u32, origin: Vec3, dir: Vec3) -> Option<Tri> {
-        let instance = self.instances.iter().find(|instance| instance.instance_id == id)?;
-        self.meshes[instance.mesh].tris.iter()
+    pub(crate) fn closest_triangle_in_instance(
+        &self,
+        id: u32,
+        origin: Vec3,
+        dir: Vec3,
+    ) -> Option<Tri> {
+        let instance = self
+            .instances
+            .iter()
+            .find(|instance| instance.instance_id == id)?;
+        self.meshes[instance.mesh]
+            .tris
+            .iter()
             .map(|tri| transformed_triangle(tri, instance))
             .filter_map(|tri| ray_tri_distance(origin, dir, &tri).map(|t| (tri, t)))
-            .min_by(|a, b| a.1.total_cmp(&b.1)).map(|(tri, _)| tri)
+            .min_by(|a, b| a.1.total_cmp(&b.1))
+            .map(|(tri, _)| tri)
     }
 
     pub fn add_mesh(&mut self, mesh: RaycastScene) -> usize {
@@ -551,11 +674,19 @@ impl InstancedScene {
     }
 
     pub fn add_instance(&mut self, mesh: usize, world: Mat4, instance_id: u32) {
-        let Some(root) = self.meshes[mesh].nodes.first() else { return };
+        let Some(root) = self.meshes[mesh].nodes.first() else {
+            return;
+        };
         let (min, max) = transformed_bounds(root.min, root.max, world);
         let order = self.instances.len() as u32;
         self.instances.push(MeshInstance {
-            mesh, world, inverse: world.inverse(), min, max, instance_id, order,
+            mesh,
+            world,
+            inverse: world.inverse(),
+            min,
+            max,
+            instance_id,
+            order,
         });
     }
 
@@ -564,7 +695,10 @@ impl InstancedScene {
     }
 
     pub fn tri_count(&self) -> usize {
-        self.instances.iter().map(|i| self.meshes[i.mesh].tri_count()).sum()
+        self.instances
+            .iter()
+            .map(|i| self.meshes[i.mesh].tri_count())
+            .sum()
     }
 
     pub fn unique_tri_count(&self) -> usize {
@@ -589,19 +723,37 @@ impl InstancedScene {
         }
         let index = self.nodes.len() as u32;
         if count <= 4 {
-            self.nodes.push(Node { min, max, left_first: first, count, right: 0 });
+            self.nodes.push(Node {
+                min,
+                max,
+                left_first: first,
+                count,
+                right: 0,
+            });
             return index;
         }
         let extent = max - min;
-        let axis = if extent.x >= extent.y && extent.x >= extent.z { 0 }
-            else if extent.y >= extent.z { 1 } else { 2 };
+        let axis = if extent.x >= extent.y && extent.x >= extent.z {
+            0
+        } else if extent.y >= extent.z {
+            1
+        } else {
+            2
+        };
         let mid = count / 2;
         slice.select_nth_unstable_by(mid as usize, |a, b| {
-            (a.min[axis] + a.max[axis]).total_cmp(&(b.min[axis] + b.max[axis]))
+            (a.min[axis] + a.max[axis])
+                .total_cmp(&(b.min[axis] + b.max[axis]))
                 .then(a.instance_id.cmp(&b.instance_id))
                 .then(a.order.cmp(&b.order))
         });
-        self.nodes.push(Node { min, max, left_first: 0, count: 0, right: 0 });
+        self.nodes.push(Node {
+            min,
+            max,
+            left_first: 0,
+            count: 0,
+            right: 0,
+        });
         let left = self.subdivide(first, mid);
         let right = self.subdivide(first + mid, count - mid);
         self.nodes[index as usize].left_first = left;
@@ -610,6 +762,36 @@ impl InstancedScene {
     }
 
     pub fn cast(&self, origin: Vec3, dir: Vec3, t_max: f32) -> Option<Hit> {
+        self.cast_indexed(origin, dir, t_max)
+            .map(|(instance_index, triangle_index, t)| {
+                self.hit_from(instance_index, triangle_index, origin, dir, t)
+            })
+    }
+
+    /// Local bounds of mesh `mesh` (its tree's root, slack included).
+    pub(crate) fn mesh_bounds(&self, mesh: usize) -> (Vec3, Vec3) {
+        self.meshes[mesh]
+            .nodes
+            .first()
+            .map_or((Vec3::ZERO, Vec3::ZERO), |root| (root.min, root.max))
+    }
+
+    /// Test/diagnostic view of [`Self::instance_records`].
+    #[doc(hidden)]
+    pub fn instance_records_pub(&self) -> impl Iterator<Item = (usize, Mat4, u32, u32)> + '_ {
+        self.instance_records()
+    }
+
+    /// Test/diagnostic: the local triangle `triangle_index` of the mesh of
+    /// instance `instance_index`.
+    #[doc(hidden)]
+    pub fn mesh_triangle_pub(&self, instance_index: usize, triangle_index: usize) -> Tri {
+        self.meshes[self.instances[instance_index].mesh].tris[triangle_index]
+    }
+
+    /// [`Self::cast`]'s winner as `(instance index, triangle index, t)`
+    /// (indices as [`Self::hit_from`] takes them).
+    pub fn cast_indexed(&self, origin: Vec3, dir: Vec3, t_max: f32) -> Option<(usize, usize, f32)> {
         if self.nodes.is_empty() {
             return None;
         }
@@ -628,10 +810,19 @@ impl InstancedScene {
             }
             let node = &self.nodes[index as usize];
             if node.count == 0 {
-                push_near_children(&self.nodes, node, origin, inv_dir, best_t, &mut stack, &mut sp);
+                push_near_children(
+                    &self.nodes,
+                    node,
+                    origin,
+                    inv_dir,
+                    best_t,
+                    &mut stack,
+                    &mut sp,
+                );
                 continue;
             }
-            for instance_index in node.left_first as usize..(node.left_first + node.count) as usize {
+            for instance_index in node.left_first as usize..(node.left_first + node.count) as usize
+            {
                 let instance = &self.instances[instance_index];
                 if !ray_aabb(origin, inv_dir, best_t, instance.min, instance.max) {
                     continue;
@@ -649,21 +840,31 @@ impl InstancedScene {
                     }
                     let local = &mesh.nodes[local_index as usize];
                     if local.count == 0 {
-                        push_near_children(&mesh.nodes, local, local_origin, local_inv,
-                            best_t + 1e-3, &mut local_stack, &mut local_sp);
+                        push_near_children(
+                            &mesh.nodes,
+                            local,
+                            local_origin,
+                            local_inv,
+                            best_t + 1e-3,
+                            &mut local_stack,
+                            &mut local_sp,
+                        );
                         continue;
                     }
-                    for triangle_index in local.left_first as usize..(local.left_first + local.count) as usize {
+                    for triangle_index in
+                        local.left_first as usize..(local.left_first + local.count) as usize
+                    {
                         let tri = &mesh.tris[triangle_index];
                         let world_tri = transformed_triangle(tri, instance);
                         if let Some(distance) = ray_tri_distance(origin, dir, &world_tri) {
                             // A nearest-first walk must not make exact depth
                             // ties depend on visitation order.
-                            let wins_tie = distance == best_t && best.is_some_and(|(old_instance, old_tri)| {
-                                let old = &self.instances[old_instance];
-                                (instance.instance_id, triangle_index, instance.order)
-                                    < (old.instance_id, old_tri, old.order)
-                            });
+                            let wins_tie = distance == best_t
+                                && best.is_some_and(|(old_instance, old_tri)| {
+                                    let old = &self.instances[old_instance];
+                                    (instance.instance_id, triangle_index, instance.order)
+                                        < (old.instance_id, old_tri, old.order)
+                                });
                             if distance < best_t || wins_tie {
                                 best_t = distance;
                                 best = Some((instance_index, triangle_index));
@@ -673,16 +874,7 @@ impl InstancedScene {
                 }
             }
         }
-        best.map(|(instance_index, triangle_index)| {
-            let instance = &self.instances[instance_index];
-            let tri = transformed_triangle(&self.meshes[instance.mesh].tris[triangle_index], instance);
-            Hit {
-                distance: best_t,
-                point: origin + dir * best_t,
-                instance_id: instance.instance_id,
-                normal: (tri.b - tri.a).cross(tri.c - tri.a).normalize(),
-            }
-        })
+        best.map(|(instance_index, triangle_index)| (instance_index, triangle_index, best_t))
     }
 }
 
@@ -736,15 +928,23 @@ fn ray_aabb_near(origin: Vec3, inv_dir: Vec3, t_max: f32, node: &Node) -> Option
 }
 
 fn push_near_children(
-    nodes: &[Node], node: &Node, origin: Vec3, inv_dir: Vec3, t_max: f32,
-    stack: &mut [(u32, f32); 64], sp: &mut usize,
+    nodes: &[Node],
+    node: &Node,
+    origin: Vec3,
+    inv_dir: Vec3,
+    t_max: f32,
+    stack: &mut [(u32, f32); 64],
+    sp: &mut usize,
 ) {
     let left = ray_aabb_near(origin, inv_dir, t_max, &nodes[node.left_first as usize]);
     let right = ray_aabb_near(origin, inv_dir, t_max, &nodes[node.right as usize]);
     match (left, right) {
         (Some(a), Some(b)) => {
-            let (near, far) = if a <= b { ((node.left_first, a), (node.right, b)) }
-                else { ((node.right, b), (node.left_first, a)) };
+            let (near, far) = if a <= b {
+                ((node.left_first, a), (node.right, b))
+            } else {
+                ((node.right, b), (node.left_first, a))
+            };
             stack[*sp] = far;
             stack[*sp + 1] = near;
             *sp += 2;
@@ -806,7 +1006,11 @@ mod parallel_build_tests {
         let mut out = Vec::with_capacity(n);
         for i in 0..n {
             let base = Vec3::new(next() * 500.0, next() * 20.0, next() * 500.0);
-            let base = if i % 7 == 0 { Vec3::new(10.0, 0.0, 10.0) } else { base };
+            let base = if i % 7 == 0 {
+                Vec3::new(10.0, 0.0, 10.0)
+            } else {
+                base
+            };
             let tri = Tri {
                 a: base,
                 b: base + Vec3::new(next(), 0.1, 0.0),
@@ -838,7 +1042,10 @@ mod parallel_build_tests {
             let mut serial = scene(&tris);
             serial.build_serial();
             assert_eq!(parallel.nodes.len(), serial.nodes.len(), "n={n}");
-            assert!(parallel.nodes == serial.nodes, "node layout differs at n={n}");
+            assert!(
+                parallel.nodes == serial.nodes,
+                "node layout differs at n={n}"
+            );
             let same_tris = parallel.tris.iter().zip(&serial.tris).all(|(a, b)| {
                 a.a == b.a && a.b == b.b && a.c == b.c && a.instance_id == b.instance_id
             });
@@ -856,14 +1063,21 @@ mod parallel_build_tests {
             built.build();
             let mut bytes = Vec::new();
             built.write_to(&mut bytes).unwrap();
-            assert_eq!(bytes.len(), 24 + built.tris.len() * TRI_BYTES + built.nodes.len() * NODE_BYTES);
+            assert_eq!(
+                bytes.len(),
+                24 + built.tris.len() * TRI_BYTES + built.nodes.len() * NODE_BYTES
+            );
             let restored = RaycastScene::read_from(&mut bytes.as_slice()).unwrap();
             assert!(restored.nodes == built.nodes, "n={n}");
             assert!(restored.tris == built.tris, "n={n}");
             for k in 0..300 {
                 let origin = Vec3::new((k * 7 % 500) as f32, 100.0, (k * 13 % 500) as f32);
-                let a = built.cast(origin, Vec3::NEG_Y, 1000.0).map(|h| (h.distance.to_bits(), h.instance_id));
-                let b = restored.cast(origin, Vec3::NEG_Y, 1000.0).map(|h| (h.distance.to_bits(), h.instance_id));
+                let a = built
+                    .cast(origin, Vec3::NEG_Y, 1000.0)
+                    .map(|h| (h.distance.to_bits(), h.instance_id));
+                let b = restored
+                    .cast(origin, Vec3::NEG_Y, 1000.0)
+                    .map(|h| (h.distance.to_bits(), h.instance_id));
                 assert_eq!(a, b);
             }
         }
@@ -889,8 +1103,12 @@ mod parallel_build_tests {
         serial.build_serial();
         for k in 0..500 {
             let origin = Vec3::new((k * 7 % 500) as f32, 100.0, (k * 13 % 500) as f32);
-            let a = parallel.cast(origin, Vec3::NEG_Y, 1000.0).map(|h| (h.distance.to_bits(), h.instance_id));
-            let b = serial.cast(origin, Vec3::NEG_Y, 1000.0).map(|h| (h.distance.to_bits(), h.instance_id));
+            let a = parallel
+                .cast(origin, Vec3::NEG_Y, 1000.0)
+                .map(|h| (h.distance.to_bits(), h.instance_id));
+            let b = serial
+                .cast(origin, Vec3::NEG_Y, 1000.0)
+                .map(|h| (h.distance.to_bits(), h.instance_id));
             assert_eq!(a, b);
         }
     }
@@ -907,19 +1125,48 @@ mod shared_blas_tests {
         fn cuboid(min: Vec3, max: Vec3, out: &mut Vec<Tri>) {
             let p = |x: f32, y: f32, z: f32| Vec3::new(x, y, z);
             let c = [
-                p(min.x, min.y, min.z), p(max.x, min.y, min.z), p(max.x, max.y, min.z), p(min.x, max.y, min.z),
-                p(min.x, min.y, max.z), p(max.x, min.y, max.z), p(max.x, max.y, max.z), p(min.x, max.y, max.z),
+                p(min.x, min.y, min.z),
+                p(max.x, min.y, min.z),
+                p(max.x, max.y, min.z),
+                p(min.x, max.y, min.z),
+                p(min.x, min.y, max.z),
+                p(max.x, min.y, max.z),
+                p(max.x, max.y, max.z),
+                p(min.x, max.y, max.z),
             ];
             for [a, b, d] in [
-                [0, 1, 2], [0, 2, 3], [4, 6, 5], [4, 7, 6], [0, 4, 5], [0, 5, 1],
-                [3, 2, 6], [3, 6, 7], [0, 3, 7], [0, 7, 4], [1, 5, 6], [1, 6, 2],
+                [0, 1, 2],
+                [0, 2, 3],
+                [4, 6, 5],
+                [4, 7, 6],
+                [0, 4, 5],
+                [0, 5, 1],
+                [3, 2, 6],
+                [3, 6, 7],
+                [0, 3, 7],
+                [0, 7, 4],
+                [1, 5, 6],
+                [1, 6, 2],
             ] {
-                out.push(Tri { a: c[a], b: c[b], c: c[d], instance_id: 0 });
+                out.push(Tri {
+                    a: c[a],
+                    b: c[b],
+                    c: c[d],
+                    instance_id: 0,
+                });
             }
         }
         let mut tris = Vec::new();
-        cuboid(Vec3::new(-2.25, 0.3, -0.9), Vec3::new(2.25, 0.9, 0.9), &mut tris);
-        cuboid(Vec3::new(-1.2, 0.9, -0.8), Vec3::new(0.8, 1.5, 0.8), &mut tris);
+        cuboid(
+            Vec3::new(-2.25, 0.3, -0.9),
+            Vec3::new(2.25, 0.9, 0.9),
+            &mut tris,
+        );
+        cuboid(
+            Vec3::new(-1.2, 0.9, -0.8),
+            Vec3::new(0.8, 1.5, 0.8),
+            &mut tris,
+        );
         tris
     }
 
@@ -929,7 +1176,11 @@ mod shared_blas_tests {
                 let k = k as f32;
                 let world = Mat4::from_rotation_translation(
                     Quat::from_rotation_y(0.37 * k),
-                    Vec3::new(9.0 * (k % 4.0) - 12.0, 0.013 * k, 8.5 * (k / 4.0).floor() - 8.0),
+                    Vec3::new(
+                        9.0 * (k % 4.0) - 12.0,
+                        0.013 * k,
+                        8.5 * (k / 4.0).floor() - 8.0,
+                    ),
                 );
                 (world, 100 + k as u32)
             })
@@ -943,7 +1194,14 @@ mod shared_blas_tests {
             let elevation = (-25.0 + 30.0 * ch as f32 / 31.0_f32).to_radians();
             for step in 0..720 {
                 let azimuth = (step as f32 / 720.0) * std::f32::consts::TAU;
-                out.push((origin, Vec3::new(elevation.cos() * azimuth.cos(), elevation.sin(), elevation.cos() * azimuth.sin())));
+                out.push((
+                    origin,
+                    Vec3::new(
+                        elevation.cos() * azimuth.cos(),
+                        elevation.sin(),
+                        elevation.cos() * azimuth.sin(),
+                    ),
+                ));
             }
         }
         out
@@ -970,12 +1228,27 @@ mod shared_blas_tests {
         flat.build();
         let mut hits = 0;
         for (origin, dir) in rays() {
-            let a = instanced.cast(origin, dir, 120.0).map(|h| (h.distance.to_bits(), h.instance_id, h.normal.to_array().map(f32::to_bits)));
-            let b = flat.cast(origin, dir, 120.0).map(|h| (h.distance.to_bits(), h.instance_id, h.normal.to_array().map(f32::to_bits)));
+            let a = instanced.cast(origin, dir, 120.0).map(|h| {
+                (
+                    h.distance.to_bits(),
+                    h.instance_id,
+                    h.normal.to_array().map(f32::to_bits),
+                )
+            });
+            let b = flat.cast(origin, dir, 120.0).map(|h| {
+                (
+                    h.distance.to_bits(),
+                    h.instance_id,
+                    h.normal.to_array().map(f32::to_bits),
+                )
+            });
             assert_eq!(a, b, "ray {origin:?} {dir:?}");
             hits += usize::from(a.is_some());
         }
-        assert!(hits > 500, "the fixture must actually hit the cars ({hits})");
+        assert!(
+            hits > 500,
+            "the fixture must actually hit the cars ({hits})"
+        );
     }
 
     #[test]
@@ -989,7 +1262,10 @@ mod shared_blas_tests {
         let b = second.add_blas(&blas);
         second.add_instance(b, Mat4::from_translation(Vec3::new(3.0, 0.0, 0.0)), 7);
         second.build();
-        assert!(first.meshes[0].as_ref() as *const RaycastScene == second.meshes[0].as_ref() as *const RaycastScene);
+        assert!(
+            first.meshes[0].as_ref() as *const RaycastScene
+                == second.meshes[0].as_ref() as *const RaycastScene
+        );
         assert_eq!(first.unique_tri_count(), 24);
         // The moved instance is hit at the moved position.
         let down = Vec3::NEG_Y;
@@ -1007,11 +1283,19 @@ mod shared_blas_tests {
         let slot = scene.add_blas(&blas);
         scene.add_instance(slot, Mat4::IDENTITY, 1);
         scene.build();
-        let hit = scene.cast(Vec3::new(1.8, 5.0, 0.0), Vec3::NEG_Y, 10.0).unwrap();
-        assert!((hit.point.y - 0.9).abs() < 1e-5, "hood hit at {}", hit.point.y);
+        let hit = scene
+            .cast(Vec3::new(1.8, 5.0, 0.0), Vec3::NEG_Y, 10.0)
+            .unwrap();
+        assert!(
+            (hit.point.y - 0.9).abs() < 1e-5,
+            "hood hit at {}",
+            hit.point.y
+        );
         // A horizontal beam at cabin height in front of the cabin misses the
         // car entirely: a 4.5 x 1.5 box would have stopped it.
-        assert!(scene.cast(Vec3::new(10.0, 1.2, 0.0), Vec3::NEG_X, 7.5).is_none());
+        assert!(scene
+            .cast(Vec3::new(10.0, 1.2, 0.0), Vec3::NEG_X, 7.5)
+            .is_none());
     }
 
     #[test]
@@ -1027,8 +1311,16 @@ mod shared_blas_tests {
                 scene.add_instance(slot, Mat4::IDENTITY, 9);
             }
             scene.build();
-            runs.push(rays().into_iter().map(|(o, d)| scene.cast(o + Vec3::new(0.0, 0.0, 6.0), d, 50.0)
-                .map(|h| (h.distance.to_bits(), h.normal.to_array().map(f32::to_bits)))).collect::<Vec<_>>());
+            runs.push(
+                rays()
+                    .into_iter()
+                    .map(|(o, d)| {
+                        scene
+                            .cast(o + Vec3::new(0.0, 0.0, 6.0), d, 50.0)
+                            .map(|h| (h.distance.to_bits(), h.normal.to_array().map(f32::to_bits)))
+                    })
+                    .collect::<Vec<_>>(),
+            );
         }
         assert_eq!(runs[0], runs[1]);
         assert_eq!(runs[1], runs[2]);

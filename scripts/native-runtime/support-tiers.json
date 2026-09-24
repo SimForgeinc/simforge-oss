@@ -102,7 +102,7 @@
     },
     {
       "tier": "bevy-sensor-render",
-      "description": "simforge.render-bundle/v1 and local scenario renders: resident Bevy renderer (native-render-service + the simforge_render shared library, Bevy 0.19.1 / wgpu 29) through the host-frame transport. The Linux gpu-interop device path additionally requires CUDA and a matching physical device; elsewhere only the declared host-copy path exists.",
+      "description": "simforge.render-bundle/v1 and local scenario renders: resident Bevy renderer (the `simforge-render` executable + the simforge_render shared library, Bevy 0.19.1 / wgpu 29) through the host-frame transport. The Linux gpu-interop device path additionally requires CUDA and a matching physical device; elsewhere only the declared host-copy path exists.",
       "requires": {},
       "requiresByOs": {
         "linux": { "vulkan": ">=1.2", "gpu": "Vulkan-capable; CUDA >=12 for the optional gpu-interop device path" },
@@ -156,8 +156,8 @@
       "module": "simforge_oss_gpu",
       "tier": "roadway-gpu-batch"
     },
-    "simforge-oss-native-renderer": {
-      "module": "simforge_native",
+    "simforge-oss-render": {
+      "module": "simforge_render",
       "tier": "bevy-sensor-render"
     },
     "simforge-oss-splat": {

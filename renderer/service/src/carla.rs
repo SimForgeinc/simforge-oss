@@ -30,13 +30,7 @@ pub const CARLA_DEPTH_MAX_M: f32 = 1000.0;
 /// `z_view = near / d`; `d = 0` is the cleared background (infinitely far).
 /// Distances beyond CARLA's 1000 m depth range saturate at 1000 m, exactly
 /// as CARLA's own depth camera does.
-pub fn depth_to_carla(
-    data: &[u8],
-    width: u32,
-    height: u32,
-    stride: usize,
-    near_m: f32,
-) -> Vec<u8> {
+pub fn depth_to_carla(data: &[u8], width: u32, height: u32, stride: usize, near_m: f32) -> Vec<u8> {
     let h = height as usize;
     let w = width as usize;
     let mut out = vec![0u8; stride * h];
@@ -53,9 +47,8 @@ pub fn depth_to_carla(
             let d = f32::from_bits(bits);
             // Background (reverse-Z clears to 0) is beyond every range.
             let meters = if d > 0.0 { near_m / d } else { f32::INFINITY };
-            let v = (meters.min(CARLA_DEPTH_MAX_M) / CARLA_DEPTH_MAX_M
-                * 16_777_215.0)
-                .round() as u32;
+            let v =
+                (meters.min(CARLA_DEPTH_MAX_M) / CARLA_DEPTH_MAX_M * 16_777_215.0).round() as u32;
             dst[col * 4] = ((v >> 16) & 0xFF) as u8; // B = MSB
             dst[col * 4 + 1] = ((v >> 8) & 0xFF) as u8; // G
             dst[col * 4 + 2] = (v & 0xFF) as u8; // R = LSB
@@ -69,6 +62,8 @@ pub fn depth_to_carla(
 pub mod classes {
     pub const UNLABELED: u8 = 0;
     pub const BUILDING: u8 = 1;
+    pub const FENCE: u8 = 2;
+    pub const POLE: u8 = 5;
     pub const PEDESTRIAN: u8 = 4;
     pub const ROAD: u8 = 7;
     pub const VEGETATION: u8 = 9;
@@ -82,25 +77,17 @@ pub mod classes {
 /// before road keywords). Everything unmatched stays 0 (unlabeled) — honest
 /// background, not a guess.
 pub fn static_class_of(name: &str) -> u8 {
-    let lower = name.to_ascii_lowercase();
-    let has = |needles: &[&str]| needles.iter().any(|n| lower.contains(n));
-    if has(&["tree", "veg", "bush", "shrub", "plant", "foliage", "grass", "hedge"]) {
-        classes::VEGETATION
-    } else if lower.contains("building") {
-        classes::BUILDING
-    } else if has(&[
-        "road",
-        "asphalt",
-        "sidewalk",
-        "curb",
-        "ground",
-        "pavement",
-        "crosswalk",
-        "marking",
-    ]) {
-        classes::ROAD
-    } else {
-        classes::UNLABELED
+    use sensors::taxonomy::StaticKind;
+    match StaticKind::of(name) {
+        StaticKind::Vegetation => classes::VEGETATION,
+        StaticKind::Building => classes::BUILDING,
+        StaticKind::Road => classes::ROAD,
+        StaticKind::Pole => classes::POLE,
+        StaticKind::TrafficSign => classes::TRAFFIC_SIGN,
+        StaticKind::Fence => classes::FENCE,
+        // Reported per map (`unlabeledStatics` in the ready record and job
+        // results), never guessed.
+        StaticKind::Unknown => classes::UNLABELED,
     }
 }
 
@@ -117,11 +104,15 @@ pub fn static_class_of(name: &str) -> u8 {
 /// consumer treats them ("vehicle").
 pub fn actor_class_of(class: &str) -> Result<u8, String> {
     match class {
-        "car" | "van" | "suv" | "pickup" | "truck" | "bus" | "motorcycle" | "cyclist" => Ok(classes::VEHICLE),
+        "car" | "van" | "suv" | "pickup" | "truck" | "bus" | "motorcycle" | "cyclist" => {
+            Ok(classes::VEHICLE)
+        }
         "pedestrian" | "rider" => Ok(classes::PEDESTRIAN),
         // Props have no CARLA CityScapes class of their own in this subset.
         "prop" => Ok(classes::UNLABELED),
-        other => Err(format!("[native_actor_class_unmapped] actor class {other:?} has no CARLA semantic class")),
+        other => Err(format!(
+            "[native_actor_class_unmapped] actor class {other:?} has no CARLA semantic class"
+        )),
     }
 }
 
@@ -131,7 +122,13 @@ pub fn actor_class_of(class: &str) -> Result<u8, String> {
 /// instance id to a CARLA class id (lookup order: dynamic actors, then static
 /// legend names). Output keeps the same row stride; byte 2 carries the class,
 /// all other bytes are 0 except alpha = 255.
-pub fn semantic_from_ids<F>(id_data: &[u8], width: u32, height: u32, stride: usize, mut class_of: F) -> Vec<u8>
+pub fn semantic_from_ids<F>(
+    id_data: &[u8],
+    width: u32,
+    height: u32,
+    stride: usize,
+    mut class_of: F,
+) -> Vec<u8>
 where
     F: FnMut(u32) -> u8,
 {

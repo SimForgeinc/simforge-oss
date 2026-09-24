@@ -5,14 +5,6 @@ use serde::{Deserialize, Serialize};
 
 pub const SCENE_STATE_VERSION: &str = "simforge.scene-state.v1";
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum RenderProfile {
-    #[default]
-    Sensor,
-    Cinematic,
-}
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Weather {
@@ -72,11 +64,23 @@ pub struct ActorTick {
     pub yaw_rad: f64,
     pub velocity: [f64; 3],
     /// sampler/2 channels (simforge-core `scene_state::ActorTick`).
-    #[serde(rename = "wheelSpinRad", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "wheelSpinRad",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub wheel_spin_rad: Option<f64>,
-    #[serde(rename = "bodyAttitude", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "bodyAttitude",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub body_attitude: Option<BodyAttitude>,
-    #[serde(rename = "wheelDropM", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "wheelDropM",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub wheel_drop_m: Option<[f64; 4]>,
 }
 
@@ -110,8 +114,6 @@ pub struct SceneState {
     pub weather: Weather,
     #[serde(rename = "timeOfDay")]
     pub time_of_day: f64,
-    #[serde(default)]
-    pub profile: RenderProfile,
     #[serde(default, rename = "groundY")]
     pub ground_y: Option<f64>,
     pub actors: Vec<ActorDesc>,
@@ -203,7 +205,6 @@ mod tests {
             "tickCount": 1,
             "weather": { "preset": "clear", "fogDensity": 0.0, "rainIntensity": 0.0, "wetness": 0.0 },
             "timeOfDay": 12.0,
-            "profile": "sensor",
             "groundY": 2.0,
             "actors": [{ "id": "ego", "catalogId": "vehicle.honda_civic", "actorClass": "car" }],
             "frames": [{

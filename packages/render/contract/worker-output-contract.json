@@ -24,6 +24,13 @@
         "native.diagnostics:parity"
       ]
     },
+    "native-evidence.render-config": {
+      "constant": "CONTROL_FEATURE_NATIVE_RENDER_CONFIG",
+      "keys": [
+        "native.diagnostics:exposure",
+        "native.manifest:render"
+      ]
+    },
     "native-evidence.scene-source": {
       "constant": "CONTROL_FEATURE_NATIVE_SCENE_SOURCE",
       "keys": [
@@ -37,6 +44,13 @@
       "constant": "CONTROL_FEATURE_NATIVE_STAGE_TIMINGS",
       "keys": [
         "native.diagnostics:timings.stages"
+      ]
+    },
+    "native-evidence.vram-detected": {
+      "constant": "CONTROL_FEATURE_NATIVE_VRAM_DETECTED",
+      "keys": [
+        "native.diagnostics:textureProfile.detectedCapacityBytes",
+        "native.manifest:textureProfile.detectedCapacityBytes"
       ]
     },
     "render-evidence.substitutions": {

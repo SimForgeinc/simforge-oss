@@ -21,10 +21,10 @@
 //! in the air.
 
 use bevy::asset::RenderAssetUsages;
+use bevy::camera::visibility::RenderLayers;
 use bevy::math::{Vec2, Vec3};
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
-use bevy::camera::visibility::RenderLayers;
 use std::collections::HashMap;
 
 /// Marks everything this module spawns so a relight can sweep it.
@@ -150,7 +150,9 @@ fn detect_facades(world: &mut World, observer: Vec3) -> (Vec<Facade>, FacadeStat
         query
             .iter(world)
             .filter(|(_, _, layers)| {
-                layers.map(|l| l.intersects(&RenderLayers::layer(0))).unwrap_or(true) // fallback-ok: Bevy semantics: no RenderLayers component means layer 0
+                layers
+                    .map(|l| l.intersects(&RenderLayers::layer(0)))
+                    .unwrap_or(true) // fallback-ok: Bevy semantics: no RenderLayers component means layer 0
             })
             .map(|(mesh, transform, _)| (mesh.0.clone(), *transform))
             .collect()
@@ -333,15 +335,7 @@ fn detect_facades(world: &mut World, observer: Vec3) -> (Vec<Facade>, FacadeStat
 }
 
 /// Conservative half-space rasterisation of one triangle into the plane grid.
-fn rasterize(
-    a: Vec2,
-    b: Vec2,
-    c: Vec2,
-    min: Vec2,
-    cols: usize,
-    rows: usize,
-    cells: &mut [bool],
-) {
+fn rasterize(a: Vec2, b: Vec2, c: Vec2, min: Vec2, cols: usize, rows: usize, cells: &mut [bool]) {
     let lo = a.min(b).min(c);
     let hi = a.max(b).max(c);
     let c0 = (((lo.x - min.x) / RASTER_CELL).floor().max(0.0)) as usize;
@@ -355,7 +349,11 @@ fn rasterize(
     }
     for row in r0..r1 {
         for col in c0..c1 {
-            let p = min + Vec2::new((col as f32 + 0.5) * RASTER_CELL, (row as f32 + 0.5) * RASTER_CELL);
+            let p = min
+                + Vec2::new(
+                    (col as f32 + 0.5) * RASTER_CELL,
+                    (row as f32 + 0.5) * RASTER_CELL,
+                );
             let w0 = edge(b, c, p) / denom;
             let w1 = edge(c, a, p) / denom;
             let w2 = edge(a, b, p) / denom;
@@ -482,8 +480,7 @@ pub fn spawn(
                     continue;
                 }
                 let key = hash32(
-                    (fid as u32)
-                        .wrapping_mul(0x9E37_79B9)
+                    (fid as u32).wrapping_mul(0x9E37_79B9)
                         ^ (bay as u32).wrapping_mul(0x85EB_CA6B)
                         ^ (floor as u32).wrapping_mul(0xC2B2_AE35)
                         ^ seed,

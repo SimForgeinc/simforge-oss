@@ -8,7 +8,7 @@ use bevy::color::{Color, LinearRgba};
 use bevy::light::{FogVolume, PointLight, VolumetricFog, VolumetricLight};
 use bevy::math::Vec3;
 use bevy::mesh::prelude::*;
-use bevy::mesh::{Meshable, SphereMeshBuilder, SphereKind};
+use bevy::mesh::{Meshable, SphereKind, SphereMeshBuilder};
 use bevy::pbr::{MeshMaterial3d, StandardMaterial};
 use bevy::prelude::{ChildOf, Commands, Entity, Name, Transform, Visibility};
 use bevy::render::mesh::Mesh3d;
@@ -25,8 +25,15 @@ use crate::lighting::{kelvin_to_rgb, LightingPlan};
 pub use crate::calibration::HDRI_TO_CDM2;
 
 #[derive(
-    Clone, Copy, Debug, Default, PartialEq, Eq, bevy::prelude::Resource,
-    serde::Serialize, serde::Deserialize,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    bevy::prelude::Resource,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 #[serde(rename_all = "lowercase")]
 pub enum Weather {
@@ -50,9 +57,9 @@ impl Weather {
             "fog" | "mist" => Ok(Weather::Fog),
             "rain" | "wet" => Ok(Weather::Rain),
             "night" | "dusk" => Ok(Weather::Night),
-            other => anyhow::bail!(
-                "unknown weather '{other}' (clear|cloudy|overcast|fog|rain|night)"
-            ),
+            other => {
+                anyhow::bail!("unknown weather '{other}' (clear|cloudy|overcast|fog|rain|night)")
+            }
         }
     }
 
@@ -85,8 +92,8 @@ impl Weather {
     pub fn lighting_plan(&self, sun_dir_color: Option<Color>, sun_elev_deg: f32) -> LightingPlan {
         let sun_lux = sun_direct_normal_illuminance_lx(sun_elev_deg);
         let daylight = daylight_fraction(sun_elev_deg);
-        let sun_color = sun_dir_color
-            .unwrap_or_else(|| kelvin_to_rgb(sun_color_temperature_k(sun_elev_deg))); // fallback-ok: optional sun temperature override; None is the documented elevation-derived colour
+        let sun_color =
+            sun_dir_color.unwrap_or_else(|| kelvin_to_rgb(sun_color_temperature_k(sun_elev_deg))); // fallback-ok: optional sun temperature override; None is the documented elevation-derived colour
         match self {
             Weather::Clear => LightingPlan {
                 sun_lux,
@@ -184,7 +191,7 @@ impl Weather {
                 deck: CloudDeck::None,
                 cloud_cover: 0.0,
                 turbidity: 2.4,
-                visibility_m: 80_000.0,
+                visibility_m: 25_000.0,
                 haze: 0.0,
                 wetness: 0.0,
                 cloud_type: 0.85,
@@ -197,7 +204,7 @@ impl Weather {
                 deck: CloudDeck::Cumulus,
                 cloud_cover: 0.45,
                 turbidity: 2.8,
-                visibility_m: 30_000.0,
+                visibility_m: 20_000.0,
                 haze: 0.03,
                 wetness: 0.0,
                 cloud_type: 0.85,
@@ -249,7 +256,7 @@ impl Weather {
                 deck: CloudDeck::None,
                 cloud_cover: 0.0,
                 turbidity: 2.4,
-                visibility_m: 80_000.0,
+                visibility_m: 25_000.0,
                 haze: 0.0,
                 wetness: 0.0,
                 cloud_type: 0.85,
@@ -282,8 +289,7 @@ pub fn spawn_fog(commands: &mut Commands, eye: Vec3, fwd: Vec3, step_count: u32)
             light_tint: Color::srgb(0.95, 0.97, 1.0),
             ..Default::default()
         },
-        Transform::from_translation(eye + fwd * 180.0)
-            .with_scale(Vec3::new(700.0, 160.0, 500.0)),
+        Transform::from_translation(eye + fwd * 180.0).with_scale(Vec3::new(700.0, 160.0, 500.0)),
         Visibility::default(),
     ));
 }
@@ -307,7 +313,14 @@ pub fn spawn_streetlights(
     let lateral = Vec3::new(-fwd.z, 0.0, fwd.x).normalize();
     let lamp_color = kelvin_to_rgb(2700.0);
     let head_mesh = meshes.add(
-        SphereMeshBuilder::new(0.16, SphereKind::Uv { sectors: 12, stacks: 8 }).build(),
+        SphereMeshBuilder::new(
+            0.16,
+            SphereKind::Uv {
+                sectors: 12,
+                stacks: 8,
+            },
+        )
+        .build(),
     );
     let head_material = materials.add(StandardMaterial {
         emissive: LinearRgba::rgb(40.0, 36.0, 28.0),
@@ -346,15 +359,13 @@ pub fn spawn_streetlights(
 /// Runs once after the scene is spawned.
 pub fn apply_wetness(
     wetness: f32,
-    meshes_q: &mut bevy::prelude::Query<
-        (
-            Entity,
-            Option<&Name>,
-            Option<&bevy::prelude::ChildOf>,
-            &Mesh3d,
-            &MeshMaterial3d<StandardMaterial>,
-        ),
-    >,
+    meshes_q: &mut bevy::prelude::Query<(
+        Entity,
+        Option<&Name>,
+        Option<&bevy::prelude::ChildOf>,
+        &Mesh3d,
+        &MeshMaterial3d<StandardMaterial>,
+    )>,
     names_q: &bevy::prelude::Query<&Name>,
     materials: &mut bevy::asset::Assets<StandardMaterial>,
 ) -> usize {
@@ -371,9 +382,7 @@ pub fn apply_wetness(
             }
         }
         let lower = label.to_ascii_lowercase();
-        if ROAD_MARKERS.iter().any(|m| lower.contains(m))
-            && seen.insert(mat.id().clone())
-        {
+        if ROAD_MARKERS.iter().any(|m| lower.contains(m)) && seen.insert(mat.id().clone()) {
             let Some(mut material) = materials.get_mut(&mat.0) else {
                 continue;
             };

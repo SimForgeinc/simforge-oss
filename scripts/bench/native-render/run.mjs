@@ -11,7 +11,7 @@
  * Usage:
  *   node scripts/bench/native-render/run.mjs --fixture <dir> [--seconds 2]
  *     [--sources all|rgb|lidar|radar|<outputName,...>] [--out <dir>]
- *     [--baseline <result.json>] [--binary <native-render-service>] [--label <text>]
+ *     [--baseline <result.json>] [--binary <simforge-render>] [--label <text>]
  *
  * `--seconds` trims the intent clip to `[start, start + seconds]`; the fixture's
  * scene, rig and video format are otherwise untouched. `--baseline` compares

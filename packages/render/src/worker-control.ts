@@ -81,9 +81,18 @@ export const CONTROL_FEATURE_RENDER_SUBSTITUTIONS = 'render-evidence.substitutio
  * video's codec and encoder arguments.
  */
 export const CONTROL_FEATURE_NATIVE_ENCODER = 'native-evidence.encoder' as const;
+/** `textureProfile.detectedCapacityBytes`: the job's measured device capacity the profile was checked against. */
+export const CONTROL_FEATURE_NATIVE_VRAM_DETECTED = 'native-evidence.vram-detected' as const;
+/**
+ * `render` in the native render manifest (the request, the service's resolved
+ * `RenderConfig`, the geometry LOD mode and derivative), with `look` then
+ * carrying only lighting/metering; an older plane gets the rc.73 `look`
+ * (`profile: cinematic`, `profileConfig` = the resolved config).
+ */
+export const CONTROL_FEATURE_NATIVE_RENDER_CONFIG = 'native-evidence.render-config' as const;
 export const CONTROL_FEATURES_V1 = [
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK,
-  CONTROL_FEATURE_RENDER_SUBSTITUTIONS, CONTROL_FEATURE_NATIVE_ENCODER,
+  CONTROL_FEATURE_RENDER_SUBSTITUTIONS, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_VRAM_DETECTED, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
 ] as const;
 /**
  * Control-plane fields newer than a worker's baseline parsers, in the other
@@ -111,6 +120,8 @@ export const CONTROL_FEATURE_OUTPUTS: Readonly<Record<(typeof CONTROL_FEATURES_V
   [CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK]: ['native.manifest:capture'],
   [CONTROL_FEATURE_RENDER_SUBSTITUTIONS]: ['render.artifact-manifest:substitutions'],
   [CONTROL_FEATURE_NATIVE_ENCODER]: ['native.manifest:encoder'],
+  [CONTROL_FEATURE_NATIVE_VRAM_DETECTED]: ['native.manifest:textureProfile.detectedCapacityBytes', 'native.diagnostics:textureProfile.detectedCapacityBytes'],
+  [CONTROL_FEATURE_NATIVE_RENDER_CONFIG]: ['native.manifest:render', 'native.diagnostics:exposure'],
 };
 
 export const JobInputTransferSchema = z.strictObject({

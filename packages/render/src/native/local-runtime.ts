@@ -18,7 +18,8 @@ import { PINNED_ACTOR_ASSETS_DIGEST, PINNED_ACTOR_ASSETS_SIZE_BYTES } from './ac
  * reason instead of a fallback.
  */
 
-export const NATIVE_RENDER_SERVICE_NAME = 'native-render-service';
+/** The one native renderer executable (`simforge-render serve|job|view|dev`). */
+export const SIMFORGE_RENDER_BINARY_NAME = 'simforge-render';
 const RUNTIME_MANIFEST_RELATIVE = 'bin/runtime-manifest.json';
 const ACTOR_ASSETS_RUNTIME_RELATIVE = 'share/actor-assets';
 
@@ -99,7 +100,7 @@ function resolveExecutable(candidates: ReadonlyArray<{ path: string; source: Loc
 }
 
 /**
- * The retained Bevy service binary: `SIMFORGE_NATIVE_RENDER_BINARY`, then the
+ * The native renderer binary (`simforge-render`): `SIMFORGE_NATIVE_RENDER_BINARY`, then the
  * component the runtime manifest installs under that name, then the
  * runtime root's `bin/`. Never PATH: the service is a packaged dependency,
  * not a developer tool.
@@ -110,11 +111,11 @@ export function resolveNativeRenderService(env: NodeJS.ProcessEnv = process.env)
   const explicit = env.SIMFORGE_NATIVE_RENDER_BINARY?.trim();
   if (explicit) candidates.push({ path: explicit, source: 'env' });
   for (const component of runtimeManifestComponents(root)) {
-    if (component.kind === 'binary' && component.name === NATIVE_RENDER_SERVICE_NAME && typeof component.install === 'string') {
+    if (component.kind === 'binary' && component.name === SIMFORGE_RENDER_BINARY_NAME && typeof component.install === 'string') {
       candidates.push({ path: join(root, component.install), source: 'runtime-manifest' });
     }
   }
-  candidates.push({ path: join(root, 'bin', nativeExecutableName(NATIVE_RENDER_SERVICE_NAME)), source: 'runtime-root' });
+  candidates.push({ path: join(root, 'bin', nativeExecutableName(SIMFORGE_RENDER_BINARY_NAME)), source: 'runtime-root' });
   return resolveExecutable(candidates);
 }
 

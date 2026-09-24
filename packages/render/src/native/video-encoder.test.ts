@@ -4,7 +4,9 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { nativeCaptureSettings } from './engine.js';
+import type { RenderIntentV1 } from '@simforge-oss/scenario';
+
+import { nativeCaptureEvidence, nativeRenderRequest } from './engine.js';
 import { VideoEncoder, assignVideoCodecs, encoderCodecArgs, ffmpegEncodeArgs } from './video-encoder.js';
 
 const temporary: string[] = [];
@@ -62,16 +64,37 @@ describe('native video encoders', () => {
   });
 });
 
-describe('native capture settings', () => {
-  it('defaults to the pinned clock with single-sample SMAA', () => {
-    expect(nativeCaptureSettings({}, {})).toEqual({ clock: 'pinned', antiAlias: 'smaa-high', samplesPerFrame: 1 });
+describe('native render request', () => {
+  const intent = (extra: object) => ({ renderTextures: 'uastc-full', ...extra }) as unknown as RenderIntentV1;
+
+  it('defaults to the showcase preset with geometry LOD auto, pinned to the staged texture tier', () => {
+    expect(nativeRenderRequest(intent({}), {})).toEqual({
+      request: { preset: 'showcase', set: { 'textures.tier': 'uastc-full' } }, geometryLod: 'auto',
+    });
   });
 
-  it('counts explicit TAA samples only on the pinned clock and keeps the free clock byte-identical to rc.73', () => {
-    expect(nativeCaptureSettings({ antiAlias: 'taa', taaSamples: 4 }, {})).toEqual({ clock: 'pinned', antiAlias: 'taa', samplesPerFrame: 4 });
-    expect(nativeCaptureSettings({ captureClock: 'free', antiAlias: 'smaa-ultra' }, {})).toEqual({ clock: 'free', antiAlias: 'taa', samplesPerFrame: 1 });
-    expect(nativeCaptureSettings({}, { SIMFORGE_NATIVE_CAPTURE_CLOCK: 'free' }).clock).toBe('free');
-    expect(() => nativeCaptureSettings({ antiAlias: 'msaa' }, {})).toThrow(/native_anti_alias_invalid/);
-    expect(() => nativeCaptureSettings({ antiAlias: 'taa', taaSamples: 0 }, {})).toThrow(/native_taa_samples_invalid/);
+  it('lets the intent override the worker default key by key', () => {
+    const resolved = nativeRenderRequest(
+      intent({ render: { preset: 'training', set: { 'aa.mode': 'taa' }, geometryLod: 'off' } }),
+      { render: { preset: 'showcase', set: { 'aa.mode': 'smaa-high', 'ssr.enabled': false } } },
+    );
+    expect(resolved).toEqual({
+      request: { preset: 'training', set: { 'aa.mode': 'taa', 'ssr.enabled': false, 'textures.tier': 'uastc-full' } },
+      geometryLod: 'off',
+    });
+  });
+
+  it('refuses a texture tier other than the one the job stages', () => {
+    expect(() => nativeRenderRequest(intent({ render: { set: { 'textures.tier': 'bc7-512' } } }), {})).toThrow(expect.objectContaining({ code: 'native_render_config_invalid' }));
+  });
+
+  it('reads the capture evidence from the resolved config', () => {
+    expect(nativeCaptureEvidence({ aa: { mode: 'taa', taaSamples: 4 }, clock: { mode: 'pinned' } }))
+      .toEqual({ clock: 'simulation-time', antiAlias: 'taa', samplesPerFrame: 4 });
+    expect(nativeCaptureEvidence({ aa: { mode: 'smaa-ultra', taaSamples: 4 }, clock: { mode: 'pinned' } }))
+      .toEqual({ clock: 'simulation-time', antiAlias: 'smaa-ultra', samplesPerFrame: 1 });
+    expect(nativeCaptureEvidence({ aa: { mode: 'taa', taaSamples: 4 }, clock: { mode: 'free' } }))
+      .toEqual({ clock: 'update-count', antiAlias: 'taa', samplesPerFrame: 1 });
+    expect(() => nativeCaptureEvidence({})).toThrow(/native_render_config_unreadable/);
   });
 });

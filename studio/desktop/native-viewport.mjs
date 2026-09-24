@@ -2,7 +2,8 @@ import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 
 /**
- * The native viewport child process, as the Electron main process sees it.
+ * The native viewport child process, as the Electron main process sees it:
+ * `simforge-render view ...`, so `executable` is the `simforge-render` binary.
  *
  * Identity is not baked into argv any more: the process is launched with the
  * map root it is anchored to and then told which release to load, so the main
@@ -37,7 +38,7 @@ export class NativeViewportProcess {
 
   start() {
     if (this.#child) return this.#ready;
-    const argv = ["--map-root", this.mapRoot];
+    const argv = ["view", "--map-root", this.mapRoot];
     if (this.headless) argv.push("--headless");
     if (this.embedded) argv.push("--embedded");
     if (this.geometry) {

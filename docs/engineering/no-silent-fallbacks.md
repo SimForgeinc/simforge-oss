@@ -98,12 +98,12 @@ explained in the row. Unless a path says otherwise, Rust paths are under
 |---|---|---|---|
 | `engine.rs` `Lighting`, `night.rs` | Unknown/camelCase keys dropped; rung 4 silently became 3; fixture budget capped at 12/2; lumens, range, CCT and night lux clamped; fixture cone ignored | `deny_unknown_fields`; `validate_for_scene_app` fails `native_lighting_unsupported`; the authored cone is rendered | engine suite |
 | `service/src/server.rs` `SceneSpec.lighting` | Absent lighting meant the calibration dawn | Required | — |
-| `render-core/src/job.rs` | The job's lighting was never applied | `apply_lighting` | — |
+| `render-core/src/job.rs` (native-render-job; removed) | The job's lighting was never applied | `apply_lighting` | — |
 | `engine.rs` `update_physical_windows` | Occupancy keyed on entity bits (changed from run to run); missing material skipped | Stable order; missing material fails | — |
 | `render-core/src/veg.rs` | Bad sidecar, missing scene or prototype dropped vegetation with a log line | Readiness fails, naming it | — |
 | `engine.rs` `new_with_profile_config` | Software (CPU/virtual) adapters accepted silently | Fail `native_gpu_adapter_software` unless `SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1`; adapter logged | — |
-| `render-core/src/playback.rs` (scen-play) | Missing models → primitives; generic pedestrians hash-substituted; missing GLB → primitive | `--allow-primitive-actors` / `--allow-pedestrian-substitution` required (logged); missing GLB fails. Golden scenes pass the catalogs explicitly | golden harness |
-| `sensors/src/capture.rs` (sensor-capture) | Proxy actors everywhere, fixed lighting | Benign for the product: a qualification harness whose help text states it uses proxy actors. Listed in the guard baseline as a harness | — |
+| `render-core/src/playback.rs` (scen-play; removed, scene-state playback is now `simforge-render job --job`) | Missing models → primitives; generic pedestrians hash-substituted; missing GLB → primitive | `--allow-primitive-actors` / `--allow-pedestrian-substitution` required (logged); missing GLB fails. Golden scenes pass the catalogs explicitly | golden harness |
+| `sensors/src/capture.rs` (sensor-capture; removed with the binary) | Proxy actors everywhere, fixed lighting | Benign for the product: a qualification harness whose help text states it uses proxy actors. Listed in the guard baseline as a harness | — |
 
 ### TypeScript render path (native, browser, SUMO, CLI, Studio)
 
@@ -113,7 +113,7 @@ explained in the row. Unless a path says otherwise, Rust paths are under
 | `native/lowering.ts` | Unknown kinds → sedan / `prop` | Fail `native_actor_kind_unmapped` (total, pinned table) |
 | `packages/engine/src/ambient/sumo*.ts` | Every SUMO vehicle a sedan; ped/cyclist shares ignored | Per-class vTypes from `vehicleMix`; unsupported shares fail `sumo_road_user_share_unsupported`; coupling v3 |
 | `studio/worker/simulate.ts`, `sim-result-store.ts`, `render-intent-store.ts`, `native/engine.ts` | A timeline build failure fell back to xosc re-lowering | Fail `render_timeline_build_failed` / `native_render_timeline_missing` (CARLA: `carla_render_timeline_missing`). The xosc replay stays as an explicit mode for revisions without a stored trace: `RenderIntentV1.motionSource: 'original-xosc'`, recorded as scene source `openscenario-legacy` and accepted only when requested |
-| `native/engine.ts` | Parity silently skipped; free capture clock; ffmpeg from bare PATH; codec/quality ignored; one near/far for all cameras (lidar forced 0.05); roll dropped; asymmetric lidar FOV emulated by pitch; frames unchecked | Fail `native_render_parity_unavailable`, `native_capture_clock_unsupported`, `native_encoder_missing`, `native_video_*_unsupported`, `native_camera_clip_planes_conflict`, `native_sensor_roll_unsupported`, `native_lidar_asymmetric_fov_unsupported`, `native_frame_*`. Encoder recorded (`native-evidence.encoder`) |
+| `native/engine.ts` | Parity silently skipped; free capture clock; ffmpeg from bare PATH; codec/quality ignored; one near/far for all cameras (lidar forced 0.05); roll dropped (now rendered); asymmetric lidar FOV emulated by pitch; frames unchecked | Fail `native_render_parity_unavailable`, `native_capture_clock_unsupported`, `native_encoder_missing`, `native_video_*_unsupported`, `native_camera_clip_planes_conflict`, `native_lidar_asymmetric_fov_unsupported`, `native_frame_*`. Encoder recorded (`native-evidence.encoder`) |
 | `native/sensor-video.ts` | NaN / malformed PLY and CSV plotted or dropped | Fail `native_sensor_payload_invalid` |
 | `native/lighting.ts` | Palo Alto site for every map; authored sun overwritten; snow/sleet → overcast; sunWarmth ignored | Site from the map's OpenDRIVE geoReference or fail `native_lighting_site_unknown`; other cases fail |
 | `scenario/.../editor-environment-policy.ts`, `render-spec-builders.ts`, `cli/commands/render*.ts` | `.catch(undefined)` and clamped extensions; CLI overrode authored capture; uncapturable sensors dropped | Strict render-side parser (`render_environment_extension_invalid`); override only when requested; `unsupported_sensor` |
@@ -151,4 +151,4 @@ explained in the row. Unless a path says otherwise, Rust paths are under
 - **Native renders without a timeline.** Old revisions fail unless the request sets `motionSource: 'original-xosc'`, the labelled legacy replay; the playability work wires that request.
 - **Moving animals.** They fail `native_actor_animation_missing` until the closure has animal clips.
 - **Rust kind→catalog default table** (`native/crates/simforge-core/src/trace/scene_state.rs`). Van, scooter, robot, drone and animal default to a sedan, so those unauthored actors fail `native_actor_default_mismatch`. Fixing it moves timelines and needs an ENGINE_SEM_VER bump (WS-A).
-- **Service features.** Camera roll, lidar upper/lower FOV and per-camera clip planes are not implemented in the service, so requests that need them fail in the TypeScript layer.
+- **Service features.** Lidar upper/lower FOV and per-camera clip planes are not implemented in the service, so requests that need them fail in the TypeScript layer.

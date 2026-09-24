@@ -120,7 +120,10 @@ pub fn asset_path(path: &Path) -> Result<String> {
                     out.push_str(&share.to_string_lossy());
                 }
                 Prefix::Verbatim(_) | Prefix::DeviceNS(_) => {
-                    bail!("asset path prefix is not a file location: {}", path.display())
+                    bail!(
+                        "asset path prefix is not a file location: {}",
+                        path.display()
+                    )
                 }
             },
             Component::RootDir | Component::CurDir => {}
@@ -147,7 +150,10 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn unix_asset_paths_drop_the_root() {
-        assert_eq!(asset_path(Path::new("/maps/rfs/master.gltf")).unwrap(), "maps/rfs/master.gltf");
+        assert_eq!(
+            asset_path(Path::new("/maps/rfs/master.gltf")).unwrap(),
+            "maps/rfs/master.gltf"
+        );
         assert!(asset_path(Path::new("maps/rfs/master.gltf")).is_err());
     }
 
@@ -158,7 +164,10 @@ mod tests {
             asset_path(Path::new(r"C:\maps\rfs\master.gltf")).unwrap(),
             "C:/maps/rfs/master.gltf"
         );
-        assert_eq!(asset_path(Path::new(r"\\?\C:\maps\a.glb")).unwrap(), "C:/maps/a.glb");
+        assert_eq!(
+            asset_path(Path::new(r"\\?\C:\maps\a.glb")).unwrap(),
+            "C:/maps/a.glb"
+        );
         assert_eq!(
             asset_path(Path::new(r"\\server\share\maps\a.glb")).unwrap(),
             "//server/share/maps/a.glb"

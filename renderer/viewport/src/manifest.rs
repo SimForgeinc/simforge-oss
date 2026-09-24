@@ -72,11 +72,17 @@ impl fmt::Display for ManifestError {
 impl std::error::Error for ManifestError {}
 
 fn reject(code: &'static str, message: impl Into<String>) -> ManifestError {
-    ManifestError { code, message: message.into() }
+    ManifestError {
+        code,
+        message: message.into(),
+    }
 }
 
 fn is_sha256(value: &str) -> bool {
-    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
 }
 
 pub fn sha256_file(path: &Path) -> std::io::Result<String> {
@@ -125,7 +131,10 @@ pub fn load_and_verify(
         )
     })?;
     let release: MapRelease = serde_json::from_slice(&raw).map_err(|error| {
-        reject("native_map_unavailable", format!("{MANIFEST_FILE} is not a map release document: {error}"))
+        reject(
+            "native_map_unavailable",
+            format!("{MANIFEST_FILE} is not a map release document: {error}"),
+        )
     })?;
     if release.schema != SCHEMA {
         return Err(reject(
@@ -136,13 +145,18 @@ pub fn load_and_verify(
     if release.profile != "native" {
         return Err(reject(
             "profile_mismatch",
-            format!("map root holds the `{}` profile, not `native`", release.profile),
+            format!(
+                "map root holds the `{}` profile, not `native`",
+                release.profile
+            ),
         ));
     }
     if !is_sha256(requested_release_digest) {
         return Err(reject(
             "release_digest_malformed",
-            format!("requested release digest is not a lowercase sha-256: {requested_release_digest}"),
+            format!(
+                "requested release digest is not a lowercase sha-256: {requested_release_digest}"
+            ),
         ));
     }
     if !is_sha256(&release.release_digest) || !is_sha256(&release.canonical_digest) {
@@ -173,7 +187,10 @@ pub fn load_and_verify(
     for (relative_path, member) in &release.members {
         let path = root.join(relative_path);
         let metadata = std::fs::metadata(&path).map_err(|error| {
-            reject("member_missing", format!("declared member {relative_path} is not on disk: {error}"))
+            reject(
+                "member_missing",
+                format!("declared member {relative_path} is not on disk: {error}"),
+            )
         })?;
         if metadata.len() != member.bytes {
             return Err(reject(
@@ -190,15 +207,24 @@ pub fn load_and_verify(
     let mut verified = Vec::new();
     for relative_path in eager_digest {
         let member = release.member(relative_path).ok_or_else(|| {
-            reject("member_missing", format!("manifest does not declare {relative_path}"))
+            reject(
+                "member_missing",
+                format!("manifest does not declare {relative_path}"),
+            )
         })?;
         let actual = sha256_file(&root.join(relative_path)).map_err(|error| {
-            reject("member_unreadable", format!("cannot hash {relative_path}: {error}"))
+            reject(
+                "member_unreadable",
+                format!("cannot hash {relative_path}: {error}"),
+            )
         })?;
         if actual != member.sha256 {
             return Err(reject(
                 "member_digest_mismatch",
-                format!("{relative_path} hashes to {actual}, manifest declares {}", member.sha256),
+                format!(
+                    "{relative_path} hashes to {actual}, manifest declares {}",
+                    member.sha256
+                ),
             ));
         }
         verified.push((*relative_path).to_owned());
@@ -212,16 +238,30 @@ pub fn load_and_verify(
 }
 
 /// Content-verify one member; used for the large deferred members.
-pub fn verify_member(root: &Path, release: &MapRelease, relative_path: &str) -> Result<(), ManifestError> {
-    let member = release
-        .member(relative_path)
-        .ok_or_else(|| reject("member_missing", format!("manifest does not declare {relative_path}")))?;
-    let actual = sha256_file(&root.join(relative_path))
-        .map_err(|error| reject("member_unreadable", format!("cannot hash {relative_path}: {error}")))?;
+pub fn verify_member(
+    root: &Path,
+    release: &MapRelease,
+    relative_path: &str,
+) -> Result<(), ManifestError> {
+    let member = release.member(relative_path).ok_or_else(|| {
+        reject(
+            "member_missing",
+            format!("manifest does not declare {relative_path}"),
+        )
+    })?;
+    let actual = sha256_file(&root.join(relative_path)).map_err(|error| {
+        reject(
+            "member_unreadable",
+            format!("cannot hash {relative_path}: {error}"),
+        )
+    })?;
     if actual != member.sha256 {
         return Err(reject(
             "member_digest_mismatch",
-            format!("{relative_path} hashes to {actual}, manifest declares {}", member.sha256),
+            format!(
+                "{relative_path} hashes to {actual}, manifest declares {}",
+                member.sha256
+            ),
         ));
     }
     Ok(())
@@ -249,7 +289,10 @@ mod tests {
     /// so the fixture is self-consistent by construction.
     fn fixture(mutate: impl FnOnce(&mut serde_json::Value)) -> Fixture {
         let id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!("simforge-viewport-manifest-{}-{id}", std::process::id()));
+        let root = std::env::temp_dir().join(format!(
+            "simforge-viewport-manifest-{}-{id}",
+            std::process::id()
+        ));
         std::fs::create_dir_all(&root).expect("fixture root");
         let gltf = br#"{"asset":{"version":"2.0"}}"#;
         let geometry = b"geometry-bytes";
@@ -269,32 +312,44 @@ mod tests {
             }
         });
         mutate(&mut manifest);
-        std::fs::write(root.join(MANIFEST_FILE), serde_json::to_vec(&manifest).unwrap()).expect("write manifest");
+        std::fs::write(
+            root.join(MANIFEST_FILE),
+            serde_json::to_vec(&manifest).unwrap(),
+        )
+        .expect("write manifest");
         Fixture { root }
     }
 
     #[test]
     fn verifies_a_consistent_profile() {
         let fixture = fixture(|_| {});
-        let verified = load_and_verify(&fixture.root, &"1".repeat(64), &[MASTER_GLTF]).expect("verify");
+        let verified =
+            load_and_verify(&fixture.root, &"1".repeat(64), &[MASTER_GLTF]).expect("verify");
         assert_eq!(verified.release.name, "fixture-map");
         assert_eq!(verified.verified, vec![MASTER_GLTF.to_owned()]);
         assert_eq!(verified.size_checked, 2);
-        verify_member(&fixture.root, &verified.release, GEOMETRY_BIN).expect("deferred member verifies");
+        verify_member(&fixture.root, &verified.release, GEOMETRY_BIN)
+            .expect("deferred member verifies");
     }
 
     #[test]
     fn rejects_a_release_digest_the_host_did_not_ask_for() {
         let fixture = fixture(|_| {});
-        let error = load_and_verify(&fixture.root, &"3".repeat(64), &[MASTER_GLTF]).expect_err("mismatch");
+        let error =
+            load_and_verify(&fixture.root, &"3".repeat(64), &[MASTER_GLTF]).expect_err("mismatch");
         assert_eq!(error.code, "release_digest_mismatch");
     }
 
     #[test]
     fn rejects_a_corrupted_member() {
         let fixture = fixture(|_| {});
-        std::fs::write(fixture.root.join(MASTER_GLTF), br#"{"asset":{"version":"2.1"}}"#).expect("corrupt");
-        let error = load_and_verify(&fixture.root, &"1".repeat(64), &[MASTER_GLTF]).expect_err("corrupt");
+        std::fs::write(
+            fixture.root.join(MASTER_GLTF),
+            br#"{"asset":{"version":"2.1"}}"#,
+        )
+        .expect("corrupt");
+        let error =
+            load_and_verify(&fixture.root, &"1".repeat(64), &[MASTER_GLTF]).expect_err("corrupt");
         // Same byte length, different bytes: only the content hash catches it.
         assert_eq!(error.code, "member_digest_mismatch");
     }
@@ -303,7 +358,8 @@ mod tests {
     fn rejects_a_truncated_member_before_hashing() {
         let fixture = fixture(|_| {});
         std::fs::write(fixture.root.join(GEOMETRY_BIN), b"short").expect("truncate");
-        let error = load_and_verify(&fixture.root, &"1".repeat(64), &[MASTER_GLTF]).expect_err("truncated");
+        let error =
+            load_and_verify(&fixture.root, &"1".repeat(64), &[MASTER_GLTF]).expect_err("truncated");
         assert_eq!(error.code, "member_size_mismatch");
     }
 

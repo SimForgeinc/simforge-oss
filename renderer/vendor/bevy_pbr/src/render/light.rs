@@ -127,7 +127,21 @@ pub struct ExtractedDirectionalLight {
     pub occlusion_culling: bool,
     pub sun_disk_angular_size: f32,
     pub sun_disk_intensity: f32,
+    /// SIMFORGE PATCH: see [`CanopySkyOcclusion`].
+    pub canopy_sky_occlusion: bool,
 }
+
+/// SIMFORGE PATCH (canopy sky occlusion). On a directional light, surfaces
+/// this light's shadow map shows under wide overhead cover (a tree canopy)
+/// stop receiving the full environment light: the environment probe is an
+/// open sky, but a car under a canopy reflects leaves, not sky. Coverage is
+/// the share of a fixed, wide (metre-scale) tap pattern around the fragment
+/// that the shadow map occludes, weighted by the sun's elevation (a high sun
+/// means overhead occluders); it scales the environment specular for
+/// upward reflections and part of the environment diffuse for upward
+/// normals. Deterministic: a fixed tap pattern, no noise.
+#[derive(bevy_ecs::component::Component, Clone, Copy, Debug, Default)]
+pub struct CanopySkyOcclusion;
 
 // NOTE: These must match the bit flags in bevy_pbr/src/render/mesh_view_types.wgsl!
 bitflags::bitflags! {
@@ -176,6 +190,8 @@ bitflags::bitflags! {
         const VOLUMETRIC                        = 1 << 1;
         const AFFECTS_LIGHTMAPPED_MESH_DIFFUSE  = 1 << 2;
         const CONTACT_SHADOWS_ENABLED           = 1 << 3;
+        // SIMFORGE PATCH (canopy sky occlusion): see `CanopySkyOcclusion`.
+        const CANOPY_SKY_OCCLUSION              = 1 << 4;
         const NONE                              = 0;
         const UNINITIALIZED                     = 0xFFFF;
     }
@@ -384,6 +400,7 @@ pub fn extract_lights(
                 Option<&VolumetricLight>,
                 Has<OcclusionCulling>,
                 Option<&SunDisk>,
+                Has<CanopySkyOcclusion>,
             ),
             (
                 Without<SpotLight>,
@@ -399,6 +416,7 @@ pub fn extract_lights(
                     Changed<VolumetricLight>,
                     Changed<OcclusionCulling>,
                     Changed<SunDisk>,
+                    Changed<CanopySkyOcclusion>,
                 )>,
             ),
         >,
@@ -705,6 +723,7 @@ pub fn extract_lights(
         volumetric_light,
         occlusion_culling,
         sun_disk,
+        canopy_sky_occlusion,
     ) in &directional_lights
     {
         if !view_visibility.get() {
@@ -835,6 +854,7 @@ pub fn extract_lights(
             occlusion_culling,
             sun_disk_angular_size: sun_disk.unwrap_or_default().angular_size,
             sun_disk_intensity: sun_disk.unwrap_or_default().intensity,
+            canopy_sky_occlusion,
         };
 
         let mut entity_commands = commands
@@ -1723,6 +1743,10 @@ pub fn prepare_lights(
 
             if light.affects_lightmapped_mesh_diffuse {
                 flags |= DirectionalLightFlags::AFFECTS_LIGHTMAPPED_MESH_DIFFUSE;
+            }
+
+            if light.canopy_sky_occlusion && flags.contains(DirectionalLightFlags::SHADOW_MAPS_ENABLED) {
+                flags |= DirectionalLightFlags::CANOPY_SKY_OCCLUSION;
             }
 
             gpu_directional_lights[index] = GpuDirectionalLight {

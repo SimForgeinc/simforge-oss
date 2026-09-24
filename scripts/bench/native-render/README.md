@@ -1,7 +1,7 @@
 # Native render benchmark
 
 Measures the throughput of the native render pipeline exactly as the Studio
-worker runs it: `@simforge-oss/render` native engine → `native-render-service`
+worker runs it: `@simforge-oss/render` native engine → `simforge-render serve`
 (Bevy, retained scene, shm frame bundles) → lidar/radar rasterizers → ffmpeg.
 The fixture is a real Studio render job (Richmond Field Station, 20 s clip,
 ego rig of 7 dash cameras + trailing chase camera at 1280×720/24 fps, one
@@ -31,8 +31,8 @@ node scripts/bench/native-render/run.mjs --fixture ~/simforge-bench/richmond \
 ```
 
 Flags: `--seconds N` (clip length, default 2), `--sources all|rgb|lidar|radar|<outputName,…>`
-(isolate a modality), `--binary <path>` (a locally built `native-render-service`
-instead of the installed runtime; `cargo build --release -p service --bin native-render-service`
+(isolate a modality), `--binary <path>` (a locally built `simforge-render`
+instead of the installed runtime; `cargo build --release -p simforge-render`
 under `renderer/`), `--label`.
 
 Rebuilding the TS engine (`pnpm --filter @simforge-oss/render run build`) is

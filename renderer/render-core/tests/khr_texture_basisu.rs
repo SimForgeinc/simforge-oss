@@ -112,7 +112,7 @@ fn load_glb(glb: Vec<u8>) -> (App, Handle<Gltf>, Result<(), String>) {
     ))
     .init_asset::<Image>()
     // Production desktop GPUs expose BC; exercise the same UASTC -> BC7 path
-    // used by native-render-service without requiring a physical GPU.
+    // used by `simforge-render serve` without requiring a physical GPU.
     .insert_resource(CompressedImageFormatSupport(CompressedImageFormats::BC));
     app.finish();
     app.cleanup();
@@ -141,7 +141,11 @@ fn load_glb(glb: Vec<u8>) -> (App, Handle<Gltf>, Result<(), String>) {
     (app, handle, outcome)
 }
 
-fn material_image<'a>(app: &'a App, handle: &Handle<Gltf>, pick: impl Fn(&GltfMaterial) -> Option<Handle<Image>>) -> &'a Image {
+fn material_image<'a>(
+    app: &'a App,
+    handle: &Handle<Gltf>,
+    pick: impl Fn(&GltfMaterial) -> Option<Handle<Image>>,
+) -> &'a Image {
     let gltf = app
         .world()
         .resource::<Assets<Gltf>>()
@@ -164,7 +168,9 @@ fn material_image<'a>(app: &'a App, handle: &Handle<Gltf>, pick: impl Fn(&GltfMa
 fn standards_compliant_basisu_glb_loads_natively() {
     let (app, handle, outcome) = load_glb(FIXTURE.to_vec());
     outcome.unwrap_or_else(|err| panic!("native KHR_texture_basisu load failed: {err}"));
-    let image = material_image(&app, &handle, |material| material.base_color_texture.clone());
+    let image = material_image(&app, &handle, |material| {
+        material.base_color_texture.clone()
+    });
     assert_eq!(
         (image.width(), image.height()),
         (1024, 1024),
@@ -188,15 +194,23 @@ fn specular_strength_basisu_texture_decodes_linear() {
     json["textures"].as_array_mut().unwrap().push(json!({
         "extensions": { "KHR_texture_basisu": { "source": 0 } }
     }));
-    json["extensionsUsed"].as_array_mut().unwrap().push(json!("KHR_materials_specular"));
+    json["extensionsUsed"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!("KHR_materials_specular"));
     json["materials"][0]["extensions"] = json!({
         "KHR_materials_specular": { "specularTexture": { "index": 1 } }
     });
     let (app, handle, outcome) = load_glb(join_glb(&json, &bin));
     outcome.unwrap_or_else(|err| panic!("load failed: {err}"));
 
-    let base = material_image(&app, &handle, |material| material.base_color_texture.clone());
-    assert!(base.texture_descriptor.format.is_srgb(), "base color stays sRGB");
+    let base = material_image(&app, &handle, |material| {
+        material.base_color_texture.clone()
+    });
+    assert!(
+        base.texture_descriptor.format.is_srgb(),
+        "base color stays sRGB"
+    );
     let specular = material_image(&app, &handle, |material| material.specular_texture.clone());
     assert!(
         !specular.texture_descriptor.format.is_srgb(),

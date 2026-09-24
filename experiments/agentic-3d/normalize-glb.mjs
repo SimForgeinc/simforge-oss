@@ -6,7 +6,7 @@
 // Generator exports are center-origin, arbitrarily faced, and sized to a ~1.9-unit
 // bounding cube regardless of what the object is. Without this step every
 // generated model renders half underground, sideways, and at toy scale (a
-// 4.6 m tractor drew 1.9 m long in passes 2-17: scen-play's scaleToDims needs
+// 4.6 m tractor drew 1.9 m long in passes 2-17: the renderer's scaleToDims needs
 // a manifest length the loop never wrote, so scale stayed 1.0).
 //
 // Usage: node normalize-glb.mjs <model.glb> [--yaw 90|auto] [--dims l,w,h] [--out <path>]

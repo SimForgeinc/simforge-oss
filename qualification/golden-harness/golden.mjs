@@ -2,36 +2,67 @@
 /**
  * Native render golden harness — WSB6 (DeterminismCI).
  *
- * Drives `native-render-job` (renderer/render-core; identity-stamped
- * single-submission captures) to record and verify golden pass hashes per GPU
- * fingerprint, with a frame-time regression budget. Evidence manifests extend
+ * Drives `simforge-render job --job job.json` (schema
+ * `simforge.render-job/v2`: the render service's own request path, pinned
+ * capture clock) to record and verify golden pass hashes per adapter
+ * fingerprint. The adapter of record is Mesa lavapipe (the CPU Vulkan
+ * driver), not a GPU: NVIDIA drivers are not run-to-run byte-stable for this
+ * renderer (1 LSB in a few pixels between identical runs), lavapipe is, and
+ * hashes are compared exactly, never with a tolerance. The frame-time budget
+ * gate runs only when GOLDEN_FRAME_BUDGET is set (a CPU rasterizer's times
+ * measure the host, not the renderer; GPU performance is gated by
+ * scripts/bench). Evidence manifests extend
  * `simforge-oss.render-determinism-manifest.v1`; the additions are documented in
  * docs/engineering/native-golden-ci.md.
  *
  * Commands:
  *   node qualification/golden-harness/golden.mjs record  <scene>   run twice, require byte-stable, write golden
- *   node qualification/golden-harness/golden.mjs verify  <scene>   one run, compare hashes + frame-time budget
- *   node qualification/golden-harness/golden.mjs verify-all        verify every scene in scenes/
+ *   node qualification/golden-harness/golden.mjs verify  <scene>   one run, compare hashes (+ frame time with GOLDEN_FRAME_BUDGET)
+ *   node qualification/golden-harness/golden.mjs verify  all       verify every scene in scenes/
+ *   node qualification/golden-harness/golden.mjs plan    <scene|all> [--allow-missing-corpus]
+ *        write each scene's job file and print the invocation; no GPU, no render
  *
- * Scene overrides for red-path demos: --set rendererArgs.sunElev=20
+ * Scene overrides for red-path demos: --set job.scene.lighting.sun_elev_deg=20
+ * Renderer binary: --bin <path>, else GOLDEN_RENDER_BIN, else
+ * renderer/target/release/simforge-render.
  *
  * Exit codes: 0 ok · 2 pass-hash drift · 3 frame-time budget exceeded ·
  * 4 nondeterministic on record (two runs differ) · 5 no golden for this GPU ·
- * 6 GPU busy (co-tenant load; infra, not drift) · 7 vacuous ID pass (it
+ * 7 vacuous ID pass (it
  * encodes too few instances: a golden of a blank pass proves nothing) ·
  * 8 observed actor transforms fail parity with the render timeline ·
  * 1 usage/environment error.
  *
- * Scene fields beyond the renderer arguments:
+ * Scene definition (scenes/<sceneId>.json):
+ * - `job: {scene, rig, ticks, passes}` — the render job minus what the
+ *   harness owns: `schema`, `scene.glbs` (the resolved `corpusFiles`),
+ *   `sceneState`, `outDir`, and `observe` (set for `parity` scenes). String
+ *   values may use `{repo}` (repository root) and `{corpus}` (corpus root).
+ * - `corpusRootEnv` / `corpusFiles` — the map GLBs (a `tiles/` subdirectory
+ *   of the corpus root is used when present).
+ * - `sceneState` — `{gz}`: a gzipped `simforge.scene-state.v1` document
+ *   (header, actor descriptors, frames; `simforge render scene-state`),
+ *   lowered here into the per-tick stream the service loads, with `groundY: 0`
+ *   so the document's baked heights are authoritative; or `{stream}`: a
+ *   committed per-tick stream (JSON array of scene-state.v1 tick documents),
+ *   passed through unchanged.
+ * - `actorCatalogSubstitutions: {actorId: catalogId}` — explicit, recorded
+ *   catalog-id replacements applied while lowering `{gz}` (the service
+ *   never substitutes a model on its own).
+ * - `expectedPasses` + `passPaths` — logical pass key -> artifact path under
+ *   the job's outDir (`<sensor>/<tick:08>.<pass>.png|.f32.bin`, lidar
+ *   `<sensor>/<tick:08>.ply`).
  * - `idPass: {keys?, minInstances?, minCoverage?}` — every ID pass (keys
- *   default to expectedPasses matching /^id\d|instance/) must encode at least
+ *   default to expectedPasses ending in `.id`) must encode at least
  *   `minInstances` distinct non-background ids (default 2) covering at least
  *   `minCoverage` of the frame (default 0.05), on record and on verify.
- * - `sceneState: {gz}` — a committed scene-state.v1 document (gzipped) that
- *   is expanded next to the run and substituted for `{sceneState}`.
  * - `parity: {timeline, observed, profile}` — grade the renderer's observed
- *   transforms against the render timeline's shared sampler
+ *   transforms (`<outDir>/observed-frames.jsonl`, written by the job when
+ *   `observe` is set) against the render timeline's shared sampler
  *   (`simforge render parity`; override with GOLDEN_PARITY_CMD).
+ *
+ * Timings come from the job's `results.json` (per tick, first tick excluded
+ * as settle); a one-tick job has none and skips the frame-time gate.
  */
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -39,7 +70,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
-import { collectNativeHardware } from './lib/fingerprint.mjs';
+import { collectNativeHardware, lavapipeEnv } from './lib/fingerprint.mjs';
 import { idPassStats } from './lib/png.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -57,7 +88,9 @@ function parseArgs(argv) {
   const args = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--set') {
+    if (a === '--allow-missing-corpus') {
+      args.allowMissingCorpus = true;
+    } else if (a === '--set') {
       const [k, v] = argv[++i].split('=');
       args.overrides ??= [];
       args.overrides.push([k, v]);
@@ -90,32 +123,7 @@ function applyOverrides(scene, overrides) {
   return clone;
 }
 
-/**
- * Co-tenant guard: the 5080 is shared (other lanes render/train on it).
- * Heavy concurrent GPU state has been observed to both inflate frame times
- * (~5x) and rarely destabilize the lit RGB path, so gates run only on a
- * reasonably quiet GPU. Exit 6 = infra condition, not hash drift.
- * GOLDEN_GPU_WAIT: seconds to wait for a quiet window (default 0 = immediate).
- */
-async function requireQuietGpu() {
-  const waitSecs = Number(process.env.GOLDEN_GPU_WAIT ?? 0);
-  const deadline = Date.now() + waitSecs * 1000;
-  for (;;) {
-    const out = spawnSync('nvidia-smi', ['--query-gpu=memory.used,memory.total,utilization.gpu', '--format=csv,noheader,nounits'], { encoding: 'utf8' }).stdout ?? '';
-    const [usedMiB, totalMiB, utilPct] = out.trim().split(',').map((v) => Number(v.trim()));
-    const maxMemFrac = Number(process.env.GOLDEN_GPU_MAX_MEM_FRAC ?? 0.5);
-    const maxUtil = Number(process.env.GOLDEN_GPU_MAX_UTIL ?? 50);
-    const busy = usedMiB > maxMemFrac * totalMiB || utilPct > maxUtil;
-    if (!busy) return;
-    if (Date.now() >= deadline) {
-      fail(6, `GPU busy (mem ${usedMiB}/${totalMiB} MiB, util ${utilPct}%) — golden runs need a quiet GPU; set GOLDEN_GPU_WAIT or free the GPU`);
-    }
-    console.log(`[golden-harness] GPU busy (mem ${usedMiB} MiB, util ${utilPct}%) — waiting for quiet window...`);
-    await new Promise((r) => setTimeout(r, 15_000));
-  }
-}
-
-function resolvePaths(scene) {
+function resolvePaths(scene, { allowMissing = false } = {}) {
   const corpusRoot = (scene.corpusRootEnv && process.env[scene.corpusRootEnv])
     ?? scene.corpusRoot
     ?? process.env.SCEN_SENSOR_CORPUS
@@ -124,108 +132,165 @@ function resolvePaths(scene) {
     ? 'tiles'
     : '';
   const glbs = scene.corpusFiles.map((f) => path.join(corpusRoot, tilesDir, f));
-  for (const g of glbs) {
-    if (!fs.existsSync(g)) {
-      fail(1, `corpus file missing: ${g} (set SCEN_SENSOR_CORPUS to the decoded corpus root)`);
-    }
+  const missing = glbs.filter((g) => !fs.existsSync(g));
+  if (missing.length > 0 && !allowMissing) {
+    fail(1, `corpus file missing: ${missing[0]} (set ${scene.corpusRootEnv ?? 'SCEN_SENSOR_CORPUS'} to the decoded corpus root)`);
   }
-  return { corpusRoot, glbs };
+  return { corpusRoot, glbs, missing };
 }
 
 function loadScene(id) {
   const p = path.join(SCENES_DIR, `${id}.json`);
   if (!fs.existsSync(p)) fail(1, `unknown scene: ${id} (${p})`);
-  return JSON.parse(fs.readFileSync(p, 'utf8'));
-}
-
-/** Map logical pass key -> output file (scene.passPaths wins over the job layout). */
-function passFiles(outPrefix, scene) {
-  if (scene?.passPaths) {
-    return Object.fromEntries(Object.entries(scene.passPaths).map(([k, rel]) => [k, `${outPrefix}/${rel}`]));
+  const scene = JSON.parse(fs.readFileSync(p, 'utf8'));
+  for (const key of ['job', 'expectedPasses', 'passPaths', 'corpusFiles']) {
+    if (!scene[key]) fail(1, `scene ${id}: missing ${key}`);
   }
-  return jobPassFiles(outPrefix, scene);
+  const unmapped = scene.expectedPasses.filter((k) => !scene.passPaths[k]);
+  if (unmapped.length > 0) fail(1, `scene ${id}: expectedPasses without passPaths: ${unmapped.join(', ')}`);
+  return scene;
 }
 
-/**
- * `native-render-job` output layout: the last scheduled frame of each camera
- * (`frames/frame-NNNNN.<sensor>.<pass>`), so the hashed frame is steady state
- * after the job's own warmup.
- */
-function jobPassFiles(outPrefix, scene) {
-  const a = scene.rendererArgs;
-  const frame = String(Math.max(0, a.frames - 1)).padStart(5, '0');
-  const out = {};
-  for (let c = 0; c < Math.max(1, a.cameras); c += 1) {
-    out[`rgb${c}`] = `${outPrefix}/frames/frame-${frame}.cam${c}.rgb.png`;
-    out[`id${c}`] = `${outPrefix}/frames/frame-${frame}.cam${c}.id.png`;
-    out[`depth${c}`] = `${outPrefix}/frames/frame-${frame}.cam${c}.depth.f32.bin`; // raw Depth32Float rows
-  }
-  return out;
+/** Map logical pass key -> artifact file under the job's outDir. */
+function passFiles(outDir, scene) {
+  return Object.fromEntries(Object.entries(scene.passPaths).map(([k, rel]) => [k, path.join(outDir, rel)]));
 }
 
-function hashPasses(outPrefix, passes, hashScene) {
-  const map = passFiles(outPrefix, hashScene);
+function hashPasses(outDir, passes, scene) {
+  const map = passFiles(outDir, scene);
   const out = {};
   for (const key of passes) {
     const f = map[key];
     if (!f || !fs.existsSync(f)) fail(1, `expected pass output missing: ${f ?? key}`);
-    out[key] = { file: path.basename(f), sha256: sha256File(f), bytes: fs.statSync(f).size };
+    out[key] = { file: path.relative(outDir, f), sha256: sha256File(f), bytes: fs.statSync(f).size };
   }
   return out;
 }
 
-/**
- * Build the renderer argv. Scenes with an `invocationTemplate` drive their own
- * binary; otherwise `rendererArgs` becomes a `simforge.native-render-job/v1`
- * job file (identity-stamped single-submission captures through
- * `SceneApp::render_once`) rendered into the `outPrefix` directory.
- */
-function buildInvocation(scene, glbs, outPrefix) {
-  if (scene.invocationTemplate) {
-    // Generic argv template ({glbs} -> csv, {out} -> output prefix/dir,
-    // {sceneState} -> the expanded committed scene state, {corpus} -> root,
-    // {repo} -> the repository root, e.g. for the committed actor catalogs).
-    let sceneStatePath = '';
-    if (scene.sceneState?.gz) {
-      sceneStatePath = `${outPrefix}.scene-state.json`;
-      fs.mkdirSync(path.dirname(sceneStatePath), { recursive: true });
-      fs.writeFileSync(sceneStatePath, gunzipSync(fs.readFileSync(path.join(repoRoot, scene.sceneState.gz))));
-    }
-    const { corpusRoot } = resolvePaths(scene);
-    fs.mkdirSync(outPrefix, { recursive: true });
-    return scene.invocationTemplate.map((t) =>
-      t === '{glbs}' ? glbs.join(',') : t.replaceAll('{out}', outPrefix)
-        .replaceAll('{sceneState}', sceneStatePath).replaceAll('{corpus}', corpusRoot).replaceAll('{repo}', repoRoot));
+/** `{repo}` / `{corpus}` in every string of a JSON value. */
+function substitute(value, vars) {
+  if (typeof value === 'string') {
+    return value.replaceAll('{repo}', vars.repo).replaceAll('{corpus}', vars.corpus);
   }
-  const a = scene.rendererArgs;
-  const cameras = Array.from({ length: Math.max(1, a.cameras) }, (_, c) => ({
-    sensorId: `cam${c}`, width: a.width, height: a.height, fovDeg: a.fov, eye: a.eye, target: a.target,
+  if (Array.isArray(value)) return value.map((v) => substitute(v, vars));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, substitute(v, vars)]));
+  }
+  return value;
+}
+
+/**
+ * Timeline actor kinds -> render-service actor classes. The same table as
+ * packages/render/src/native/lowering.ts `NATIVE_ACTOR_CLASSES`; an unknown
+ * class is refused, never guessed.
+ */
+const SERVICE_ACTOR_CLASSES = {
+  vehicle: 'car', car: 'car', van: 'van', truck: 'truck', bus: 'bus', motorcycle: 'motorcycle',
+  bicycle: 'cyclist', scooter: 'cyclist', cyclist: 'cyclist', pedestrian: 'pedestrian',
+  sidewalk_robot: 'prop', drone: 'prop', animal: 'prop', static_object: 'prop', prop: 'prop',
+};
+
+/**
+ * Lower a `simforge.scene-state.v1` document (header + actor descriptors +
+ * frames) into the per-tick stream `load_scene_state` takes: every tick
+ * carries the header, every actor record its descriptor (catalogId,
+ * actorClass, dims, color) and its pose as `transform`. `groundY: 0` makes
+ * the baked heights authoritative even where they are exactly 0 (the retired
+ * playback binary's `--authored-height`). `t` is the frame's clip time, for the
+ * job's observed-frames record.
+ */
+function lowerSceneStateDocument(doc, substitutions, sceneId) {
+  if (doc.version !== 'simforge.scene-state.v1') fail(1, `scene ${sceneId}: scene-state version ${doc.version}`);
+  if (!Array.isArray(doc.frames) || !Array.isArray(doc.actors)) fail(1, `scene ${sceneId}: scene-state document needs actors and frames`);
+  const descriptors = new Map(doc.actors.map((a) => [a.id, a]));
+  for (const id of Object.keys(substitutions)) {
+    if (!descriptors.has(id)) fail(1, `scene ${sceneId}: actorCatalogSubstitutions names unknown actor ${id}`);
+  }
+  const applied = [];
+  for (const [id, catalogId] of Object.entries(substitutions)) {
+    applied.push({ actorId: id, kind: 'catalog-id', requested: descriptors.get(id).catalogId, rendered: catalogId });
+  }
+  const stream = doc.frames.map((frame) => ({
+    version: doc.version,
+    mapId: doc.mapId,
+    tick: frame.tick,
+    tickHz: doc.tickHz,
+    t: frame.t,
+    ...(doc.weather ? { weather: doc.weather } : {}),
+    ...(doc.timeOfDay !== undefined ? { timeOfDay: doc.timeOfDay } : {}),
+    groundY: 0,
+    actors: frame.actors.map((a) => {
+      const d = descriptors.get(a.id);
+      if (!d) fail(1, `scene ${sceneId}: frame ${frame.tick} actor ${a.id} has no descriptor`);
+      const actorClass = SERVICE_ACTOR_CLASSES[d.actorClass];
+      if (!actorClass) fail(1, `scene ${sceneId}: actor ${a.id} class ${d.actorClass} has no render-service class`);
+      return {
+        id: a.id,
+        kind: a.kind,
+        catalogId: substitutions[a.id] ?? d.catalogId,
+        actorClass,
+        dims: d.dims,
+        ...(d.color ? { color: d.color } : {}),
+        transform: { position: a.position, rotation: a.rotation },
+        velocity: a.velocity ?? [0, 0, 0],
+        ...(a.wheelSpinRad !== undefined ? { wheelSpinRad: a.wheelSpinRad } : {}),
+        ...(a.bodyAttitude ? { bodyAttitude: a.bodyAttitude } : {}),
+        ...(a.wheelDropM ? { wheelDropM: a.wheelDropM } : {}),
+      };
+    }),
   }));
+  return { stream, applied };
+}
+
+/**
+ * Build the `simforge.render-job/v2` job for one run into `<outDir>.job.json`
+ * and return the renderer argv plus what the manifest records about it.
+ */
+function buildInvocation(scene, glbs, corpusRoot, outDir) {
+  if (scene.rendererArgs || scene.invocationTemplate || scene.profile) {
+    fail(1, `scene ${scene.sceneId}: rendererArgs/invocationTemplate/profile are retired; describe the render as \`job\``);
+  }
+  // A fresh directory per run: a stale artifact (or observed-frames file)
+  // from an earlier run must never be hashed as this run's output.
+  fs.rmSync(outDir, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(outDir), { recursive: true });
   const job = {
-    schema: 'simforge.native-render-job/v1',
-    profile: scene.profile ?? 'sensor',
-    lighting: {
-      sun_elev_deg: a.sunElev, sun_azim_deg: a.sunAzim, sun_lux: a.lux, ambient: a.ambient,
-      ...(scene.lighting ?? {}),
-    },
-    glbs,
-    warmupFrames: a.warmup,
-    passes: { rgb: true, id: true, depth: true },
-    schedule: Array.from({ length: a.frames }, (_, frameIndex) => ({ frameIndex, cameras })),
-    outDir: outPrefix,
+    schema: 'simforge.render-job/v2',
+    ...substitute(scene.job, { repo: repoRoot, corpus: corpusRoot }),
+    outDir,
   };
-  const jobPath = `${outPrefix}.job.json`;
-  fs.mkdirSync(outPrefix, { recursive: true });
+  job.scene = { ...job.scene, glbs };
+  const substitutions = [];
+  if (scene.sceneState?.gz) {
+    const doc = JSON.parse(gunzipSync(fs.readFileSync(path.join(repoRoot, scene.sceneState.gz))).toString('utf8'));
+    const { stream, applied } = lowerSceneStateDocument(doc, scene.actorCatalogSubstitutions ?? {}, scene.sceneId);
+    substitutions.push(...applied);
+    job.sceneState = `${outDir}.scene-state.json`;
+    fs.writeFileSync(job.sceneState, JSON.stringify(stream));
+  } else if (scene.sceneState?.stream) {
+    job.sceneState = path.join(repoRoot, scene.sceneState.stream);
+  } else if (scene.sceneState) {
+    fail(1, `scene ${scene.sceneId}: sceneState needs gz or stream`);
+  }
+  if (scene.actorCatalogSubstitutions && !scene.sceneState?.gz) {
+    fail(1, `scene ${scene.sceneId}: actorCatalogSubstitutions apply only to a lowered {gz} scene state`);
+  }
+  for (const [actorId, glb] of Object.entries(job.scene.actorModelRefs ?? {})) {
+    substitutions.push({ actorId, kind: 'actor-model-ref', rendered: path.relative(repoRoot, glb) });
+  }
+  if (job.scene.allowPrimitiveActors) substitutions.push({ kind: 'allow-primitive-actors' });
+  if (scene.parity) job.observe = true;
+  const jobPath = `${outDir}.job.json`;
   fs.writeFileSync(jobPath, JSON.stringify(job, null, 2));
-  return ['--job', jobPath];
+  return { args: ['job', '--job', jobPath], job, substitutions };
 }
 
 /** Exit 7 unless every ID pass encodes real instances (see `idPass`). */
-function checkIdPasses(outPrefix, scene) {
-  const keys = scene.idPass?.keys ?? scene.expectedPasses.filter((k) => /^id\d|instance/.test(k));
+function checkIdPasses(outDir, scene) {
+  const keys = scene.idPass?.keys ?? scene.expectedPasses.filter((k) => /\.id$/.test(k));
   const minInstances = scene.idPass?.minInstances ?? 2;
   const minCoverage = scene.idPass?.minCoverage ?? 0.05;
-  const files = passFiles(outPrefix, scene);
+  const files = passFiles(outDir, scene);
   const stats = {};
   for (const key of keys) {
     const file = files[key];
@@ -240,11 +305,15 @@ function checkIdPasses(outPrefix, scene) {
 }
 
 /** Exit 8 unless the renderer's observed transforms match the timeline sampler. */
-function checkParity(outPrefix, scene) {
+function checkParity(outDir, scene) {
   if (!scene.parity) return undefined;
-  const cmd = (process.env.GOLDEN_PARITY_CMD ?? `node ${path.join(repoRoot, 'packages/cli/bin/simforge.js')} render parity`).split(' ');
-  const observed = path.join(outPrefix, scene.parity.observed ?? 'observed-frames.jsonl');
-  const r = spawnSync(cmd[0], [...cmd.slice(1), path.join(repoRoot, scene.parity.timeline), observed, '--profile', scene.parity.profile ?? 'bevy'], { encoding: 'utf8' });
+  // The CLI from source (the checkout the goldens run in; no build step).
+  const cmd = (process.env.GOLDEN_PARITY_CMD ?? `node --conditions=development --import tsx ${path.join(repoRoot, 'packages/cli/bin/simforge.js')} render parity`).split(' ');
+  const observed = path.join(outDir, scene.parity.observed ?? 'observed-frames.jsonl');
+  if (!fs.existsSync(observed)) {
+    throw new GateFailure(1, `parity: the job wrote no ${path.basename(observed)} (job \`observe\` must write the observed actor transforms of every tick)`);
+  }
+  const r = spawnSync(cmd[0], [...cmd.slice(1), path.join(repoRoot, scene.parity.timeline), observed, '--profile', scene.parity.profile ?? 'bevy'], { encoding: 'utf8', cwd: repoRoot });
   let report;
   try { report = JSON.parse(r.stdout); } catch { throw new GateFailure(1, `parity command failed (${r.status}): ${r.stderr?.slice(-800)}`); }
   const summary = {
@@ -257,22 +326,36 @@ function checkParity(outPrefix, scene) {
   return summary;
 }
 
+/**
+ * Run the job; timings come from its `results.json` (`tickMs` excludes the
+ * first, settling tick). A one-tick job has no timed ticks: null, and its
+ * scene skips the frame-time gate.
+ */
 function runRenderer(binPath, invocation, label) {
-  console.log(`[golden-harness] render ${label}: ${path.basename(binPath)} ${invocation.join(' ')}`);
-  const r = spawnSync(binPath, invocation, { encoding: 'utf8', timeout: 600_000 });
+  console.log(`[golden-harness] render ${label}: ${path.basename(binPath)} ${invocation.args.join(' ')}`);
+  // Lavapipe renders on the CPU: a 120-tick scene takes minutes, not seconds.
+  const timeoutMs = Number(process.env.GOLDEN_RENDER_TIMEOUT_S ?? 3600) * 1000;
+  const r = spawnSync(binPath, invocation.args, {
+    encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024, env: { ...process.env, ...lavapipeEnv() },
+  });
   if (r.status !== 0) {
     fail(1, `renderer exited ${r.status}\nstdout tail:\n${(r.stdout ?? '').slice(-2000)}\nstderr tail:\n${(r.stderr ?? '').slice(-2000)}`);
   }
-  // `native-render-job` prints its timings JSON as the last stdout line;
-  // binaries without timing instrumentation (e.g. sensor-capture) are
-  // allowed and their scenes opt out of the frame-time gate.
-  const lines = (r.stdout ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
-  const last = lines.at(-1);
-  if (!last?.startsWith('{')) return null;
-  const t = JSON.parse(last);
-  return typeof t.avg_frame_ms === 'number'
-    ? { ...t, measured_frames: t.measured_frames ?? t.frames_rendered }
-    : null;
+  const resultsPath = path.join(invocation.job.outDir, 'results.json');
+  if (!fs.existsSync(resultsPath)) fail(1, `renderer wrote no ${resultsPath}`);
+  const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+  if (results.schema !== 'simforge.render-job-results/v2') fail(1, `${resultsPath}: schema ${results.schema}`);
+  const ticks = results.tickMs ?? [];
+  if (ticks.length === 0) return null;
+  const sorted = [...ticks].sort((a, b) => a - b);
+  return {
+    avg_frame_ms: results.meanMsPerTick,
+    p50_frame_ms: results.medianMsPerTick,
+    p99_frame_ms: sorted[Math.min(sorted.length - 1, Math.ceil(0.99 * sorted.length) - 1)],
+    fps: 1000 / results.meanMsPerTick,
+    measured_frames: ticks.length,
+    gpu_busy_ms_per_tick: results.gpuBusyMsPerTick,
+  };
 }
 
 function cargoVersions() {
@@ -293,14 +376,14 @@ function rustcVersion() {
   } catch { return null; }
 }
 
-function resolveBinary(args, scene) {
+function resolveBinary(args) {
   const candidates = [
     args.bin,
-    scene?.binary && path.join(repoRoot, scene.binary),
-    path.join(repoRoot, 'renderer/target/release/native-render-job'),
+    process.env.GOLDEN_RENDER_BIN,
+    path.join(repoRoot, 'renderer/target/release/simforge-render'),
   ].filter(Boolean);
   const bin = candidates.find((p) => fs.existsSync(p));
-  if (!bin) fail(1, `no renderer binary found (tried: ${candidates.join(', ')}) — build it first (cargo build --release -p render-core --bin native-render-job --manifest-path renderer/Cargo.toml)`);
+  if (!bin) fail(1, `no renderer binary found (tried: ${candidates.join(', ')}) — build it first (cargo build --release -p simforge-render --manifest-path renderer/Cargo.toml)`);
   return bin;
 }
 
@@ -308,9 +391,9 @@ function manifestBase({ mode, scene, hardware, binPath, invocation, versions }) 
   return {
     schema: 'simforge-oss.render-determinism-manifest.v1',
     generatedAt: new Date().toISOString(),
-    claim: 'byte-exactness of the native (Bevy/wgpu) sensor-profile pass hashes across renders of one fixed scene state on pinned hardware',
+    claim: 'byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware',
     mode,
-    profile: scene.profile,
+    renderConfig: invocation.job.scene.render ?? null,
     scenario: {
       instanceId: null,
       mapId: scene.mapId,
@@ -321,9 +404,10 @@ function manifestBase({ mode, scene, hardware, binPath, invocation, versions }) 
       engine: 'native-bevy',
       file: path.relative(repoRoot, binPath),
       sha256: sha256File(binPath),
-      invocation: { args: invocation, passesRenderedSequentially: false },
+      invocation: { args: invocation.args, job: invocation.job, passesRenderedSequentially: false },
       versions: { ...versions, rustc: rustcVersion(), backend: 'vulkan' },
     },
+    ...(invocation.substitutions.length > 0 ? { actorSubstitutions: invocation.substitutions } : {}),
     hardware,
   };
 }
@@ -350,13 +434,12 @@ async function cmdRecord(args) {
   const sceneId = args._[1];
   if (!sceneId) fail(1, 'usage: golden.mjs record <scene>');
   const scene = applyOverrides(loadScene(sceneId), args.overrides);
-  const { glbs } = resolvePaths(scene);
-  const binPath = resolveBinary(args, scene);
+  const { glbs, corpusRoot } = resolvePaths(scene);
+  const binPath = resolveBinary(args);
 
-  await requireQuietGpu();
   console.log('[golden-harness] collecting hardware fingerprint...');
   const hardware = await collectNativeHardware();
-  console.log(`[golden-harness] gpuFingerprint=${hardware.gpuFingerprint} gpu=${hardware.host.gpus[0].name} driver=${hardware.host.gpus[0].driverVersion}`);
+  console.log(`[golden-harness] gpuFingerprint=${hardware.gpuFingerprint} adapter=${hardware.host.adapter.deviceName} driver=${hardware.host.adapter.driverInfo} cpu=${hardware.host.cpuModel}`);
 
   const corpusChecksums = glbs.map((g) => ({
     path: path.basename(g),
@@ -372,15 +455,14 @@ async function cmdRecord(args) {
   // Two independent process runs — the determinism evidence itself.
   const runs = [];
   for (const label of ['runA', 'runB']) {
-    const prefix = path.join(artifacts, label, sceneId);
-    fs.mkdirSync(path.dirname(prefix), { recursive: true });
-    const invocation = buildInvocation(scene, glbs, prefix);
+    const outDir = path.join(artifacts, label, sceneId);
+    const invocation = buildInvocation(scene, glbs, corpusRoot, outDir);
     const timings = runRenderer(binPath, invocation, label);
     runs.push({
       timings,
-      passHashes: hashPasses(prefix, scene.expectedPasses, scene),
-      idPasses: checkIdPasses(prefix, scene),
-      parity: checkParity(prefix, scene),
+      passHashes: hashPasses(outDir, scene.expectedPasses, scene),
+      idPasses: checkIdPasses(outDir, scene),
+      parity: checkParity(outDir, scene),
       invocation,
     });
   }
@@ -398,7 +480,7 @@ async function cmdRecord(args) {
     passHashes: runs[0].passHashes,
     idPasses: runs[0].idPasses,
     ...(runs[0].parity ? { parity: runs[0].parity } : {}),
-    ...(scene.sceneState?.gz ? { sceneStateSha256: sha256File(path.join(repoRoot, scene.sceneState.gz)) } : {}),
+    ...(scene.sceneState ? { sceneStateSha256: sha256File(path.join(repoRoot, scene.sceneState.gz ?? scene.sceneState.stream)) } : {}),
     corpusChecksums,
     ...(t ? {
       timings: {
@@ -417,7 +499,7 @@ async function cmdRecord(args) {
     verdict: {
       byteStable: true,
       driftedPasses: [],
-      scope: 'sensor-profile pass hashes, single GPU/driver/wgpu backend — cross-hardware reproducibility NOT claimed (docs/determinism-claim.md)',
+      scope: 'render-job pass hashes (pinned capture clock), one lavapipe build on one CPU model (the adapter of record) — cross-adapter reproducibility NOT claimed (docs/determinism-claim.md)',
     },
   };
   const gp = goldenPath(hardware, sceneId);
@@ -434,7 +516,7 @@ async function cmdRecord(args) {
   fs.writeFileSync(gp, JSON.stringify(golden, null, 2));
   writeManifest(golden, path.join(artifacts, 'manifest.json'));
   console.log(`[golden-harness] RECORDED golden for ${sceneId} @ ${hardware.gpuFingerprint}`);
-  if (golden.timings) console.log(`  baseline avg_frame_ms=${golden.timings.avgFrameMs.toFixed(3)} p50=${golden.timings.p50FrameMs.toFixed(3)} (budget: verify fails above ${(golden.timings.avgFrameMs * 1.10).toFixed(3)})`);
+  if (golden.timings) console.log(`  baseline avg_frame_ms=${golden.timings.avgFrameMs.toFixed(3)} p50=${golden.timings.p50FrameMs.toFixed(3)} (lavapipe; informational unless GOLDEN_FRAME_BUDGET is set)`);
   else console.log('  (no timing instrumentation — frame-time gate disabled for this scene)');
   for (const [k, v] of Object.entries(golden.passHashes)) console.log(`  ${k.padEnd(7)} ${v.sha256.slice(0, 16)}…  ${v.bytes}B`);
 }
@@ -462,10 +544,9 @@ class GateFailure extends Error {
 
 async function verifyOne(args, sceneId) {
   const scene = applyOverrides(loadScene(sceneId), args.overrides);
-  const { glbs } = resolvePaths(scene);
-  const binPath = resolveBinary(args, scene);
+  const { glbs, corpusRoot } = resolvePaths(scene);
+  const binPath = resolveBinary(args);
 
-  await requireQuietGpu();
   const hardware = await collectNativeHardware();
   const gp = goldenPath(hardware, sceneId);
   if (!fs.existsSync(gp)) {
@@ -475,13 +556,12 @@ async function verifyOne(args, sceneId) {
 
   const artifacts = path.join(ARTIFACTS_DIR, 'verify', sceneId);
   fs.mkdirSync(artifacts, { recursive: true });
-  const prefix = path.join(artifacts, 'verify-run', sceneId);
-  fs.mkdirSync(path.dirname(prefix), { recursive: true });
-  const invocation = buildInvocation(scene, glbs, prefix);
+  const outDir = path.join(artifacts, 'verify-run', sceneId);
+  const invocation = buildInvocation(scene, glbs, corpusRoot, outDir);
   const timings = runRenderer(binPath, invocation, 'verify');
-  const observed = hashPasses(prefix, [...scene.expectedPasses, ...(Object.keys(golden.passHashes).includes('legend') ? ['legend'] : [])], scene);
-  const idPasses = checkIdPasses(prefix, scene);
-  const parity = checkParity(prefix, scene);
+  const observed = hashPasses(outDir, scene.expectedPasses, scene);
+  const idPasses = checkIdPasses(outDir, scene);
+  const parity = checkParity(outDir, scene);
 
   // Gate 1: pass-hash drift.
   const drifted = Object.entries(golden.passHashes)
@@ -489,9 +569,10 @@ async function verifyOne(args, sceneId) {
     .filter(([k, v]) => !(observed[k]?.sha256 === v.sha256))
     .map(([k]) => k);
 
-  // Gate 2: frame-time budget (>10% avg-frame regression vs recorded baseline).
-  // Scenes without timing instrumentation (sensor-capture) skip this gate.
-  const budgetFactor = Number(process.env.GOLDEN_FRAME_BUDGET ?? 1.10);
+  // Gate 2 (opt-in): frame-time budget vs the recorded baseline, only when
+  // GOLDEN_FRAME_BUDGET is set (e.g. 1.10). On lavapipe the times measure
+  // the CPU host; one-tick jobs have no timed ticks.
+  const budgetFactor = process.env.GOLDEN_FRAME_BUDGET ? Number(process.env.GOLDEN_FRAME_BUDGET) : null;
   const baseline = golden.timings?.avgFrameMs;
   const regressionPct = timings && baseline ? ((timings.avg_frame_ms - baseline) / baseline) * 100 : null;
 
@@ -513,7 +594,7 @@ async function verifyOne(args, sceneId) {
     verdict: {
       byteStable: drifted.length === 0,
       driftedPasses: drifted,
-      frameTimeBudgetExceeded: regressionPct > (budgetFactor - 1) * 100,
+      frameTimeBudgetExceeded: budgetFactor !== null && regressionPct !== null && regressionPct > (budgetFactor - 1) * 100,
       scope: golden.verdict.scope,
     },
   };
@@ -526,16 +607,17 @@ async function verifyOne(args, sceneId) {
     console.log(`  ${ok ? 'MATCH' : 'DRIFT'}  ${k.padEnd(7)} ${v.sha256.slice(0, 16)}…${exp && !ok ? ` (golden ${exp.sha256.slice(0, 16)}…)` : ''}`);
   }
   if (regressionPct !== null) {
-    console.log(`  frame-time: ${timings.avg_frame_ms.toFixed(3)} ms vs baseline ${baseline.toFixed(3)} ms → ${regressionPct >= 0 ? '+' : ''}${regressionPct.toFixed(1)}% (budget +${((budgetFactor - 1) * 100).toFixed(0)}%)`);
+    const budget = budgetFactor === null ? 'not gated' : `budget +${((budgetFactor - 1) * 100).toFixed(0)}%`;
+    console.log(`  frame-time: ${timings.avg_frame_ms.toFixed(3)} ms vs baseline ${baseline.toFixed(3)} ms → ${regressionPct >= 0 ? '+' : ''}${regressionPct.toFixed(1)}% (${budget})`);
   } else {
-    console.log('  frame-time gate: skipped (no timing instrumentation)');
+    console.log('  frame-time: no timed ticks');
   }
 
   if (drifted.length > 0) {
     console.error(`[golden-harness] FAIL(${sceneId}): pass-hash drift in: ${drifted.join(', ')}`);
     throw new GateFailure(2, 'pass-hash drift');
   }
-  if (regressionPct !== null && regressionPct > (budgetFactor - 1) * 100) {
+  if (manifest.verdict.frameTimeBudgetExceeded) {
     console.error(`[golden-harness] FAIL(${sceneId}): frame-time regression ${regressionPct.toFixed(1)}% exceeds budget`);
     throw new GateFailure(3, 'frame-time budget exceeded');
   }
@@ -544,12 +626,52 @@ async function verifyOne(args, sceneId) {
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Build every job without rendering: proves the scene definitions parse,
+ * the corpus resolves (unless --allow-missing-corpus), the scene state
+ * lowers, and prints the exact invocation. Jobs land in
+ * `<artifacts>/plan/<scene>/<scene>.job.json`.
+ */
+function cmdPlan(args) {
+  const all = args._[1] === undefined || args._[1] === 'all';
+  const sceneIds = all
+    ? fs.readdirSync(SCENES_DIR).filter((f) => f.endsWith('.json')).map((f) => f.replace(/\.json$/, ''))
+    : [args._[1]];
+  const binPath = [args.bin, process.env.GOLDEN_RENDER_BIN, path.join(repoRoot, 'renderer/target/release/simforge-render')]
+    .filter(Boolean).find((p) => fs.existsSync(p)) ?? path.join(repoRoot, 'renderer/target/release/simforge-render');
+  let missingCorpus = 0;
+  for (const id of sceneIds) {
+    const scene = applyOverrides(loadScene(id), args.overrides);
+    const { glbs, corpusRoot, missing } = resolvePaths(scene, { allowMissing: args.allowMissingCorpus });
+    missingCorpus += missing.length;
+    const outDir = path.join(ARTIFACTS_DIR, 'plan', id, id);
+    const invocation = buildInvocation(scene, glbs, corpusRoot, outDir);
+    const rig = invocation.job.rig;
+    const sensors = new Set([
+      ...(rig.cameras ?? []).map((c) => c.sensorId), ...(rig.lidars ?? []).map((l) => l.sensorId),
+      ...(rig.radars ?? []).map((r) => r.sensorId),
+    ]);
+    const unknown = rig.pronto ? [] : Object.values(scene.passPaths).map((p) => p.split('/')[0]).filter((s) => !sensors.has(s));
+    if (unknown.length > 0) fail(1, `scene ${id}: passPaths name sensors the rig does not have: ${[...new Set(unknown)].join(', ')}`);
+    let ticks = '';
+    if (invocation.job.sceneState) {
+      const frames = JSON.parse(fs.readFileSync(invocation.job.sceneState, 'utf8'));
+      ticks = ` sceneState ${Array.isArray(frames) ? frames.length : frames.frames.length} ticks,`;
+    }
+    console.log(`[golden-harness] plan ${id}:${ticks} ${invocation.job.ticks ? `ticks ${JSON.stringify(invocation.job.ticks)}, ` : ''}passes ${invocation.job.passes.join(',')}${missing.length ? `, MISSING corpus ${missing.join(', ')}` : ''}`);
+    console.log(`  ${binPath} ${invocation.args.join(' ')}`);
+    for (const sub of invocation.substitutions) console.log(`  substitution: ${JSON.stringify(sub)}`);
+  }
+  if (missingCorpus > 0) console.log(`[golden-harness] plan: ${missingCorpus} corpus file(s) missing (--allow-missing-corpus)`);
+}
+
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];
 try {
   if (cmd === 'record') await cmdRecord(args);
   else if (cmd === 'verify') await cmdVerify(args);
-  else fail(1, 'usage: golden.mjs <record|verify> <scene|all> [--set dotted.path=value] [--bin path]');
+  else if (cmd === 'plan') cmdPlan(args);
+  else fail(1, 'usage: golden.mjs <record|verify|plan> <scene|all> [--set dotted.path=value] [--bin path] [--allow-missing-corpus]');
 } catch (e) {
   if (e instanceof GateFailure) { console.error(`[golden-harness] ERROR: ${e.message}`); process.exit(e.exitCode); }
   throw e;

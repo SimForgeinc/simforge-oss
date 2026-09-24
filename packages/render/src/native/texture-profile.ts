@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { homedir } from 'node:os';
@@ -67,7 +67,17 @@ export interface NativeTexturePlan {
   readonly images: ReadonlyMap<number, string>;
   readonly variantDigest: string;
   readonly variant: boolean;
+  /**
+   * `uastc-full` only: why the service will transcode UASTC at load instead
+   * of uploading the ingest-built `textures-full-bc7` blocks (identical
+   * pixels either way); `undefined` when the GPU variant is used.
+   */
+  readonly transcodeAtLoad?: string;
 }
+
+/** The ingest-built full-resolution GPU-block variant of `uastc-full` (`ktx2-gpu-variant`). */
+export const NATIVE_FULL_GPU_VARIANT_ID = 'textures-full-bc7';
+const FULL_GPU_VARIANT_CODECS = ['bc7', 'bc5', 'bc4'];
 
 /**
  * Selects exactly the closure members a texture tier renders from. Pure
@@ -104,6 +114,44 @@ export async function planNativeTextureMembers(
     if (variant.schemaVersion !== 1 || variant.id !== 'textures-512-bc7' || variant.sourceManifestSha256 !== manifestSha256) throw new Error('native_ml_texture_index_invalid');
     variantDigest = indexSha256;
   }
+  // uastc-full: prefer the pre-transcoded blocks when ingest built them.
+  // The variant's envelope lives in derived/textures-full-bc7/ (new builds
+  // and backfills of immutable published closures alike), else in the
+  // closure's own 3d/variants/manifest.json; index and image files resolve
+  // against the envelope's base directory.
+  let fullVariant: Variant | undefined;
+  let fullVariantBase = '';
+  let transcodeAtLoad: string | undefined;
+  if (renderTextures === 'uastc-full') {
+    const manifestSha256 = source.sha256('3d/manifest.json');
+    const envelope = [
+      { uri: `derived/${NATIVE_FULL_GPU_VARIANT_ID}/manifest.json`, base: `derived/${NATIVE_FULL_GPU_VARIANT_ID}/`, indexBase: `derived/${NATIVE_FULL_GPU_VARIANT_ID}/` },
+      { uri: '3d/variants/manifest.json', base: '3d/', indexBase: '3d/variants/' },
+    ].find((candidate) => source.sha256(candidate.uri));
+    if (!manifestSha256 || !envelope) {
+      transcodeAtLoad = 'closure has no texture variants';
+    } else {
+      const manifest = JSON.parse(await source.readText(envelope.uri)) as { sourceManifestSha256: string; variants?: Record<string, { file: string; outputSha256: string; sourceManifestSha256: string }> };
+      const entry = manifest.variants?.[NATIVE_FULL_GPU_VARIANT_ID];
+      const indexUri = entry ? `${envelope.indexBase}${entry.file}` : undefined;
+      if (!entry || !indexUri) transcodeAtLoad = `closure has no ${NATIVE_FULL_GPU_VARIANT_ID} variant`;
+      else if (manifest.sourceManifestSha256 !== manifestSha256 || entry.sourceManifestSha256 !== manifestSha256) transcodeAtLoad = `${NATIVE_FULL_GPU_VARIANT_ID} is bound to another manifest`;
+      else if (source.sha256(indexUri) !== entry.outputSha256) transcodeAtLoad = `${NATIVE_FULL_GPU_VARIANT_ID} index is missing or its digest differs`;
+      else {
+        const index = JSON.parse(await source.readText(indexUri)) as Variant;
+        if (index.schemaVersion !== 1 || index.id !== NATIVE_FULL_GPU_VARIANT_ID || index.sourceManifestSha256 !== manifestSha256) {
+          transcodeAtLoad = `${NATIVE_FULL_GPU_VARIANT_ID} index is invalid`;
+        } else {
+          fullVariant = index;
+          fullVariantBase = envelope.base;
+          members.add('3d/manifest.json');
+          members.add(envelope.uri);
+          members.add(assertIndexUri(indexUri));
+          variantDigest = entry.outputSha256;
+        }
+      }
+    }
+  }
   const imageIndices = new Set<number>();
   for (const texture of document.textures ?? []) {
     const index = texture.extensions?.KHR_texture_basisu?.source ?? texture.source;
@@ -121,6 +169,13 @@ export async function planNativeTextureMembers(
       const sha256 = requireMember(uri);
       if (sha256 !== replacement.outputSha256) throw new Error(`native_ml_texture_digest_mismatch: ${uri}`);
     }
+    // A full GPU variant omits images that need no transcode (passthrough).
+    const gpu = fullVariant?.images[`../${image.uri}`];
+    if (gpu) {
+      if (!FULL_GPU_VARIANT_CODECS.includes(gpu.codec)) throw new Error(`native_texture_variant_codec_invalid: ${gpu.codec} for ${image.uri}`);
+      uri = `${fullVariantBase}${gpu.file}`;
+      if (requireMember(uri) !== gpu.outputSha256) throw new Error(`native_texture_variant_digest_mismatch: ${uri}`);
+    }
     requireMember(uri);
     images.set(index, uri);
   }
@@ -128,7 +183,12 @@ export async function planNativeTextureMembers(
     if (!buffer.uri || buffer.uri.startsWith('data:')) throw new Error('native_external_geometry_required');
     requireMember(buffer.uri);
   }
-  return { members, images, variantDigest, variant: variant !== undefined };
+  return { members, images, variantDigest, variant: variant !== undefined, ...(transcodeAtLoad ? { transcodeAtLoad } : {}) };
+}
+
+function assertIndexUri(uri: string): string {
+  assertSafeNativeMapMemberPath(uri);
+  return uri;
 }
 
 const KTX2_MAGIC = Buffer.from([0xab,0x4b,0x54,0x58,0x20,0x32,0x30,0xbb,0x0d,0x0a,0x1a,0x0a]);
@@ -181,6 +241,12 @@ export async function stageNativeTextureProfile(input: {
   budgetBytes?: number;
   capacityBytes?: number;
   cacheDirectory?: string;
+  /**
+   * Further closure members the render reads, staged beside the master at
+   * their map-relative paths (the geometry LOD derivative); part of the
+   * staged tree's identity.
+   */
+  extraMembers?: readonly string[];
 }) {
   const capacityBytes = input.budgetBytes ?? input.capacityBytes;
   if (!Number.isSafeInteger(capacityBytes) || capacityBytes! <= 0) throw new Error('native_vram_capacity_missing');
@@ -193,28 +259,13 @@ export async function stageNativeTextureProfile(input: {
     readText: (uri) => fs.readFile(input.closure.members.get(uri)!.path, 'utf8'),
   });
   const selected = new Map<string, RenderInputFile>([...plan.members].map((uri) => [uri, input.closure.members.get(uri)!]));
-  const variantDigest = plan.variantDigest;
-  let textureBytes = 0;
-  const seenImages = new Set<string>();
-  for (const [index, uri] of plan.images) {
-    const image = document.images![index]!;
-    if (plan.variant) {
-      image.uri = uri;
-      image.mimeType = 'image/ktx2';
-    }
-    const member = selected.get(uri)!;
-    if (seenImages.has(uri)) continue;
-    seenImages.add(uri);
-    textureBytes += ktx2VramBytes(await readKtx2Header(member.path), uri, plan.variant);
+  for (const uri of input.extraMembers ?? []) { // fallback-ok: no extra members requested
+    assertSafeNativeMapMemberPath(uri);
+    const member = input.closure.members.get(uri);
+    if (!member) throw new Error(`native_render_member_missing: ${uri}`);
+    selected.set(uri, member);
   }
-  let geometryBytes = 0;
-  for (const buffer of document.buffers ?? []) geometryBytes += buffer.byteLength;
-  // Admission ESTIMATE: geometry upload + CPU/GPU expansion allowance, frame
-  // attachments/readback, and a 512 MiB actor/lighting/driver reserve. This is
-  // not a GPU allocator limit and cannot guarantee aggregate parallel VRAM.
-  const estimatedBytes = textureBytes + geometryBytes * 2 + input.framePixels * 64 + NATIVE_SCENE_RESERVE_BYTES;
-  if (estimatedBytes > capacityBytes!) throw new NativeTextureCapacityError(estimatedBytes, capacityBytes!, capacitySource);
-  const budgetBytes = input.budgetBytes ?? estimatedBytes;
+  const variantDigest = plan.variantDigest;
   const identity = createHash('sha256').update(JSON.stringify([masterInput.sha256, input.renderTextures, variantDigest, [...selected].map(([uri, member]) => [uri, member.sha256])])).digest('hex');
   // Default beside the worker's blob cache (SIMFORGE_CACHE_DIR) so the staged
   // tree is hard links on the same filesystem: no copy, and it survives restarts.
@@ -222,8 +273,44 @@ export async function stageNativeTextureProfile(input: {
     ?? (process.env.SIMFORGE_CACHE_DIR ? path.join(process.env.SIMFORGE_CACHE_DIR, 'native-textures') : undefined)
     ?? path.join(process.env.XDG_CACHE_HOME ?? path.join(homedir(), '.cache'), 'simforge', 'native-textures');
   const directory = path.join(cacheRoot, identity);
+  const masterPath = path.join(directory, 'master.gltf');
+  // A tree staged before (same identity: master, tier, variant and every
+  // member digest) is complete once its marker exists; its measured bytes
+  // ride in the marker, so a later job skips the per-file header reads and
+  // links (thousands of files on a large map).
+  const staged = await readStagedMarker(directory, identity);
+  let textureBytes: number;
+  let geometryBytes: number;
+  if (staged) {
+    ({ textureBytes, geometryBytes } = staged);
+  } else {
+    const headers = new Map<string, number>();
+    const uniqueImages = [...new Set(plan.images.values())];
+    await forEachConcurrent(uniqueImages, 32, async (uri) => {
+      headers.set(uri, ktx2VramBytes(await readKtx2Header(selected.get(uri)!.path), uri, plan.variant));
+    });
+    textureBytes = 0;
+    for (const uri of uniqueImages) textureBytes += headers.get(uri)!;
+    for (const [index, uri] of plan.images) {
+      const image = document.images![index]!;
+      if (uri !== image.uri) {
+        image.uri = uri;
+        image.mimeType = 'image/ktx2';
+      }
+    }
+    geometryBytes = 0;
+    for (const buffer of document.buffers ?? []) geometryBytes += buffer.byteLength;
+  }
+  // Admission ESTIMATE: geometry upload + CPU/GPU expansion allowance, frame
+  // attachments/readback, and a 512 MiB actor/lighting/driver reserve. This is
+  // not a GPU allocator limit and cannot guarantee aggregate parallel VRAM.
+  const estimatedBytes = textureBytes + geometryBytes * 2 + input.framePixels * 64 + NATIVE_SCENE_RESERVE_BYTES;
+  if (estimatedBytes > capacityBytes!) throw new NativeTextureCapacityError(estimatedBytes, capacityBytes!, capacitySource);
+  const budgetBytes = input.budgetBytes ?? estimatedBytes;
+  const profile = { ...(plan.transcodeAtLoad ? { transcodeAtLoad: plan.transcodeAtLoad } : {}), masterPath, renderTextures: input.renderTextures, memberCount: selected.size + 1, textureBytes, geometryBytes, estimatedBytes, budgetBytes, capacityBytes: capacityBytes!, capacitySource, cacheKey: identity };
+  if (staged) return profile;
   await fs.mkdir(directory, { recursive: true });
-  for (const [uri, member] of selected) {
+  await forEachConcurrent([...selected], 32, async ([uri, member]) => {
     const target = path.join(directory, uri);
     await fs.mkdir(path.dirname(target), { recursive: true });
     try { await fs.link(member.path, target); }
@@ -231,8 +318,8 @@ export async function stageNativeTextureProfile(input: {
       const code = (error as NodeJS.ErrnoException).code;
       if (code === 'EEXIST') {
         // Already staged as a link to this very blob: nothing to prove again.
-        const [staged, source] = await Promise.all([fs.stat(target), fs.stat(member.path)]);
-        if (staged.ino === source.ino && staged.dev === source.dev) continue;
+        const [linked, source] = await Promise.all([fs.stat(target), fs.stat(member.path)]);
+        if (linked.ino === source.ino && linked.dev === source.dev) return;
         const digest = await hashFile(target);
         if (digest.sha256 !== member.sha256 || digest.sizeBytes !== member.sizeBytes) throw new Error(`native_texture_cache_digest_mismatch: ${uri}`);
       } else if (code === 'EXDEV' || code === 'EPERM') {
@@ -246,9 +333,8 @@ export async function stageNativeTextureProfile(input: {
         } finally { await fs.rm(temporary, { recursive: true, force: true }); }
       } else throw error;
     }
-  }
+  });
   // Never modify the read-only installed master or a hardlink to it.
-  const masterPath = path.join(directory, 'master.gltf');
   const content = JSON.stringify(document);
   const temporary = await fs.mkdtemp(path.join(directory, '.master-'));
   try {
@@ -256,5 +342,43 @@ export async function stageNativeTextureProfile(input: {
     await fs.writeFile(candidate, content);
     await fs.rename(candidate, masterPath);
   } finally { await fs.rm(temporary, { recursive: true, force: true }); }
-  return { masterPath, renderTextures: input.renderTextures, memberCount: selected.size + 1, textureBytes, geometryBytes, estimatedBytes, budgetBytes, capacityBytes: capacityBytes!, capacitySource, cacheKey: identity };
+  await writeStagedMarker(directory, { identity, textureBytes, geometryBytes });
+  return profile;
+}
+
+const STAGED_MARKER = '.staged.json';
+
+interface StagedMarker {
+  readonly identity: string;
+  readonly textureBytes: number;
+  readonly geometryBytes: number;
+}
+
+async function readStagedMarker(directory: string, identity: string): Promise<StagedMarker | null> {
+  try {
+    const marker = JSON.parse(await fs.readFile(path.join(directory, STAGED_MARKER), 'utf8')) as StagedMarker;
+    if (marker.identity !== identity || !Number.isSafeInteger(marker.textureBytes) || !Number.isSafeInteger(marker.geometryBytes)) return null;
+    await fs.access(path.join(directory, 'master.gltf'));
+    return marker;
+  } catch {
+    return null;
+  }
+}
+
+/** Written last (temp + rename): its presence means every member and the master are staged. */
+async function writeStagedMarker(directory: string, marker: StagedMarker): Promise<void> {
+  const temporary = path.join(directory, `${STAGED_MARKER}.${process.pid}.${randomUUID()}.tmp`);
+  await fs.writeFile(temporary, JSON.stringify(marker));
+  await fs.rename(temporary, path.join(directory, STAGED_MARKER));
+}
+
+async function forEachConcurrent<T>(items: readonly T[], limit: number, work: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next]!;
+      next += 1;
+      await work(item);
+    }
+  }));
 }

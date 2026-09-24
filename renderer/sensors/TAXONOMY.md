@@ -3,6 +3,17 @@
 WSB3 reference for the semantic-class pass, instance-ID pass, lidar
 intensity proxy, and frame conventions. Code: `renderer/sensors/src/taxonomy.rs`.
 
+> **Camera `semantic` pass of `simforge-render` (service, `job`) uses the
+> CARLA layout, not this table.** The service derives it from the instance-ID
+> pass (`service/src/carla.rs::semantic_from_ids`): CARLA semantic class ids
+> (0 unlabeled, 1 building, 2 fence, 4 pedestrian, 5 pole, 7 road,
+> 9 vegetation, 10 vehicle, 12 traffic sign, 18 traffic light; the
+> `classes` module there) in byte 2 of each pixel,
+> alpha 255. CARLA reads its buffers as BGRA, so byte 2 is CARLA's red; in the
+> RGBA PNG a job writes (`<tick>.semantic.png`) it is the **blue** channel
+> (PIL `img[..., 2]`). A mounted camera neither renders nor labels its host
+> vehicle. The table below is the lidar/sensor taxonomy.
+
 ## Semantic classes (closed set)
 
 Carried in the BLUE channel of the shared aux (instance-ID) render — one
@@ -18,7 +29,7 @@ Background/sky = 0.
 | 0  | unlabeled  | background / sky                                              |
 | 1  | road       | static mesh names matching road/asphalt/sidewalk/curb/ground/pavement/crosswalk/marking |
 | 2  | building   | static mesh names containing "building"                       |
-| 3  | vegetation | mesh names containing tree/veg/bush/shrub/plant/foliage/grass/hedge |
+| 3  | vegetation | mesh names containing tree/veg/bush/shrub/plant/foliage/grass/hedge or a tree genus (see below) |
 | 4  | car        | scenario-model actor class `car`                              |
 | 5  | truck      | actor class `truck`; scenario `kind: bus` folds into truck    |
 | 6  | pedestrian | actor class `pedestrian`                                      |
@@ -35,8 +46,16 @@ service's CARLA-layout output uses the legacy CityScapes palette, which has
 neither class: there the rider is `Pedestrian` (4) and the two-wheeler
 `Vehicles` (10), and the instance ids still differ.
 
-Matching order for statics: vegetation before building before road keywords,
-fallback `prop`.
+Static meshes are classified once, by `sensors::taxonomy::StaticKind::of(mesh name)`. That one table serves both this taxonomy and the service's CARLA semantic pass. Rules are applied in this order:
+
+1. vegetation: tree, veg, bush, shrub, plant, foliage, grass, hedge, or a tree genus (maple, oak, pine, alder, birch, eucalyptus, palm, spruce, cypress, willow, conifer);
+2. building;
+3. fence: fence, guardrail, railbracket, barrier;
+4. pole: post, pole, luminaire, streetlight;
+5. traffic sign: sign;
+6. road keywords.
+
+Poles, signs, fences and unmatched meshes are `prop` here. In the CARLA pass, poles are Pole (5), signs are TrafficSign (12) and fences are Fence (2). An unmatched mesh is Unlabeled (0) there, and the service reports every such mesh in its ready record and job results (`unlabeledStatics`) instead of guessing a class.
 
 ## Instance IDs
 
@@ -88,6 +107,26 @@ truck/bus 0.65, pedestrian/cyclist/rider 0.60, prop 0.50, unlabeled 0.
 - Old outputs involving non-host vehicles or rotated lidar must be regenerated:
   actor proxy length/width axes were swapped, and lidar XYZ was world-oriented.
   A post-hoc point rotation cannot repair incorrect proxy geometry or classes.
+
+## Ray–triangle contract (lidar and radar)
+
+Both backends (CPU `bvh::InstancedScene::cast`, RT-core `gpu_rays`) return
+the same bytes; the contract they share:
+
+- First hit = smallest `t` of f32 Möller–Trumbore on the world-space
+  triangle (`Mat4::transform_point3` of the local vertices), `EPS = 1e-9`.
+- **Grazing cut:** a hit is rejected when the beam is within about **2.9°**
+  of the surface plane (`|cos(incidence)| < MIN_INCIDENCE_COS = 0.05`,
+  tested as `det² < 0.05² · |e1×e2|² · |dir|²`). Near grazing, f32
+  cancellation accepted beams that miss the triangle by centimetres to
+  metres ("ghost" returns); a physical lidar returns essentially nothing
+  there and the intensity proxy is already at its floor. Adopted as the
+  reference in rc.75 (goldens re-recorded once).
+- Ties on exact `t`: smallest `(instance_id, triangle index, instance
+  insertion order)`; an actor hit replaces a static one only when strictly
+  nearer. Static instances are inserted by `(instance_id, mesh asset label)`.
+- Parity gate: `sensors/tests/gpu_rays_parity.rs` (bit-identical on RTX
+  5080 and 3080) and `lidarBackend: "verify"` per scan in production.
 
 ## Output formats (CARLA-path parity)
 

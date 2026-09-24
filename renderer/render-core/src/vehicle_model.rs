@@ -81,27 +81,51 @@ impl RiderSpec {
     /// Material colours an actor's variant writes (empty for the authored look).
     pub fn colors_for(&self, actor_id: &str) -> Vec<(String, [f32; 3])> {
         // fallback-ok: a null palette is variant 0, the authored colours (nothing to write)
-        self.palettes[self.variant(actor_id)].clone().unwrap_or_default()
+        self.palettes[self.variant(actor_id)]
+            .clone()
+            .unwrap_or_default()
     }
 
     fn parse(value: &serde_json::Value) -> Result<Self> {
-        let field = |name: &str| value.get(name).with_context(|| format!("rider binding lacks {name}"));
-        let clip = field("clip")?.as_str().context("rider.clip must be a string")?.to_string();
-        let clip_duration_s = field("clipDurationS")?.as_f64().filter(|v| *v > 0.0).context("rider.clipDurationS must be > 0")?;
-        let meters_per_cycle = field("metersPerCycle")?.as_f64().filter(|v| *v > 0.0).context("rider.metersPerCycle must be > 0")?;
+        let field = |name: &str| {
+            value
+                .get(name)
+                .with_context(|| format!("rider binding lacks {name}"))
+        };
+        let clip = field("clip")?
+            .as_str()
+            .context("rider.clip must be a string")?
+            .to_string();
+        let clip_duration_s = field("clipDurationS")?
+            .as_f64()
+            .filter(|v| *v > 0.0)
+            .context("rider.clipDurationS must be > 0")?;
+        let meters_per_cycle = field("metersPerCycle")?
+            .as_f64()
+            .filter(|v| *v > 0.0)
+            .context("rider.metersPerCycle must be > 0")?;
         let slots: Vec<String> = field("slots")?
             .as_array()
             .context("rider.slots must be an array")?
             .iter()
-            .map(|v| v.as_str().map(str::to_string).context("rider.slots entries must be strings"))
+            .map(|v| {
+                v.as_str()
+                    .map(str::to_string)
+                    .context("rider.slots entries must be strings")
+            })
             .collect::<Result<_>>()?;
         let mut palettes = Vec::new();
-        for palette in field("palettes")?.as_array().context("rider.palettes must be an array")? {
+        for palette in field("palettes")?
+            .as_array()
+            .context("rider.palettes must be an array")?
+        {
             if palette.is_null() {
                 palettes.push(None);
                 continue;
             }
-            let object = palette.as_object().context("rider palette must be null or an object")?;
+            let object = palette
+                .as_object()
+                .context("rider palette must be null or an object")?;
             let mut colors = Vec::new();
             for slot in &slots {
                 let rgb = object
@@ -109,7 +133,12 @@ impl RiderSpec {
                     .and_then(|v| v.as_array())
                     .filter(|a| a.len() == 3)
                     .with_context(|| format!("rider palette lacks slot {slot}"))?;
-                let channel = |i: usize| rgb[i].as_f64().map(|v| v as f32).context("palette channel must be a number");
+                let channel = |i: usize| {
+                    rgb[i]
+                        .as_f64()
+                        .map(|v| v as f32)
+                        .context("palette channel must be a number")
+                };
                 colors.push((slot.clone(), [channel(0)?, channel(1)?, channel(2)?]));
             }
             if object.len() != slots.len() {
@@ -120,14 +149,20 @@ impl RiderSpec {
         if palettes.is_empty() {
             bail!("rider.palettes is empty");
         }
-        Ok(Self { clip, clip_duration_s, meters_per_cycle, palettes })
+        Ok(Self {
+            clip,
+            clip_duration_s,
+            meters_per_cycle,
+            palettes,
+        })
     }
 }
 
 pub fn fnv1a32(text: &str) -> u32 {
-    text.bytes().fold(0x811c9dc5_u32, |hash, byte| (hash ^ u32::from(byte)).wrapping_mul(0x0100_0193))
+    text.bytes().fold(0x811c9dc5_u32, |hash, byte| {
+        (hash ^ u32::from(byte)).wrapping_mul(0x0100_0193)
+    })
 }
-
 
 /// Catalog-id keyed model table. The sorted fallback list supports stable
 /// per-actor assignment for generic pedestrian catalog ids.
@@ -154,7 +189,10 @@ impl VehicleModelCatalog {
     pub fn load(dir: &Path) -> Result<Self> {
         let sidecar = dir.join("catalog-models.json");
         if !sidecar.is_file() {
-            bail!("actor model catalog {} has no catalog-models.json", dir.display());
+            bail!(
+                "actor model catalog {} has no catalog-models.json",
+                dir.display()
+            );
         }
         Self::from_sidecar(dir, &sidecar)
     }
@@ -171,11 +209,9 @@ impl VehicleModelCatalog {
         if self.fallback.is_empty() {
             return None;
         }
-        let hash = actor_id
-            .bytes()
-            .fold(0xcbf29ce484222325_u64, |hash, byte| {
-                (hash ^ u64::from(byte)).wrapping_mul(0x100000001b3)
-            });
+        let hash = actor_id.bytes().fold(0xcbf29ce484222325_u64, |hash, byte| {
+            (hash ^ u64::from(byte)).wrapping_mul(0x100000001b3)
+        });
         let (catalog_id, entry) = &self.fallback[hash as usize % self.fallback.len()];
         Some((catalog_id.as_str(), entry))
     }
@@ -218,9 +254,13 @@ impl VehicleModelCatalog {
                 continue; // wrapper metadata like "version"
             }
             let entry = || format!("{}: entry {catalog_id}", path.display());
-            let value = value.as_object().with_context(|| format!("{} is not an object", entry()))?;
+            let value = value
+                .as_object()
+                .with_context(|| format!("{} is not an object", entry()))?;
             let model = match value.get("model") {
-                Some(model) => model.as_object().with_context(|| format!("{} model is not an object", entry()))?,
+                Some(model) => model
+                    .as_object()
+                    .with_context(|| format!("{} model is not an object", entry()))?,
                 None => value,
             };
             let glb = model
@@ -235,19 +275,28 @@ impl VehicleModelCatalog {
             let bool_field = |key: &str| -> Result<bool> {
                 value
                     .get(key)
-                    .map(|v| v.as_bool().with_context(|| format!("{} {key} is not a boolean", entry())))
+                    .map(|v| {
+                        v.as_bool()
+                            .with_context(|| format!("{} {key} is not a boolean", entry()))
+                    })
                     .transpose()?
                     .with_context(|| format!("{} does not declare {key}", entry()))
             };
             let number_field = |key: &str| -> Result<Option<f64>> {
                 value
                     .get(key)
-                    .map(|v| v.as_f64().filter(|v| v.is_finite()).with_context(|| format!("{} {key} is not a finite number", entry())))
+                    .map(|v| {
+                        v.as_f64()
+                            .filter(|v| v.is_finite())
+                            .with_context(|| format!("{} {key} is not a finite number", entry()))
+                    })
                     .transpose()
             };
             let mut animations = HashMap::new();
             if let Some(table) = value.get("animations") {
-                let table = table.as_object().with_context(|| format!("{} animations is not an object", entry()))?;
+                let table = table
+                    .as_object()
+                    .with_context(|| format!("{} animations is not an object", entry()))?;
                 for (name, animation) in table {
                     let path = animation
                         .get("glbPath")
@@ -257,24 +306,45 @@ impl VehicleModelCatalog {
                         .get("clip")
                         .and_then(|v| v.as_str())
                         .with_context(|| format!("{} animation {name} has no clip", entry()))?;
-                    animations.insert(name.clone(), (resolve_glb_path(dir, path), clip.to_string()));
+                    animations.insert(
+                        name.clone(),
+                        (resolve_glb_path(dir, path), clip.to_string()),
+                    );
                 }
             }
             if let Some(clips) = model.get("clips") {
-                let clips = clips.as_object().with_context(|| format!("{} model.clips is not an object", entry()))?;
+                let clips = clips
+                    .as_object()
+                    .with_context(|| format!("{} model.clips is not an object", entry()))?;
                 for (key, motion) in [("idle", "idle"), ("locomotion", "walk")] {
                     if let Some(clip) = clips.get(key) {
-                        let clip = clip.as_str().with_context(|| format!("{} model.clips.{key} is not a string", entry()))?;
-                        if animations.insert(motion.to_string(), (glb_path.clone(), clip.to_string())).is_some() {
-                            bail!("{} binds the {motion} clip twice (animations and model.clips)", entry());
+                        let clip = clip.as_str().with_context(|| {
+                            format!("{} model.clips.{key} is not a string", entry())
+                        })?;
+                        if animations
+                            .insert(motion.to_string(), (glb_path.clone(), clip.to_string()))
+                            .is_some()
+                        {
+                            bail!(
+                                "{} binds the {motion} clip twice (animations and model.clips)",
+                                entry()
+                            );
                         }
                     }
                 }
-                if let Some(unknown) = clips.keys().find(|key| !matches!(key.as_str(), "idle" | "locomotion")) {
-                    bail!("{} model.clips.{unknown} is not a known motion (idle, locomotion)", entry());
+                if let Some(unknown) = clips
+                    .keys()
+                    .find(|key| !matches!(key.as_str(), "idle" | "locomotion"))
+                {
+                    bail!(
+                        "{} model.clips.{unknown} is not a known motion (idle, locomotion)",
+                        entry()
+                    );
                 }
             }
-            if model.get("animated").and_then(|v| v.as_bool()) == Some(true) && animations.is_empty() {
+            if model.get("animated").and_then(|v| v.as_bool()) == Some(true)
+                && animations.is_empty()
+            {
                 bail!("{} is animated but binds no animation clips", entry());
             }
             by_catalog_id.insert(
@@ -389,10 +459,19 @@ mod tests {
         let catalog = VehicleModelCatalog::load(&pack).unwrap();
         for id in ["vehicle.bicycle", "vehicle.motorcycle"] {
             let entry = catalog.resolve(id).unwrap();
-            let rider = entry.rider.as_ref().unwrap_or_else(|| panic!("{id} is not ridden"));
+            let rider = entry
+                .rider
+                .as_ref()
+                .unwrap_or_else(|| panic!("{id} is not ridden"));
             assert!(entry.glb_path.is_file(), "{}", entry.glb_path.display());
             assert_eq!(rider.clip, "ride");
-            assert_eq!(entry.animations.get("ride").map(|(p, c)| (p.clone(), c.as_str())), Some((entry.glb_path.clone(), "ride")));
+            assert_eq!(
+                entry
+                    .animations
+                    .get("ride")
+                    .map(|(p, c)| (p.clone(), c.as_str())),
+                Some((entry.glb_path.clone(), "ride"))
+            );
             assert_eq!(rider.palettes[0], None, "variant 0 keeps the authored look");
             assert!(rider.palettes.len() > 1);
             // Clip time wraps every metersPerCycle and is independent of how it is reached.
@@ -404,14 +483,18 @@ mod tests {
         }
     }
 
-
     #[test]
     fn generated_sidecar_resolves_scale_grounding_yaw_and_animation() {
-        let root = std::env::temp_dir().join(format!("simforge-actor-catalog-{}", std::process::id()));
+        let root =
+            std::env::temp_dir().join(format!("simforge-actor-catalog-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("models/vehicle.sedan/animations")).unwrap();
         fs::write(root.join("models/vehicle.sedan/model.glb"), b"glb").unwrap();
-        fs::write(root.join("models/vehicle.sedan/animations/walk.glb"), b"glb").unwrap();
+        fs::write(
+            root.join("models/vehicle.sedan/animations/walk.glb"),
+            b"glb",
+        )
+        .unwrap();
         fs::write(
             root.join("catalog-models.json"),
             r#"{

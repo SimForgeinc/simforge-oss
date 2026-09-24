@@ -1,4 +1,4 @@
-"""Resident Bevy sensors in-process (``simforge_native.embedded.EmbeddedRenderer``).
+"""Resident Bevy sensors in-process (``simforge_render.embedded.EmbeddedRenderer``).
 
 The renderer is the existing native Bevy service linked in-process through
 ``libsimforge_render`` (``renderer/ffi``); there is no socket, Node or Studio
@@ -7,14 +7,14 @@ rendered from a ``simforge.scene-state.v1`` document the world exported for its 
 tick and full body poses. Two consumption paths, selected explicitly:
 
 - ``device=True``: cameras get exportable device streams imported into CUDA
-  (``simforge_native.gpu.ImportedStream``); ``render`` returns per-sensor
+  (``simforge_render.gpu.ImportedStream``); ``render`` returns per-sensor
   leases whose planes are torch tensors. Release a lease after use; the
   producer waits device-side and never recycles a slot under a live view.
 - ``device=False``: frames are read from the renderer's shm ring as owned
   NumPy copies (``rgba8``/semantic ``(H, W, 4)`` uint8, ``depth32f`` ``(H, W)`` float32).
 
 Scene documents are the renderer's ``SceneSpec`` (``glbs`` absolute tile paths for
-ground/ramp/plateau, lighting, profile); ``robot.delivery-4w``/``robot.wheel``
+ground/ramp/plateau, lighting, render ``{preset, set}``); ``robot.delivery-4w``/``robot.wheel``
 actors are body-centred proxies sized from ``dims`` with the full quaternion applied.
 """
 
@@ -28,10 +28,10 @@ from typing import Any, Callable, Mapping, Sequence
 import numpy as np
 
 try:
-    from simforge_native.embedded import EmbeddedRenderer, EmbeddedRendererError
+    from simforge_render.embedded import EmbeddedRenderer, EmbeddedRendererError
 except ImportError as error:  # pragma: no cover - extras guard
     raise ImportError(
-        "resident Bevy sensors need the simforge_native provider: `pip install simforge-oss-gym[bevy]` "
+        "resident Bevy sensors need the simforge_render provider: `pip install simforge-oss-gym[bevy]` "
         "(libsimforge_render comes with the native runtime bundle; SIMFORGE_RENDER_LIB overrides its location)"
     ) from error
 

@@ -7,7 +7,7 @@ history window with `simforge_alpamayo.bridge`, and drives N `act` calls
 through the model server, recording per-stage latency and VRAM.
 
 Both servers must already be running, e.g.:
-  native-render-service --socket /tmp/sf-camerarig-render.sock \
+  simforge-render serve --socket /tmp/sf-camerarig-render.sock \
       --shm /dev/shm/sf-camerarig-ring --scene <yale scene.json>
   scripts/run_server.sh --family alpamayo-1.5 --quant nf4 --socket /tmp/simforge-alpamayo.sock
 
@@ -42,7 +42,7 @@ from simforge_alpamayo.bridge import (  # noqa: E402
     profile_camera_map,
 )
 from simforge_alpamayo.client import AlpamayoClient  # noqa: E402
-from simforge_native import BundleRingReader, NativeRenderClient  # noqa: E402
+from simforge_render import BundleRingReader, NativeRenderClient  # noqa: E402
 
 WIDTH, HEIGHT = 512, 384  # model-native render size (== Qwen MAX_PIXELS)
 

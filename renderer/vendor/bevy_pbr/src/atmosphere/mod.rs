@@ -193,7 +193,15 @@ impl Plugin for AtmospherePlugin {
             .add_systems(
                 Core3d,
                 (
-                    (atmosphere_luts, atmosphere_environment)
+                    // SIMFORGE PATCH: filter the view's probe in the same
+                    // schedule, right after it is written (see
+                    // light_probe::generate::downsampling_system).
+                    (
+                        atmosphere_luts,
+                        atmosphere_environment,
+                        crate::light_probe::generate::downsampling_current_view,
+                        crate::light_probe::generate::filtering_current_view,
+                    )
                         .chain()
                         .after(Core3dSystems::Prepass)
                         .before(Core3dSystems::MainPass),

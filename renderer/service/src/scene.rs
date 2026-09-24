@@ -96,7 +96,10 @@ impl SceneState {
             ));
         }
         if !(self.tick_hz.is_finite() && self.tick_hz > 0.0) {
-            return Err(format!("[native_scene_tick_hz_invalid] tick {} has tickHz {}", self.tick, self.tick_hz));
+            return Err(format!(
+                "[native_scene_tick_hz_invalid] tick {} has tickHz {}",
+                self.tick, self.tick_hz
+            ));
         }
         for actor in &self.actors {
             if actor.kind == "despawn" {
@@ -104,7 +107,13 @@ impl SceneState {
             }
             let rotation = actor.transform.rotation;
             let norm = rotation.iter().map(|v| v * v).sum::<f32>().sqrt();
-            if !actor.transform.position.iter().chain(rotation.iter()).chain(actor.velocity.iter()).all(|v| v.is_finite())
+            if !actor
+                .transform
+                .position
+                .iter()
+                .chain(rotation.iter())
+                .chain(actor.velocity.iter())
+                .all(|v| v.is_finite())
                 || !(0.5..2.0).contains(&norm)
             {
                 return Err(format!(

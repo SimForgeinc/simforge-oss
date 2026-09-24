@@ -19,6 +19,41 @@ const suite = enabled ? describe : describe.skip;
 const executeFile = promisify(execFile);
 const output = process.env.SIMFORGE_NATIVE_E2E_OUTPUT ?? path.resolve('native-e2e-output');
 
+async function grayVideoFrame(videoPath: string, frame: number): Promise<Buffer> {
+  const result = await executeFile('ffmpeg', [
+    '-v', 'error', '-i', videoPath, '-vf', `select='eq(n,${frame})',format=gray`,
+    '-frames:v', '1', '-f', 'rawvideo', 'pipe:1',
+  ], { encoding: null, maxBuffer: 320 * 180 * 2 });
+  return Buffer.from(result.stdout);
+}
+
+/**
+ * Mean absolute difference between `reference` and `candidate` sampled
+ * through an image rotation of `degrees` about the frame centre. Image Y
+ * points down, so a negative angle is a counter-clockwise image rotation.
+ */
+function rotatedFrameDifference(reference: Uint8Array, candidate: Uint8Array, width: number, height: number, degrees: number): number {
+  const radians = degrees * Math.PI / 180;
+  const sin = Math.sin(radians);
+  const cos = Math.cos(radians);
+  const centerX = (width - 1) / 2;
+  const centerY = (height - 1) / 2;
+  let difference = 0;
+  let samples = 0;
+  for (let y = 16; y < height - 16; y += 1) {
+    for (let x = 16; x < width - 16; x += 1) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const candidateX = Math.round(centerX + cos * dx - sin * dy);
+      const candidateY = Math.round(centerY + sin * dx + cos * dy);
+      if (candidateX < 0 || candidateX >= width || candidateY < 0 || candidateY >= height) continue;
+      difference += Math.abs(reference[y * width + x]! - candidate[candidateY * width + candidateX]!);
+      samples += 1;
+    }
+  }
+  return difference / samples;
+}
+
 suite('native retained service GPU e2e', () => {
   afterAll(async () => {
     // The output is intentional release evidence; only transient service files are removed by the adapter.
@@ -86,7 +121,9 @@ suite('native retained service GPU e2e', () => {
         openScenario: { sha256: xoscSha256, sizeBytes: xosc.byteLength },
         map: { mapId: plan.mapId, revisionId: 'native-corpus', sha256: xodrSha256 },
       },
-      sensorHosts: [{ sourceId: 'front-rgb', actorId: actor.id, vehicleAsset: { catalogAssetId: hostCatalogId } }],
+      sensorHosts: ['front-rgb', 'front-rgb-roll'].map((sourceId) => ({
+        sourceId, actorId: actor.id, vehicleAsset: { catalogAssetId: hostCatalogId },
+      })),
       renderSpec: {
         schema: 'simforge.render-spec/v3',
         sources: [{
@@ -94,6 +131,14 @@ suite('native retained service GPU e2e', () => {
           transform: {
             position: { x: 1.5, y: 1.8, z: 0 },
             rotation: { yawRad: 0, pitchRad: 0, rollRad: 0 },
+          },
+          attributes: { width: 320, height: 180, fps: 12, horizontalFovDeg: 90, nearM: 0.05, farM: 1_000 },
+        }, {
+          // The same mount rolled +10 deg: the rendered horizon must turn with it.
+          actorId: actor.id, sensorId: 'front-camera-roll', outputName: 'front-rgb-roll', modality: 'rgb',
+          transform: {
+            position: { x: 1.5, y: 1.8, z: 0 },
+            rotation: { yawRad: 0, pitchRad: 0, rollRad: 10 * Math.PI / 180 },
           },
           attributes: { width: 320, height: 180, fps: 12, horizontalFovDeg: 90, nearM: 0.05, farM: 1_000 },
         }],
@@ -135,13 +180,26 @@ suite('native retained service GPU e2e', () => {
       inputs: new Map(inputRecords.map((input) => [input.inputId, input])), workspace: output,
       signal: new AbortController().signal, reportProgress: async () => undefined,
     });
-    const video = manifest.artifacts.find((artifact) => artifact.identity.role === 'video');
+    const video = manifest.artifacts.find((artifact) => artifact.identity.role === 'video' && artifact.identity.sensorId === 'front-camera');
     expect(video?.frameCount).toBe(24);
     const probe = JSON.parse((await executeFile('ffprobe', [
       '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=codec_name,pix_fmt,nb_frames',
       '-of', 'json', path.join(output, video!.relativePath),
     ])).stdout) as { streams: Array<{ codec_name: string; pix_fmt: string; nb_frames: string }> };
     expect(probe.streams[0]).toMatchObject({ codec_name: 'h264', pix_fmt: 'yuv420p', nb_frames: '24' });
+    // Camera roll reaches the pixels, in the browser capture's sense: authored
+    // +roll about the forward axis turns the imaged horizon counter-clockwise.
+    const rolledVideo = manifest.artifacts.find((artifact) => artifact.identity.role === 'video' && artifact.identity.sensorId === 'front-camera-roll');
+    expect(rolledVideo?.frameCount).toBe(24);
+    const baselineFrame = await grayVideoFrame(path.join(output, video!.relativePath), 12);
+    const rolledFrame = await grayVideoFrame(path.join(output, rolledVideo!.relativePath), 12);
+    expect(baselineFrame).toHaveLength(320 * 180);
+    expect(rolledFrame).toHaveLength(320 * 180);
+    const counterClockwise = rotatedFrameDifference(baselineFrame, rolledFrame, 320, 180, -10);
+    const level = rotatedFrameDifference(baselineFrame, rolledFrame, 320, 180, 0);
+    const clockwise = rotatedFrameDifference(baselineFrame, rolledFrame, 320, 180, 10);
+    expect(counterClockwise).toBeLessThan(level * 0.8);
+    expect(counterClockwise).toBeLessThan(clockwise * 0.7);
     const trace = JSON.parse(await fs.readFile(path.join(output, 'trace/native-trace.json'), 'utf8')) as {
       frames: Array<{ actors: Array<{ id: string; transform: { position: number[] } }> }>;
     };

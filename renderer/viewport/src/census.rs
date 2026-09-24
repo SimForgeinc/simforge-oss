@@ -209,15 +209,25 @@ fn texture_bytes(shape: TextureShape) -> u64 {
     // depth-stencil, multi-planar — has no single byte size. Those are
     // render targets rather than assets, and belong in the non-asset
     // residual instead of being guessed at here.
-    let Some(block_bytes) = shape.format.block_copy_size(None) else { return 0 };
+    let Some(block_bytes) = shape.format.block_copy_size(None) else {
+        return 0;
+    };
     let mut total = 0u64;
     for level in 0..shape.mips {
         let width = (shape.width >> level).max(1);
         let height = (shape.height >> level).max(1);
-        let depth = if shape.volume { (shape.layers >> level).max(1) } else { shape.layers.max(1) };
+        let depth = if shape.volume {
+            (shape.layers >> level).max(1)
+        } else {
+            shape.layers.max(1)
+        };
         let blocks_x = u64::from(width.div_ceil(block_width));
         let blocks_y = u64::from(height.div_ceil(block_height));
-        total += blocks_x * blocks_y * u64::from(depth) * u64::from(block_bytes) * u64::from(shape.samples.max(1));
+        total += blocks_x
+            * blocks_y
+            * u64::from(depth)
+            * u64::from(block_bytes)
+            * u64::from(shape.samples.max(1));
     }
     total
 }
@@ -231,7 +241,9 @@ impl Plugin for MemoryCensusPlugin {
 
     fn finish(&self, app: &mut App) {
         let census = app.world().resource::<GpuCensus>().clone();
-        let Some(render_app) = app.get_sub_app_mut(RenderApp) else { return };
+        let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
+            return;
+        };
         render_app
             .insert_resource(census)
             .add_systems(Render, sample_census.after(RenderSystems::Render));
@@ -279,8 +291,14 @@ fn sample_census(
         map_textures,
         other_texture_bytes,
         other_textures,
-        shadow_casting_lights: (directional.iter().filter(|light| light.shadow_maps_enabled).count()
-            + point.iter().filter(|light| light.shadow_maps_enabled).count()) as u64,
+        shadow_casting_lights: (directional
+            .iter()
+            .filter(|light| light.shadow_maps_enabled)
+            .count()
+            + point
+                .iter()
+                .filter(|light| light.shadow_maps_enabled)
+                .count()) as u64,
     };
     inner.latest = sample;
     if sample.wgpu_total() > inner.peak.wgpu_total() {
@@ -296,8 +314,23 @@ mod tests {
     use super::*;
     use bevy::render::render_resource::TextureFormat;
 
-    fn shape(width: u32, height: u32, layers: u32, mips: u32, format: TextureFormat, volume: bool) -> TextureShape {
-        TextureShape { width, height, layers, mips, samples: 1, volume, format }
+    fn shape(
+        width: u32,
+        height: u32,
+        layers: u32,
+        mips: u32,
+        format: TextureFormat,
+        volume: bool,
+    ) -> TextureShape {
+        TextureShape {
+            width,
+            height,
+            layers,
+            mips,
+            samples: 1,
+            volume,
+            format,
+        }
     }
 
     #[test]
@@ -307,10 +340,24 @@ mod tests {
         // whatever the KTX2 file happened to weigh. The tail levels each
         // still cost one whole 4x4 block, which is why it is not 4/3 of
         // level 0 exactly.
-        let bytes = texture_bytes(shape(1024, 1024, 1, 11, TextureFormat::Bc7RgbaUnormSrgb, false));
+        let bytes = texture_bytes(shape(
+            1024,
+            1024,
+            1,
+            11,
+            TextureFormat::Bc7RgbaUnormSrgb,
+            false,
+        ));
         assert_eq!(bytes, 1_398_128);
         // Level 0 alone is 1 byte per pixel for BC7; the chain adds a third.
-        let level0 = texture_bytes(shape(1024, 1024, 1, 1, TextureFormat::Bc7RgbaUnormSrgb, false));
+        let level0 = texture_bytes(shape(
+            1024,
+            1024,
+            1,
+            1,
+            TextureFormat::Bc7RgbaUnormSrgb,
+            false,
+        ));
         assert_eq!(level0, 1024 * 1024);
         assert!(bytes > level0);
     }
@@ -331,8 +378,21 @@ mod tests {
         // depth-stencil format does not, and guessing one would put a
         // modelled number into a ledger whose whole claim is that it is
         // measured.
-        assert_eq!(texture_bytes(shape(1600, 1000, 1, 1, TextureFormat::Depth32Float, false)), 1600 * 1000 * 4);
-        assert_eq!(texture_bytes(shape(1600, 1000, 1, 1, TextureFormat::Depth24PlusStencil8, false)), 0);
+        assert_eq!(
+            texture_bytes(shape(1600, 1000, 1, 1, TextureFormat::Depth32Float, false)),
+            1600 * 1000 * 4
+        );
+        assert_eq!(
+            texture_bytes(shape(
+                1600,
+                1000,
+                1,
+                1,
+                TextureFormat::Depth24PlusStencil8,
+                false
+            )),
+            0
+        );
     }
 
     #[test]

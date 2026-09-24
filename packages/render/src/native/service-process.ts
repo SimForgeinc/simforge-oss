@@ -10,12 +10,12 @@ import { z } from 'zod';
 import { NATIVE_SERVICE_PROTOCOL, NativeServiceClient } from './service-client.js';
 
 /**
- * One retained native-render-service process bound to a caller's workspace:
+ * One retained `simforge-render serve` process bound to a caller's workspace:
  * the same launch, readiness, protocol and teardown path for a full Bevy
  * render and for a still preview, so neither carries its own copy.
  */
 export interface NativeServiceOptions {
-  /** Path to the retained native-render-service binary. */
+  /** Path to the `simforge-render` binary (run as `simforge-render serve`). */
   readonly binary: string;
   /**
    * Caller-owned directory the service's transient files (shared memory,
@@ -39,6 +39,10 @@ export interface NativeServiceSession {
   readonly client: NativeServiceClient;
   /** Wire protocol the running service declared (equals `NATIVE_SERVICE_PROTOCOL`). */
   readonly protocol: number;
+  /** The resolved render configuration the service reported in its ready record. */
+  readonly renderConfig: Readonly<Record<string, unknown>>;
+  /** Legacy look fields the service mapped onto the render config. */
+  readonly deprecations: readonly string[];
   /** The service's stderr, captured to a file in the workspace; survives `close()`. */
   readonly logPath: string;
   /** Tail (at most 8 KiB) of the captured stderr. */
@@ -63,6 +67,10 @@ const ReadyFileSchema = z.object({
   pid: z.number().int(),
   endpoint: z.string().min(1),
   shm: z.object({ path: z.string().min(1), size_bytes: z.number().int(), meta_bytes: z.number().int() }),
+  /** The resolved `RenderConfig` (render_core::render_config) the service renders with. */
+  renderConfig: z.record(z.string(), z.unknown()),
+  /** Legacy scene-spec look fields the service mapped (empty for a `render` request). */
+  deprecations: z.array(z.string()),
 });
 
 /** Sends SIGTERM once, escalating to SIGKILL if the process lingers. */
@@ -122,7 +130,7 @@ export async function startNativeRenderService(options: NativeServiceOptions): P
   const startupTimeoutMs = options.startupTimeoutMs ?? DEFAULT_STARTUP_TIMEOUT_MS;
   const shmPath = path.join(workspace, 'native-render.shm');
   const readyFile = path.join(workspace, 'native-render-ready.json');
-  const logPath = path.join(workspace, 'native-render-service.log');
+  const logPath = path.join(workspace, 'simforge-render.log');
   await fs.mkdir(workspace, { recursive: true });
   await Promise.all([fs.rm(readyFile, { force: true }), fs.rm(shmPath, { force: true })]);
   // Unix sockaddr paths are limited to 104 bytes on macOS and 108 on Linux.
@@ -133,7 +141,7 @@ export async function startNativeRenderService(options: NativeServiceOptions): P
   const endpoint = serviceEndpoint(socketDirectory, options.jobId);
   const log = await fs.open(logPath, 'w', 0o644);
   const child = spawn(options.binary, [
-    '--scene', options.scenePath, '--socket', endpoint, '--shm', shmPath,
+    'serve', '--scene', options.scenePath, '--socket', endpoint, '--shm', shmPath,
     '--shm-size-mb', String(options.shmSizeMb ?? DEFAULT_SHM_SIZE_MB), '--ready-file', readyFile,
   ], { stdio: ['ignore', 'ignore', log.fd], windowsHide: true });
   const exit = watchExit(child);
@@ -189,6 +197,8 @@ export async function startNativeRenderService(options: NativeServiceOptions): P
     return {
       client,
       protocol: ready.protocol,
+      renderConfig: ready.renderConfig,
+      deprecations: ready.deprecations,
       logPath,
       readStderr: () => readLogTail(logPath),
       close,

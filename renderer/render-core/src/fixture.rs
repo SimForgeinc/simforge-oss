@@ -185,12 +185,12 @@ pub fn check_fixture(fixture: &ParityFixture) -> Result<FixtureReport> {
         .actors
         .iter()
         .filter_map(|rec| {
-            let desc = fixture
-                .scene_state
-                .actors
-                .iter()
-                .find(|d| d.id == rec.id)?;
-            let cues = fixture.render_cues.get(&rec.id).copied().unwrap_or_default();
+            let desc = fixture.scene_state.actors.iter().find(|d| d.id == rec.id)?;
+            let cues = fixture
+                .render_cues
+                .get(&rec.id)
+                .copied()
+                .unwrap_or_default();
             Some(LightInput {
                 id: rec.id.clone(),
                 is_vehicle: is_vehicle_class(&desc.actor_class),
@@ -239,7 +239,11 @@ pub fn check_fixture(fixture: &ParityFixture) -> Result<FixtureReport> {
             && d.indicator == e.indicator
             && d.reverse_light == e.reverse_light;
         if !matches {
-            mismatches.push(format!("derived [{}] != expected [{}]", fmt(d), fmt_expected(e)));
+            mismatches.push(format!(
+                "derived [{}] != expected [{}]",
+                fmt(d),
+                fmt_expected(e)
+            ));
         }
     }
 

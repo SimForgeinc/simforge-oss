@@ -154,10 +154,16 @@ pub fn load_veg_roots(
             continue;
         };
         // No `scene` property in these GLBs — take the first scene.
-        let Some(scene) = gltf.default_scene.clone().or_else(|| gltf.scenes.first().cloned())
+        let Some(scene) = gltf
+            .default_scene
+            .clone()
+            .or_else(|| gltf.scenes.first().cloned())
         else {
             error!("veg GLB without any scene: {}", load.1.display());
-            commands.queue(record_veg_error(format!("veg GLB without any scene: {}", load.1.display())));
+            commands.queue(record_veg_error(format!(
+                "veg GLB without any scene: {}",
+                load.1.display()
+            )));
             commands.entity(e).insert(VegFailed);
             continue;
         };
@@ -166,7 +172,10 @@ pub fn load_veg_roots(
         // missing sidecar means "this is a static tile", not a broken one.
         // Dropping it silently lost whole terrains from every native render.
         if !load.1.is_file() {
-            info!("veg {}: no instances sidecar; spawning as placed geometry", load.1.display());
+            info!(
+                "veg {}: no instances sidecar; spawning as placed geometry",
+                load.1.display()
+            );
             commands.entity(e).insert(VegSceneSpawned);
             commands.spawn((WorldAssetRoot(scene),));
             continue;
@@ -178,7 +187,10 @@ pub fn load_veg_roots(
             Ok(d) => d,
             Err(err) => {
                 error!("veg sidecar {}: {err}", load.1.display());
-                commands.queue(record_veg_error(format!("veg sidecar {}: {err}", load.1.display())));
+                commands.queue(record_veg_error(format!(
+                    "veg sidecar {}: {err}",
+                    load.1.display()
+                )));
                 commands.entity(e).insert(VegFailed);
                 continue;
             }
@@ -187,7 +199,10 @@ pub fn load_veg_roots(
             Ok(m) => m,
             Err(err) => {
                 error!("veg sidecar {}: {err}", load.1.display());
-                commands.queue(record_veg_error(format!("veg sidecar {}: {err}", load.1.display())));
+                commands.queue(record_veg_error(format!(
+                    "veg sidecar {}: {err}",
+                    load.1.display()
+                )));
                 commands.entity(e).insert(VegFailed);
                 continue;
             }
@@ -322,7 +337,10 @@ pub fn instantiate_veg(
                 continue;
             }
             // Prototype node transform (quantization decode scale/offset).
-            let pt = transforms.get(proto_e).copied().unwrap_or(Transform::IDENTITY); // fallback-ok: spawned scene nodes always carry a Transform; identity is the glTF node default
+            let pt = transforms
+                .get(proto_e)
+                .copied()
+                .unwrap_or(Transform::IDENTITY); // fallback-ok: spawned scene nodes always carry a Transform; identity is the glTF node default
             let proto_local =
                 Mat4::from_scale_rotation_translation(pt.scale, pt.rotation, pt.translation);
             for (i, m) in vr.matrices[offset - count..offset].iter().enumerate() {
@@ -348,7 +366,9 @@ pub fn instantiate_veg(
         }
         if !missing.is_empty() {
             error!("veg root {root_e}: prototypes without geometry: {missing:?}");
-            commands.queue(record_veg_error(format!("vegetation prototypes without geometry: {missing:?}")));
+            commands.queue(record_veg_error(format!(
+                "vegetation prototypes without geometry: {missing:?}"
+            )));
         }
         // The authored subtrees are quantization-space; three.js never draws
         // them either — hide instead of despawn so handles stay shared.
@@ -396,6 +416,9 @@ mod tests {
 
 fn record_veg_error(message: String) -> impl FnOnce(&mut bevy::prelude::World) {
     move |world: &mut bevy::prelude::World| {
-        world.get_resource_or_insert_with(VegErrors::default).0.push(message);
+        world
+            .get_resource_or_insert_with(VegErrors::default)
+            .0
+            .push(message);
     }
 }

@@ -102,7 +102,7 @@ function evidence(overrides: { slowFrames?: number; actorAssetsSha256?: string }
         { actorId: 'ego', sensorId: 'fast', frameCount: 48, sha256: HEX('2') },
         { actorId: 'ego', sensorId: 'slow', frameCount: slowFrames, sha256: HEX('1') },
       ],
-      service: { protocol: NATIVE_SERVICE_PROTOCOL, binary: '/opt/native-render-service' },
+      service: { protocol: NATIVE_SERVICE_PROTOCOL, binary: '/opt/simforge-render' },
       frames: Array.from({ length: 48 }, (_, simTick) => ({ simTick, sceneRevision: 1, rigRevision: 1, generation: 1 })),
       timings: { wallMs: 1000, serverMs: 800 },
     },

@@ -188,7 +188,6 @@ class SceneStateRecorder:
             "tickCount": len(frames),
             "weather": {"preset": "clear", "fogDensity": 0.0, "rainIntensity": 0.0, "wetness": 0.0},
             "timeOfDay": 12.0,
-            "profile": "sensor",
             # Positions carry solver height; no ground hint is meaningful for a
             # course with a raised sidewalk. Consumers resolve the surface.
             "groundY": None,

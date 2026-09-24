@@ -154,15 +154,21 @@ pub struct MaterialDef {
 /// `typeSize`, `pixelWidth`, `pixelHeight`, `pixelDepth`, `layerCount`,
 /// `faceCount`, `levelCount`, `supercompressionScheme` as little-endian u32.
 pub fn ktx2_gpu_bytes(path: &Path, bytes_per_pixel: u32) -> Option<u64> {
-    const KTX2_IDENTIFIER: [u8; 12] =
-        [0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A];
+    const KTX2_IDENTIFIER: [u8; 12] = [
+        0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A,
+    ];
     let mut header = [0u8; 48];
     File::open(path).ok()?.read_exact(&mut header).ok()?;
     if header[..12] != KTX2_IDENTIFIER {
         return None;
     }
     let field = |index: usize| -> u32 {
-        u32::from_le_bytes([header[index], header[index + 1], header[index + 2], header[index + 3]])
+        u32::from_le_bytes([
+            header[index],
+            header[index + 1],
+            header[index + 2],
+            header[index + 3],
+        ])
     };
     let width = field(20);
     let height = field(24).max(1);
@@ -302,17 +308,28 @@ impl SceneIndex {
             .ok_or("master.gltf has no accessors")?
             .iter()
             .map(|raw| {
-                let kind = raw.get("type").and_then(Value::as_str).ok_or("accessor without type")?;
+                let kind = raw
+                    .get("type")
+                    .and_then(Value::as_str)
+                    .ok_or("accessor without type")?;
                 Ok(Accessor {
-                    count: raw.get("count").and_then(Value::as_u64).ok_or("accessor without count")? as usize,
+                    count: raw
+                        .get("count")
+                        .and_then(Value::as_u64)
+                        .ok_or("accessor without count")? as usize,
                     component_type: raw
                         .get("componentType")
                         .and_then(Value::as_u64)
-                        .ok_or("accessor without componentType")? as u32,
+                        .ok_or("accessor without componentType")?
+                        as u32,
                     components: accessor_components(kind).ok_or("unsupported accessor type")?,
-                    buffer_view: raw.get("bufferView").and_then(Value::as_u64).ok_or("accessor without bufferView")?
+                    buffer_view: raw
+                        .get("bufferView")
+                        .and_then(Value::as_u64)
+                        .ok_or("accessor without bufferView")?
                         as usize,
-                    byte_offset: raw.get("byteOffset").and_then(Value::as_u64).unwrap_or(0) as usize,
+                    byte_offset: raw.get("byteOffset").and_then(Value::as_u64).unwrap_or(0)
+                        as usize,
                 })
             })
             .collect::<Result<_, String>>()?;
@@ -324,7 +341,10 @@ impl SceneIndex {
             .map(|raw| BufferView {
                 byte_offset: raw.get("byteOffset").and_then(Value::as_u64).unwrap_or(0) as usize,
                 byte_length: raw.get("byteLength").and_then(Value::as_u64).unwrap_or(0) as usize,
-                byte_stride: raw.get("byteStride").and_then(Value::as_u64).map(|value| value as usize),
+                byte_stride: raw
+                    .get("byteStride")
+                    .and_then(Value::as_u64)
+                    .map(|value| value as usize),
             })
             .collect();
         let buffer_uri = document
@@ -420,16 +440,27 @@ impl SceneIndex {
                             base_color_texture: texture,
                             texture_bytes,
                             texture_file_bytes,
-                            alpha_blend: raw.get("alphaMode").and_then(Value::as_str) == Some("BLEND"),
-                            double_sided: raw.get("doubleSided").and_then(Value::as_bool).unwrap_or(false),
+                            alpha_blend: raw.get("alphaMode").and_then(Value::as_str)
+                                == Some("BLEND"),
+                            double_sided: raw
+                                .get("doubleSided")
+                                .and_then(Value::as_bool)
+                                .unwrap_or(false),
                         }
                     })
                     .collect()
             })
             .unwrap_or_default();
 
-        let raw_nodes = document.get("nodes").and_then(Value::as_array).ok_or("master.gltf has no nodes")?;
-        let meshes = document.get("meshes").and_then(Value::as_array).cloned().unwrap_or_default();
+        let raw_nodes = document
+            .get("nodes")
+            .and_then(Value::as_array)
+            .ok_or("master.gltf has no nodes")?;
+        let meshes = document
+            .get("meshes")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
         let scene_index = document.get("scene").and_then(Value::as_u64).unwrap_or(0) as usize;
         let roots: Vec<usize> = document
             .get("scenes")
@@ -437,22 +468,40 @@ impl SceneIndex {
             .and_then(|scenes| scenes.get(scene_index))
             .and_then(|scene| scene.get("nodes"))
             .and_then(Value::as_array)
-            .map(|nodes| nodes.iter().filter_map(Value::as_u64).map(|index| index as usize).collect())
+            .map(|nodes| {
+                nodes
+                    .iter()
+                    .filter_map(Value::as_u64)
+                    .map(|index| index as usize)
+                    .collect()
+            })
             .ok_or("master.gltf scene has no root nodes")?;
 
         let mut nodes = Vec::new();
-        let mut stack: Vec<(usize, Mat4)> = roots.iter().rev().map(|index| (*index, Mat4::IDENTITY)).collect();
+        let mut stack: Vec<(usize, Mat4)> = roots
+            .iter()
+            .rev()
+            .map(|index| (*index, Mat4::IDENTITY))
+            .collect();
         while let Some((index, parent)) = stack.pop() {
-            let Some(raw) = raw_nodes.get(index) else { continue };
+            let Some(raw) = raw_nodes.get(index) else {
+                continue;
+            };
             let world = parent * node_transform(raw);
             if let Some(children) = raw.get("children").and_then(Value::as_array) {
                 for child in children.iter().filter_map(Value::as_u64) {
                     stack.push((child as usize, world));
                 }
             }
-            let Some(mesh_index) = raw.get("mesh").and_then(Value::as_u64) else { continue };
-            let Some(mesh) = meshes.get(mesh_index as usize) else { continue };
-            let Some(primitives_raw) = mesh.get("primitives").and_then(Value::as_array) else { continue };
+            let Some(mesh_index) = raw.get("mesh").and_then(Value::as_u64) else {
+                continue;
+            };
+            let Some(mesh) = meshes.get(mesh_index as usize) else {
+                continue;
+            };
+            let Some(primitives_raw) = mesh.get("primitives").and_then(Value::as_array) else {
+                continue;
+            };
             let mut primitives = Vec::new();
             let mut local_min = Vec3::splat(f32::INFINITY);
             let mut local_max = Vec3::splat(f32::NEG_INFINITY);
@@ -461,7 +510,12 @@ impl SceneIndex {
             for raw_primitive in primitives_raw {
                 // Only triangle lists are authored by the map pipeline; a
                 // non-triangle primitive is skipped rather than guessed at.
-                if raw_primitive.get("mode").and_then(Value::as_u64).unwrap_or(4) != 4 {
+                if raw_primitive
+                    .get("mode")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(4)
+                    != 4
+                {
                     continue;
                 }
                 let attributes = raw_primitive.get("attributes");
@@ -471,8 +525,12 @@ impl SceneIndex {
                         .and_then(Value::as_u64)
                         .map(|index| index as usize)
                 };
-                let Some(position) = attribute("POSITION") else { continue };
-                let Some(bounds) = raw_primitive.get("attributes").and(document.pointer(&format!("/accessors/{position}")))
+                let Some(position) = attribute("POSITION") else {
+                    continue;
+                };
+                let Some(bounds) = raw_primitive
+                    .get("attributes")
+                    .and(document.pointer(&format!("/accessors/{position}")))
                 else {
                     continue;
                 };
@@ -492,10 +550,15 @@ impl SceneIndex {
                 // POSITION accessors are required by glTF to publish min/max;
                 // without them the node has no bounds and cannot be ranked,
                 // budgeted or picked, so it is not admitted at all.
-                let (Some(min), Some(max)) = (read_bound("min"), read_bound("max")) else { continue };
+                let (Some(min), Some(max)) = (read_bound("min"), read_bound("max")) else {
+                    continue;
+                };
                 local_min = local_min.min(min);
                 local_max = local_max.max(max);
-                let vertices = accessors.get(position).map(|accessor| accessor.count).unwrap_or(0) as u64;
+                let vertices = accessors
+                    .get(position)
+                    .map(|accessor| accessor.count)
+                    .unwrap_or(0) as u64;
                 let index_count = raw_primitive
                     .get("indices")
                     .and_then(Value::as_u64)
@@ -509,8 +572,14 @@ impl SceneIndex {
                     position,
                     normal: attribute("NORMAL"),
                     uv: attribute("TEXCOORD_0"),
-                    indices: raw_primitive.get("indices").and_then(Value::as_u64).map(|index| index as usize),
-                    material: raw_primitive.get("material").and_then(Value::as_u64).map(|index| index as usize),
+                    indices: raw_primitive
+                        .get("indices")
+                        .and_then(Value::as_u64)
+                        .map(|index| index as usize),
+                    material: raw_primitive
+                        .get("material")
+                        .and_then(Value::as_u64)
+                        .map(|index| index as usize),
                 });
             }
             if primitives.is_empty() || !local_min.is_finite() || !local_max.is_finite() {
@@ -593,7 +662,13 @@ impl SceneIndex {
         admitted
     }
 
-    fn read_view(&self, file: &mut File, view: usize, offset: usize, length: usize) -> Result<Vec<u8>, String> {
+    fn read_view(
+        &self,
+        file: &mut File,
+        view: usize,
+        offset: usize,
+        length: usize,
+    ) -> Result<Vec<u8>, String> {
         let view = self.views.get(view).ok_or("missing bufferView")?;
         if offset + length > view.byte_length {
             return Err("accessor range exceeds its bufferView".to_owned());
@@ -601,7 +676,8 @@ impl SceneIndex {
         let mut bytes = vec![0u8; length];
         file.seek(SeekFrom::Start((view.byte_offset + offset) as u64))
             .map_err(|error| error.to_string())?;
-        file.read_exact(&mut bytes).map_err(|error| error.to_string())?;
+        file.read_exact(&mut bytes)
+            .map_err(|error| error.to_string())?;
         Ok(bytes)
     }
 
@@ -619,7 +695,11 @@ impl SceneIndex {
             .ok_or("missing bufferView")?
             .byte_stride
             .unwrap_or(element);
-        let span = if accessor.count == 0 { 0 } else { (accessor.count - 1) * stride + element };
+        let span = if accessor.count == 0 {
+            0
+        } else {
+            (accessor.count - 1) * stride + element
+        };
         let bytes = self.read_view(file, accessor.buffer_view, accessor.byte_offset, span)?;
         let mut values = Vec::with_capacity(accessor.count * accessor.components);
         for vertex in 0..accessor.count {
@@ -646,7 +726,11 @@ impl SceneIndex {
             .ok_or("missing bufferView")?
             .byte_stride
             .unwrap_or(size);
-        let span = if accessor.count == 0 { 0 } else { (accessor.count - 1) * stride + size };
+        let span = if accessor.count == 0 {
+            0
+        } else {
+            (accessor.count - 1) * stride + size
+        };
         let bytes = self.read_view(file, accessor.buffer_view, accessor.byte_offset, span)?;
         let mut values = Vec::with_capacity(accessor.count);
         for element in 0..accessor.count {
@@ -654,7 +738,9 @@ impl SceneIndex {
             values.push(match accessor.component_type {
                 5121 => u32::from(bytes[at]),
                 5123 => u32::from(u16::from_le_bytes([bytes[at], bytes[at + 1]])),
-                5125 => u32::from_le_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]]),
+                5125 => {
+                    u32::from_le_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]])
+                }
                 other => return Err(format!("unsupported index component type {other}")),
             });
         }
@@ -686,7 +772,12 @@ pub struct LoadResponse {
 }
 
 /// Read one node's primitives at `tier` from `geometry.bin`.
-pub fn read_node(index: &SceneIndex, file: &mut File, node: usize, tier: Tier) -> Result<Vec<PrimitiveData>, String> {
+pub fn read_node(
+    index: &SceneIndex,
+    file: &mut File,
+    node: usize,
+    tier: Tier,
+) -> Result<Vec<PrimitiveData>, String> {
     let draw = index.nodes.get(node).ok_or("unknown node")?;
     let mut out = Vec::with_capacity(draw.primitives.len());
     for primitive in &draw.primitives {
@@ -760,7 +851,11 @@ pub fn spawn_loader(
         for request in requests {
             let result = read_node(&index, &mut file, request.node, request.tier);
             if responses
-                .send(LoadResponse { node: request.node, tier: request.tier, result })
+                .send(LoadResponse {
+                    node: request.node,
+                    tier: request.tier,
+                    result,
+                })
                 .is_err()
             {
                 break;
@@ -826,15 +921,23 @@ mod tests {
     fn members() -> BTreeMap<String, crate::manifest::Member> {
         BTreeMap::from([(
             "images/aa.ktx2".to_owned(),
-            crate::manifest::Member { bytes: 4096, sha256: "0".repeat(64) },
+            crate::manifest::Member {
+                bytes: 4096,
+                sha256: "0".repeat(64),
+            },
         )])
     }
 
     #[test]
     fn indexes_nodes_with_world_bounds_and_costs() {
-        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members(), 1).expect("parse");
+        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members(), 1)
+            .expect("parse");
         assert_eq!(index.nodes.len(), 2);
-        let slab = index.nodes.iter().find(|node| node.name == "Slab").expect("slab");
+        let slab = index
+            .nodes
+            .iter()
+            .find(|node| node.name == "Slab")
+            .expect("slab");
         // Parent translation must reach the child's world bounds.
         assert_eq!(slab.min, Vec3::new(-40.0, 0.0, -50.0));
         assert_eq!(slab.max, Vec3::new(60.0, 0.5, 50.0));
@@ -842,26 +945,39 @@ mod tests {
         // 4 vertices: coarse = 4*12 + 6 indices * 4; detail adds normals+uvs.
         assert_eq!(slab.coarse_bytes, 4 * 12 + 6 * 4);
         assert_eq!(slab.detail_bytes, 4 * 32 + 6 * 4);
-        let post = index.nodes.iter().find(|node| node.name == "Post").expect("post");
+        let post = index
+            .nodes
+            .iter()
+            .find(|node| node.name == "Post")
+            .expect("post");
         assert_eq!(post.layer(), "map-static");
         assert_eq!(index.buffer, Path::new("/maps/example/geometry.bin"));
     }
 
     #[test]
     fn resolves_base_colour_through_the_basisu_extension() {
-        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members(), 1).expect("parse");
+        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members(), 1)
+            .expect("parse");
         let material = &index.materials[0];
         // The `.png` entry is a placeholder the profile does not ship; the
         // KTX2 the extension points at is the real payload.
-        assert_eq!(material.base_color_texture.as_deref(), Some("images/aa.ktx2"));
+        assert_eq!(
+            material.base_color_texture.as_deref(),
+            Some("images/aa.ktx2")
+        );
         assert_eq!(material.texture_bytes, 4096);
         assert_eq!(material.roughness, 0.8);
     }
 
     #[test]
     fn coarse_plan_is_extent_ranked_and_budget_bounded() {
-        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members(), 1).expect("parse");
-        let slab = index.nodes.iter().position(|node| node.name == "Slab").expect("slab");
+        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members(), 1)
+            .expect("parse");
+        let slab = index
+            .nodes
+            .iter()
+            .position(|node| node.name == "Slab")
+            .expect("slab");
         // A budget that fits only one node must keep the larger one.
         let plan = index.coarse_plan(index.nodes[slab].coarse_bytes);
         assert_eq!(plan, vec![slab]);
@@ -871,14 +987,20 @@ mod tests {
 
     #[test]
     fn stable_ids_are_derived_from_immutable_node_identity() {
-        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members(), 1).expect("parse");
-        let slab = index.nodes.iter().position(|node| node.name == "Slab").expect("slab");
+        let index = SceneIndex::parse(Path::new("/maps/example"), &document(), &members(), 1)
+            .expect("parse");
+        let slab = index
+            .nodes
+            .iter()
+            .position(|node| node.name == "Slab")
+            .expect("slab");
         assert_eq!(index.stable_id(slab), "ground:1:Slab");
     }
 
     #[test]
     fn reads_interleaved_and_tightly_packed_accessors() {
-        let root = std::env::temp_dir().join(format!("simforge-viewport-scene-{}", std::process::id()));
+        let root =
+            std::env::temp_dir().join(format!("simforge-viewport-scene-{}", std::process::id()));
         std::fs::create_dir_all(&root).expect("root");
         let mut bytes = Vec::new();
         for vertex in 0..4u32 {
@@ -904,7 +1026,11 @@ mod tests {
         std::fs::write(root.join("geometry.bin"), &bytes).expect("buffer");
         let index = SceneIndex::parse(&root, &document(), &members(), 1).expect("parse");
         let mut file = File::open(index.buffer.clone()).expect("open");
-        let slab = index.nodes.iter().position(|node| node.name == "Slab").expect("slab");
+        let slab = index
+            .nodes
+            .iter()
+            .position(|node| node.name == "Slab")
+            .expect("slab");
         let coarse = read_node(&index, &mut file, slab, Tier::Coarse).expect("coarse");
         assert_eq!(coarse[0].positions.len(), 4);
         assert_eq!(coarse[0].positions[1], [3.0, 4.0, 5.0]);
@@ -914,7 +1040,11 @@ mod tests {
         let detail = read_node(&index, &mut file, slab, Tier::Detail).expect("detail");
         assert_eq!(detail[0].normals.as_ref().expect("normals").len(), 4);
         assert_eq!(detail[0].uvs.as_ref().expect("uvs").len(), 4);
-        let post = index.nodes.iter().position(|node| node.name == "Post").expect("post");
+        let post = index
+            .nodes
+            .iter()
+            .position(|node| node.name == "Post")
+            .expect("post");
         let post_data = read_node(&index, &mut file, post, Tier::Coarse).expect("post");
         assert_eq!(post_data[0].indices, vec![0, 1, 2]);
         std::fs::remove_dir_all(&root).ok();

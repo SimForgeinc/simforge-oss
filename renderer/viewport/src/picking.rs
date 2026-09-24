@@ -69,7 +69,9 @@ pub fn hits<'a>(
         return Vec::new();
     }
     let mut hits: Vec<PickHit> = candidates
-        .filter(|(entity, _, _)| layers.is_empty() || layers.iter().any(|layer| layer == entity.layer))
+        .filter(|(entity, _, _)| {
+            layers.is_empty() || layers.iter().any(|layer| layer == entity.layer)
+        })
         .filter_map(|(entity, aabb, transform)| {
             // Meshes are built in world space by the progressive loader, but
             // the transform is applied anyway so a future instanced entity
@@ -96,7 +98,13 @@ mod tests {
 
     #[test]
     fn ray_hit_matches_shared_pick_shape() {
-        let distance = ray_aabb(Vec3::new(0.0, 1.0, 5.0), Vec3::NEG_Z, Vec3::splat(-1.0), Vec3::splat(1.0)).unwrap();
+        let distance = ray_aabb(
+            Vec3::new(0.0, 1.0, 5.0),
+            Vec3::NEG_Z,
+            Vec3::splat(-1.0),
+            Vec3::splat(1.0),
+        )
+        .unwrap();
         let hit = PickHit {
             layer: "ground".into(),
             id: None,
@@ -112,12 +120,22 @@ mod tests {
     #[test]
     fn misses_and_backwards_rays_produce_no_hit() {
         assert_eq!(
-            ray_aabb(Vec3::new(5.0, 5.0, 5.0), Vec3::Y, Vec3::splat(-1.0), Vec3::splat(1.0)),
+            ray_aabb(
+                Vec3::new(5.0, 5.0, 5.0),
+                Vec3::Y,
+                Vec3::splat(-1.0),
+                Vec3::splat(1.0)
+            ),
             None
         );
         // Box behind the origin.
         assert_eq!(
-            ray_aabb(Vec3::new(0.0, 0.0, 5.0), Vec3::Z, Vec3::splat(-1.0), Vec3::splat(1.0)),
+            ray_aabb(
+                Vec3::new(0.0, 0.0, 5.0),
+                Vec3::Z,
+                Vec3::splat(-1.0),
+                Vec3::splat(1.0)
+            ),
             None
         );
         // Starting inside the box is a zero-distance hit, not a miss.
@@ -129,17 +147,28 @@ mod tests {
 
     #[test]
     fn hits_carry_stable_ids_sorted_by_distance_and_filtered_by_layer() {
-        let near = MapEntity { stable_id: "map-static:1:Post".to_owned(), layer: "map-static" };
-        let far = MapEntity { stable_id: "ground:2:Slab".to_owned(), layer: "ground" };
+        let near = MapEntity {
+            stable_id: "map-static:1:Post".to_owned(),
+            layer: "map-static",
+        };
+        let far = MapEntity {
+            stable_id: "ground:2:Slab".to_owned(),
+            layer: "ground",
+        };
         let near_aabb = Aabb::from_min_max(Vec3::new(-1.0, -1.0, -3.0), Vec3::new(1.0, 1.0, -1.0));
-        let far_aabb = Aabb::from_min_max(Vec3::new(-10.0, -1.0, -30.0), Vec3::new(10.0, 1.0, -20.0));
+        let far_aabb =
+            Aabb::from_min_max(Vec3::new(-10.0, -1.0, -30.0), Vec3::new(10.0, 1.0, -20.0));
         let transform = GlobalTransform::IDENTITY;
         let collected = hits(
             Vec3::ZERO,
             Vec3::NEG_Z,
             &[],
             8,
-            [(&near, &near_aabb, &transform), (&far, &far_aabb, &transform)].into_iter(),
+            [
+                (&near, &near_aabb, &transform),
+                (&far, &far_aabb, &transform),
+            ]
+            .into_iter(),
         );
         assert_eq!(collected.len(), 2);
         assert_eq!(collected[0].id.as_deref(), Some("map-static:1:Post"));
@@ -152,7 +181,11 @@ mod tests {
             Vec3::NEG_Z,
             &["ground".to_owned()],
             8,
-            [(&near, &near_aabb, &transform), (&far, &far_aabb, &transform)].into_iter(),
+            [
+                (&near, &near_aabb, &transform),
+                (&far, &far_aabb, &transform),
+            ]
+            .into_iter(),
         );
         assert_eq!(ground_only.len(), 1);
         assert_eq!(ground_only[0].layer, "ground");
@@ -163,7 +196,11 @@ mod tests {
             Vec3::NEG_Z,
             &[],
             1,
-            [(&far, &far_aabb, &transform), (&near, &near_aabb, &transform)].into_iter(),
+            [
+                (&far, &far_aabb, &transform),
+                (&near, &near_aabb, &transform),
+            ]
+            .into_iter(),
         );
         assert_eq!(one.len(), 1);
         assert_eq!(one[0].id.as_deref(), Some("map-static:1:Post"));
@@ -171,12 +208,21 @@ mod tests {
 
     #[test]
     fn a_scaled_transform_moves_the_hit() {
-        let entity = MapEntity { stable_id: "map-static:3:Box".to_owned(), layer: "map-static" };
+        let entity = MapEntity {
+            stable_id: "map-static:3:Box".to_owned(),
+            layer: "map-static",
+        };
         let aabb = Aabb::from_min_max(Vec3::splat(-1.0), Vec3::splat(1.0));
         let transform = GlobalTransform::from(
             Transform::from_xyz(0.0, 0.0, -10.0).with_scale(Vec3::splat(2.0)),
         );
-        let collected = hits(Vec3::ZERO, Vec3::NEG_Z, &[], 8, [(&entity, &aabb, &transform)].into_iter());
+        let collected = hits(
+            Vec3::ZERO,
+            Vec3::NEG_Z,
+            &[],
+            8,
+            [(&entity, &aabb, &transform)].into_iter(),
+        );
         // Centre at -10 with half-extent 2 after scaling: entry at 8 m.
         assert_eq!(collected[0].distance_m, 8.0);
     }

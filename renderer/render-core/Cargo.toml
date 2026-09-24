@@ -3,22 +3,6 @@ name = "render-core"
 version.workspace = true
 edition.workspace = true
 
-[[bin]]
-name = "scen-play"
-path = "src/bin/scen-play.rs"
-
-[[bin]]
-name = "native-render-job"
-path = "src/bin/native-render-job.rs"
-
-[[bin]]
-name = "parity-check"
-path = "src/bin/parity-check.rs"
-
-[[bin]]
-name = "sky-bench"
-path = "src/bin/sky-bench.rs"
-
 [dependencies]
 crossbeam-channel = "0.5"
 # `basis-universal` transcodes the map masters' UASTC KTX2 images to GPU formats at load.
@@ -45,6 +29,10 @@ clap = { version = "4", features = ["derive"] }
 half = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Ingest-time GPU texture variants (`ktx2_variant`, `simforge-render dev ktx2-gpu-variant`):
+# the same KTX2 reader and zstd encoder versions Bevy already locks.
+ktx2 = "0.5"
+ruzstd = "0.8"
 walkdir = "2"
 
 sha2 = "0.10"
@@ -52,18 +40,22 @@ sha2 = "0.10"
 # query implementation shared with the simulator and the contact gate.
 simforge-core = { path = "../../native/crates/simforge-core" }
 
-# `gpu-interop` only (Linux): raw Vulkan handles for exportable output memory
-# and semaphores (see src/gpu_interop.rs). `ash` must track wgpu-hal's 0.38.
-wgpu = { version = "29.0.4", default-features = false, features = ["vulkan"], optional = true }
+# Raw wgpu types (query sets for `gpu_diagnostics`); Bevy enables the
+# backends. `gpu-interop` (Linux) adds the Vulkan HAL for raw handles to
+# exportable output memory and semaphores (see src/gpu_interop.rs). `ash`
+# must track wgpu-hal's 0.38.
+wgpu = { version = "29.0.4", default-features = false }
 ash = { version = "0.38", default-features = false, optional = true }
 libc = { version = "0.2", optional = true }
 
 [features]
 default = ["pcss"]
+# Chrome-trace CPU spans of every Bevy system (profiling builds only).
+trace-chrome = ["bevy/trace_chrome"]
 # PCSS soft shadows (lighting ladder rung 4)
 pcss = ["bevy/experimental_pbr_pcss"]
 # Solari raytraced GI (rung 5) — optional RT-hardware quality tier
 solari = ["bevy/bevy_solari"]
 # Exportable Vulkan/CUDA output path (`render_core::gpu_interop`). Linux
 # only; enabling it for another target is a compile error (src/lib.rs).
-gpu-interop = ["bevy/raw_vulkan_init", "dep:wgpu", "dep:ash", "dep:libc"]
+gpu-interop = ["bevy/raw_vulkan_init", "wgpu/vulkan", "dep:ash", "dep:libc"]

@@ -144,7 +144,7 @@ simforge-oss-physics course --out-dir DIR      # writes DIR/course/<sha256>.glb 
 with a manifest (`simforge.physics-course-resource/v1`: mapId, workload
 digest, files[{path, kind, sha256, bytes}], geometry). `render_scene_spec
 (manifest, dir)` returns the native render service prewarm `SceneSpec`
-(`renderer/service/src/server.rs`: `glbs` absolute, `profile`, `nearM`,
+(`renderer/service/src/server.rs`: `glbs` absolute, `render: {preset}`, `nearM`,
 `farM`, `warmupFrames`). `to_service_states(doc)` converts the playback
 document into the service's per-tick `LoadSceneState` form
 (`transform{position, rotation}` per actor, descriptors joined in). The

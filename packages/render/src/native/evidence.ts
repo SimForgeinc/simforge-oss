@@ -44,6 +44,12 @@ const NativeRunLineageSchema = z.strictObject({
     budgetBytes: z.number().int().positive(),
     capacityBytes: z.number().int().positive(),
     capacitySource: z.enum(['assumed', 'explicit']),
+    /**
+     * Gated by native-evidence.vram-detected: the job's own device capacity,
+     * measured on the worker, which the profile was checked against when it
+     * is below the intent's.
+     */
+    detectedCapacityBytes: z.number().int().positive().optional(),
     cacheKey: Sha256Schema,
   }).optional(),
 });
@@ -51,12 +57,33 @@ const NativeRunLineageSchema = z.strictObject({
 export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
   schema: z.literal(NATIVE_RENDER_MANIFEST_V1_SCHEMA),
   look: z.strictObject({
+    /** Baseline key: the retired look's name, always `cinematic`; `render` carries the preset. */
     profile: z.literal('cinematic'),
     lighting: z.record(z.string(), z.unknown()),
+    /** Baseline key: the resolved render config (the same as `render.config`). */
     profileConfig: z.record(z.string(), z.unknown()),
     autoMeter: z.boolean(),
     provenance: z.record(z.string(), z.unknown()),
   }),
+  /**
+   * The render configuration; gated by `native-evidence.render-config`.
+   * `request` is what the job asked for (preset + overrides), `config` the
+   * `RenderConfig` the service resolved and rendered with, `geometryLod`
+   * whether the map's LOD derivative was drawn (`manifestSha256` null: the
+   * mode was `off` or the map carries none).
+   */
+  render: z.strictObject({
+    request: z.strictObject({
+      preset: z.enum(['training', 'showcase']),
+      set: z.record(z.string(), z.unknown()),
+    }),
+    config: z.record(z.string(), z.unknown()),
+    geometryLod: z.strictObject({
+      mode: z.enum(['auto', 'off']),
+      manifestSha256: Sha256Schema.nullable(),
+      buildKey: Sha256Schema.nullable(),
+    }),
+  }).optional(),
   /**
    * How captured pixels relate to time; gated by `native-evidence.capture-clock`.
    * `simulation-time`: each frame is a function of its scene and simulation
@@ -146,6 +173,24 @@ export const NativeRunDiagnosticsSchema = NativeRunLineageSchema.extend({
     rigRevision: z.number().int().nonnegative(),
     generation: z.number().int().nonnegative(),
   })),
+  /**
+   * Per rendered tick, the exposure each RGB camera metered (the dash-cam
+   * camera model): EV100, the adjustment over the incident exposure, and the
+   * aperture/shutter/ISO/gain the camera's program realises it with. Gated
+   * by `native-evidence.render-config`.
+   */
+  exposure: z.array(z.strictObject({
+    tick: z.number().int().nonnegative(),
+    cameras: z.record(z.string(), z.strictObject({
+      ev100: z.number().finite(),
+      adjustEv: z.number().finite(),
+      meteredLog2Luminance: z.number().finite(),
+      fNumber: z.number().finite().positive(),
+      shutterS: z.number().finite().positive(),
+      iso: z.number().finite().positive(),
+      gainDb: z.number().finite(),
+    })),
+  })).optional(),
   timings: z.strictObject({
     wallMs: z.number().finite().nonnegative(),
     serverMs: z.number().finite().nonnegative(),

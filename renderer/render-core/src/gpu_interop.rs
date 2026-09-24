@@ -75,7 +75,7 @@ use bevy::render::renderer::{RenderDevice, RenderQueue};
 use serde::{Deserialize, Serialize};
 use wgpu::hal::api::Vulkan;
 
-/// Manifest/handle protocol version understood by `simforge_native.gpu`.
+/// Manifest/handle protocol version understood by `simforge_render.gpu`.
 pub const PROTOCOL: &str = "simforge-gpu-interop/1";
 /// Frame prefix for [`ExportedStream::send_over_unix`].
 pub const WIRE_MAGIC: &[u8; 4] = b"SFGX";
@@ -89,7 +89,8 @@ pub const MAX_SLOTS: usize = SCM_MAX_FD / HANDLES_PER_SLOT;
 /// Plane offsets are aligned to this so any plane is a valid copy destination.
 const PLANE_ALIGN: u64 = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT as u64;
 const NVIDIA_VENDOR_ID: u32 = 0x10DE;
-const HANDLE_TYPE_MEM: vk::ExternalMemoryHandleTypeFlags = vk::ExternalMemoryHandleTypeFlags::OPAQUE_FD;
+const HANDLE_TYPE_MEM: vk::ExternalMemoryHandleTypeFlags =
+    vk::ExternalMemoryHandleTypeFlags::OPAQUE_FD;
 const HANDLE_TYPE_SEM: vk::ExternalSemaphoreHandleTypeFlags =
     vk::ExternalSemaphoreHandleTypeFlags::OPAQUE_FD;
 const VK_USAGE: vk::BufferUsageFlags = vk::BufferUsageFlags::from_raw(
@@ -111,17 +112,34 @@ pub enum InteropError {
     /// Capability check failed; the message names the missing requirement.
     Unsupported(String),
     /// A Vulkan entry point failed.
-    Vulkan { what: &'static str, code: vk::Result },
+    Vulkan {
+        what: &'static str,
+        code: vk::Result,
+    },
     /// Descriptor rejected (empty planes, zero extent, too many slots, ...).
     InvalidDescriptor(String),
     UnknownStream(StreamId),
-    UnknownPlane { stream: StreamId, plane: String },
+    UnknownPlane {
+        stream: StreamId,
+        plane: String,
+    },
     /// A lease was used out of order (e.g. `submit_ready` after `cancel`).
-    LeaseState { stream: StreamId, slot: u32, generation: u64, expected: &'static str },
+    LeaseState {
+        stream: StreamId,
+        slot: u32,
+        generation: u64,
+        expected: &'static str,
+    },
     /// Copy extent or format does not match the plane layout.
-    PlaneMismatch { plane: String, detail: String },
+    PlaneMismatch {
+        plane: String,
+        detail: String,
+    },
     /// Every slot is outstanding; nothing was released within the wait.
-    Backpressure { stream: StreamId, waited: Duration },
+    Backpressure {
+        stream: StreamId,
+        waited: Duration,
+    },
     Io(io::Error),
 }
 
@@ -136,7 +154,12 @@ impl fmt::Display for InteropError {
             Self::UnknownPlane { stream, plane } => {
                 write!(f, "stream {} has no plane {plane:?}", stream.0)
             }
-            Self::LeaseState { stream, slot, generation, expected } => write!(
+            Self::LeaseState {
+                stream,
+                slot,
+                generation,
+                expected,
+            } => write!(
                 f,
                 "stream {} slot {slot} generation {generation}: expected state {expected}",
                 stream.0
@@ -201,24 +224,30 @@ pub fn raw_vulkan_init_settings() -> RawVulkanInitSettings {
     // SAFETY: the callback only appends extensions the physical device
     // reports as supported and never removes or disables anything.
     unsafe {
-        settings.add_create_device_callback(|args: &mut wgpu::hal::vulkan::CreateDeviceCallbackArgs<'_, '_, '_>, adapter: &wgpu::hal::vulkan::Adapter, features: &mut AdditionalVulkanFeatures| {
-            let caps = adapter.physical_device_capabilities();
-            let wanted: [&'static CStr; 2] =
-                [khr::external_memory_fd::NAME, khr::external_semaphore_fd::NAME];
-            let mut all = true;
-            for ext in wanted {
-                if caps.supports_extension(ext) {
-                    if !args.extensions.contains(&ext) {
-                        args.extensions.push(ext);
+        settings.add_create_device_callback(
+            |args: &mut wgpu::hal::vulkan::CreateDeviceCallbackArgs<'_, '_, '_>,
+             adapter: &wgpu::hal::vulkan::Adapter,
+             features: &mut AdditionalVulkanFeatures| {
+                let caps = adapter.physical_device_capabilities();
+                let wanted: [&'static CStr; 2] = [
+                    khr::external_memory_fd::NAME,
+                    khr::external_semaphore_fd::NAME,
+                ];
+                let mut all = true;
+                for ext in wanted {
+                    if caps.supports_extension(ext) {
+                        if !args.extensions.contains(&ext) {
+                            args.extensions.push(ext);
+                        }
+                    } else {
+                        all = false;
                     }
-                } else {
-                    all = false;
                 }
-            }
-            if all {
-                features.insert::<ExternalHandlesEnabled>();
-            }
-        });
+                if all {
+                    features.insert::<ExternalHandlesEnabled>();
+                }
+            },
+        );
     }
     settings
 }
@@ -329,7 +358,7 @@ pub struct PlaneLayout {
 pub struct StreamId(pub u64);
 
 /// Manifest accompanying exported handles. Serialized as JSON for the
-/// consumer (`simforge_native.gpu.ImportedStream`).
+/// consumer (`simforge_render.gpu.ImportedStream`).
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StreamManifest {
     pub protocol: String,
@@ -392,9 +421,14 @@ pub struct StreamTeardown {
 pub enum SlotStatus {
     Free,
     /// Acquired by the producer, not yet submitted.
-    Leased { generation: u64 },
+    Leased {
+        generation: u64,
+    },
     /// Ready signal submitted; waiting for consumer release.
-    Published { generation: u64, released: bool },
+    Published {
+        generation: u64,
+        released: bool,
+    },
 }
 
 // ----------------------------------------------------------------------------
@@ -534,7 +568,10 @@ fn open_raw(device: &RenderDevice) -> Result<(Raw, InteropCapabilities), Interop
     let enabled = hal.enabled_device_extensions();
     for (ext, label) in [
         (khr::external_memory_fd::NAME, "VK_KHR_external_memory_fd"),
-        (khr::external_semaphore_fd::NAME, "VK_KHR_external_semaphore_fd"),
+        (
+            khr::external_semaphore_fd::NAME,
+            "VK_KHR_external_semaphore_fd",
+        ),
     ] {
         if !enabled.contains(&ext) {
             return Err(InteropError::Unsupported(format!(
@@ -576,7 +613,9 @@ fn open_raw(device: &RenderDevice) -> Result<(Raw, InteropCapabilities), Interop
             .handle_type(HANDLE_TYPE_MEM);
         let mut out = vk::ExternalBufferProperties::default();
         // SAFETY: valid physical device and fully initialised query structs.
-        unsafe { instance.get_physical_device_external_buffer_properties(physical, &info, &mut out) };
+        unsafe {
+            instance.get_physical_device_external_buffer_properties(physical, &info, &mut out)
+        };
         out.external_memory_properties
     };
     if !mem_props
@@ -593,7 +632,8 @@ fn open_raw(device: &RenderDevice) -> Result<(Raw, InteropCapabilities), Interop
         .contains(vk::ExternalMemoryFeatureFlags::DEDICATED_ONLY);
 
     let sem_props = {
-        let mut ty = vk::SemaphoreTypeCreateInfo::default().semaphore_type(vk::SemaphoreType::TIMELINE);
+        let mut ty =
+            vk::SemaphoreTypeCreateInfo::default().semaphore_type(vk::SemaphoreType::TIMELINE);
         let info = vk::PhysicalDeviceExternalSemaphoreInfo::default()
             .handle_type(HANDLE_TYPE_SEM)
             .push_next(&mut ty);
@@ -696,19 +736,24 @@ impl GpuInterop {
         }
         if let Err(e) = result {
             // Nothing was submitted yet: buffers are unused, safe to tear down now.
-            let stream = Stream { label: desc.label.clone(), planes, slot_bytes, slots };
+            let stream = Stream {
+                label: desc.label.clone(),
+                planes,
+                slot_bytes,
+                slots,
+            };
             self.teardown(stream, Duration::ZERO);
             return Err(e);
         }
 
         // wgpu requires imported buffers to be initialised; clear them once on
         // the device (this also moves them into a tracked state).
-        let mut encoder = self
-            .device
-            .wgpu_device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("gpu-interop-init"),
-            });
+        let mut encoder =
+            self.device
+                .wgpu_device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("gpu-interop-init"),
+                });
         for slot in &slots {
             encoder.clear_buffer(slot.buffer.as_ref().expect("fresh slot"), 0, None);
         }
@@ -717,7 +762,12 @@ impl GpuInterop {
         self.next_stream += 1;
         self.streams.insert(
             id,
-            Stream { label: desc.label.clone(), planes, slot_bytes, slots },
+            Stream {
+                label: desc.label.clone(),
+                planes,
+                slot_bytes,
+                slots,
+            },
         );
         Ok(id)
     }
@@ -762,7 +812,10 @@ impl GpuInterop {
             Ok(m) => m,
             Err(code) => {
                 unsafe { dev.destroy_buffer(buffer, None) };
-                return Err(InteropError::Vulkan { what: "vkAllocateMemory", code });
+                return Err(InteropError::Vulkan {
+                    what: "vkAllocateMemory",
+                    code,
+                });
             }
         };
         // SAFETY: memory was allocated dedicated for this buffer, offset 0.
@@ -771,7 +824,10 @@ impl GpuInterop {
                 dev.destroy_buffer(buffer, None);
                 dev.free_memory(memory, None);
             }
-            return Err(InteropError::Vulkan { what: "vkBindBufferMemory", code });
+            return Err(InteropError::Vulkan {
+                what: "vkBindBufferMemory",
+                code,
+            });
         }
 
         let ready = match self.create_timeline() {
@@ -835,7 +891,8 @@ impl GpuInterop {
             .push_next(&mut ty)
             .push_next(&mut export);
         // SAFETY: live device; timeline feature enabled by wgpu-hal on >= 1.2.
-        unsafe { self.raw.device.create_semaphore(&info, None) }.map_err(vk_err("vkCreateSemaphore"))
+        unsafe { self.raw.device.create_semaphore(&info, None) }
+            .map_err(vk_err("vkCreateSemaphore"))
     }
 
     pub fn streams(&self) -> impl Iterator<Item = StreamId> + '_ {
@@ -851,7 +908,10 @@ impl GpuInterop {
         s.planes
             .iter()
             .find(|p| p.name == name)
-            .ok_or_else(|| InteropError::UnknownPlane { stream, plane: name.to_owned() })
+            .ok_or_else(|| InteropError::UnknownPlane {
+                stream,
+                plane: name.to_owned(),
+            })
     }
 
     /// Current state of every slot, including whether a published slot's
@@ -886,7 +946,10 @@ impl GpuInterop {
         stream: StreamId,
         grace: Duration,
     ) -> Result<StreamTeardown, InteropError> {
-        let s = self.streams.remove(&stream).ok_or(InteropError::UnknownStream(stream))?;
+        let s = self
+            .streams
+            .remove(&stream)
+            .ok_or(InteropError::UnknownStream(stream))?;
         Ok(self.teardown(s, grace))
     }
 
@@ -904,7 +967,9 @@ impl GpuInterop {
             .collect();
         if !published.is_empty() && !grace.is_zero() {
             let (sems, vals): (Vec<_>, Vec<_>) = published.iter().copied().unzip();
-            let info = vk::SemaphoreWaitInfo::default().semaphores(&sems).values(&vals);
+            let info = vk::SemaphoreWaitInfo::default()
+                .semaphores(&sems)
+                .values(&vals);
             // SAFETY: live timeline semaphores; TIMEOUT is an expected outcome.
             let _ = unsafe { dev.wait_semaphores(&info, nanos(grace)) };
         }
@@ -925,7 +990,10 @@ impl GpuInterop {
         for slot in &mut s.slots {
             slot.buffer = None;
         }
-        let _ = self.device.wgpu_device().poll(wgpu::PollType::wait_indefinitely());
+        let _ = self
+            .device
+            .wgpu_device()
+            .poll(wgpu::PollType::wait_indefinitely());
 
         for slot in &s.slots {
             // SAFETY: no wgpu buffer references the memory any more (drained
@@ -945,7 +1013,9 @@ impl GpuInterop {
     }
 
     fn stream_mut(&mut self, id: StreamId) -> Result<&mut Stream, InteropError> {
-        self.streams.get_mut(&id).ok_or(InteropError::UnknownStream(id))
+        self.streams
+            .get_mut(&id)
+            .ok_or(InteropError::UnknownStream(id))
     }
 
     fn counter(&self, sem: vk::Semaphore) -> Result<u64, InteropError> {
@@ -976,7 +1046,10 @@ impl GpuInterop {
             return Ok(lease);
         }
         let Some(wait) = wait else {
-            return Err(InteropError::Backpressure { stream, waited: Duration::ZERO });
+            return Err(InteropError::Backpressure {
+                stream,
+                waited: Duration::ZERO,
+            });
         };
         let (sems, vals): (Vec<_>, Vec<_>) = self
             .stream(stream)?
@@ -990,7 +1063,10 @@ impl GpuInterop {
         if sems.is_empty() {
             // Every slot is held by the producer itself (acquired, never
             // submitted/cancelled); waiting cannot help.
-            return Err(InteropError::Backpressure { stream, waited: Duration::ZERO });
+            return Err(InteropError::Backpressure {
+                stream,
+                waited: Duration::ZERO,
+            });
         }
         let info = vk::SemaphoreWaitInfo::default()
             .flags(vk::SemaphoreWaitFlags::ANY)
@@ -1000,17 +1076,30 @@ impl GpuInterop {
         match unsafe { self.raw.device.wait_semaphores(&info, nanos(wait)) } {
             Ok(()) => {}
             Err(vk::Result::TIMEOUT) => {
-                return Err(InteropError::Backpressure { stream, waited: wait });
+                return Err(InteropError::Backpressure {
+                    stream,
+                    waited: wait,
+                });
             }
-            Err(code) => return Err(InteropError::Vulkan { what: "vkWaitSemaphores", code }),
+            Err(code) => {
+                return Err(InteropError::Vulkan {
+                    what: "vkWaitSemaphores",
+                    code,
+                })
+            }
         }
-        self.take_free(stream)?
-            .ok_or(InteropError::Backpressure { stream, waited: wait })
+        self.take_free(stream)?.ok_or(InteropError::Backpressure {
+            stream,
+            waited: wait,
+        })
     }
 
     fn take_free(&mut self, stream: StreamId) -> Result<Option<SlotLease>, InteropError> {
         let dev = &self.raw.device;
-        let s = self.streams.get_mut(&stream).ok_or(InteropError::UnknownStream(stream))?;
+        let s = self
+            .streams
+            .get_mut(&stream)
+            .ok_or(InteropError::UnknownStream(stream))?;
         for (i, slot) in s.slots.iter_mut().enumerate() {
             let free = match slot.state {
                 SlotState::Free => true,
@@ -1025,7 +1114,11 @@ impl GpuInterop {
             if free {
                 slot.generation += 1;
                 slot.state = SlotState::Leased(slot.generation);
-                return Ok(Some(SlotLease { stream, slot: i as u32, generation: slot.generation }));
+                return Ok(Some(SlotLease {
+                    stream,
+                    slot: i as u32,
+                    generation: slot.generation,
+                }));
             }
         }
         Ok(None)
@@ -1048,20 +1141,27 @@ impl GpuInterop {
         src: wgpu::TexelCopyTextureInfo<'_>,
     ) -> Result<(), InteropError> {
         let s = self.stream(lease.stream)?;
-        let layout = s
-            .planes
-            .iter()
-            .find(|p| p.name == plane)
-            .ok_or_else(|| InteropError::UnknownPlane { stream: lease.stream, plane: plane.to_owned() })?;
+        let layout = s.planes.iter().find(|p| p.name == plane).ok_or_else(|| {
+            InteropError::UnknownPlane {
+                stream: lease.stream,
+                plane: plane.to_owned(),
+            }
+        })?;
         let slot = self.leased_slot(lease)?;
         let size = src.texture.size();
-        if size.width != layout.width || size.height != layout.height || size.depth_or_array_layers != 1
+        if size.width != layout.width
+            || size.height != layout.height
+            || size.depth_or_array_layers != 1
         {
             return Err(InteropError::PlaneMismatch {
                 plane: plane.to_owned(),
                 detail: format!(
                     "texture extent {}x{}x{} != plane {}x{}",
-                    size.width, size.height, size.depth_or_array_layers, layout.width, layout.height
+                    size.width,
+                    size.height,
+                    size.depth_or_array_layers,
+                    layout.width,
+                    layout.height
                 ),
             });
         }
@@ -1091,7 +1191,11 @@ impl GpuInterop {
                     rows_per_image: None,
                 },
             },
-            wgpu::Extent3d { width: layout.width, height: layout.height, depth_or_array_layers: 1 },
+            wgpu::Extent3d {
+                width: layout.width,
+                height: layout.height,
+                depth_or_array_layers: 1,
+            },
         );
         Ok(())
     }
@@ -1112,7 +1216,11 @@ impl GpuInterop {
         self.add_ready_signal(ready, lease.generation)?;
         let slot = self.leased_slot_mut(&lease)?;
         slot.state = SlotState::Published(lease.generation);
-        Ok(ReadyFrame { stream_id: lease.stream, slot: lease.slot, generation: lease.generation })
+        Ok(ReadyFrame {
+            stream_id: lease.stream,
+            slot: lease.slot,
+            generation: lease.generation,
+        })
     }
 
     /// Submit the command buffers that fill the slot and bind the slot's ready
@@ -1121,7 +1229,11 @@ impl GpuInterop {
     /// Self-contained variant of [`Self::arm_ready`]: signal registration and
     /// submit happen back-to-back inside this call, so callers only need to
     /// not submit concurrently from another thread.
-    pub fn submit_ready<I>(&mut self, lease: SlotLease, command_buffers: I) -> Result<ReadyFrame, InteropError>
+    pub fn submit_ready<I>(
+        &mut self,
+        lease: SlotLease,
+        command_buffers: I,
+    ) -> Result<ReadyFrame, InteropError>
     where
         I: IntoIterator<Item = wgpu::CommandBuffer>,
     {
@@ -1130,7 +1242,11 @@ impl GpuInterop {
         self.queue.submit(command_buffers);
         let slot = self.leased_slot_mut(&lease)?;
         slot.state = SlotState::Published(lease.generation);
-        Ok(ReadyFrame { stream_id: lease.stream, slot: lease.slot, generation: lease.generation })
+        Ok(ReadyFrame {
+            stream_id: lease.stream,
+            slot: lease.slot,
+            generation: lease.generation,
+        })
     }
 
     fn add_ready_signal(&self, ready: vk::Semaphore, generation: u64) -> Result<(), InteropError> {
@@ -1151,8 +1267,13 @@ impl GpuInterop {
             let slot = self.leased_slot(&lease)?;
             (slot.ready, slot.release)
         };
-        for (sem, what) in [(ready, "vkSignalSemaphore(ready)"), (release, "vkSignalSemaphore(release)")] {
-            let info = vk::SemaphoreSignalInfo::default().semaphore(sem).value(lease.generation);
+        for (sem, what) in [
+            (ready, "vkSignalSemaphore(ready)"),
+            (release, "vkSignalSemaphore(release)"),
+        ] {
+            let info = vk::SemaphoreSignalInfo::default()
+                .semaphore(sem)
+                .value(lease.generation);
             // SAFETY: live timeline semaphore; value exceeds its current counter
             // because this generation was never signalled.
             unsafe { self.raw.device.signal_semaphore(&info) }.map_err(vk_err(what))?;
@@ -1184,10 +1305,13 @@ impl GpuInterop {
             });
         }
         let release = slot.release;
-        let info = vk::SemaphoreSignalInfo::default().semaphore(release).value(frame.generation);
+        let info = vk::SemaphoreSignalInfo::default()
+            .semaphore(release)
+            .value(frame.generation);
         // SAFETY: live timeline semaphore; no consumer imported a lease for
         // this generation, so `generation` exceeds its current counter.
-        unsafe { self.raw.device.signal_semaphore(&info) }.map_err(vk_err("vkSignalSemaphore(release)"))?;
+        unsafe { self.raw.device.signal_semaphore(&info) }
+            .map_err(vk_err("vkSignalSemaphore(release)"))?;
         // Leave the state Published: `acquire` re-validates via the release
         // counter, which now equals `generation`, and the ready signal bound
         // to the earlier submission still completes on its own semaphore.
@@ -1308,7 +1432,10 @@ impl GpuInterop {
         let allocation_bytes = s.slots.first().map_or(0, |slot| slot.allocation_bytes);
         // Dedicated allocations of identical buffers have identical sizes; the
         // manifest carries one import size, so refuse anything else.
-        if s.slots.iter().any(|slot| slot.allocation_bytes != allocation_bytes) {
+        if s.slots
+            .iter()
+            .any(|slot| slot.allocation_bytes != allocation_bytes)
+        {
             return Err(InteropError::Unsupported(
                 "slot allocations of one stream differ in size".into(),
             ));
@@ -1318,7 +1445,11 @@ impl GpuInterop {
             let memory = self.export_memory(slot.memory)?;
             let ready = self.export_semaphore(slot.ready)?;
             let release = self.export_semaphore(slot.release)?;
-            handles.push(SlotHandles { memory, ready, release });
+            handles.push(SlotHandles {
+                memory,
+                ready,
+                release,
+            });
         }
         Ok(ExportedStream {
             manifest: StreamManifest {
@@ -1338,7 +1469,9 @@ impl GpuInterop {
     }
 
     fn export_memory(&self, memory: vk::DeviceMemory) -> Result<OwnedFd, InteropError> {
-        let info = vk::MemoryGetFdInfoKHR::default().memory(memory).handle_type(HANDLE_TYPE_MEM);
+        let info = vk::MemoryGetFdInfoKHR::default()
+            .memory(memory)
+            .handle_type(HANDLE_TYPE_MEM);
         // SAFETY: memory was allocated with a matching export info.
         let fd: RawFd = unsafe { self.raw.ext_mem_fd.get_memory_fd(&info) }
             .map_err(vk_err("vkGetMemoryFdKHR"))?;
@@ -1347,7 +1480,9 @@ impl GpuInterop {
     }
 
     fn export_semaphore(&self, sem: vk::Semaphore) -> Result<OwnedFd, InteropError> {
-        let info = vk::SemaphoreGetFdInfoKHR::default().semaphore(sem).handle_type(HANDLE_TYPE_SEM);
+        let info = vk::SemaphoreGetFdInfoKHR::default()
+            .semaphore(sem)
+            .handle_type(HANDLE_TYPE_SEM);
         // SAFETY: semaphore was created with a matching export info.
         let fd: RawFd = unsafe { self.raw.ext_sem_fd.get_semaphore_fd(&info) }
             .map_err(vk_err("vkGetSemaphoreFdKHR"))?;

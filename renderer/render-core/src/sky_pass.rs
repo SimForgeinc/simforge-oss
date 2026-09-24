@@ -852,11 +852,11 @@ mod tests {
         root
     }
 
-    /// `<root>/bin/native-render-service` beside `bin/runtime-manifest.json`.
+    /// `<root>/bin/simforge-render` beside `bin/runtime-manifest.json`.
     fn installed_layout(root: &Path) -> PathBuf {
         fs::create_dir_all(root.join("bin")).unwrap();
         fs::write(root.join("bin").join(RUNTIME_MANIFEST_FILE), b"{}").unwrap();
-        root.join("bin/native-render-service")
+        root.join("bin/simforge-render")
     }
 
     #[test]
@@ -871,7 +871,7 @@ mod tests {
     #[test]
     fn binary_without_manifest_beside_it_is_a_source_checkout() {
         let root = scratch("target-dir");
-        let exe = root.join("release/native-render-service");
+        let exe = root.join("release/simforge-render");
         let (dir, selection) = select_dir(None, None, Some(exe.as_path()));
         assert_eq!(selection, SkySelection::SourceCheckout);
         assert_eq!(

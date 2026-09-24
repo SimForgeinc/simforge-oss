@@ -9,7 +9,7 @@ import { NATIVE_SERVICE_PROTOCOL } from './service-client.js';
 import { startNativeRenderService } from './service-process.js';
 
 /**
- * A stand-in for native-render-service driven by `FAKE_SERVICE_MODE`:
+ * A stand-in for `simforge-render serve` driven by `FAKE_SERVICE_MODE`:
  * `ready` serves hello/close over the requested socket after writing the
  * ready file atomically; `exit` dies with code 3; `hang` never becomes
  * ready; `protocol` declares a wire protocol this client cannot speak.
@@ -20,6 +20,7 @@ const net = require('node:net');
 const path = require('node:path');
 const { decode, encode } = require(process.env.MSGPACK);
 const args = process.argv.slice(2);
+if (args[0] !== 'serve') { process.stderr.write('expected the serve subcommand\\n'); process.exit(2); }
 const arg = (flag) => args[args.indexOf(flag) + 1];
 fs.writeFileSync(path.join(path.dirname(arg('--scene')), 'service-endpoint'), arg('--socket'));
 process.stderr.write('fake service booting\\n');
@@ -54,6 +55,7 @@ else {
     const ready = {
       protocol: mode === 'protocol' ? ${NATIVE_SERVICE_PROTOCOL} + 1 : ${NATIVE_SERVICE_PROTOCOL},
       pid: process.pid, endpoint: arg('--socket'), shm: { path: shm, size_bytes: 16, meta_bytes: 0 },
+      renderConfig: { preset: 'showcase' }, deprecations: [],
     };
     fs.writeFileSync(readyFile + '.tmp', JSON.stringify(ready));
     fs.renameSync(readyFile + '.tmp', readyFile);
@@ -110,6 +112,8 @@ describe.skipIf(process.platform === 'win32')('startNativeRenderService', () => 
   it('serves a session whose close terminates the process and removes only what it created', async () => {
     const session = await start('ready');
     await session.client.rpc({ op: 'hello' });
+    expect(session.renderConfig).toEqual({ preset: 'showcase' });
+    expect(session.deprecations).toEqual([]);
     expect(await session.readStderr()).toContain('fake service booting');
     await expect(fs.access(path.join(workspace, 'native-render-ready.json'))).resolves.toBeUndefined();
 

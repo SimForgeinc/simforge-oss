@@ -22,7 +22,8 @@
 // Environment:
 //   SIMFORGE_MAPS_CACHE_ROOT  cache root holding `.corpus/<sourceMapId>`
 //                             (default: $XDG_DATA_HOME/simforge/maps)
-//   SIMFORGE_NATIVE_VIEWPORT  viewport binary (default: renderer/target/release/...)
+//   SIMFORGE_NATIVE_VIEWPORT  `simforge-render` binary, run as `simforge-render view`
+//                             (default: renderer/target/release/simforge-render)
 
 import { spawn } from "node:child_process";
 import { access, readFile, writeFile } from "node:fs/promises";
@@ -42,7 +43,7 @@ const args = new Map(process.argv.slice(2).map((arg) => {
   const [name, ...value] = arg.replace(/^--/, "").split("=");
   return [name, value.join("=") || "true"];
 }));
-const binary = process.env.SIMFORGE_NATIVE_VIEWPORT ?? join(root, "renderer/target/release/simforge-native-viewport");
+const binary = process.env.SIMFORGE_NATIVE_VIEWPORT ?? join(root, "renderer/target/release/simforge-render");
 // Same resolution as `studio/scripts/seed.ts`: one map cache per machine, at
 // the XDG data path. Override only to point at a variant of that root.
 const cacheRoot =

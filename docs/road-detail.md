@@ -14,7 +14,7 @@ Components:
 | Master material (Bevy `ExtendedMaterial`) | `renderer/render-core/src/road_detail.rs` |
 | Fragment shader | `renderer/render-core/src/shaders/road_detail.wgsl` |
 | Sidecar generator | `tools/road-detail-gen` |
-| Job wiring (flag) | `renderer/render-core/src/job.rs` (`roadDetail`), `packages/render/src/native/engine.ts` (`NativeCameraSchedule.roadDetail`) |
+| Engine entry point | `renderer/render-core/src/engine.rs` (`SceneApp::apply_road_detail`); no job/serve wiring today (see Renderer wiring) |
 
 ## Sidecar document
 
@@ -116,22 +116,24 @@ across tiles and runs.
 
 ## Renderer wiring
 
-`native-render-job` job files accept an optional flag block:
+The engine entry point is `SceneApp::apply_road_detail(sidecar)`
+(`renderer/render-core/src/engine.rs`). The former `native-render-job` binary
+called it from an optional job-file block
+`{ "roadDetail": { "sidecars": ["/abs/path/road.road-detail.json"] } }`; that
+binary is gone, and neither the `simforge-render job --job` spec
+(`simforge.render-job/v2`) nor the `serve` scene spec has a road-detail field
+yet, so no command applies sidecars today.
 
-```json
-{ "roadDetail": { "sidecars": ["/abs/path/road.road-detail.json"] } }
-```
-
-Absent → byte-identical legacy output. Present → after scene readiness the
-engine loads the sidecar textures (CPU-decoded, mipless, fixed samplers) and
+Without sidecars the output is byte-identical legacy output. With them, after
+scene readiness the engine loads the sidecar textures (CPU-decoded, mipless, fixed samplers) and
 swaps every mesh whose `GltfMaterialName` is listed in `materials` to
 `ExtendedMaterial<StandardMaterial, RoadDetailExtension>`; the authored
 material remains the blend base, so tile UV density, alpha modes, and any
 ORM repair (`tools/glb-orm-repair`) survive. The instance-ID pass and
 legend are unaffected (ID clones use engine-created unlit materials).
 
-The Node adapter (`@simforge-oss/render` native engine) forwards
-`NativeCameraSchedule.roadDetail` verbatim into the job file.
+The Node adapter (`@simforge-oss/render` native engine) does not forward
+road-detail sidecars.
 
 ## Determinism & tests
 

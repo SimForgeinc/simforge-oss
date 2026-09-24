@@ -1,0 +1,148 @@
+{
+  "schema": "simforge-oss.render-determinism-manifest.v1",
+  "generatedAt": "2026-09-24T01:08:50.570Z",
+  "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
+  "mode": "golden-record",
+  "renderConfig": {
+    "preset": "training"
+  },
+  "scenario": {
+    "instanceId": null,
+    "mapId": "yale-street",
+    "sceneId": "yale-pronto",
+    "inputs": {
+      "sceneDefinition": "qualification/golden-harness/scenes/yale-pronto.json"
+    }
+  },
+  "rendererPath": {
+    "engine": "native-bevy",
+    "file": "../../.cache/gpu-deep-target/release/simforge-render",
+    "sha256": "8397e2bc03fde0fc05d121dfb7ce53d9c8cb88f92f3e1871663b7503753f2b04",
+    "invocation": {
+      "args": [
+        "job",
+        "--job",
+        "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/yale-pronto/runA/yale-pronto.job.json"
+      ],
+      "job": {
+        "schema": "simforge.render-job/v2",
+        "scene": {
+          "lighting": {
+            "sun_elev_deg": 38,
+            "sun_azim_deg": 145,
+            "sun_lux": 28000,
+            "ambient": 0.6
+          },
+          "render": {
+            "preset": "training"
+          },
+          "warmupFrames": 20,
+          "allowPrimitiveActors": true,
+          "glbs": [
+            "/home/path/tmp/renderfleet/maps/.corpus/yale-street/master.gltf"
+          ]
+        },
+        "rig": {
+          "pronto": {
+            "program": "/home/path/worktrees/oss-gpu-deep/qualification/render-qualification-program.v1.json",
+            "host": "ego",
+            "width": 736,
+            "height": 416
+          }
+        },
+        "ticks": {
+          "start": 0,
+          "count": 1
+        },
+        "passes": [
+          "rgb",
+          "depth",
+          "id",
+          "semantic"
+        ],
+        "outDir": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/yale-pronto/runA/yale-pronto",
+        "sceneState": "/home/path/worktrees/oss-gpu-deep/qualification/golden-harness/fixtures/yale-pronto.scene-state.json"
+      },
+      "passesRenderedSequentially": false
+    },
+    "versions": {
+      "bevy": "0.19.1",
+      "wgpu": "29.0.4",
+      "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+      "backend": "vulkan"
+    }
+  },
+  "actorSubstitutions": [
+    {
+      "kind": "allow-primitive-actors"
+    }
+  ],
+  "hardware": {
+    "collectedAt": "2026-09-24T00:51:41.051Z",
+    "gpuFingerprint": "c398eadcadbd2754",
+    "host": {
+      "osPrettyName": "Ubuntu 24.04.4 LTS",
+      "kernel": "7.0.0-31-generic",
+      "arch": "x64",
+      "cpuModel": "Intel(R) Core(TM) Ultra 9 285K",
+      "cpuCount": 24,
+      "hostname": "path-pc",
+      "adapter": {
+        "icd": "/usr/share/vulkan/icd.d/lvp_icd.json",
+        "deviceName": "llvmpipe (LLVM 20.1.2, 256 bits)",
+        "driverName": "llvmpipe",
+        "driverInfo": "Mesa 25.2.8-0ubuntu0.24.04.2 (LLVM 20.1.2)"
+      }
+    }
+  },
+  "passHashes": {
+    "pronto-cam0.rgb": {
+      "file": "pronto-cam0/00000000.rgb.png",
+      "sha256": "a749d4ab01768d000bbd7a034de3b155ce7ef45ee9b739609a1a6e639b684bb9",
+      "bytes": 252109
+    },
+    "pronto-cam0.depth": {
+      "file": "pronto-cam0/00000000.depth.f32.bin",
+      "sha256": "ddbb01ba3e0af5148e3d1f8f246e9179246cf1e2eb9a561802e331eda2b6a71c",
+      "bytes": 1224704
+    },
+    "pronto-cam0.id": {
+      "file": "pronto-cam0/00000000.id.png",
+      "sha256": "95e728b121bd0f25471067b6664ccfa12a4185603639010951dfd1e2e19c15c1",
+      "bytes": 30303
+    },
+    "pronto-cam0.semantic": {
+      "file": "pronto-cam0/00000000.semantic.png",
+      "sha256": "c3a049bcb50f0209383481e458eccfe089f57691a327e23e4da8a6ee82cb1f77",
+      "bytes": 16211
+    },
+    "pronto-lidar-front-left.ply": {
+      "file": "pronto-lidar-front-left/00000000.ply",
+      "sha256": "3f3068851ef35ee4a3cd7bba64fb5aca451215a47bf09c3d7b0f02abb816f0e9",
+      "bytes": 5160592
+    }
+  },
+  "idPasses": {
+    "pronto-cam0.id": {
+      "distinctIds": 71,
+      "coveredFraction": 0.5308
+    }
+  },
+  "sceneStateSha256": "bb322902efbac7963842718482e46d4bc27ad857b91ecfb40c2a1796c97f2c98",
+  "corpusChecksums": [
+    {
+      "path": "master.gltf",
+      "sha256": "600f824537784bd9ca675ad8156f4ded5a66f5314158112c19cb66a013283495",
+      "bytes": 2364602
+    }
+  ],
+  "twoRunEvidence": {
+    "runsCompared": 2,
+    "byteStable": true
+  },
+  "verdict": {
+    "byteStable": true,
+    "driftedPasses": [],
+    "scope": "render-job pass hashes (pinned capture clock), one lavapipe build on one CPU model (the adapter of record) — cross-adapter reproducibility NOT claimed (docs/determinism-claim.md)"
+  }
+}

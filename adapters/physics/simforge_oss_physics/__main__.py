@@ -5,7 +5,7 @@
     simforge-oss-physics rollout --seed N [--decisions K] [--torque NM]
                                  [--start approach|ramp|plateau] [--scene-state out.json]
     simforge-oss-physics job --params params.json --out-dir DIR [--resume checkpoint.json]
-    simforge-oss-physics course --out-dir DIR [--profile sensor|cinematic]
+    simforge-oss-physics course --out-dir DIR [--preset training|showcase]
     simforge-oss-physics mjcf [--out model.xml]
 """
 
@@ -90,14 +90,14 @@ def cmd_mjcf(args: argparse.Namespace) -> int:
 
 def cmd_course(args: argparse.Namespace) -> int:
     """Materialise the course GLB + manifest and print the absolute-path
-    renderer SceneSpec ready for ``native-render-service`` prewarm."""
+    renderer SceneSpec ready for ``simforge-render serve`` prewarm."""
     from pathlib import Path
 
     from .course_asset import render_scene_spec, write_course_resources
 
     out_dir = Path(args.out_dir)
     manifest = write_course_resources(Workload(), out_dir)
-    spec = render_scene_spec(manifest, out_dir, profile=args.profile)
+    spec = render_scene_spec(manifest, out_dir, preset=args.preset)
     _emit({"manifest": manifest, "sceneSpec": spec}, args.out)
     return 0
 
@@ -138,7 +138,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("course", help="write the course GLB/manifest and print the renderer SceneSpec")
     p.add_argument("--out-dir", required=True, help="resource directory; writes course/<sha256>.glb and course/manifest.json")
-    p.add_argument("--profile", choices=("sensor", "cinematic"), default="sensor")
+    p.add_argument("--preset", choices=("training", "showcase"), default="training", help="renderer RenderConfig preset (scene spec `render.preset`)")
     p.add_argument("--out", help="write the JSON summary here instead of stdout")
     p.set_defaults(func=cmd_course)
     return parser

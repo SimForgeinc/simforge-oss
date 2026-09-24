@@ -4,7 +4,6 @@ export {
   actorDescSchema,
   actorTickSchema,
   frameSchema,
-  renderProfileSchema,
   sceneStateSchema,
   weatherSchema,
 } from './schema.js';
@@ -12,7 +11,6 @@ export type {
   ActorClass,
   ActorDesc,
   ActorTick,
-  RenderProfile,
   SceneFrame,
   SceneState,
   Weather,

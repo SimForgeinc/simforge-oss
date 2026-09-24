@@ -16,27 +16,30 @@
 //! Lighting/profile routing: the scene is lit by the WSB4 lighting ladder
 //! (`crate::lighting::spawn_lighting` — IBL sky, physical sun via the shared
 //! spec docs/lighting-calibration.md) and every RGB camera gets its render
-//! profile from `crate::profiles::RenderProfile::apply` (fixed EV100,
-//! AgX cinematic stack, GTAO at rung ≥ 3). Sensor views keep TAA, motion
-//! blur and auto-exposure disabled.
+//! look from `crate::profiles::RenderProfile::apply` (fixed EV100, the
+//! render config's AA/SSAO/SSR/post stack; no auto-exposure).
+use crate::lighting::{self, LightingRung};
+use crate::profiles::{RenderProfile, RenderProfileConfig};
+use crate::readiness::{GpuPending, GPU_IDLE_FRAMES};
+use crate::weather::Weather;
 use anyhow::{anyhow, bail, Context as _, Result};
+use bevy::anti_alias::fxaa::Fxaa;
+use bevy::anti_alias::smaa::{Smaa, SmaaPreset};
+use bevy::anti_alias::taa::TemporalAntiAliasing;
 use bevy::app::ScheduleRunnerPlugin;
 use bevy::asset::RecursiveDependencyLoadState;
-use crate::readiness::{GpuPending, GPU_IDLE_FRAMES};
+use bevy::asset::RenderAssetUsages;
 use bevy::camera::visibility::RenderLayers;
 use bevy::camera::RenderTarget;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::gltf::{Gltf, GltfMaterialName};
 use bevy::light::DirectionalLightShadowMap;
-use bevy::anti_alias::fxaa::Fxaa;
-use bevy::anti_alias::smaa::{Smaa, SmaaPreset};
-use bevy::anti_alias::taa::TemporalAntiAliasing;
-use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::log::LogPlugin;
+use bevy::mesh::{skinning::SkinnedMesh, Meshable, SphereKind, SphereMeshBuilder};
+use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::prelude::*;
 use bevy::render::camera::ExtractedCamera;
 use bevy::render::render_asset::RenderAssets;
-use bevy::asset::RenderAssetUsages;
 use bevy::render::render_resource::{
     Buffer, BufferDescriptor, BufferUsages, Extent3d, MapMode, PollType, TexelCopyBufferInfo,
     TexelCopyBufferLayout, TextureDimension, TextureFormat, TextureUsages,
@@ -47,35 +50,9 @@ use bevy::render::view::ViewDepthTexture;
 use bevy::render::{Extract, Render, RenderApp, RenderSystems};
 use bevy::window::ExitCondition;
 use bevy::world_serialization::{WorldAssetRoot, WorldInstance, WorldInstanceSpawner};
-use crate::lighting::{self, LightingRung};
-use crate::profiles::{RenderProfile, RenderProfileConfig};
-use crate::weather::Weather;
-use bevy::mesh::{skinning::SkinnedMesh, Meshable, SphereKind, SphereMeshBuilder};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-
-/// Render profile: part of the render intent (native-renderer plan WSB4).
-///
-/// - `Sensor`: linear output (no tonemapping), fixed exposure, zero temporal
-///   effects — the hash-stable machine-vision profile.
-/// - `Cinematic`: AgX tonemapping + authored look — human-facing; the full
-///   realism stack (WSB4) layers on top of this variant.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Profile {
-    Sensor,
-    Cinematic,
-}
-
-impl Profile {
-    fn render_profile(self) -> RenderProfile {
-        match self {
-            Profile::Sensor => RenderProfile::Sensor,
-            Profile::Cinematic => RenderProfile::Cinematic,
-        }
-    }
-}
 
 /// Scene lighting configuration, resolved through the shared lighting spec
 /// (docs/lighting-calibration.md) at rung ≥ 2. `sun_lux`/`ambient` are the
@@ -186,6 +163,10 @@ pub struct Lighting {
     /// incident light alone.
     #[serde(default)]
     pub meter_view: Option<crate::atmosphere::MeterView>,
+    /// `RenderConfig.atmosphere.hazeDensity`, set by the engine from the
+    /// render config (not part of the authored lighting).
+    #[serde(skip, default = "unit_haze_density")]
+    pub haze_density: f32,
     /// UTC/site-resolved celestial, sky, fixture and honest fallback controls.
     #[serde(default)]
     pub night: crate::night::NightControls,
@@ -246,9 +227,14 @@ impl Default for Lighting {
             cloud_deck: None,
             ground_y: None,
             meter_view: None,
+            haze_density: 1.0,
             night: crate::night::NightControls::default(),
         }
     }
+}
+
+fn unit_haze_density() -> f32 {
+    1.0
 }
 
 /// Exactly what the engine ended up with after the weather model, the
@@ -386,7 +372,9 @@ impl Lighting {
         crate::atmosphere::AtmosphereInputs {
             sun_elevation_deg: self.sun_elev_deg,
             turbidity: self.turbidity.unwrap_or(seed.turbidity) + 6.0 * haze, // fallback-ok: optional atmosphere overrides; None means the documented weather-preset value
-            ozone_du: self.ozone_du.unwrap_or(crate::atmosphere::REFERENCE_OZONE_DU),
+            ozone_du: self
+                .ozone_du
+                .unwrap_or(crate::atmosphere::REFERENCE_OZONE_DU),
             air_density: self.air_density.unwrap_or(1.0), // fallback-ok: optional override; None is the documented standard density
             visibility_m: self.visibility_m.unwrap_or(seed.visibility_m),
             deck: self.cloud_deck.unwrap_or(seed.deck), // fallback-ok: optional override of the weather preset
@@ -396,6 +384,7 @@ impl Lighting {
             ground_albedo: crate::atmosphere::GROUND_ALBEDO,
             meter_view: self.meter_view,
             sky_cube: self.sun_elev_deg <= PROBE_HANDOVER_ELEVATION_DEG,
+            haze_density: self.haze_density,
         }
     }
 
@@ -436,8 +425,7 @@ impl Lighting {
         cloud_beam_transmittance: Option<f32>,
     ) -> (crate::lighting::LightingPlan, ResolvedLighting) {
         let inputs = self.atmosphere_inputs(cloud_beam_transmittance);
-        let (_, readback) =
-            crate::atmosphere::resolve(&inputs, self.sun_azim_deg, far_plane_m);
+        let (_, readback) = crate::atmosphere::resolve(&inputs, self.sun_azim_deg, far_plane_m);
 
         let sun_scale = self.sun_scale.max(0.0);
         let ambient_scale = self.ambient_scale.max(0.0);
@@ -567,9 +555,9 @@ impl Lighting {
             sun_lux: base.sun_lux * self.sun_scale.max(0.0) * (1.0 - 0.85 * cloud),
             sun_color,
             ev100_fixed: Some(ev100),
-            env_intensity: base.env_intensity * self.ambient_scale.max(0.0)
-                * (1.0 + 0.30 * cloud),
-            skybox_brightness: base.skybox_brightness * self.sky_scale.max(0.0)
+            env_intensity: base.env_intensity * self.ambient_scale.max(0.0) * (1.0 + 0.30 * cloud),
+            skybox_brightness: base.skybox_brightness
+                * self.sky_scale.max(0.0)
                 * (1.0 - 0.35 * cloud),
         };
         let fog = self.fog_for(&plan);
@@ -710,7 +698,6 @@ fn set_view_env_gain(world: &mut bevy::ecs::world::World, entity: Entity, gain: 
     }
 }
 
-
 /// Which passes to produce for one camera. Pass keys are `<sensor>:rgb|id|depth`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PassSet {
@@ -720,6 +707,10 @@ pub struct PassSet {
     pub id: bool,
     #[serde(default)]
     pub depth: bool,
+    /// The pre-exposure linear HDR frame (`<sensor>:hdr`, RGBA f16; needs the
+    /// dash-cam camera model, `crate::camera_model::HdrCapture`).
+    #[serde(default)]
+    pub hdr: bool,
 }
 
 fn default_true() -> bool {
@@ -728,7 +719,12 @@ fn default_true() -> bool {
 
 impl Default for PassSet {
     fn default() -> Self {
-        Self { rgb: true, id: false, depth: false }
+        Self {
+            rgb: true,
+            id: false,
+            depth: false,
+            hdr: false,
+        }
     }
 }
 
@@ -744,6 +740,9 @@ impl PassSet {
         }
         if self.depth {
             keys.push(format!("{sensor_id}:depth"));
+        }
+        if self.hdr {
+            keys.push(format!("{sensor_id}:hdr"));
         }
         keys
     }
@@ -900,7 +899,10 @@ const TAA_HALTON: [Vec2; 8] = [
 
 /// Render world: jitter every TAA view by the pinned sample (after Bevy's
 /// frame-count jitter, before the view uniforms consume it).
-fn pin_taa_jitter(pinned: Res<PinnedSample>, mut views: Query<&mut bevy::render::camera::TemporalJitter>) {
+fn pin_taa_jitter(
+    pinned: Res<PinnedSample>,
+    mut views: Query<&mut bevy::render::camera::TemporalJitter>,
+) {
     let Some(sample) = pinned.get() else { return };
     let offset = TAA_HALTON[sample as usize % TAA_HALTON.len()];
     for mut jitter in &mut views {
@@ -970,6 +972,9 @@ struct ReadbackTarget {
     key: String,
     src_image: Handle<Image>,
     depth: bool,
+    /// The camera model's metering result of the view rendering
+    /// `src_image` (16 bytes), not a texture.
+    exposure: bool,
 }
 
 /// One plane of a device stream and the resident target it is copied from.
@@ -1037,7 +1042,6 @@ pub enum CaptureTicket {
 
 pub struct PendingCapture {
     identity: FrameIdentity,
-    slot: usize,
     keys: Vec<String>,
     stats: CaptureStats,
 }
@@ -1049,6 +1053,7 @@ struct StagingBuffer {
     key: String,
     src_image: Handle<Image>,
     depth: bool,
+    exposure: bool,
     width: u32,
     height: u32,
     padded_row: usize,
@@ -1263,10 +1268,6 @@ fn night_ledger_illuminance_lx(lighting: &Lighting) -> f32 {
         + fixtures
 }
 
-
-
-
-
 /// Assemble the per-view sky parameters from the resolved night state.
 ///
 /// Two gains are computed here and both are reported:
@@ -1305,8 +1306,7 @@ fn build_sky_pass(
     // exponent tracks how fast the lit area shrinks with phase.
     let disc_mean = 0.05 * env.celestial.illuminated_fraction.max(0.02).powf(1.1);
     let moon_gain = if moon_direct_precloud > 0.0 {
-        (moon_direct_precloud / (disc_mean * std::f32::consts::PI * rho * rho))
-            .clamp(0.0, 5.0e5)
+        (moon_direct_precloud / (disc_mean * std::f32::consts::PI * rho * rho)).clamp(0.0, 5.0e5)
     } else {
         0.0
     };
@@ -1318,8 +1318,8 @@ fn build_sky_pass(
     // on the display and never past the authored ceiling. A dark site whose
     // camera is already wide open needs none; a lit street whose camera is
     // stopped down for its luminaires gets the full ceiling.
-    let background_cd = (env.natural_ambient_lux + env.urban_skyglow_lux * 0.5)
-        / std::f32::consts::PI;
+    let background_cd =
+        (env.natural_ambient_lux + env.urban_skyglow_lux * 0.5) / std::f32::consts::PI;
     let lift = (NIGHT_SKY_TARGET / (background_cd * exposure_scene).max(1.0e-9))
         .clamp(1.0, controls.sky_display_lift.clamp(1.0, 600.0));
 
@@ -1332,8 +1332,7 @@ fn build_sky_pass(
                 let t = Vec3::from_array(a.deck_sun_transmittance);
                 let luma = t.dot(Vec3::new(0.2126, 0.7152, 0.0722));
                 let tint = if luma > 0.0 { t / luma } else { Vec3::ONE };
-                let ground = a.total_horizontal_illuminance_lx
-                    * crate::atmosphere::GROUND_ALBEDO
+                let ground = a.total_horizontal_illuminance_lx * crate::atmosphere::GROUND_ALBEDO
                     / std::f32::consts::PI;
                 (
                     crate::atmosphere::SOLAR_CONSTANT_LX * luma,
@@ -1505,7 +1504,6 @@ pub const NIGHT_SKY_TARGET: f32 = 0.035;
 /// cloud transmittance between in-place look advances.
 pub const CLOUD_BEAM_SMOOTHING_S: f32 = 2.0;
 
-
 fn spawn_night_sources(
     world: &mut World,
     lighting: &Lighting,
@@ -1539,7 +1537,14 @@ fn spawn_night_sources(
     world.resource_scope(|world, mut meshes: Mut<Assets<Mesh>>| {
         world.resource_scope(|world, mut materials: Mut<Assets<StandardMaterial>>| {
             let head_mesh = meshes.add(
-                SphereMeshBuilder::new(0.16, SphereKind::Uv { sectors: 12, stacks: 8 }).build(),
+                SphereMeshBuilder::new(
+                    0.16,
+                    SphereKind::Uv {
+                        sectors: 12,
+                        stacks: 8,
+                    },
+                )
+                .build(),
             );
             let _ = &lighting; // fallback-ok: borrow marker only
             let mut commands = world.commands();
@@ -1588,7 +1593,8 @@ fn update_physical_windows(world: &mut World, enabled: bool, internal_scale: f32
         q.iter(world).map(|(e, o)| (e, o.0.clone())).collect()
     };
     for (entity, handle) in restores {
-        world.entity_mut(entity)
+        world
+            .entity_mut(entity)
             .insert(MeshMaterial3d(handle))
             .remove::<NightWindowOriginal>();
     }
@@ -1611,9 +1617,12 @@ fn update_physical_windows(world: &mut World, enabled: bool, internal_scale: f32
                 let positive = label.contains("window")
                     || (label.contains("glass")
                         && !["bulb", "signal", "streetlight", "train", "hydrant"]
-                            .iter().any(|token| label.contains(token)));
+                            .iter()
+                            .any(|token| label.contains(token)));
                 let path = material.0.path().map(|p| p.to_string()).unwrap_or_default(); // fallback-ok: sort key only; an unlabelled material sorts first, deterministically
-                let position = global.map(|g| g.translation().to_array().map(f32::to_bits)).unwrap_or([0; 3]); // fallback-ok: sort key only
+                let position = global
+                    .map(|g| g.translation().to_array().map(f32::to_bits))
+                    .unwrap_or([0; 3]); // fallback-ok: sort key only
                 positive.then(|| (entity, material.0.clone(), label, path, position))
             })
             .collect()
@@ -1643,10 +1652,9 @@ fn update_physical_windows(world: &mut World, enabled: bool, internal_scale: f32
             material.emissive = color.to_linear() * (luminance * internal_scale);
             material.base_color = Color::BLACK;
             let handle = materials.add(material);
-            world.entity_mut(entity).insert((
-                MeshMaterial3d(handle),
-                NightWindowOriginal(source),
-            ));
+            world
+                .entity_mut(entity)
+                .insert((MeshMaterial3d(handle), NightWindowOriginal(source)));
             applied += 1;
         }
     });
@@ -1655,7 +1663,6 @@ fn update_physical_windows(world: &mut World, enabled: bool, internal_scale: f32
     }
     Ok(applied)
 }
-
 
 fn sun_direction(elev_deg: f32, azim_deg: f32) -> Dir3 {
     // Unit vector pointing FROM the sun INTO the scene.
@@ -1682,9 +1689,9 @@ struct NightWindowOriginal(Handle<StandardMaterial>);
 #[derive(Component)]
 struct SceneSpawned;
 #[derive(Component)]
-struct IdClone;
+pub(crate) struct IdClone;
 #[derive(Component, Clone, Copy)]
-struct InstanceId(u32);
+pub(crate) struct InstanceId(pub(crate) u32);
 #[derive(Component)]
 struct ActorModelRoot;
 #[derive(Clone)]
@@ -1692,7 +1699,6 @@ struct ActorAnimationBinding {
     players: Vec<Entity>,
     node: AnimationNodeIndex,
 }
-
 
 /// One legend entry: instance-ID value -> source mesh name.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -1719,8 +1725,14 @@ fn in_rider_subtree(world: &World, entity: Entity, model_root: Entity) -> bool {
     while let Some(node) = current {
         if let Some(extras) = world.get::<bevy::gltf::GltfExtras>(node) {
             // fallback-ok: bevy_gltf stores extras as validated JSON (a RawValue), so the parse cannot fail; extras without a semanticClass string are simply not a rider tag
-            let tagged = serde_json::from_str::<serde_json::Value>(&extras.value).ok()
-                .and_then(|value| value.get("semanticClass").and_then(|v| v.as_str()).map(|c| c == "rider"))
+            let tagged = serde_json::from_str::<serde_json::Value>(&extras.value)
+                .ok()
+                .and_then(|value| {
+                    value
+                        .get("semanticClass")
+                        .and_then(|v| v.as_str())
+                        .map(|c| c == "rider")
+                })
                 .unwrap_or(false); // fallback-ok: see above
             if tagged {
                 return true;
@@ -1745,6 +1757,18 @@ pub struct ActorSensorMesh {
     pub geometry: ActorSensorGeometry,
 }
 
+/// One static map mesh as the lidar/radar scene instances it (see
+/// [`SceneApp::static_sensor_meshes`]).
+#[derive(Clone, Debug)]
+pub struct StaticSensorMesh {
+    pub mesh: Handle<Mesh>,
+    pub world: Mat4,
+    pub instance_id: u32,
+    /// Asset label of the mesh (`<gltf>#Mesh<N>/Primitive<M>`), or its
+    /// entity name for generated meshes; errors and ordering use it.
+    pub label: String,
+}
+
 #[derive(Clone, Debug)]
 pub enum ActorSensorGeometry {
     /// A rigid mesh: model-local triangles (see
@@ -1752,7 +1776,10 @@ pub enum ActorSensorGeometry {
     /// the world matrix the camera draws it with this tick.
     Rigid { mesh: Handle<Mesh>, world: Mat4 },
     /// A skinned mesh posed this tick in world space.
-    Skinned { mesh: AssetId<Mesh>, triangles: Vec<[Vec3; 3]> },
+    Skinned {
+        mesh: AssetId<Mesh>,
+        triangles: Vec<[Vec3; 3]>,
+    },
 }
 
 /// Triangle-list triangles of a mesh in its local space. Any layout the
@@ -1761,7 +1788,10 @@ pub enum ActorSensorGeometry {
 pub fn mesh_local_triangles(mesh: &Mesh, label: &str) -> Result<Vec<[Vec3; 3]>> {
     use bevy::render::render_resource::PrimitiveTopology;
     if mesh.primitive_topology() != PrimitiveTopology::TriangleList {
-        bail!("mesh {label} uses {:?}; the lidar/radar scene supports triangle lists only", mesh.primitive_topology());
+        bail!(
+            "mesh {label} uses {:?}; the lidar/radar scene supports triangle lists only",
+            mesh.primitive_topology()
+        );
     }
     if mesh.has_morph_targets() {
         bail!("mesh {label} has morph targets, which the lidar/radar scene cannot pose");
@@ -1773,9 +1803,12 @@ pub fn mesh_local_triangles(mesh: &Mesh, label: &str) -> Result<Vec<[Vec3; 3]>> 
         bail!("mesh {label} POSITION is not Float32x3");
     };
     let vertex = |index: usize| -> Result<Vec3> {
-        vertices.get(index).map(|v| Vec3::from(*v)).ok_or_else(|| anyhow::anyhow!(
-            "mesh {label} index {index} is out of range ({} vertices)", vertices.len()
-        ))
+        vertices.get(index).map(|v| Vec3::from(*v)).ok_or_else(|| {
+            anyhow::anyhow!(
+                "mesh {label} index {index} is out of range ({} vertices)",
+                vertices.len()
+            )
+        })
     };
     let indices: Vec<usize> = match mesh.indices() {
         Some(bevy::mesh::Indices::U16(indices)) => indices.iter().map(|i| *i as usize).collect(),
@@ -1783,7 +1816,10 @@ pub fn mesh_local_triangles(mesh: &Mesh, label: &str) -> Result<Vec<[Vec3; 3]>> 
         None => (0..vertices.len()).collect(),
     };
     if indices.len() % 3 != 0 {
-        bail!("mesh {label} has {} indices, not a whole number of triangles", indices.len());
+        bail!(
+            "mesh {label} has {} indices, not a whole number of triangles",
+            indices.len()
+        );
     }
     indices
         .chunks_exact(3)
@@ -1795,30 +1831,48 @@ pub fn mesh_local_triangles(mesh: &Mesh, label: &str) -> Result<Vec<[Vec3; 3]>> 
 /// matrix x inverse bindpose, as the skin extraction uploads them), blended
 /// the way `skinning.wgsl` blends: the weighted sum of joint matrices
 /// applied to the bind-pose position.
-pub fn skinned_world_triangles(mesh: &Mesh, joints: &[Mat4], label: &str) -> Result<Vec<[Vec3; 3]>> {
+pub fn skinned_world_triangles(
+    mesh: &Mesh,
+    joints: &[Mat4],
+    label: &str,
+) -> Result<Vec<[Vec3; 3]>> {
     use bevy::mesh::VertexAttributeValues;
     let local = mesh_local_triangles(mesh, label)?;
-    let Some(VertexAttributeValues::Float32x3(positions)) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else {
+    let Some(VertexAttributeValues::Float32x3(positions)) =
+        mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+    else {
         bail!("mesh {label} POSITION is not Float32x3");
     };
     let joint_indices: Vec<[u16; 4]> = match mesh.attribute(Mesh::ATTRIBUTE_JOINT_INDEX) {
         Some(VertexAttributeValues::Uint16x4(values)) => values.clone(),
-        Some(other) => bail!("skinned mesh {label} JOINTS_0 has unsupported format {:?}", bevy::mesh::VertexFormat::from(other)),
+        Some(other) => bail!(
+            "skinned mesh {label} JOINTS_0 has unsupported format {:?}",
+            bevy::mesh::VertexFormat::from(other)
+        ),
         None => bail!("skinned mesh {label} has no JOINTS_0 attribute"),
     };
-    let Some(VertexAttributeValues::Float32x4(weights)) = mesh.attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT) else {
+    let Some(VertexAttributeValues::Float32x4(weights)) =
+        mesh.attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT)
+    else {
         bail!("skinned mesh {label} has no Float32x4 WEIGHTS_0 attribute");
     };
     if joint_indices.len() != positions.len() || weights.len() != positions.len() {
-        bail!("skinned mesh {label} joint attributes do not match its {} vertices", positions.len());
+        bail!(
+            "skinned mesh {label} joint attributes do not match its {} vertices",
+            positions.len()
+        );
     }
     let mut posed = Vec::with_capacity(positions.len());
     for ((position, index), weight) in positions.iter().zip(&joint_indices).zip(weights) {
         let mut model = Mat4::ZERO;
         for k in 0..4 {
-            let joint = joints.get(index[k] as usize).ok_or_else(|| anyhow::anyhow!(
-                "skinned mesh {label} references joint {} of {}", index[k], joints.len()
-            ))?;
+            let joint = joints.get(index[k] as usize).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "skinned mesh {label} references joint {} of {}",
+                    index[k],
+                    joints.len()
+                )
+            })?;
             model += *joint * weight[k];
         }
         posed.push(model.transform_point3(Vec3::from(*position)));
@@ -1830,7 +1884,10 @@ pub fn skinned_world_triangles(mesh: &Mesh, joints: &[Mat4], label: &str) -> Res
         None => (0..positions.len()).collect(),
     };
     debug_assert_eq!(indices.len(), local.len() * 3);
-    Ok(indices.chunks_exact(3).map(|tri| [posed[tri[0]], posed[tri[1]], posed[tri[2]]]).collect())
+    Ok(indices
+        .chunks_exact(3)
+        .map(|tri| [posed[tri[0]], posed[tri[1]], posed[tri[2]]])
+        .collect())
 }
 
 #[cfg(test)]
@@ -1842,7 +1899,15 @@ mod sensor_mesh_tests {
 
     fn quad(topology: PrimitiveTopology) -> Mesh {
         let mut mesh = Mesh::new(topology, RenderAssetUsages::default());
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]);
+        mesh.insert_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            vec![
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0],
+            ],
+        );
         mesh.insert_indices(Indices::U16(vec![0, 1, 2, 0, 2, 3]));
         mesh
     }
@@ -1851,20 +1916,34 @@ mod sensor_mesh_tests {
     fn triangle_list_meshes_yield_their_triangles() {
         let tris = mesh_local_triangles(&quad(PrimitiveTopology::TriangleList), "quad").unwrap();
         assert_eq!(tris.len(), 2);
-        assert_eq!(tris[1], [Vec3::ZERO, Vec3::new(1.0, 1.0, 0.0), Vec3::new(0.0, 1.0, 0.0)]);
+        assert_eq!(
+            tris[1],
+            [
+                Vec3::ZERO,
+                Vec3::new(1.0, 1.0, 0.0),
+                Vec3::new(0.0, 1.0, 0.0)
+            ]
+        );
     }
 
     #[test]
     fn unreadable_meshes_fail_instead_of_disappearing_from_lidar() {
-        let strip = mesh_local_triangles(&quad(PrimitiveTopology::TriangleStrip), "car/body").unwrap_err();
+        let strip =
+            mesh_local_triangles(&quad(PrimitiveTopology::TriangleStrip), "car/body").unwrap_err();
         assert!(format!("{strip}").contains("car/body"), "{strip}");
         let mut bad = quad(PrimitiveTopology::TriangleList);
         bad.insert_indices(Indices::U16(vec![0, 1, 9]));
-        assert!(format!("{}", mesh_local_triangles(&bad, "car/wheel").unwrap_err()).contains("out of range"));
+        assert!(
+            format!("{}", mesh_local_triangles(&bad, "car/wheel").unwrap_err())
+                .contains("out of range")
+        );
         let mut partial = quad(PrimitiveTopology::TriangleList);
         partial.insert_indices(Indices::U16(vec![0, 1]));
         assert!(mesh_local_triangles(&partial, "x").is_err());
-        let mut no_position = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
+        let mut no_position = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        );
         no_position.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 1.0, 0.0]; 3]);
         assert!(mesh_local_triangles(&no_position, "x").is_err());
     }
@@ -1872,34 +1951,73 @@ mod sensor_mesh_tests {
     fn skinned_quad() -> Mesh {
         let mut mesh = quad(PrimitiveTopology::TriangleList);
         // Bottom edge on joint 0, top edge on joint 1.
-        mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_INDEX, VertexAttributeValues::Uint16x4(vec![[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0]]));
-        mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, vec![[1.0f32, 0.0, 0.0, 0.0]; 4]);
+        mesh.insert_attribute(
+            Mesh::ATTRIBUTE_JOINT_INDEX,
+            VertexAttributeValues::Uint16x4(vec![
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [1, 0, 0, 0],
+                [1, 0, 0, 0],
+            ]),
+        );
+        mesh.insert_attribute(
+            Mesh::ATTRIBUTE_JOINT_WEIGHT,
+            vec![[1.0f32, 0.0, 0.0, 0.0]; 4],
+        );
         mesh
     }
 
     #[test]
     fn skinned_meshes_are_posed_by_their_joints() {
         let mesh = skinned_quad();
-        let rest = skinned_world_triangles(&mesh, &[Mat4::IDENTITY, Mat4::IDENTITY], "ped").unwrap();
+        let rest =
+            skinned_world_triangles(&mesh, &[Mat4::IDENTITY, Mat4::IDENTITY], "ped").unwrap();
         assert_eq!(rest, mesh_local_triangles(&mesh, "ped").unwrap());
         // Lift joint 1 (the top edge) by 2 m and move the whole skin 5 m in x.
         let base = Mat4::from_translation(Vec3::new(5.0, 0.0, 0.0));
-        let posed = skinned_world_triangles(&mesh, &[base, base * Mat4::from_translation(Vec3::Y * 2.0)], "ped").unwrap();
-        assert_eq!(posed[0], [Vec3::new(5.0, 0.0, 0.0), Vec3::new(6.0, 0.0, 0.0), Vec3::new(6.0, 3.0, 0.0)]);
+        let posed = skinned_world_triangles(
+            &mesh,
+            &[base, base * Mat4::from_translation(Vec3::Y * 2.0)],
+            "ped",
+        )
+        .unwrap();
+        assert_eq!(
+            posed[0],
+            [
+                Vec3::new(5.0, 0.0, 0.0),
+                Vec3::new(6.0, 0.0, 0.0),
+                Vec3::new(6.0, 3.0, 0.0)
+            ]
+        );
         // Blended weights interpolate the joint matrices.
         let mut blended = mesh.clone();
-        blended.insert_attribute(Mesh::ATTRIBUTE_JOINT_INDEX, VertexAttributeValues::Uint16x4(vec![[0, 1, 0, 0]; 4]));
-        blended.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, vec![[0.5f32, 0.5, 0.0, 0.0]; 4]);
-        let half = skinned_world_triangles(&blended, &[Mat4::IDENTITY, Mat4::from_translation(Vec3::Y * 2.0)], "ped").unwrap();
+        blended.insert_attribute(
+            Mesh::ATTRIBUTE_JOINT_INDEX,
+            VertexAttributeValues::Uint16x4(vec![[0, 1, 0, 0]; 4]),
+        );
+        blended.insert_attribute(
+            Mesh::ATTRIBUTE_JOINT_WEIGHT,
+            vec![[0.5f32, 0.5, 0.0, 0.0]; 4],
+        );
+        let half = skinned_world_triangles(
+            &blended,
+            &[Mat4::IDENTITY, Mat4::from_translation(Vec3::Y * 2.0)],
+            "ped",
+        )
+        .unwrap();
         assert_eq!(half[0][0], Vec3::new(0.0, 1.0, 0.0));
     }
 
     #[test]
     fn skins_that_reference_missing_joints_fail() {
-        let error = skinned_world_triangles(&skinned_quad(), &[Mat4::IDENTITY], "ped/body").unwrap_err();
+        let error =
+            skinned_world_triangles(&skinned_quad(), &[Mat4::IDENTITY], "ped/body").unwrap_err();
         assert!(format!("{error}").contains("joint 1 of 1"), "{error}");
         let mut unskinned = quad(PrimitiveTopology::TriangleList);
-        unskinned.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, vec![[1.0f32, 0.0, 0.0, 0.0]; 4]);
+        unskinned.insert_attribute(
+            Mesh::ATTRIBUTE_JOINT_WEIGHT,
+            vec![[1.0f32, 0.0, 0.0, 0.0]; 4],
+        );
         assert!(skinned_world_triangles(&unskinned, &[Mat4::IDENTITY], "x").is_err());
     }
 }
@@ -1923,7 +2041,11 @@ mod sensor_mesh_tests {
 /// integer attachment would need a separate pipeline for every material.
 pub fn instance_id_color(id: u32) -> Color {
     let [r, g, b, _] = id.to_le_bytes();
-    Color::linear_rgb(f32::from(r) / 255.0, f32::from(g) / 255.0, f32::from(b) / 255.0)
+    Color::linear_rgb(
+        f32::from(r) / 255.0,
+        f32::from(g) / 255.0,
+        f32::from(b) / 255.0,
+    )
 }
 
 /// The unlit, fog-free material an instance id is drawn with.
@@ -1940,23 +2062,49 @@ pub fn instance_id_material(id: u32) -> StandardMaterial {
 pub const ID_PASS_FORMAT: TextureFormat = TextureFormat::Rgba8Unorm;
 
 /// Camera components that keep the ID pass exact (see [`instance_id_color`]).
+///
+/// `NoIndirectDrawing`: GPU-driven culling compacts visible instances with
+/// atomics, so coplanar surfaces won their depth ties in a different order
+/// on every run and single ID pixels flipped between runs (RTX 3080, Belmont).
+/// CPU-ordered draws of entity-sorted bins (vendored bevy_render) make the ID
+/// pass a function of the scene; it cost nothing measurable (93.1 vs 92.7 ms
+/// GPU per 8-camera frame).
 pub fn id_pass_camera() -> impl Bundle {
     (
         bevy::camera::Hdr,
         Msaa::Off,
         Tonemapping::None,
         bevy::core_pipeline::tonemapping::DebandDither::Disabled,
+        bevy::render::view::NoIndirectDrawing,
     )
 }
 
 #[derive(Resource, Default)]
 struct Legend(Vec<LegendEntry>);
 
+/// Tearing down a render world whose device reported an error crashes in
+/// wgpu (a segfault instead of the error the caller is returning), so a
+/// failed app is leaked; the process is about to exit with that error.
+impl Drop for SceneApp {
+    fn drop(&mut self) {
+        let failed = self
+            .app
+            .world()
+            .get_resource::<RenderFailure>()
+            .is_some_and(|failure| failure.0.is_some());
+        if failed {
+            std::mem::forget(std::mem::replace(&mut self.app, App::empty()));
+        }
+    }
+}
+
+/// The first GPU device error the renderer hit, if any (see
+/// [`SceneApp::ensure_rendering`]). Rendering has stopped once it is set.
+#[derive(Resource, Default)]
+struct RenderFailure(Option<String>);
+
 struct GroupEntities {
     spec: CameraSpec,
-    /// Profile this group's RGB camera was built with, so a live re-light
-    /// can rebuild the same stack without re-registering the camera.
-    profile: Profile,
     rgb_entity: Entity,
     id_entity: Option<Entity>,
     /// Actor this camera is mounted on. Its RGB geometry is excluded from
@@ -1965,8 +2113,16 @@ struct GroupEntities {
 }
 
 /// First render layer handed to a camera host actor. Layer 0 is the shared
-/// scene, layer 1 the instance-ID clones.
+/// scene, layer 1 the instance-ID clones. Host layers come in pairs: the
+/// host's RGB visuals on an even layer `2 + 2k`, its instance-ID clones on
+/// `3 + 2k` (see [`id_host_layer`]), so a mounted camera's ID pass drops
+/// its host exactly where its RGB pass does.
 const FIRST_HOST_LAYER: usize = 2;
+
+/// The instance-ID layer paired with a host's RGB layer.
+fn id_host_layer(rgb_layer: usize) -> usize {
+    rgb_layer + 1
+}
 
 /// Layers every light must cover: the shared scene plus every host actor's
 /// private layer, so a host still casts shadows into views that exclude
@@ -1977,6 +2133,46 @@ struct HostLayerUnion(RenderLayers);
 impl Default for HostLayerUnion {
     fn default() -> Self {
         Self(RenderLayers::layer(0))
+    }
+}
+
+/// Whether directional lights carry the vendored bevy_pbr
+/// `CanopySkyOcclusion` (`RenderConfig.lighting.canopySkyOcclusion`).
+#[derive(Resource, Clone, Copy, Debug, PartialEq)]
+pub struct CanopySkyOcclusionSetting(pub bool);
+
+impl Default for CanopySkyOcclusionSetting {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
+/// Keep every directional light's canopy sky occlusion on the configured
+/// setting. Lights are respawned by relights, so this runs every iteration.
+/// Removing the marker does not re-extract a light by itself, so the light
+/// is touched too.
+fn sync_canopy_sky_occlusion(
+    setting: Res<CanopySkyOcclusionSetting>,
+    mut lights: Query<(
+        Entity,
+        Has<bevy::pbr::CanopySkyOcclusion>,
+        &mut DirectionalLight,
+    )>,
+    mut commands: Commands,
+) {
+    for (entity, has, mut light) in &mut lights {
+        if has != setting.0 {
+            if setting.0 {
+                commands
+                    .entity(entity)
+                    .insert(bevy::pbr::CanopySkyOcclusion);
+            } else {
+                commands
+                    .entity(entity)
+                    .remove::<bevy::pbr::CanopySkyOcclusion>();
+            }
+            light.set_changed();
+        }
     }
 }
 
@@ -2026,40 +2222,118 @@ impl GroundField {
         instances: impl IntoIterator<Item = (&'a Mesh3d, &'a GlobalTransform)>,
         cell_m: f32,
     ) -> GroundField {
-        let mut field = GroundField { cell_m, min_y: HashMap::new() };
-        for (mesh, gt) in instances {
-            let Some(mesh) = meshes.get(&mesh.0) else { continue };
-            let Some(pos) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else { continue };
-            let bevy::mesh::VertexAttributeValues::Float32x3(values) = pos else { continue };
-            let gt = gt.to_matrix();
-            let positions: Vec<Vec3> = values.iter()
-                .map(|v| gt.transform_point3(Vec3::from(*v)))
+        // A large map is hundreds of millions of triangles: split the
+        // instances into contiguous chunks, build each chunk's field on its
+        // own thread, and fold the chunk fields in order. Every cell is a
+        // running `min`, and folding chunk minima in instance order applies
+        // the same tie rule as the serial loop, so the field is
+        // bit-identical to `from_meshes_serial`.
+        let items: Vec<(&Mesh, Mat4)> = instances
+            .into_iter()
+            .filter_map(|(mesh, gt)| Some((meshes.get(&mesh.0)?, gt.to_matrix())))
+            .collect();
+        let threads = std::thread::available_parallelism()
+            .map_or(1, |n| n.get())
+            .clamp(1, 16);
+        let chunk = items.len().div_ceil(threads).max(1);
+        let parts: Vec<GroundField> = std::thread::scope(|scope| {
+            let handles: Vec<_> = items
+                .chunks(chunk)
+                .map(|part| {
+                    scope.spawn(move || {
+                        let mut field = GroundField {
+                            cell_m,
+                            min_y: HashMap::new(),
+                        };
+                        for (mesh, matrix) in part {
+                            field.add_mesh(mesh, matrix);
+                        }
+                        field
+                    })
+                })
                 .collect();
-            for p in &positions {
-                let key = (
-                    (p.x / cell_m).floor() as i64,
-                    (p.z / cell_m).floor() as i64,
-                );
+            handles
+                .into_iter()
+                .map(|handle| handle.join().expect("ground field thread panicked"))
+                .collect()
+        });
+        let mut field = GroundField {
+            cell_m,
+            min_y: HashMap::new(),
+        };
+        for part in parts {
+            if field.min_y.is_empty() {
+                field.min_y = part.min_y;
+                continue;
+            }
+            for (cell, y) in part.min_y {
                 field
                     .min_y
-                    .entry(key)
-                    .and_modify(|y| *y = y.min(p.y))
-                    .or_insert(p.y);
-            }
-            if mesh.primitive_topology() == bevy::render::render_resource::PrimitiveTopology::TriangleList {
-                if let Some(indices) = mesh.indices() {
-                    let mut indices = indices.iter();
-                    while let (Some(a), Some(b), Some(c)) = (indices.next(), indices.next(), indices.next()) {
-                        field.rasterize_triangle(positions[a], positions[b], positions[c]);
-                    }
-                } else {
-                    for triangle in positions.chunks_exact(3) {
-                        field.rasterize_triangle(triangle[0], triangle[1], triangle[2]);
-                    }
-                }
+                    .entry(cell)
+                    .and_modify(|height| *height = height.min(y))
+                    .or_insert(y);
             }
         }
         field
+    }
+
+    /// The single-threaded reference [`Self::from_meshes`] must reproduce.
+    #[cfg(test)]
+    pub(crate) fn from_meshes_serial<'a>(
+        meshes: &Assets<Mesh>,
+        instances: impl IntoIterator<Item = (&'a Mesh3d, &'a GlobalTransform)>,
+        cell_m: f32,
+    ) -> GroundField {
+        let mut field = GroundField {
+            cell_m,
+            min_y: HashMap::new(),
+        };
+        for (mesh, gt) in instances {
+            let Some(mesh) = meshes.get(&mesh.0) else {
+                continue;
+            };
+            field.add_mesh(mesh, &gt.to_matrix());
+        }
+        field
+    }
+
+    /// Fold one mesh instance into the field: every vertex's cell and every
+    /// triangle's covered cell centres keep their minimum height.
+    fn add_mesh(&mut self, mesh: &Mesh, gt: &Mat4) {
+        let cell_m = self.cell_m;
+        let Some(pos) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) else {
+            return;
+        };
+        let bevy::mesh::VertexAttributeValues::Float32x3(values) = pos else {
+            return;
+        };
+        let positions: Vec<Vec3> = values
+            .iter()
+            .map(|v| gt.transform_point3(Vec3::from(*v)))
+            .collect();
+        for p in &positions {
+            let key = ((p.x / cell_m).floor() as i64, (p.z / cell_m).floor() as i64);
+            self.min_y
+                .entry(key)
+                .and_modify(|y| *y = y.min(p.y))
+                .or_insert(p.y);
+        }
+        if mesh.primitive_topology()
+            == bevy::render::render_resource::PrimitiveTopology::TriangleList
+        {
+            if let Some(indices) = mesh.indices() {
+                let mut indices = indices.iter();
+                while let (Some(a), Some(b), Some(c)) =
+                    (indices.next(), indices.next(), indices.next())
+                {
+                    self.rasterize_triangle(positions[a], positions[b], positions[c]);
+                }
+            } else {
+                for triangle in positions.chunks_exact(3) {
+                    self.rasterize_triangle(triangle[0], triangle[1], triangle[2]);
+                }
+            }
+        }
     }
 
     fn rasterize_triangle(&mut self, a: Vec3, b: Vec3, c: Vec3) {
@@ -2084,7 +2358,8 @@ impl GroundField {
                 let v = (ab.x * z - ab.z * x) * inv_area;
                 if u >= -1.0e-6 && v >= -1.0e-6 && u + v <= 1.0 + 1.0e-6 {
                     let y = a.y + u * ab.y + v * ac.y;
-                    self.min_y.entry((cx, cz))
+                    self.min_y
+                        .entry((cx, cz))
                         .and_modify(|height| *height = height.min(y))
                         .or_insert(y);
                 }
@@ -2095,7 +2370,10 @@ impl GroundField {
     /// Ground height under (x, z): the cell itself or the nearest populated
     /// cell within 20 m (cell-edge gaps); `None` further off the map.
     pub(crate) fn sample_covered(&self, x: f32, z: f32) -> Option<f32> {
-        let (cx, cz) = ((x / self.cell_m).floor() as i64, (z / self.cell_m).floor() as i64);
+        let (cx, cz) = (
+            (x / self.cell_m).floor() as i64,
+            (z / self.cell_m).floor() as i64,
+        );
         if let Some(y) = self.min_y.get(&(cx, cz)) {
             return Some(*y);
         }
@@ -2151,9 +2429,9 @@ pub(crate) fn ground_mesh_height(
     z: f32,
 ) -> std::result::Result<f32, String> {
     let (xodr_x, xodr_y) = (f64::from(x), -f64::from(z));
-    let hits = surface
-        .surfaces_at(xodr_x, xodr_y)
-        .map_err(|error| format!("[native_ground_height_unavailable] x={x:.2} z={z:.2}: {error}"))?;
+    let hits = surface.surfaces_at(xodr_x, xodr_y).map_err(|error| {
+        format!("[native_ground_height_unavailable] x={x:.2} z={z:.2}: {error}")
+    })?;
     match hits.as_slice() {
         [] => Err(format!(
             "[native_ground_height_unavailable] x={x:.2} z={z:.2} is off the map's ground surface"
@@ -2170,6 +2448,49 @@ pub(crate) fn ground_mesh_height(
 // ---------------------------------------------------------------------------
 // SceneApp
 // ---------------------------------------------------------------------------
+
+/// Bevy's default task pools, except that the IO pool (where the glTF
+/// loader decodes and transcodes every map texture) gets a thread per core
+/// instead of at most 4. The other pools keep their default sizes: the total
+/// grows by exactly the extra IO threads, which sit idle after the map has
+/// loaded. On Belmont's 2,305 UASTC textures the transcode is ~125 s of
+/// CPU: 61 s on 4 threads, 13 s on 24 (measured by `ktx2_transcode_probe`).
+fn map_load_task_pools() -> bevy::app::TaskPoolOptions {
+    use bevy::app::{TaskPoolOptions, TaskPoolThreadAssignmentPolicy};
+    let defaults = TaskPoolOptions::default();
+    let cores = bevy::tasks::available_parallelism().max(1);
+    // Bevy's own assignment (`TaskPoolThreadAssignmentPolicy::get_number_of_threads`).
+    let share = |policy: &TaskPoolThreadAssignmentPolicy, remaining: usize| -> usize {
+        let proportion = cores as f32 * policy.percent;
+        let mut desired = proportion as usize;
+        if proportion - desired as f32 >= 0.5 {
+            desired += 1;
+        }
+        desired
+            .min(remaining)
+            .clamp(policy.min_threads, policy.max_threads)
+    };
+    let default_io = share(&defaults.io, cores);
+    let async_compute = share(&defaults.async_compute, cores.saturating_sub(default_io));
+    let compute = share(
+        &defaults.compute,
+        cores.saturating_sub(default_io + async_compute),
+    );
+    let fixed =
+        |policy: &TaskPoolThreadAssignmentPolicy, threads: usize| TaskPoolThreadAssignmentPolicy {
+            min_threads: threads,
+            max_threads: threads,
+            ..policy.clone()
+        };
+    let total = cores + async_compute + compute;
+    TaskPoolOptions {
+        min_total_threads: total,
+        max_total_threads: total,
+        io: fixed(&defaults.io, cores),
+        async_compute: fixed(&defaults.async_compute, async_compute),
+        compute: fixed(&defaults.compute, compute),
+    }
+}
 
 /// Host-driven headless renderer over a resident tile scene.
 ///
@@ -2205,8 +2526,8 @@ pub struct SceneApp {
     pinned_sample: PinnedSample,
     /// Deferred readbacks the render world started ([`Self::capture_begin`]).
     deferred_maps: DeferredMaps,
-    /// Staging slot of the next capture.
-    next_slot: usize,
+    /// Bevy's GPU clustering setting before a pinned clock disabled it.
+    gpu_clustering_default: Option<Option<bevy::light::cluster::GlobalClusterGpuSettings>>,
     /// Scene-state actors: id -> (cuboid entity, allocated instance id).
     actors: HashMap<String, (Entity, u32)>,
     /// Dynamic actor id -> (loaded catalog GLB root, authored scale, mesh count).
@@ -2255,7 +2576,8 @@ pub struct SceneApp {
     fog: Option<DistanceFog>,
     /// Pre-wetness material state, keyed by material asset, so the road ramp
     /// is reversible instead of a one-way destructive edit.
-    dry_road_materials: HashMap<AssetId<StandardMaterial>, (f32, f32, Color)>,
+    dry_road_materials:
+        HashMap<AssetId<StandardMaterial>, (f32, f32, Color, bevy::material::OpaqueRendererMethod)>,
     /// Handle of the [`ScatteringMedium`] the physical atmosphere resolves
     /// into. Reused across relights so the 1024x1024 density/phase LUT pair
     /// is replaced in place rather than leaked.
@@ -2285,6 +2607,15 @@ pub struct SceneApp {
     /// Atmosphere IBL gain the last relight resolved, reused for views
     /// registered afterwards.
     env_gain: f32,
+    /// Fit one directional cascade set to the whole RGB rig and render it
+    /// once per frame ([`crate::shared_shadows`]).
+    shared_shadows: bool,
+    /// Distance LODs of the static map ([`crate::geometry_lod`]).
+    geometry_lods: Option<crate::geometry_lod::GeometryLods>,
+    /// Static master mesh entity -> its ID-pass clone and ID material.
+    id_clone_of: HashMap<Entity, (Entity, Handle<StandardMaterial>)>,
+    /// Resolved render config ([`Self::apply_render_config`]).
+    render_config: Option<crate::render_config::RenderConfig>,
 }
 
 impl SceneApp {
@@ -2327,6 +2658,21 @@ impl SceneApp {
         // creation; `gpu_interop` owns that configuration (Linux only).
         #[cfg(feature = "gpu-interop")]
         app.insert_resource(crate::gpu_interop::raw_vulkan_init_settings());
+        // A device error (out of memory, device lost, validation) stops
+        // rendering for good: record it so every wait fails at once with the
+        // cause instead of timing out on frames that never come.
+        app.init_resource::<RenderFailure>().insert_resource(
+            bevy::render::error_handler::RenderErrorHandler(|error, main_world, _| {
+                let cause = format!("{:?} {}", error.ty, error.description)
+                    .trim_end()
+                    .to_string();
+                main_world
+                    .resource_mut::<RenderFailure>()
+                    .0
+                    .get_or_insert(cause);
+                bevy::render::error_handler::RenderErrorPolicy::StopRendering
+            }),
+        );
         app.insert_resource(ClearColor(Color::BLACK))
             .insert_resource(DirectionalLightShadowMap { size: 2048 })
             .insert_resource(Legend::default())
@@ -2334,6 +2680,9 @@ impl SceneApp {
             .init_resource::<HostLayerUnion>()
             .add_plugins((
                 DefaultPlugins
+                    .set(bevy::app::TaskPoolPlugin {
+                        task_pool_options: map_load_task_pools(),
+                    })
                     .set(crate::platform::asset_plugin())
                     // Device creation on the backend this OS is qualified
                     // for (Vulkan / Metal / DX12); the resident engine keeps
@@ -2357,8 +2706,17 @@ impl SceneApp {
                 ScheduleRunnerPlugin::run_loop(Duration::ZERO),
                 crate::road_detail::RoadDetailPlugin,
                 crate::sky_pass::SkyPassPlugin { assets: sky_assets },
+                crate::camera_model::CameraModelPlugin,
                 crate::readiness::GpuReadinessPlugin,
+                crate::shared_shadows::SharedShadowsPlugin,
             ))
+            .init_resource::<ShadowCascadeSettings>()
+            .init_resource::<CanopySkyOcclusionSetting>()
+            .add_systems(
+                PostUpdate,
+                enforce_shadow_cascades
+                    .before(bevy::light::SimulationLightSystems::UpdateDirectionalLightCascades),
+            )
             .add_systems(
                 Update,
                 (
@@ -2366,6 +2724,7 @@ impl SceneApp {
                     crate::veg::load_veg_roots,
                     crate::veg::instantiate_veg,
                     sync_light_layers,
+                    sync_canopy_sky_occlusion,
                 )
                     .chain(),
             );
@@ -2453,12 +2812,32 @@ impl SceneApp {
                 ),
             );
         #[cfg(feature = "gpu-interop")]
-        render_app.insert_resource(DeviceSender(device_tx)).add_systems(
-            RenderGraph,
-            copy_device_passes
-                .after(RenderGraphSystems::Render)
-                .before(RenderGraphSystems::Submit),
+        render_app
+            .insert_resource(DeviceSender(device_tx))
+            .add_systems(
+                RenderGraph,
+                copy_device_passes
+                    .after(RenderGraphSystems::Render)
+                    .before(RenderGraphSystems::Submit),
+            );
+        // A reconfigured look can drop the motion-vector prepass from a live
+        // view; Bevy's background motion-vector pipeline id stays on the
+        // retained render-world view and no longer matches its prepass.
+        render_app.add_systems(
+            bevy::render::Render,
+            drop_stale_background_motion_vectors
+                .in_set(bevy::render::RenderSystems::PrepareBindGroups),
         );
+
+        // Opt-in GPU pass timing (timestamp queries + pipeline statistics per
+        // Bevy render pass, plus a whole-frame timer), read back through
+        // [`Self::take_gpu_pass_times`] / [`Self::take_gpu_frame_times`].
+        // Profiling only: the queries add encoder work, so production never
+        // sets the variable.
+        if crate::gpu_diagnostics::enabled() {
+            app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin);
+            crate::gpu_diagnostics::install_frame_timer(&mut app);
+        }
 
         // Drive the plugin lifecycle to completion manually (we never call
         // app.run()): pump updates until plugins are built, then finish so the
@@ -2468,10 +2847,38 @@ impl SceneApp {
         }
         app.finish();
         app.cleanup();
+        // Finish the frame's command encoders in parallel at submission
+        // (vendored bevy_render patch). Order and content of the submitted
+        // command buffers are unchanged, so output is identical; only
+        // wgpu-core's HAL recording leaves the render thread.
+        // SIMFORGE_ENCODER_FINISH_THREADS=1 restores serial finishing.
+        {
+            let threads = std::env::var("SIMFORGE_ENCODER_FINISH_THREADS")
+                .ok()
+                .and_then(|value| value.parse::<usize>().ok())
+                .unwrap_or_else(|| {
+                    std::thread::available_parallelism()
+                        .map_or(1, |n| n.get())
+                        .min(16)
+                }); // fallback-ok: thread count only; output does not depend on it
+            app.sub_app_mut(RenderApp)
+                .insert_resource(EncoderFinishThreads(threads))
+                // Counts directional shadow views whose camera the vendored
+                // bevy_render could not resolve for LOD selection (a
+                // correct frame adds nothing; see the regression test).
+                .init_resource::<bevy::render::view::DirectionalShadowLodMisses>()
+                .add_systems(
+                    RenderGraph,
+                    apply_encoder_finish_threads.in_set(RenderGraphSystems::Begin),
+                );
+        }
         // A CPU or virtual adapter (lavapipe, llvmpipe, SwiftShader) renders a
         // different image than the qualified GPU: never silently. It is an
         // explicit, logged opt-in for tests and tooling.
-        if let Some(info) = app.world().get_resource::<bevy::render::renderer::RenderAdapterInfo>() {
+        if let Some(info) = app
+            .world()
+            .get_resource::<bevy::render::renderer::RenderAdapterInfo>()
+        {
             let info = &info.0;
             eprintln!(
                 "render-adapter: {} ({:?}, {:?}, driver {} {})",
@@ -2509,7 +2916,7 @@ impl SceneApp {
             capture_clock: CaptureClock::Free,
             pinned_sample,
             deferred_maps,
-            next_slot: 0,
+            gpu_clustering_default: None,
             actors: HashMap::new(),
             actor_models: HashMap::new(),
             actor_rest_poses: HashMap::new(),
@@ -2525,9 +2932,9 @@ impl SceneApp {
             ground_surface: None,
             sky,
             skybox_brightness: plan.skybox_brightness,
-            ev100_fixed: plan.ev100_fixed.unwrap_or_else(|| {
-                lighting.weather.sensor_ev100(lighting.sun_elev_deg)
-            }),
+            ev100_fixed: plan
+                .ev100_fixed
+                .unwrap_or_else(|| lighting.weather.sensor_ev100(lighting.sun_elev_deg)),
             profile_config,
             lighting: lighting.clone(),
             fog: if lighting.atmosphere {
@@ -2536,12 +2943,14 @@ impl SceneApp {
                 // would apply the haze a second time.
                 None
             } else {
-                lighting.fog_for(&plan).map(|(density, _, color)| DistanceFog {
-                    color,
-                    directional_light_color: Color::srgb(1.0, 0.95, 0.86),
-                    directional_light_exponent: 30.0,
-                    falloff: FogFalloff::ExponentialSquared { density },
-                })
+                lighting
+                    .fog_for(&plan)
+                    .map(|(density, _, color)| DistanceFog {
+                        color,
+                        directional_light_color: Color::srgb(1.0, 0.95, 0.86),
+                        directional_light_exponent: 30.0,
+                        falloff: FogFalloff::ExponentialSquared { density },
+                    })
             },
             dry_road_materials: HashMap::new(),
             medium: medium_handle,
@@ -2554,7 +2963,150 @@ impl SceneApp {
             sun_cookie: None,
             probe_cubemap: None,
             env_gain: 1.0,
+            shared_shadows: false,
+            geometry_lods: None,
+            id_clone_of: HashMap::new(),
+            render_config: None,
         })
+    }
+
+    /// Share one directional cascade set across every RGB camera
+    /// ([`crate::shared_shadows`]). Applies to registered and future views.
+    pub fn set_shared_shadows(&mut self, enabled: bool) {
+        self.shared_shadows = enabled;
+        let entities: Vec<Entity> = self.groups.iter().map(|g| g.rgb_entity).collect();
+        let world = self.app.world_mut();
+        for entity in entities {
+            let mut e = world.entity_mut(entity);
+            if enabled {
+                e.insert(crate::shared_shadows::SharedShadowView);
+            } else {
+                e.remove::<crate::shared_shadows::SharedShadowView>();
+            }
+        }
+    }
+
+    /// Apply the non-look knobs of a resolved [`crate::render_config::RenderConfig`]
+    /// (the look itself is the `RenderProfileConfig` the app was built and
+    /// relit with: `config.profile_config()`). Call before loading tiles.
+    pub fn apply_render_config(
+        &mut self,
+        config: &crate::render_config::RenderConfig,
+    ) -> Result<()> {
+        use crate::render_config::ClockMode;
+        config.validate()?;
+        self.render_config = Some(*config);
+        self.set_shared_shadows(config.shadows.shared);
+        {
+            let world = self.app.world_mut();
+            world.resource_mut::<DirectionalLightShadowMap>().size =
+                config.shadows.map_size as usize;
+            *world.resource_mut::<ShadowCascadeSettings>() = ShadowCascadeSettings {
+                cascades: config.shadows.cascades,
+                max_distance_m: config.shadows.max_distance_m,
+            };
+            *world.resource_mut::<CanopySkyOcclusionSetting>() =
+                CanopySkyOcclusionSetting(config.lighting.canopy_sky_occlusion);
+        }
+        self.set_capture_clock(match config.clock.mode {
+            ClockMode::Free => CaptureClock::Free,
+            ClockMode::Pinned => CaptureClock::Pinned {
+                samples: if config.aa.mode == crate::profiles::AntiAlias::Taa {
+                    config.aa.taa_samples
+                } else {
+                    1
+                },
+            },
+        });
+        let threads = match config.encode.finish_threads {
+            0 => std::thread::available_parallelism()
+                .map_or(1, |n| n.get())
+                .min(16), // fallback-ok: thread count only; output does not depend on it
+            n => n as usize,
+        };
+        self.app
+            .sub_app_mut(RenderApp)
+            .insert_resource(EncoderFinishThreads(threads));
+        if let Some(lods) = &mut self.geometry_lods {
+            lods.pixel_error_px = config.lod.pixel_error_px;
+            lods.applied_f_px = None;
+        }
+        self.refresh_lod_ranges();
+        Ok(())
+    }
+
+    /// Reconfigure a running app: the non-look knobs, then a relight with
+    /// the config's look (re-applies every camera's effects). Output after
+    /// the next readiness settle is what a fresh app with this config
+    /// renders (history-free pinned captures).
+    pub fn reconfigure(&mut self, config: &crate::render_config::RenderConfig) -> Result<()> {
+        self.apply_render_config(config)?;
+        let lighting = self.lighting.clone();
+        self.apply_lighting(&lighting, config.profile_config())?;
+        Ok(())
+    }
+
+    /// `lighting` with the render config's haze density (the authored
+    /// lighting never carries it).
+    fn with_render_config_haze(&self, lighting: &Lighting) -> Lighting {
+        Lighting {
+            haze_density: self
+                .render_config
+                .map_or(1.0, |config| config.atmosphere.haze_density), // fallback-ok: without a render config the weather's own haze (density 1)
+            ..lighting.clone()
+        }
+    }
+
+    /// The resolved render config this app runs with, if one was applied.
+    pub fn render_config(&self) -> Option<crate::render_config::RenderConfig> {
+        self.render_config
+    }
+
+    /// Take one camera in or out of the shared cascade set (for example a
+    /// narrow presentation camera that should keep its own tight fit).
+    /// No-op unless shared shadows are enabled.
+    pub fn set_camera_shared_shadows(&mut self, sensor_id: &str, shared: bool) {
+        if !self.shared_shadows {
+            return;
+        }
+        let Some(entity) = self
+            .groups
+            .iter()
+            .find(|g| g.spec.sensor_id == sensor_id)
+            .map(|g| g.rgb_entity)
+        else {
+            return;
+        };
+        let mut e = self.app.world_mut().entity_mut(entity);
+        let marked = e.contains::<crate::shared_shadows::SharedShadowView>();
+        if shared && !marked {
+            e.insert(crate::shared_shadows::SharedShadowView);
+        } else if !shared && marked {
+            e.remove::<crate::shared_shadows::SharedShadowView>();
+        }
+    }
+
+    /// Whole-frame GPU times (ms) completed since the last call; empty unless
+    /// [`crate::gpu_diagnostics::enabled`].
+    pub fn take_gpu_frame_times(&mut self) -> Vec<f64> {
+        crate::gpu_diagnostics::take_frame_times(self.app.world())
+    }
+
+    /// The render sub-app's world (profiling tools only: phase statistics).
+    pub fn render_world_mut(&mut self) -> &mut World {
+        self.app.sub_app_mut(bevy::render::RenderApp).world_mut()
+    }
+
+    /// Direct world access for profiling tools and ablation experiments
+    /// (`simforge-render job --ablate`). Production paths go through the typed methods.
+    pub fn world_mut(&mut self) -> &mut World {
+        self.app.world_mut()
+    }
+
+    /// Drain the GPU pass timings recorded since the last call (see
+    /// [`crate::gpu_diagnostics`]). Empty unless diagnostics are enabled.
+    pub fn take_gpu_pass_times(&mut self) -> Vec<crate::gpu_diagnostics::PassTotal> {
+        crate::gpu_diagnostics::drain(self.app.world_mut())
     }
 
     /// Spawn (or re-point) the planet entity and its scattering medium.
@@ -2571,21 +3123,16 @@ impl SceneApp {
         far_plane_m: f32,
     ) -> (Entity, Handle<bevy::light::atmosphere::ScatteringMedium>) {
         let inputs = lighting.atmosphere_inputs(None);
-        let (medium, _) =
-            crate::atmosphere::resolve(&inputs, lighting.sun_azim_deg, far_plane_m);
+        let (medium, _) = crate::atmosphere::resolve(&inputs, lighting.sun_azim_deg, far_plane_m);
         let handle = {
-            let mut media = world
-                .resource_mut::<Assets<bevy::light::atmosphere::ScatteringMedium>>();
+            let mut media =
+                world.resource_mut::<Assets<bevy::light::atmosphere::ScatteringMedium>>();
             crate::atmosphere::upload_medium(&mut media, existing_medium, medium)
         };
         let entity = world
             .spawn((
                 crate::atmosphere::atmosphere(&inputs, handle.clone()),
-                Transform::from_xyz(
-                    0.0,
-                    ground_y - crate::atmosphere::INNER_RADIUS_M,
-                    0.0,
-                ),
+                Transform::from_xyz(0.0, ground_y - crate::atmosphere::INNER_RADIUS_M, 0.0),
                 GlobalTransform::from(Transform::from_xyz(
                     0.0,
                     ground_y - crate::atmosphere::INNER_RADIUS_M,
@@ -2610,10 +3157,10 @@ impl SceneApp {
     fn apply_sun_cookie(&mut self, transmittance: f32) {
         let world = self.app.world_mut();
         let suns: Vec<Entity> = {
-            let mut q = world.query_filtered::<
-                Entity,
-                (With<lighting::VolumetricLightMarker>, With<DirectionalLight>),
-            >();
+            let mut q = world.query_filtered::<Entity, (
+                With<lighting::VolumetricLightMarker>,
+                With<DirectionalLight>,
+            )>();
             q.iter(world).collect()
         };
         if suns.is_empty() {
@@ -2645,10 +3192,12 @@ impl SceneApp {
         };
         self.sun_cookie = Some(handle.clone());
         for sun in suns {
-            world.entity_mut(sun).insert(bevy::light::DirectionalLightTexture {
-                image: handle.clone(),
-                tiled: true,
-            });
+            world
+                .entity_mut(sun)
+                .insert(bevy::light::DirectionalLightTexture {
+                    image: handle.clone(),
+                    tiled: true,
+                });
         }
     }
 
@@ -2689,7 +3238,8 @@ impl SceneApp {
         let mut night_controls = lighting.night.clone();
         if let Some(eye) = camera_eye {
             night_controls.fixtures.sort_by(|a, b| {
-                Vec3::from_array(a.position).distance_squared(eye)
+                Vec3::from_array(a.position)
+                    .distance_squared(eye)
                     .total_cmp(&Vec3::from_array(b.position).distance_squared(eye))
             });
         }
@@ -2741,8 +3291,7 @@ impl SceneApp {
         };
         self.cloud_beam_t = lighting.atmosphere.then_some(sun_cloud_t);
 
-        let (plan, mut resolved) =
-            lighting.resolve_for(self.far_plane_m, self.cloud_beam_t);
+        let (plan, mut resolved) = lighting.resolve_for(self.far_plane_m, self.cloud_beam_t);
         // One camera EV exposes everything (see `resolve_atmosphere`), so
         // every source is spawned at its nominal physical value: the
         // renderer-internal scale is 1 and the ledger reports it as such.
@@ -2763,12 +3312,12 @@ impl SceneApp {
         } else {
             plan.env_intensity * deck_diffuse_gain * atmosphere_ibl_gain(lighting.sun_elev_deg)
         };
-        let moon_shadows = matches!(night_controls.cloud_quality, crate::night::CloudQuality::Lookdev);
-        let mut night_environment = crate::night::resolve_night(
-            &night_controls,
-            internal_scale,
-            moon_shadows,
+        let moon_shadows = matches!(
+            night_controls.cloud_quality,
+            crate::night::CloudQuality::Lookdev
         );
+        let mut night_environment =
+            crate::night::resolve_night(&night_controls, internal_scale, moon_shadows);
         let moon_dir_for_cloud = Vec3::from_array(night_environment.frame.moon_dir);
         let (moon_cloud_t, zenith_tau) = if clouds_drawn {
             let field = self.app.world().resource::<crate::clouds::CloudField>();
@@ -2792,7 +3341,11 @@ impl SceneApp {
             cloud_params.wind.y * cloud_params.time_s,
         ];
         night_environment.cloud_continuous = clouds_drawn;
-        if let Some(moon) = night_environment.source_ledger.iter_mut().find(|s| s.id == "moon") {
+        if let Some(moon) = night_environment
+            .source_ledger
+            .iter_mut()
+            .find(|s| s.id == "moon")
+        {
             moon.nominal_value = night_environment.celestial.direct_normal_lux;
             moon.renderer_internal_value = moon.nominal_value * internal_scale;
             moon.provenance.push_str(&format!(
@@ -2853,6 +3406,7 @@ impl SceneApp {
         profile_config: RenderProfileConfig,
     ) -> Result<ResolvedLighting> {
         profile_config.cinematic.validate()?;
+        let lighting = &self.with_render_config_haze(lighting);
         lighting.validate_for_scene_app()?;
         self.scene_revision += 1;
         let rung = LightingRung(lighting.rung);
@@ -2881,8 +3435,7 @@ impl SceneApp {
         {
             let world = self.app.world_mut();
             let mut stale: Vec<Entity> = Vec::new();
-            let mut suns =
-                world.query_filtered::<Entity, With<lighting::VolumetricLightMarker>>();
+            let mut suns = world.query_filtered::<Entity, With<lighting::VolumetricLightMarker>>();
             stale.extend(suns.iter(world));
             let mut probes = world.query_filtered::<Entity, With<LightProbe>>();
             stale.extend(probes.iter(world));
@@ -2925,7 +3478,10 @@ impl SceneApp {
             });
         let previous_probe = self.probe_cubemap.take();
         if let Some(handle) = previous_probe {
-            self.app.world_mut().resource_mut::<Assets<Image>>().remove(&handle);
+            self.app
+                .world_mut()
+                .resource_mut::<Assets<Image>>()
+                .remove(&handle);
         }
         let sky = {
             let world = self.app.world_mut();
@@ -3000,17 +3556,21 @@ impl SceneApp {
             internal_scale,
         )?;
         if physical_window_primitives > 0 {
-            night_environment.source_ledger.push(crate::night::SourceLedgerEntry {
-                id: "selective-windows".into(),
-                kind: "emissive_surface".into(),
-                nominal_value: physical_window_primitives as f32,
-                nominal_unit: "occupied dedicated GLB primitives".into(),
-                renderer_internal_value: physical_window_primitives as f32,
-                active_layers: vec!["emissive_surface".into()],
-                shadows: false,
-                confidence: 0.9,
-                provenance: "dedicated window/glass GltfMaterialName clone; walls/facades excluded".into(),
-            });
+            night_environment
+                .source_ledger
+                .push(crate::night::SourceLedgerEntry {
+                    id: "selective-windows".into(),
+                    kind: "emissive_surface".into(),
+                    nominal_value: physical_window_primitives as f32,
+                    nominal_unit: "occupied dedicated GLB primitives".into(),
+                    renderer_internal_value: physical_window_primitives as f32,
+                    active_layers: vec!["emissive_surface".into()],
+                    shadows: false,
+                    confidence: 0.9,
+                    provenance:
+                        "dedicated window/glass GltfMaterialName clone; walls/facades excluded"
+                            .into(),
+                });
             resolved.night_environment = Some(night_environment.clone());
         }
 
@@ -3046,34 +3606,32 @@ impl SceneApp {
         let atmosphere_changed = self.lighting.atmosphere != lighting.atmosphere;
         let fx_changed = self.profile_config != profile_config || atmosphere_changed;
         self.sky = sky;
-        self.skybox_brightness = if lighting.atmosphere { 1.0 } else { plan.skybox_brightness };
+        self.skybox_brightness = if lighting.atmosphere {
+            1.0
+        } else {
+            plan.skybox_brightness
+        };
         self.ev100_fixed = resolved.ev100;
         self.env_gain = env_gain;
         self.profile_config = profile_config;
         self.fog = if lighting.atmosphere {
             None
         } else {
-            lighting.fog_for(&plan).map(|(density, _, color)| DistanceFog {
-                color,
-                directional_light_color: Color::srgb(1.0, 0.95, 0.86),
-                directional_light_exponent: 30.0,
-                falloff: FogFalloff::ExponentialSquared { density },
-            })
+            lighting
+                .fog_for(&plan)
+                .map(|(density, _, color)| DistanceFog {
+                    color,
+                    directional_light_color: Color::srgb(1.0, 0.95, 0.86),
+                    directional_light_exponent: 30.0,
+                    falloff: FogFalloff::ExponentialSquared { density },
+                })
         };
         self.lighting = lighting.clone();
 
-        let views: Vec<(Entity, Profile, f32, f32, u32)> = self
+        let views: Vec<(Entity, f32, f32, u32)> = self
             .groups
             .iter()
-            .map(|g| {
-                (
-                    g.rgb_entity,
-                    g.profile,
-                    g.spec.far,
-                    g.spec.fov_y_deg,
-                    g.spec.height,
-                )
-            })
+            .map(|g| (g.rgb_entity, g.spec.far, g.spec.fov_y_deg, g.spec.height))
             .collect();
         let sky_template = lighting.atmosphere.then(|| {
             build_sky_pass(
@@ -3090,7 +3648,11 @@ impl SceneApp {
         let (sky_handle, skybox_brightness, ev100, fx, fog) = (
             // The sky pass composites the background itself; a `Skybox`
             // would draw straight over the atmosphere inside the opaque pass.
-            if lighting.atmosphere { None } else { self.sky.clone() },
+            if lighting.atmosphere {
+                None
+            } else {
+                self.sky.clone()
+            },
             self.skybox_brightness,
             self.ev100_fixed,
             self.profile_config.cinematic,
@@ -3099,13 +3661,13 @@ impl SceneApp {
         {
             let world = self.app.world_mut();
             let mut commands = world.commands();
-            for (entity, profile, far, fov_y_deg, height) in views {
+            for (entity, far, fov_y_deg, height) in views {
                 // A free camera is not a vehicle. Ensure a stale rev15
                 // camera-owned source cannot survive the clean cutover.
                 commands.entity(entity).remove::<SpotLight>();
                 RenderProfile::strip(&mut commands, entity);
                 commands.entity(entity).remove::<DistanceFog>();
-                profile.render_profile().apply(
+                RenderProfile::apply(
                     &mut commands,
                     entity,
                     ev100,
@@ -3114,17 +3676,16 @@ impl SceneApp {
                     fx,
                 );
                 match sky_template {
-                    Some(template) if profile == Profile::Cinematic => {
+                    Some(template) => {
                         let mut sky = template;
-                        sky.pixel_angle =
-                            fov_y_deg.to_radians() / height.max(1) as f32;
+                        sky.pixel_angle = fov_y_deg.to_radians() / height.max(1) as f32;
                         commands.entity(entity).insert(sky);
                     }
-                    _ => {
+                    None => {
                         commands.entity(entity).remove::<crate::sky_pass::SkyPass>();
                     }
                 }
-                if use_atmosphere && profile == Profile::Cinematic {
+                if use_atmosphere {
                     attach_atmosphere_view(&mut commands, entity, far, env_gain);
                 } else {
                     detach_atmosphere_view(&mut commands, entity);
@@ -3144,6 +3705,11 @@ impl SceneApp {
         }
         let mut resolved = resolved;
         resolved.road_materials = self.set_wetness(resolved.wetness) as u32;
+        // A wet scene on a map whose road materials the ramp does not
+        // recognise renders dry: say so instead of pretending.
+        if resolved.wetness > 0.0 && resolved.road_materials == 0 {
+            resolved.inert_controls.push("wetness".to_string());
+        }
         // Changing which post-process components a view carries changes the
         // view's pipeline specialization key, its prepass texture set and
         // its view-target chain. For a frame or two afterwards the graph
@@ -3191,6 +3757,7 @@ impl SceneApp {
         lighting: &Lighting,
         profile_config: RenderProfileConfig,
     ) -> Result<(ResolvedLighting, bool)> {
+        let lighting = &self.with_render_config_haze(lighting);
         lighting.validate_for_scene_app()?;
         let tier = ladder_tier(lighting.sun_elev_deg);
         self.scene_revision += 1;
@@ -3214,7 +3781,11 @@ impl SceneApp {
                     .collect::<std::result::Result<_, _>>()?;
                 fixtures.sort_unstable();
                 l.night.fixtures.clear();
-                Ok(format!("{}\n{}", serde_json::to_string(&l)?, fixtures.join("\n")))
+                Ok(format!(
+                    "{}\n{}",
+                    serde_json::to_string(&l)?,
+                    fixtures.join("\n")
+                ))
             };
             neutral(&self.lighting)? == neutral(lighting)?
         };
@@ -3248,10 +3819,9 @@ impl SceneApp {
         if tier == LadderTier::Night {
             let moon = &night_environment.celestial;
             let world = self.app.world_mut();
-            let mut moons = world.query_filtered::<
-                (&mut DirectionalLight, &mut Transform),
-                With<NightLightMarker>,
-            >();
+            let mut moons = world
+                .query_filtered::<(&mut DirectionalLight, &mut Transform), With<NightLightMarker>>(
+                );
             if moons.iter(world).next().is_none() && moon.direct_normal_lux > 0.0 {
                 return Ok((self.apply_lighting(lighting, profile_config)?, true));
             }
@@ -3314,23 +3884,21 @@ impl SceneApp {
             moon_direct_precloud,
         );
         self.sky_pass = Some(template);
-        let views: Vec<(Entity, Profile, f32, u32)> = self
+        let views: Vec<(Entity, f32, u32)> = self
             .groups
             .iter()
-            .map(|g| (g.rgb_entity, g.profile, g.spec.fov_y_deg, g.spec.height))
+            .map(|g| (g.rgb_entity, g.spec.fov_y_deg, g.spec.height))
             .collect();
         let world = self.app.world_mut();
-        for (entity, profile, fov_y_deg, height) in views {
+        for (entity, fov_y_deg, height) in views {
             if let Some(mut exposure) = world.get_mut::<bevy::camera::Exposure>(entity) {
                 exposure.ev100 = resolved.ev100;
             }
-            if profile == Profile::Cinematic {
-                set_view_env_gain(world, entity, env_gain);
-                if let Some(mut sky) = world.get_mut::<crate::sky_pass::SkyPass>(entity) {
-                    let pixel_angle = fov_y_deg.to_radians() / height.max(1) as f32;
-                    *sky = template;
-                    sky.pixel_angle = pixel_angle;
-                }
+            set_view_env_gain(world, entity, env_gain);
+            if let Some(mut sky) = world.get_mut::<crate::sky_pass::SkyPass>(entity) {
+                let pixel_angle = fov_y_deg.to_radians() / height.max(1) as f32;
+                *sky = template;
+                sky.pixel_angle = pixel_angle;
             }
         }
         self.lighting = lighting.clone();
@@ -3339,7 +3907,9 @@ impl SceneApp {
 
     /// Engine values currently in force.
     pub fn resolved_lighting(&self) -> ResolvedLighting {
-        self.lighting.resolve_for(self.far_plane_m, self.cloud_beam_t).1
+        self.lighting
+            .resolve_for(self.far_plane_m, self.cloud_beam_t)
+            .1
     }
 
     /// The anti-aliasing mode actually present on each live RGB view, read
@@ -3389,8 +3959,15 @@ impl SceneApp {
     /// that original, so dragging a wetness slider back to zero restores the
     /// scene exactly instead of compounding the darkening.
     pub fn set_wetness(&mut self, wetness: f32) -> usize {
+        // Matched against the mesh entity's name (older corpus exports) and
+        // its glTF material name (RoadRunner masters: Belmont's road is
+        // `MI_Road_Asphalt_A_Roads_Road_Layer0` on a generically named mesh,
+        // so a name-only match left wetness inert there).
         const ROAD_MARKERS: [&str; 2] = ["asphalt1_road", "roads_road_layer0"];
         let wetness = wetness.clamp(0.0, 1.0);
+        // Deferred road materials need every view that draws them to carry
+        // a deferred prepass, which the look adds with SSR (and only then).
+        let deferred_road = wetness > 0.0 && self.profile_config.cinematic.ssr;
         self.scene_revision += 1;
         let world = self.app.world_mut();
         let mut road_materials: Vec<Handle<StandardMaterial>> = Vec::new();
@@ -3399,17 +3976,28 @@ impl SceneApp {
                 Option<&Name>,
                 Option<&ChildOf>,
                 &MeshMaterial3d<StandardMaterial>,
+                Option<&GltfMaterialName>,
             )>();
             let mut names = world.query::<&Name>();
             let mut seen: std::collections::HashSet<AssetId<StandardMaterial>> =
                 std::collections::HashSet::new();
-            let rows: Vec<(Option<String>, Option<Entity>, Handle<StandardMaterial>)> = meshes
+            let rows: Vec<(
+                Option<String>,
+                Option<Entity>,
+                Handle<StandardMaterial>,
+                Option<String>,
+            )> = meshes
                 .iter(world)
-                .map(|(name, parent, mat)| {
-                    (name.map(|n| n.as_str().to_owned()), parent.map(|p| p.0), mat.0.clone())
+                .map(|(name, parent, mat, material_name)| {
+                    (
+                        name.map(|n| n.as_str().to_owned()),
+                        parent.map(|p| p.0),
+                        mat.0.clone(),
+                        material_name.map(|m| m.0.clone()),
+                    )
                 })
                 .collect();
-            for (name, parent, material) in rows {
+            for (name, parent, material, material_name) in rows {
                 let mut label = name.unwrap_or_default();
                 if label.is_empty() {
                     if let Some(parent) = parent {
@@ -3419,7 +4007,10 @@ impl SceneApp {
                     }
                 }
                 let lower = label.to_ascii_lowercase();
-                if ROAD_MARKERS.iter().any(|m| lower.contains(m))
+                let material_lower = material_name.unwrap_or_default().to_ascii_lowercase(); // fallback-ok: an unnamed material only fails to match
+                if ROAD_MARKERS
+                    .iter()
+                    .any(|m| lower.contains(m) || material_lower.contains(m))
                     && seen.insert(material.id())
                 {
                     road_materials.push(material);
@@ -3433,11 +4024,25 @@ impl SceneApp {
             let Some(mut material) = assets.get_mut(&handle) else {
                 continue;
             };
-            let (dry_roughness, dry_metallic, dry_color) = *self
-                .dry_road_materials
-                .entry(id)
-                .or_insert((material.perceptual_roughness, material.metallic, material.base_color));
+            let (dry_roughness, dry_metallic, dry_color, dry_method) =
+                *self.dry_road_materials.entry(id).or_insert((
+                    material.perceptual_roughness,
+                    material.metallic,
+                    material.base_color,
+                    material.opaque_render_method,
+                ));
             material.perceptual_roughness = dry_roughness * (1.0 - wetness) + 0.16 * wetness;
+            // Screen-space reflections read the deferred G-buffer: a forward
+            // material never receives them, so a wet road reflected nothing
+            // but the environment probe (SSR on and off rendered the same
+            // bytes). With SSR on, wet road materials draw deferred;
+            // everything else, and a dry road, stays on its original
+            // (forward) path.
+            material.opaque_render_method = if deferred_road {
+                bevy::material::OpaqueRendererMethod::Deferred
+            } else {
+                dry_method
+            };
             material.metallic = dry_metallic.max(0.04 * wetness);
             let mut linear = dry_color.to_linear();
             let k = 1.0 - 0.35 * wetness;
@@ -3450,12 +4055,14 @@ impl SceneApp {
         touched
     }
 
-
     /// Queue GLB tiles for loading. Call before [`Self::wait_until_ready`].
     pub fn load_tiles(&mut self, glbs: &[String]) -> Result<()> {
         let paths = glbs
             .iter()
-            .map(|g| crate::platform::asset_path(std::path::Path::new(g)).map_err(|e| anyhow::anyhow!("glb {e}")))
+            .map(|g| {
+                crate::platform::asset_path(std::path::Path::new(g))
+                    .map_err(|e| anyhow::anyhow!("glb {e}"))
+            })
             .collect::<Result<Vec<String>>>()?;
         self.scene_revision += 1;
         let server = self.app.world().resource::<AssetServer>().clone();
@@ -3491,8 +4098,8 @@ impl SceneApp {
     /// directly; the legend is not re-derived, so IDs stay stable. A camera
     /// already registered under the same `sensor_id` is replaced (its
     /// targets, staging and host binding are released), which is how a
-    /// resize or profile change is expressed.
-    pub fn add_camera(&mut self, spec: CameraSpec, profile: Profile) {
+    /// resize is expressed.
+    pub fn add_camera(&mut self, spec: CameraSpec) {
         let host = self
             .groups
             .iter()
@@ -3502,14 +4109,18 @@ impl SceneApp {
 
         let rgb_image = {
             let mut images = self.app.world_mut().resource_mut::<Assets<Image>>();
-            setup_target_image(&mut images, spec.width, spec.height, TextureFormat::Rgba8UnormSrgb)
+            setup_target_image(
+                &mut images,
+                spec.width,
+                spec.height,
+                TextureFormat::Rgba8UnormSrgb,
+            )
         };
         let rgb_handle = rgb_image.clone();
 
         let e = self.app.world_mut().spawn((
             Camera3d {
-                depth_texture_usages: (TextureUsages::RENDER_ATTACHMENT
-                    | TextureUsages::COPY_SRC)
+                depth_texture_usages: (TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC)
                     .into(),
                 ..default()
             },
@@ -3520,16 +4131,22 @@ impl SceneApp {
                 ..default()
             }),
             Msaa::Off,
-            Camera { order: self.next_camera_order, ..default() },
+            Camera {
+                order: self.next_camera_order,
+                ..default()
+            },
             Transform::IDENTITY,
             RenderTarget::Image(rgb_image.into()),
         ));
         let rgb_entity = e.id();
         self.next_camera_order += 10;
+        if self.shared_shadows {
+            self.app
+                .world_mut()
+                .entity_mut(rgb_entity)
+                .insert(crate::shared_shadows::SharedShadowView);
+        }
 
-        // Sensor views retain the deterministic contract. Cinematic views use
-        // the configured temporal/reflection/filmic stack and can coexist in
-        // the same SceneApp.
         let use_atmosphere = atmosphere_view_active(&self.lighting);
         // Same gain and the same sky the last relight resolved; a view that
         // registers late must not re-derive either from a different path.
@@ -3537,25 +4154,26 @@ impl SceneApp {
         {
             let world = self.app.world_mut();
             let mut commands = world.commands();
-            profile.render_profile().apply(
+            RenderProfile::apply(
                 &mut commands,
                 rgb_entity,
                 self.ev100_fixed,
-                if use_atmosphere { None } else { self.sky.clone() },
+                if use_atmosphere {
+                    None
+                } else {
+                    self.sky.clone()
+                },
                 self.skybox_brightness,
                 self.profile_config.cinematic,
             );
-            // Cinematic only; see the same guard in `apply_lighting`.
-            if use_atmosphere && profile == Profile::Cinematic {
+            if use_atmosphere {
                 attach_atmosphere_view(&mut commands, rgb_entity, spec.far, env_gain);
             }
-            if let (Some(template), Profile::Cinematic) = (self.sky_pass, profile) {
+            if let Some(template) = self.sky_pass {
                 let mut sky = template;
                 sky.pixel_angle = spec.fov_y_deg.to_radians() / spec.height.max(1) as f32;
                 commands.entity(rgb_entity).insert(sky);
             }
-            // Sensor deliberately receives no stochastic screen-space
-            // AO/contact pass. Cinematic owns those effects.
             if let Some(fog) = self.fog.clone() {
                 commands.entity(rgb_entity).insert(fog);
             }
@@ -3571,7 +4189,39 @@ impl SceneApp {
             key: format!("{}:rgb", spec.sensor_id),
             src_image: rgb_handle.clone(),
             depth: false,
+            exposure: false,
         });
+        // Copied only when the look carries the camera model and the
+        // caller asks for it.
+        self.app.world_mut().spawn(ReadbackTarget {
+            key: format!("{}:exposure", spec.sensor_id),
+            src_image: rgb_handle.clone(),
+            depth: false,
+            exposure: true,
+        });
+        if spec.passes.hdr {
+            let hdr_image = {
+                let mut images = self.app.world_mut().resource_mut::<Assets<Image>>();
+                let mut image = Image::new_target_texture(
+                    spec.width,
+                    spec.height,
+                    TextureFormat::Rgba16Float,
+                    None,
+                );
+                image.texture_descriptor.usage |= TextureUsages::COPY_SRC | TextureUsages::COPY_DST;
+                images.add(image)
+            };
+            self.app
+                .world_mut()
+                .entity_mut(rgb_entity)
+                .insert(crate::camera_model::HdrCapture(hdr_image.clone()));
+            self.app.world_mut().spawn(ReadbackTarget {
+                key: format!("{}:hdr", spec.sensor_id),
+                src_image: hdr_image,
+                depth: false,
+                exposure: false,
+            });
+        }
 
         let id_entity = if spec.passes.id {
             let id_image = {
@@ -3582,6 +4232,7 @@ impl SceneApp {
                 key: format!("{}:id", spec.sensor_id),
                 src_image: id_image.clone(),
                 depth: false,
+                exposure: false,
             });
             let cmd = self.app.world_mut().spawn((
                 Camera3d::default(),
@@ -3612,12 +4263,20 @@ impl SceneApp {
                 key: format!("{}:depth", spec.sensor_id),
                 src_image: rgb_handle,
                 depth: true,
+                exposure: false,
             });
         }
 
-        self.groups.push(GroupEntities { spec, profile, rgb_entity, id_entity, host });
+        self.groups.push(GroupEntities {
+            spec,
+            rgb_entity,
+            id_entity,
+            host,
+        });
         self.rig_revision += 1;
         self.sync_host_layers();
+        self.refresh_lod_ranges();
+        self.sync_rgb_draw_order();
         if self.ready {
             // Post-ready registration: pump updates so extraction and
             // pipeline compilation happen before the next capture. Two
@@ -3655,17 +4314,14 @@ impl SceneApp {
     /// that layer, and every light covers all of them. Layers are released
     /// when no camera is mounted on the actor any more.
     fn sync_host_layers(&mut self) {
-        let mounted: Vec<String> = self
-            .groups
-            .iter()
-            .filter_map(|g| g.host.clone())
-            .collect();
+        let mounted: Vec<String> = self.groups.iter().filter_map(|g| g.host.clone()).collect();
         self.host_layers.retain(|actor, _| mounted.contains(actor));
         for actor in &mounted {
             if self.host_layers.contains_key(actor) {
                 continue;
             }
             let layer = (FIRST_HOST_LAYER..)
+                .step_by(2)
                 .find(|candidate| !self.host_layers.values().any(|used| used == candidate))
                 .expect("unbounded layer range");
             self.host_layers.insert(actor.clone(), layer);
@@ -3675,21 +4331,27 @@ impl SceneApp {
                 .chain(self.host_layers.values().copied())
                 .collect::<Vec<_>>(),
         );
-        let views: Vec<(Entity, RenderLayers)> = self
-            .groups
-            .iter()
-            .map(|g| {
-                let layers: Vec<usize> = std::iter::once(0)
-                    .chain(
-                        self.host_layers
-                            .iter()
-                            .filter(|(actor, _)| Some(actor.as_str()) != g.host.as_deref())
-                            .map(|(_, layer)| *layer),
-                    )
+        // Each view sees every host layer but its own host's: the RGB camera
+        // on layer 0 plus the other hosts' RGB layers, the ID camera on
+        // layer 1 plus the other hosts' ID layers. Labels therefore match
+        // the pixels: a mounted camera neither renders nor labels its host.
+        let mut views: Vec<(Entity, RenderLayers)> = Vec::new();
+        for g in &self.groups {
+            let others: Vec<usize> = self
+                .host_layers
+                .iter()
+                .filter(|(actor, _)| Some(actor.as_str()) != g.host.as_deref())
+                .map(|(_, layer)| *layer)
+                .collect();
+            let rgb: Vec<usize> = std::iter::once(0).chain(others.iter().copied()).collect();
+            views.push((g.rgb_entity, RenderLayers::from_layers(&rgb)));
+            if let Some(id_entity) = g.id_entity {
+                let id: Vec<usize> = std::iter::once(1)
+                    .chain(others.iter().map(|l| id_host_layer(*l)))
                     .collect();
-                (g.rgb_entity, RenderLayers::from_layers(&layers))
-            })
-            .collect();
+                views.push((id_entity, RenderLayers::from_layers(&id)));
+            }
+        }
         let actor_ids: Vec<String> = self.actors.keys().cloned().collect();
         let world = self.app.world_mut();
         world.insert_resource(HostLayerUnion(union));
@@ -3702,39 +4364,48 @@ impl SceneApp {
     }
 
     /// Put one actor's RGB visuals (fallback cuboid and every mesh under
-    /// its catalog model) on its host layer, or back on layer 0.
+    /// its catalog model) on its host layer, or back on layer 0, and its
+    /// instance-ID clones on the paired ID layer, or back on layer 1.
     fn apply_actor_layers(&mut self, actor_id: &str) {
         let Some((cuboid, _)) = self.actors.get(actor_id).copied() else {
             return;
         };
-        let layer = self.host_layers.get(actor_id).copied().unwrap_or(0);
-        let model = self.actor_models.get(actor_id).map(|(entity, _, _)| *entity);
+        let host = self.host_layers.get(actor_id).copied();
+        let layer = host.unwrap_or(0);
+        let id_layer = host.map(id_host_layer).unwrap_or(1);
+        let model = self
+            .actor_models
+            .get(actor_id)
+            .map(|(entity, _, _)| *entity);
+        let cuboid_clone = self.actor_id_clones.get(actor_id).copied();
         let world = self.app.world_mut();
-        let mut targets = vec![cuboid];
+        let mut targets = vec![(cuboid, layer)];
+        targets.extend(cuboid_clone.map(|clone| (clone, id_layer)));
         if let Some(root) = model {
             let mut stack = vec![root];
             while let Some(entity) = stack.pop() {
                 if let Some(children) = world.get::<Children>(entity) {
                     stack.extend(children.iter());
                 }
-                if world.get::<Mesh3d>(entity).is_some() && world.get::<IdClone>(entity).is_none() {
-                    targets.push(entity);
+                if world.get::<Mesh3d>(entity).is_some() {
+                    let is_clone = world.get::<IdClone>(entity).is_some();
+                    targets.push((entity, if is_clone { id_layer } else { layer }));
                 }
             }
         }
-        for entity in targets {
+        for (entity, layer) in targets {
             if let Ok(mut entity) = world.get_entity_mut(entity) {
                 entity.insert(RenderLayers::layer(layer));
             }
         }
     }
 
-    /// Registered spec and profile of one camera, if it exists.
-    pub fn camera(&self, sensor_id: &str) -> Option<(&CameraSpec, Profile)> {
+    /// Registered spec of one camera, if it exists.
+    pub fn camera(&self, sensor_id: &str) -> Option<&CameraSpec> {
         self.groups
             .iter()
             .find(|g| g.spec.sensor_id == sensor_id)
-            .map(|g| (&g.spec, g.profile))
+            .map(|g| &g.spec)
     }
 
     /// Frozen legend (static instance ids). Dynamic actors get ids above the
@@ -3761,7 +4432,9 @@ impl SceneApp {
     /// map versions published before their ground derivative.
     pub fn ground_source(&self) -> GroundSource {
         match &self.ground_surface {
-            Some(surface) => GroundSource::GroundMesh { sha256: surface.digest().to_owned() },
+            Some(surface) => GroundSource::GroundMesh {
+                sha256: surface.digest().to_owned(),
+            },
             None => GroundSource::LegacyMeshField,
         }
     }
@@ -3777,9 +4450,11 @@ impl SceneApp {
     pub fn ground_height(&self, x: f32, z: f32) -> std::result::Result<f32, String> {
         match &self.ground_surface {
             Some(surface) => ground_mesh_height(surface, x, z),
-            None => self.ground.sample_covered(x, z).ok_or_else(|| format!(
+            None => self.ground.sample_covered(x, z).ok_or_else(|| {
+                format!(
                 "[native_ground_height_unavailable] x={x:.2} z={z:.2} has no map ground within 20 m"
-            )),
+            )
+            }),
         }
     }
 
@@ -3815,9 +4490,8 @@ impl SceneApp {
         sidecar_path: &str,
     ) -> Result<crate::road_detail::RoadDetailStats> {
         self.scene_revision += 1;
-        let stats =
-            crate::road_detail::apply(&mut self.app, std::path::Path::new(sidecar_path))
-                .map_err(|e| anyhow::anyhow!("{e:#}"))?;
+        let stats = crate::road_detail::apply(&mut self.app, std::path::Path::new(sidecar_path))
+            .map_err(|e| anyhow::anyhow!("{e:#}"))?;
         // Pump one update so the swapped materials extract before the next
         // render.
         self.app.update();
@@ -3880,21 +4554,25 @@ impl SceneApp {
             let mut materials = world.resource_mut::<Assets<StandardMaterial>>();
             materials.add(instance_id_material(instance_id))
         };
-        let e = world.spawn((
-            Name::new(format!("actor:{id}")),
-            Mesh3d(mesh_handle.clone()),
-            MeshMaterial3d(mat_handle),
-            InstanceId(instance_id),
-            transform,
-        )).id();
-        let clone = world.spawn((
-            IdClone,
-            Name::new(format!("actor:{id}")),
-            Mesh3d(mesh_handle),
-            MeshMaterial3d(id_mat),
-            RenderLayers::layer(1),
-            transform,
-        )).id();
+        let e = world
+            .spawn((
+                Name::new(format!("actor:{id}")),
+                Mesh3d(mesh_handle.clone()),
+                MeshMaterial3d(mat_handle),
+                InstanceId(instance_id),
+                transform,
+            ))
+            .id();
+        let clone = world
+            .spawn((
+                IdClone,
+                Name::new(format!("actor:{id}")),
+                Mesh3d(mesh_handle),
+                MeshMaterial3d(id_mat),
+                RenderLayers::layer(1),
+                transform,
+            ))
+            .id();
         self.actors.insert(id.to_string(), (e, instance_id));
         self.actor_id_clones.insert(id.to_string(), clone);
         self.actor_classes.insert(instance_id, class.to_string());
@@ -3975,15 +4653,23 @@ impl SceneApp {
 
     /// Pose visible catalog geometry independently of the canonical cuboid.
     /// Asset yaw/origin corrections must not rotate or bury sensor geometry.
-    pub fn set_actor_asset_pose(&mut self, actor_id:&str, position:[f32;3], rotation:Quat)->Result<()> {
-        let Some(&(entity,_,_))=self.actor_models.get(actor_id) else {
+    pub fn set_actor_asset_pose(
+        &mut self,
+        actor_id: &str,
+        position: [f32; 3],
+        rotation: Quat,
+    ) -> Result<()> {
+        let Some(&(entity, _, _)) = self.actor_models.get(actor_id) else {
             bail!("actor {actor_id} has no attached catalog asset");
         };
-        let mut transform=self.app.world_mut().get_mut::<Transform>(entity)
-            .ok_or_else(||anyhow::anyhow!("actor {actor_id} asset entity disappeared"))?;
-        transform.translation=Vec3::from_array(position);
-        transform.rotation=rotation;
-        self.scene_revision+=1;
+        let mut transform = self
+            .app
+            .world_mut()
+            .get_mut::<Transform>(entity)
+            .ok_or_else(|| anyhow::anyhow!("actor {actor_id} asset entity disappeared"))?;
+        transform.translation = Vec3::from_array(position);
+        transform.rotation = rotation;
+        self.scene_revision += 1;
         Ok(())
     }
 
@@ -4012,7 +4698,10 @@ impl SceneApp {
             return Ok(());
         }
         if !glb_path.is_absolute() || !glb_path.is_file() {
-            bail!("actor model GLB is not an absolute existing file: {}", glb_path.display());
+            bail!(
+                "actor model GLB is not an absolute existing file: {}",
+                glb_path.display()
+            );
         }
         let (cuboid, _) = self
             .actors
@@ -4041,13 +4730,12 @@ impl SceneApp {
                     let scene = gltf.default_scene.clone()?;
                     let animation = animation_clip
                         .map(|name| {
-                            gltf.named_animations
-                                .get(name)
-                                .cloned()
-                                .ok_or_else(|| anyhow::anyhow!(
+                            gltf.named_animations.get(name).cloned().ok_or_else(|| {
+                                anyhow::anyhow!(
                                     "actor model {} has no animation clip {name:?}",
                                     glb_path.display()
-                                ))
+                                )
+                            })
                         })
                         .transpose();
                     Some(animation.map(|animation| (scene, animation)))
@@ -4077,7 +4765,10 @@ impl SceneApp {
                 model_transform,
             ))
             .id();
-        self.app.world_mut().entity_mut(cuboid).insert(Visibility::Hidden);
+        self.app
+            .world_mut()
+            .entity_mut(cuboid)
+            .insert(Visibility::Hidden);
         loop {
             self.app.update();
             let ready = {
@@ -4094,7 +4785,10 @@ impl SceneApp {
                 break;
             }
             if Instant::now() > deadline {
-                bail!("actor model scene failed to instantiate: {}", glb_path.display());
+                bail!(
+                    "actor model scene failed to instantiate: {}",
+                    glb_path.display()
+                );
             }
         }
         if let Some(clip) = animation {
@@ -4175,10 +4869,12 @@ impl SceneApp {
                     .resource::<Assets<StandardMaterial>>()
                     .get(source_handle)
                     .cloned()
-                    .ok_or_else(|| anyhow::anyhow!(
-                        "body_paint material missing after actor model load: {}",
-                        glb_path.display()
-                    ))?;
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "body_paint material missing after actor model load: {}",
+                            glb_path.display()
+                        )
+                    })?;
                 tinted.base_color = Color::srgb(color[0], color[1], color[2]);
                 world.resource_mut::<Assets<StandardMaterial>>().add(tinted)
             };
@@ -4199,7 +4895,10 @@ impl SceneApp {
         };
         let model_mesh_count = mesh_count_after.saturating_sub(mesh_count_before);
         if model_mesh_count == 0 {
-            bail!("actor model instantiated without mesh nodes: {}", glb_path.display());
+            bail!(
+                "actor model instantiated without mesh nodes: {}",
+                glb_path.display()
+            );
         }
         // The instance-ID pass must draw the model the RGB camera draws, not
         // the canonical cuboid: every model mesh gets a layer-1 child clone
@@ -4214,7 +4913,9 @@ impl SceneApp {
             let world = self.app.world_mut();
             let id_material = world
                 .get::<MeshMaterial3d<StandardMaterial>>(clone)
-                .ok_or_else(|| anyhow::anyhow!("actor {actor_id} instance-ID clone has no material"))?
+                .ok_or_else(|| {
+                    anyhow::anyhow!("actor {actor_id} instance-ID clone has no material")
+                })?
                 .0
                 .clone();
             let mut stack = vec![model_root];
@@ -4224,7 +4925,11 @@ impl SceneApp {
                     stack.extend(children.iter());
                 }
                 if let Some(mesh) = world.get::<Mesh3d>(entity) {
-                    sources.push((entity, mesh.0.clone(), world.get::<SkinnedMesh>(entity).cloned()));
+                    sources.push((
+                        entity,
+                        mesh.0.clone(),
+                        world.get::<SkinnedMesh>(entity).cloned(),
+                    ));
                 }
             }
             // A ridden two-wheeler's rider (glTF node extras `semanticClass:
@@ -4247,8 +4952,13 @@ impl SceneApp {
                     }
                 };
                 self.actor_classes.insert(rider_id, "rider".to_string());
-                self.actor_riders.insert(actor_id.to_string(), (rider_id, rider_meshes.clone()));
-                Some(world.resource_mut::<Assets<StandardMaterial>>().add(instance_id_material(rider_id)))
+                self.actor_riders
+                    .insert(actor_id.to_string(), (rider_id, rider_meshes.clone()));
+                Some(
+                    world
+                        .resource_mut::<Assets<StandardMaterial>>()
+                        .add(instance_id_material(rider_id)),
+                )
             };
             for (entity, mesh, skin) in sources {
                 let material = match &rider_material {
@@ -4292,10 +5002,7 @@ impl SceneApp {
             let Some(mut player) = self.app.world_mut().get_mut::<AnimationPlayer>(entity) else {
                 continue;
             };
-            player
-                .play(binding.node)
-                .seek_to(time_s.max(0.0))
-                .pause();
+            player.play(binding.node).seek_to(time_s.max(0.0)).pause();
         }
         Ok(())
     }
@@ -4305,14 +5012,17 @@ impl SceneApp {
     /// is cloned per actor, so instances sharing the GLB keep their own
     /// colours. Every requested slot must exist in the model: a missing slot
     /// fails instead of leaving the authored colour in place.
-    pub fn set_actor_material_colors(&mut self, actor_id: &str, colors: &[(String, [f32; 3])]) -> Result<()> {
+    pub fn set_actor_material_colors(
+        &mut self,
+        actor_id: &str,
+        colors: &[(String, [f32; 3])],
+    ) -> Result<()> {
         if colors.is_empty() {
             return Ok(());
         }
-        let (model_root, _, _) = *self
-            .actor_models
-            .get(actor_id)
-            .ok_or_else(|| anyhow::anyhow!("set material colours before attaching a model: {actor_id}"))?;
+        let (model_root, _, _) = *self.actor_models.get(actor_id).ok_or_else(|| {
+            anyhow::anyhow!("set material colours before attaching a model: {actor_id}")
+        })?;
         let targets = {
             let world = self.app.world();
             let mut stack = vec![model_root];
@@ -4346,16 +5056,24 @@ impl SceneApp {
                     .resource::<Assets<StandardMaterial>>()
                     .get(source)
                     .cloned()
-                    .ok_or_else(|| anyhow::anyhow!("material {slot:?} missing after actor model load"))?;
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("material {slot:?} missing after actor model load")
+                    })?;
                 material.base_color = Color::linear_rgb(color[0], color[1], color[2]);
-                world.resource_mut::<Assets<StandardMaterial>>().add(material)
+                world
+                    .resource_mut::<Assets<StandardMaterial>>()
+                    .add(material)
             };
             for (entity, _, _) in slot_targets {
-                self.app.world_mut().entity_mut(*entity).insert(MeshMaterial3d(handle.clone()));
+                self.app
+                    .world_mut()
+                    .entity_mut(*entity)
+                    .insert(MeshMaterial3d(handle.clone()));
             }
             owned.push(handle);
         }
-        self.actor_palette_materials.insert(actor_id.to_string(), owned);
+        self.actor_palette_materials
+            .insert(actor_id.to_string(), owned);
         self.scene_revision += 1;
         Ok(())
     }
@@ -4374,8 +5092,14 @@ impl SceneApp {
             if let Some(children) = world.get::<Children>(entity) {
                 stack.extend(children.iter());
             }
-            if world.get::<GltfMaterialName>(entity).is_some_and(|name| &**name == slot) {
-                if let Some(material) = world.get::<MeshMaterial3d<StandardMaterial>>(entity).and_then(|m| materials.get(&m.0)) {
+            if world
+                .get::<GltfMaterialName>(entity)
+                .is_some_and(|name| &**name == slot)
+            {
+                if let Some(material) = world
+                    .get::<MeshMaterial3d<StandardMaterial>>(entity)
+                    .and_then(|m| materials.get(&m.0))
+                {
                     let c = material.base_color.to_linear();
                     out.push([c.red, c.green, c.blue]);
                 }
@@ -4472,7 +5196,67 @@ impl SceneApp {
 
     /// Stable instance id allocated to a dynamic actor, if it is spawned.
     pub fn actor_instance_id(&self, actor_id: &str) -> Option<u32> {
-        self.actors.get(actor_id).map(|(_, instance_id)| *instance_id)
+        self.actors
+            .get(actor_id)
+            .map(|(_, instance_id)| *instance_id)
+    }
+
+    /// The static map geometry as instances of mesh assets: every
+    /// instance-ID'd mesh that is not a dynamic actor, with the world matrix
+    /// the cameras draw it with. The static layer of the lidar/radar scene
+    /// is built from this (one tree per mesh asset, 2.2M unique triangles on
+    /// Belmont instead of 266M world-space copies).
+    ///
+    /// Order is deterministic and part of the sensor contract (it is the
+    /// last tie-break between coincident instances): by instance id, then
+    /// the mesh's asset label, then the world matrix bits. Every mesh must
+    /// have main-world data; a missing one is an error naming it.
+    pub fn static_sensor_meshes(&mut self) -> Result<Vec<StaticSensorMesh>> {
+        let world = self.app.world_mut();
+        let mut query = world.query_filtered::<
+            (&Mesh3d, &GlobalTransform, &InstanceId, Option<&Name>),
+            Without<IdClone>,
+        >();
+        let meshes = world.resource::<Assets<Mesh>>();
+        let mut out = Vec::new();
+        for (mesh3d, transform, instance_id, name) in query.iter(world) {
+            if name.is_some_and(|name| name.as_str().starts_with("actor:")) {
+                continue;
+            }
+            let label = match mesh3d.0.path() {
+                Some(path) => path.to_string(),
+                None => format!(
+                    "{}#{:?}",
+                    name.map(|name| name.as_str())
+                        .unwrap_or("unnamed static mesh"),
+                    mesh3d.0.id()
+                ),
+            };
+            if meshes.get(&mesh3d.0).is_none() {
+                bail!(
+                    "static mesh {label} (instance {}) has no main-world mesh data for the lidar/radar scene",
+                    instance_id.0
+                );
+            }
+            out.push(StaticSensorMesh {
+                mesh: mesh3d.0.clone(),
+                world: transform.to_matrix(),
+                instance_id: instance_id.0,
+                label,
+            });
+        }
+        out.sort_by(|a, b| {
+            a.instance_id
+                .cmp(&b.instance_id)
+                .then_with(|| a.label.cmp(&b.label))
+                .then_with(|| {
+                    a.world
+                        .to_cols_array()
+                        .map(f32::to_bits)
+                        .cmp(&b.world.to_cols_array().map(f32::to_bits))
+                })
+        });
+        Ok(out)
     }
 
     /// Snapshot the static map geometry (every instance-ID'd mesh that is not
@@ -4494,7 +5278,9 @@ impl SceneApp {
             if name.is_some_and(|name| name.as_str().starts_with("actor:")) {
                 continue;
             }
-            let label = name.map(|name| name.as_str()).unwrap_or("unnamed static mesh");
+            let label = name
+                .map(|name| name.as_str())
+                .unwrap_or("unnamed static mesh");
             let mesh = meshes.get(&mesh3d.0).ok_or_else(|| anyhow::anyhow!(
                 "static mesh {label} (instance {}) has no main-world mesh data for the lidar/radar scene",
                 instance_id.0
@@ -4516,9 +5302,9 @@ impl SceneApp {
     /// per-mesh BLAS cache (built once per asset, not per tick).
     pub fn mesh_asset_triangles(&self, mesh: &Handle<Mesh>, label: &str) -> Result<Vec<[Vec3; 3]>> {
         let meshes = self.app.world().resource::<Assets<Mesh>>();
-        let data = meshes.get(mesh).ok_or_else(|| anyhow::anyhow!(
-            "actor mesh {label} has no main-world mesh data for the lidar/radar scene"
-        ))?;
+        let data = meshes.get(mesh).ok_or_else(|| {
+            anyhow::anyhow!("mesh {label} has no main-world mesh data for the lidar/radar scene")
+        })?;
         mesh_local_triangles(data, label)
     }
 
@@ -4537,7 +5323,8 @@ impl SceneApp {
         actor_ids.sort();
         let world = self.app.world();
         let meshes = world.resource::<Assets<Mesh>>();
-        let bindposes = world.resource::<Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>>();
+        let bindposes =
+            world.resource::<Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>>();
         let mut out = Vec::new();
         for actor_id in actor_ids {
             let (cuboid, instance_id) = self.actors[actor_id];
@@ -4551,7 +5338,9 @@ impl SceneApp {
                             // in their declared order.
                             stack.extend(children.iter().rev());
                         }
-                        if world.get::<IdClone>(entity).is_none() && world.get::<Mesh3d>(entity).is_some() {
+                        if world.get::<IdClone>(entity).is_none()
+                            && world.get::<Mesh3d>(entity).is_some()
+                        {
                             entities.push(entity);
                         }
                     }
@@ -4565,7 +5354,9 @@ impl SceneApp {
             for entity in entities {
                 let visible = world
                     .get::<InheritedVisibility>(entity)
-                    .ok_or_else(|| anyhow::anyhow!("actor {actor_id} mesh {entity:?} has no visibility state"))?
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("actor {actor_id} mesh {entity:?} has no visibility state")
+                    })?
                     .get();
                 if !visible {
                     continue;
@@ -4574,28 +5365,43 @@ impl SceneApp {
                     .get::<Name>(entity)
                     .map(|name| format!("{actor_id}/{}", name.as_str()))
                     .unwrap_or_else(|| format!("{actor_id}/{entity:?}"));
-                let handle = world.get::<Mesh3d>(entity).expect("filtered on Mesh3d").0.clone();
+                let handle = world
+                    .get::<Mesh3d>(entity)
+                    .expect("filtered on Mesh3d")
+                    .0
+                    .clone();
                 let world_matrix = world
                     .get::<GlobalTransform>(entity)
                     .ok_or_else(|| anyhow::anyhow!("actor mesh {label} has no world transform"))?
                     .to_matrix();
                 let geometry = match world.get::<SkinnedMesh>(entity) {
-                    None => ActorSensorGeometry::Rigid { mesh: handle, world: world_matrix },
+                    None => ActorSensorGeometry::Rigid {
+                        mesh: handle,
+                        world: world_matrix,
+                    },
                     Some(skin) => {
                         let mesh = meshes.get(&handle).ok_or_else(|| anyhow::anyhow!(
                             "skinned actor mesh {label} has no main-world mesh data for the lidar/radar scene"
                         ))?;
-                        let inverse = bindposes.get(&skin.inverse_bindposes).ok_or_else(|| anyhow::anyhow!(
-                            "skinned actor mesh {label} has no inverse bindposes loaded"
-                        ))?;
+                        let inverse = bindposes.get(&skin.inverse_bindposes).ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "skinned actor mesh {label} has no inverse bindposes loaded"
+                            )
+                        })?;
                         if inverse.len() < skin.joints.len() {
-                            bail!("skinned actor mesh {label} has {} joints but {} inverse bindposes", skin.joints.len(), inverse.len());
+                            bail!(
+                                "skinned actor mesh {label} has {} joints but {} inverse bindposes",
+                                skin.joints.len(),
+                                inverse.len()
+                            );
                         }
                         let mut joints = Vec::with_capacity(skin.joints.len());
                         for (joint, inverse_bindpose) in skin.joints.iter().zip(inverse.iter()) {
-                            let global = world.get::<GlobalTransform>(*joint).ok_or_else(|| anyhow::anyhow!(
+                            let global = world.get::<GlobalTransform>(*joint).ok_or_else(|| {
+                                anyhow::anyhow!(
                                 "skinned actor mesh {label} joint {joint:?} has no world transform"
-                            ))?;
+                            )
+                            })?;
                             // Same product the skin extraction uploads.
                             joints.push(Mat4::from(global.affine()) * *inverse_bindpose);
                         }
@@ -4609,7 +5415,12 @@ impl SceneApp {
                     Some((rider_id, meshes)) if meshes.contains(&entity) => *rider_id,
                     _ => instance_id,
                 };
-                out.push(ActorSensorMesh { actor_id: actor_id.clone(), label, instance_id, geometry });
+                out.push(ActorSensorMesh {
+                    actor_id: actor_id.clone(),
+                    label,
+                    instance_id,
+                    geometry,
+                });
                 contributed += 1;
             }
             if contributed == 0 {
@@ -4623,8 +5434,11 @@ impl SceneApp {
     /// the next render re-registers with fresh attributes). Also prunes the
     /// render-world staging buffers for the removed targets.
     pub fn clear_cameras(&mut self) {
-        let sensor_ids: Vec<String> =
-            self.groups.iter().map(|g| g.spec.sensor_id.clone()).collect();
+        let sensor_ids: Vec<String> = self
+            .groups
+            .iter()
+            .map(|g| g.spec.sensor_id.clone())
+            .collect();
         for sensor_id in &sensor_ids {
             self.remove_camera(sensor_id);
         }
@@ -4633,6 +5447,16 @@ impl SceneApp {
 
     /// Wait for the current capture cameras' GPU permutations, not the prewarm rig.
     /// Returns the number of frames it rendered to get there.
+    /// Fails once the GPU device reported an error (out of memory, device
+    /// lost, validation): the renderer then produces no further frames, so
+    /// every wait and capture reports the cause instead of timing out.
+    pub fn ensure_rendering(&self) -> Result<()> {
+        match &self.app.world().resource::<RenderFailure>().0 {
+            None => Ok(()),
+            Some(cause) => bail!("[native_render_device_error] the GPU device failed ({cause}); rendering has stopped"),
+        }
+    }
+
     pub fn wait_for_capture_ready(&mut self) -> Result<u32> {
         let deadline = Instant::now() + Duration::from_secs(300);
         let mut last_sample = self.app.world().resource::<GpuPending>().samples();
@@ -4640,13 +5464,18 @@ impl SceneApp {
         let mut updates = 0u32;
         loop {
             self.app.update();
+            self.ensure_rendering()?;
             updates += 1;
             while self.receiver.try_recv().is_ok() {}
             let pending = self.app.world().resource::<GpuPending>();
             let sample = pending.samples();
             if sample != last_sample {
                 last_sample = sample;
-                idle_frames = if pending.is_idle() { idle_frames + 1 } else { 0 };
+                idle_frames = if pending.is_idle() {
+                    idle_frames + 1
+                } else {
+                    0
+                };
                 if idle_frames >= GPU_IDLE_FRAMES {
                     return Ok(updates);
                 }
@@ -4674,6 +5503,7 @@ impl SceneApp {
         let mut gpu_idle_frames = 0u32;
         loop {
             self.app.update();
+            self.ensure_rendering()?;
             updates += 1;
             let world = self.app.world_mut();
             if let Some(errors) = world.get_resource::<crate::veg::VegErrors>() {
@@ -4686,23 +5516,39 @@ impl SceneApp {
                 q.iter(world).count()
             };
             let pending_vegetation = {
-                let mut q = world.query_filtered::<
-                    &crate::veg::VegLoad,
-                    (
-                        Without<crate::veg::VegSceneSpawned>,
-                        Without<crate::veg::VegFailed>,
-                    ),
-                >();
+                let mut q = world.query_filtered::<&crate::veg::VegLoad, (
+                    Without<crate::veg::VegSceneSpawned>,
+                    Without<crate::veg::VegFailed>,
+                )>();
                 q.iter(world).count()
             };
             let pending_instances = {
-                let mut q = world.query_filtered::<
-                    &crate::veg::VegRoot,
-                    Without<crate::veg::VegInstantiated>,
-                >();
+                let mut q = world
+                    .query_filtered::<&crate::veg::VegRoot, Without<crate::veg::VegInstantiated>>();
                 q.iter(world).count()
             };
-            if pending_loads == 0 && pending_vegetation == 0 && pending_instances == 0 {
+            let pending_lods = match &self.geometry_lods {
+                Some(lods) => {
+                    use bevy::asset::RecursiveDependencyLoadState as State;
+                    match world
+                        .resource::<AssetServer>()
+                        .recursive_dependency_load_state(&lods.lod_gltf)
+                    {
+                        State::Loaded => 0,
+                        State::Failed(error) => bail!(
+                            "geometry LOD derivative {} failed to load: {error}",
+                            lods.lod_path
+                        ),
+                        _ => 1,
+                    }
+                }
+                None => 0,
+            };
+            if pending_loads == 0
+                && pending_vegetation == 0
+                && pending_instances == 0
+                && pending_lods == 0
+            {
                 // Collect instance entities under the query's mutable borrow,
                 // then re-check readiness through plain world access.
                 let roots: Vec<Entity> = {
@@ -4711,11 +5557,10 @@ impl SceneApp {
                 };
                 if !roots.is_empty() && world.get_resource::<WorldInstanceSpawner>().is_some() {
                     let spawner = world.resource::<WorldInstanceSpawner>();
-                    let all_ready =
-                        roots.iter().all(|e| match world.get::<WorldInstance>(*e) {
-                            Some(wi) => spawner.instance_is_ready(**wi),
-                            None => false,
-                        });
+                    let all_ready = roots.iter().all(|e| match world.get::<WorldInstance>(*e) {
+                        Some(wi) => spawner.instance_is_ready(**wi),
+                        None => false,
+                    });
                     // Scene entities exist; now the render world must have
                     // compiled every pipeline and bound every material, and
                     // stay that way for a few frames (each frame can queue
@@ -4874,20 +5719,23 @@ impl SceneApp {
             entries
                 .into_iter()
                 .enumerate()
-                .map(|(i, (name, _, _, _, entity, mesh_h, parent, transform, skin))| {
-                    let id = (i + 1) as u32; // 0 reserved as background
-                    let mat = materials.add(instance_id_material(id));
-                    (id, name, entity, mesh_h, mat, parent, transform, skin)
-                })
+                .map(
+                    |(i, (name, _, _, _, entity, mesh_h, parent, transform, skin))| {
+                        let id = (i + 1) as u32; // 0 reserved as background
+                        let mat = materials.add(instance_id_material(id));
+                        (id, name, entity, mesh_h, mat, parent, transform, skin)
+                    },
+                )
                 .collect()
         };
         let mut legend = Vec::with_capacity(prepared.len());
+        let mut id_clone_of = HashMap::with_capacity(prepared.len());
         for (id, name, entity, mesh_h, mat, parent, transform, skin) in prepared {
             world.entity_mut(entity).insert(InstanceId(id));
             let mut cmd = world.spawn((
                 IdClone,
                 Mesh3d(mesh_h),
-                MeshMaterial3d(mat),
+                MeshMaterial3d(mat.clone()),
                 RenderLayers::layer(1),
                 transform,
             ));
@@ -4897,6 +5745,7 @@ impl SceneApp {
             if let Some(skin) = skin {
                 cmd.insert(skin);
             }
+            id_clone_of.insert(entity, (cmd.id(), mat));
             legend.push(LegendEntry { id, name });
         }
         // Dynamic actors take ids above the static legend: before this, the
@@ -4909,23 +5758,82 @@ impl SceneApp {
             bail!("actors were spawned before the static instance-ID legend was frozen");
         }
         self.next_instance_id = static_max;
+        self.id_clone_of = id_clone_of;
+        if let Some(lods) = &self.geometry_lods {
+            let (masters, levels) =
+                crate::geometry_lod::spawn_levels(self.app.world_mut(), lods, &self.id_clone_of)?;
+            eprintln!("geometry-lod: {masters} master primitives, {levels} level entities");
+        }
 
-        // One update so the newly spawned ID clones are extracted before the
-        // first real render request.
+        // One update so the newly spawned ID clones (and LOD levels, whose
+        // ranges need propagated transforms) are extracted before the first
+        // real render request.
         self.app.update();
+        self.refresh_lod_ranges();
         Ok(())
     }
 
-    /// Set the pose of a registered camera group (applies to RGB + ID cams).
-    pub fn set_pose(&mut self, sensor_id: &str, eye: &[f32; 3], target: &[f32; 3]) -> Result<()> {
-        let eye = Vec3::from_slice(eye);
-        let target = Vec3::from_slice(target);
+    /// Load the map's geometry LOD derivative (`manifest.json` beside its
+    /// `lod.gltf`) for the master glTF `master`. Call after
+    /// [`Self::load_tiles`] and before readiness; the levels are spawned
+    /// when the scene is finalized.
+    pub fn load_geometry_lods(&mut self, manifest: &std::path::Path, master: &str) -> Result<()> {
+        let parsed = crate::geometry_lod::Manifest::load(manifest)?;
+        let dir = manifest
+            .parent()
+            .ok_or_else(|| anyhow::anyhow!("geometry LOD manifest has no directory"))?;
+        let lod_path = crate::platform::asset_path(&dir.join("lod.gltf"))
+            .map_err(|e| anyhow::anyhow!("lod.gltf {e}"))?;
+        let master_path = crate::platform::asset_path(std::path::Path::new(master))
+            .map_err(|e| anyhow::anyhow!("master {e}"))?;
+        let lod_gltf = self
+            .app
+            .world()
+            .resource::<AssetServer>()
+            .load(lod_path.clone());
+        self.geometry_lods = Some(crate::geometry_lod::GeometryLods {
+            manifest: parsed,
+            lod_path,
+            master_path,
+            lod_gltf,
+            pixel_error_px: self
+                .render_config
+                .map_or(crate::geometry_lod::DEFAULT_PIXEL_ERROR_PX, |config| {
+                    config.lod.pixel_error_px
+                }), // fallback-ok: the derivative's own default when no render config was applied (tests)
+            applied_f_px: None,
+        });
+        Ok(())
+    }
+
+    /// Recompute LOD ranges for the most demanding RGB camera of the rig
+    /// (largest focal length in pixels). No-op without LODs or cameras, or
+    /// when the rig's focal length did not change.
+    fn refresh_lod_ranges(&mut self) {
+        let Some(lods) = &self.geometry_lods else {
+            return;
+        };
+        let f_px = self
+            .groups
+            .iter()
+            .map(|g| crate::geometry_lod::focal_px(g.spec.fov_y_deg.to_radians(), g.spec.height))
+            .fold(0.0f32, f32::max);
+        if f_px <= 0.0 || lods.applied_f_px == Some(f_px) {
+            return;
+        }
+        let pixel_error = lods.pixel_error_px;
+        crate::geometry_lod::apply_ranges(self.app.world_mut(), f_px, pixel_error);
+        if let Some(lods) = &mut self.geometry_lods {
+            lods.applied_f_px = Some(f_px);
+        }
+    }
+
+    fn set_camera_transform(&mut self, sensor_id: &str, transform: Transform) -> Result<()> {
         let group = self
             .groups
             .iter()
             .find(|g| g.spec.sensor_id == sensor_id)
             .ok_or_else(|| anyhow::anyhow!("unknown sensor {sensor_id}"))?;
-        let transform = Transform::from_translation(eye).looking_at(target, Vec3::Y);
         self.scene_revision += 1;
         let world = self.app.world_mut();
         if let Some(mut t) = world.get_mut::<Transform>(group.rgb_entity) {
@@ -4937,6 +5845,26 @@ impl SceneApp {
             }
         }
         Ok(())
+    }
+
+    /// Set the eye/target pose of a registered camera group (RGB + ID cams).
+    pub fn set_pose(&mut self, sensor_id: &str, eye: &[f32; 3], target: &[f32; 3]) -> Result<()> {
+        let transform = Transform::from_translation(Vec3::from_slice(eye))
+            .looking_at(Vec3::from_slice(target), Vec3::Y);
+        self.set_camera_transform(sensor_id, transform)
+    }
+
+    /// Set the full world pose of a registered camera group, preserving roll.
+    pub fn set_camera_pose(
+        &mut self,
+        sensor_id: &str,
+        position: &[f32; 3],
+        rotation: Quat,
+    ) -> Result<()> {
+        self.set_camera_transform(
+            sensor_id,
+            Transform::from_translation(Vec3::from_slice(position)).with_rotation(rotation),
+        )
     }
 
     /// Unregister a camera group: its cameras and readback targets are
@@ -4976,6 +5904,7 @@ impl SceneApp {
         world.flush();
         self.rig_revision += 1;
         self.sync_host_layers();
+        self.refresh_lod_ranges();
         true
     }
 
@@ -4983,7 +5912,15 @@ impl SceneApp {
     pub fn expected_keys(&self) -> Vec<String> {
         self.groups
             .iter()
-            .flat_map(|g| g.spec.passes.keys(&g.spec.sensor_id))
+            .flat_map(|g| {
+                let mut keys = g.spec.passes.keys(&g.spec.sensor_id);
+                // Every RGB camera registers its exposure readback; it is
+                // only filled when the look carries the camera model.
+                if g.spec.passes.rgb {
+                    keys.push(format!("{}:exposure", g.spec.sensor_id));
+                }
+                keys
+            })
             .collect()
     }
 
@@ -5030,7 +5967,22 @@ impl SceneApp {
 
     /// Capture every registered pass of one submission to host memory.
     pub fn render_once(&mut self, sim_tick: u64) -> Result<CapturedFrame> {
-        let keys = self.expected_keys();
+        let with_model: Vec<String> = self
+            .groups
+            .iter()
+            .filter(|g| {
+                self.app
+                    .world()
+                    .get::<crate::camera_model::CameraModel>(g.rgb_entity)
+                    .is_some()
+            })
+            .map(|g| format!("{}:exposure", g.spec.sensor_id))
+            .collect();
+        let keys: Vec<String> = self
+            .expected_keys()
+            .into_iter()
+            .filter(|key| !key.ends_with(":exposure") || with_model.contains(key))
+            .collect();
         self.capture(sim_tick, &keys)
     }
 
@@ -5055,7 +6007,10 @@ impl SceneApp {
     pub fn capture(&mut self, sim_tick: u64, keys: &[String]) -> Result<CapturedFrame> {
         self.capture_request(
             sim_tick,
-            CaptureRequest { keys: keys.to_vec(), ..Default::default() },
+            CaptureRequest {
+                keys: keys.to_vec(),
+                ..Default::default()
+            },
         )
     }
 
@@ -5082,7 +6037,14 @@ impl SceneApp {
                 .ok_or_else(|| anyhow::anyhow!("capture: no device stream open for {sensor_id}"))?;
             device.push(copy.clone());
         }
-        self.capture_request(sim_tick, CaptureRequest { keys: keys.to_vec(), device, ..Default::default() })
+        self.capture_request(
+            sim_tick,
+            CaptureRequest {
+                keys: keys.to_vec(),
+                device,
+                ..Default::default()
+            },
+        )
     }
 
     /// Submit a host capture and return without waiting for the GPU, so the
@@ -5104,7 +6066,13 @@ impl SceneApp {
         let id_activity: Vec<(Entity, bool)> = self
             .groups
             .iter()
-            .filter_map(|g| Some((g.id_entity?, keys.iter().any(|k| *k == format!("{}:id", g.spec.sensor_id)))))
+            .filter_map(|g| {
+                Some((
+                    g.id_entity?,
+                    keys.iter()
+                        .any(|k| *k == format!("{}:id", g.spec.sensor_id)),
+                ))
+            })
             .collect();
         {
             let world = self.app.world_mut();
@@ -5130,7 +6098,13 @@ impl SceneApp {
             }
             self.pinned_sample.set(Some(lead));
         }
-        let generation = self.submit(CaptureRequest { keys: keys.to_vec(), slot, deferred: true, ..Default::default() });
+        let generation = self.submit(CaptureRequest {
+            keys: keys.to_vec(),
+            slot,
+            deferred: true,
+            ..Default::default()
+        });
+        self.ensure_rendering()?;
         if self.capture_clock != CaptureClock::Free {
             self.pinned_sample.set(Some(0));
         }
@@ -5139,7 +6113,9 @@ impl SceneApp {
         let settled = self.app.world().resource::<GpuPending>().is_idle();
         let started = {
             let maps = self.deferred_maps.0.lock().expect("deferred maps");
-            maps.iter().find(|m| m.generation == generation).map_or(0, |m| m.expected)
+            maps.iter()
+                .find(|m| m.generation == generation)
+                .map_or(0, |m| m.expected)
         };
         let pending = PendingCapture {
             identity: FrameIdentity {
@@ -5148,7 +6124,6 @@ impl SceneApp {
                 rig_revision: self.rig_revision,
                 generation,
             },
-            slot,
             keys: keys.to_vec(),
             stats,
         };
@@ -5172,7 +6147,10 @@ impl SceneApp {
             CaptureTicket::Pending(pending) => {
                 let (passes, wait_ms, copy_ms, bytes) = self.collect_deferred(&pending)?;
                 if let Some(missing) = pending.keys.iter().find(|k| !passes.contains_key(*k)) {
-                    bail!("capture incomplete: generation {} missing {missing:?}", pending.identity.generation);
+                    bail!(
+                        "capture incomplete: generation {} missing {missing:?}",
+                        pending.identity.generation
+                    );
                 }
                 self.last_capture = CaptureStats {
                     readback_wait_ms: wait_ms,
@@ -5180,31 +6158,43 @@ impl SceneApp {
                     readback_bytes: bytes,
                     ..pending.stats
                 };
-                Ok(CapturedFrame { identity: pending.identity, passes, device: HashMap::new() })
+                Ok(CapturedFrame {
+                    identity: pending.identity,
+                    passes,
+                    device: HashMap::new(),
+                })
             }
         }
     }
 
     /// Poll (without blocking the queue on later work) until the deferred
     /// maps of `pending` complete, then copy them out and unmap.
-    fn collect_deferred(&mut self, pending: &PendingCapture) -> Result<(HashMap<String, CapturedPass>, f64, f64, u64)> {
+    fn collect_deferred(
+        &mut self,
+        pending: &PendingCapture,
+    ) -> Result<(HashMap<String, CapturedPass>, f64, f64, u64)> {
         let generation = pending.identity.generation;
         let map = {
             let mut maps = self.deferred_maps.0.lock().expect("deferred maps");
             let index = maps.iter().position(|m| m.generation == generation);
             index.map(|index| maps.remove(index))
         };
-        let Some(map) = map else { return Ok((HashMap::new(), 0.0, 0.0, 0)) };
+        let Some(map) = map else {
+            return Ok((HashMap::new(), 0.0, 0.0, 0));
+        };
         let waited = Instant::now();
         let deadline = waited + Duration::from_secs(120);
         let device = self.app.world().resource::<RenderDevice>().clone();
         while map.done.load(std::sync::atomic::Ordering::Acquire) < map.expected {
             // `Poll` only reaps finished work; it never waits for frames
             // queued after this capture.
-            device.poll(PollType::Poll).map_err(|error| anyhow::anyhow!("poll device: {error}"))?;
+            device
+                .poll(PollType::Poll)
+                .map_err(|error| anyhow::anyhow!("poll device: {error}"))?;
             if map.done.load(std::sync::atomic::Ordering::Acquire) >= map.expected {
                 break;
             }
+            self.ensure_rendering()?;
             if Instant::now() > deadline {
                 bail!("capture readback of generation {generation} did not complete within 120 s");
             }
@@ -5215,15 +6205,28 @@ impl SceneApp {
         let copied = Instant::now();
         let mut passes = HashMap::with_capacity(map.expected);
         let mut bytes = 0u64;
-        let render_world = self.app.get_sub_app_mut(RenderApp).expect("render app").world_mut();
+        let render_world = self
+            .app
+            .get_sub_app_mut(RenderApp)
+            .expect("render app")
+            .world_mut();
         let mut staging = render_world.resource_mut::<Staging>();
-        for b in staging.0.iter_mut().filter(|b| b.copied && b.slot == map.slot) {
+        for b in staging
+            .0
+            .iter_mut()
+            .filter(|b| b.copied && b.slot == map.slot)
+        {
             if !failed {
                 let data = b.buffer.slice(..).get_mapped_range().to_vec();
                 bytes += data.len() as u64;
                 passes.insert(
                     b.key.clone(),
-                    CapturedPass { width: b.width, height: b.height, padded_row: b.padded_row, bytes: data },
+                    CapturedPass {
+                        width: b.width,
+                        height: b.height,
+                        padded_row: b.padded_row,
+                        bytes: data,
+                    },
                 );
                 b.buffer.unmap();
             }
@@ -5232,16 +6235,34 @@ impl SceneApp {
         if failed {
             bail!("capture readback of generation {generation} failed to map");
         }
-        Ok((passes, wait_ms, copied.elapsed().as_secs_f64() * 1000.0, bytes))
+        Ok((
+            passes,
+            wait_ms,
+            copied.elapsed().as_secs_f64() * 1000.0,
+            bytes,
+        ))
     }
 
     /// A staging slot no deferred capture is holding.
     fn free_slot(&self) -> usize {
-        let busy: Vec<usize> = self.deferred_maps.0.lock().expect("deferred maps").iter().map(|m| m.slot).collect();
-        (0..READBACK_SLOTS).find(|slot| !busy.contains(slot)).unwrap_or(0)
+        let busy: Vec<usize> = self
+            .deferred_maps
+            .0
+            .lock()
+            .expect("deferred maps")
+            .iter()
+            .map(|m| m.slot)
+            .collect();
+        (0..READBACK_SLOTS)
+            .find(|slot| !busy.contains(slot))
+            .unwrap_or(0)
     }
 
-    fn capture_request(&mut self, sim_tick: u64, mut request: CaptureRequest) -> Result<CapturedFrame> {
+    fn capture_request(
+        &mut self,
+        sim_tick: u64,
+        mut request: CaptureRequest,
+    ) -> Result<CapturedFrame> {
         request.slot = self.free_slot();
         request.deferred = false;
         let registered = self.expected_keys();
@@ -5294,6 +6315,7 @@ impl SceneApp {
                 self.pinned_sample.set(Some(lead));
             }
             let generation = self.submit(request.clone());
+            self.ensure_rendering()?;
             if self.capture_clock != CaptureClock::Free {
                 self.pinned_sample.set(Some(0));
             }
@@ -5385,7 +6407,10 @@ impl SceneApp {
             #[cfg(feature = "gpu-interop")]
             self.withdraw_device_frames(device)?;
             if !settled {
-                missing.push("gpu-settled (pipelines compiling or materials unbound during the frame)".into());
+                missing.push(
+                    "gpu-settled (pipelines compiling or materials unbound during the frame)"
+                        .into(),
+                );
                 stats.settle_updates += self.settle_gpu()?;
             }
         }
@@ -5415,8 +6440,13 @@ impl SceneApp {
                 );
             }
             self.submit(CaptureRequest::default());
+            self.ensure_rendering()?;
             updates += 1;
-            idle = if self.app.world().resource::<GpuPending>().is_idle() { idle + 1 } else { 0 };
+            idle = if self.app.world().resource::<GpuPending>().is_idle() {
+                idle + 1
+            } else {
+                0
+            };
         }
         self.drain_outputs();
         Ok(updates)
@@ -5436,10 +6466,33 @@ impl SceneApp {
     /// [`CaptureClock`]).
     pub fn set_capture_clock(&mut self, clock: CaptureClock) {
         self.capture_clock = clock;
+        self.sync_rgb_draw_order();
+        // Clustered lights: Bevy's GPU clustering fills each cluster's light
+        // list through atomics, so the order lights are summed in (and the
+        // low bits of the result) varies run to run, and an overflowing list
+        // is resized with "a few incorrect frames". CPU clustering orders the
+        // lists deterministically; a pinned capture uses it.
+        if let Some(mut settings) = self
+            .app
+            .world_mut()
+            .get_resource_mut::<bevy::light::cluster::GlobalClusterSettings>()
+        {
+            if self.gpu_clustering_default.is_none() {
+                self.gpu_clustering_default = Some(settings.gpu_clustering);
+            }
+            settings.gpu_clustering = match clock {
+                CaptureClock::Free => self.gpu_clustering_default.flatten(),
+                CaptureClock::Pinned { .. } => None,
+            };
+        }
         match clock {
             CaptureClock::Free => {
                 self.pinned_sample.set(None);
-                if let Some(mut sky) = self.app.world_mut().get_resource_mut::<crate::sky_pass::SkyClock>() {
+                if let Some(mut sky) = self
+                    .app
+                    .world_mut()
+                    .get_resource_mut::<crate::sky_pass::SkyClock>()
+                {
                     sky.pinned = None;
                 }
             }
@@ -5455,6 +6508,41 @@ impl SceneApp {
         }
     }
 
+    /// RGB views draw in CPU order under a pinned clock.
+    ///
+    /// Which of two surfaces at exactly equal depth wins (coplanar signal
+    /// lenses, decals, overlapping cards) is decided by draw order, and two
+    /// things made that order depend on the run rather than the scene:
+    /// - with indirect drawing, GPU preprocessing compacts each batch's
+    ///   visible instances with `atomicAdd`, so instances of one mesh draw
+    ///   in the device's thread interleaving order;
+    /// - binned phases draw bins in key order, and the keys (pipeline id,
+    ///   material slot, mesh slab, mesh asset index) are allocation order,
+    ///   which follows the order assets finished loading.
+    /// A few HDR pixels flipped; the dash-cam meter then moved the exposure
+    /// by a hair and the whole frame by 1 LSB. Lavapipe runs compute and
+    /// asset loads on thread pools: unloaded it happened to repeat, under CPU
+    /// load it did not (richmond-06: 9 of 12 chase frames differed between
+    /// two runs). `NoIndirectDrawing` takes the CPU-ordered path, as the ID
+    /// pass does ([`id_pass_camera`]), and a CPU-ordered view draws its bins
+    /// in entity order (vendored bevy_render, `sort_binned_render_phase`).
+    /// The free clock keeps GPU-driven draws.
+    fn sync_rgb_draw_order(&mut self) {
+        let cpu_ordered = self.capture_clock != CaptureClock::Free;
+        let entities: Vec<Entity> = self.groups.iter().map(|g| g.rgb_entity).collect();
+        let world = self.app.world_mut();
+        for entity in entities {
+            let Ok(mut camera) = world.get_entity_mut(entity) else {
+                continue;
+            };
+            if cpu_ordered {
+                camera.insert(bevy::render::view::NoIndirectDrawing);
+            } else {
+                camera.remove::<bevy::render::view::NoIndirectDrawing>();
+            }
+        }
+    }
+
     pub fn capture_clock(&self) -> CaptureClock {
         self.capture_clock
     }
@@ -5466,7 +6554,11 @@ impl SceneApp {
         if self.capture_clock == CaptureClock::Free {
             return;
         }
-        if let Some(mut sky) = self.app.world_mut().get_resource_mut::<crate::sky_pass::SkyClock>() {
+        if let Some(mut sky) = self
+            .app
+            .world_mut()
+            .get_resource_mut::<crate::sky_pass::SkyClock>()
+        {
             sky.pinned = Some(seconds);
             sky.seconds = seconds;
         }
@@ -5502,7 +6594,9 @@ impl SceneApp {
                     slot: ready.slot,
                     generation: ready.generation,
                 })
-                .map_err(|error| anyhow::anyhow!("withdraw device frame for {sensor_id}: {error}"))?;
+                .map_err(|error| {
+                    anyhow::anyhow!("withdraw device frame for {sensor_id}: {error}")
+                })?;
         }
         Ok(())
     }
@@ -5512,8 +6606,8 @@ impl SceneApp {
     /// export memory/semaphores; callers keep the host capture path.
     #[cfg(feature = "gpu-interop")]
     fn device_interop(&mut self) -> Result<&mut crate::gpu_interop::GpuInterop> {
-        use bevy::render::renderer::RenderQueue;
         use crate::gpu_interop::GpuInterop;
+        use bevy::render::renderer::RenderQueue;
         let world = self.app.sub_app_mut(RenderApp).world_mut();
         if !world.contains_resource::<GpuInterop>() {
             let device = world.resource::<RenderDevice>().clone();
@@ -5569,14 +6663,26 @@ impl SceneApp {
         let (width, height) = (group.spec.width, group.spec.height);
         let mut planes = Vec::with_capacity(3);
         if passes.rgb {
-            planes.push(DevicePlane { name: "rgb", src_image: rgb_image.clone(), depth: false });
+            planes.push(DevicePlane {
+                name: "rgb",
+                src_image: rgb_image.clone(),
+                depth: false,
+            });
         }
         if passes.id {
             let id_image = target_image(group.id_entity.expect("checked above"))?;
-            planes.push(DevicePlane { name: "id", src_image: id_image, depth: false });
+            planes.push(DevicePlane {
+                name: "id",
+                src_image: id_image,
+                depth: false,
+            });
         }
         if passes.depth {
-            planes.push(DevicePlane { name: "depth", src_image: rgb_image, depth: true });
+            planes.push(DevicePlane {
+                name: "depth",
+                src_image: rgb_image,
+                depth: true,
+            });
         }
         let descriptor = StreamDescriptor {
             label: sensor_id.to_string(),
@@ -5608,14 +6714,22 @@ impl SceneApp {
             .to_vec();
         self.device_streams.insert(
             sensor_id.to_string(),
-            DeviceCopy { sensor_id: sensor_id.to_string(), stream, wait, planes },
+            DeviceCopy {
+                sensor_id: sensor_id.to_string(),
+                stream,
+                wait,
+                planes,
+            },
         );
         Ok((stream.0, layouts))
     }
 
     /// Fresh exportable handles and the manifest of a sensor's stream.
     #[cfg(feature = "gpu-interop")]
-    pub fn export_device_stream(&mut self, sensor_id: &str) -> Result<crate::gpu_interop::ExportedStream> {
+    pub fn export_device_stream(
+        &mut self,
+        sensor_id: &str,
+    ) -> Result<crate::gpu_interop::ExportedStream> {
         let stream = self
             .device_streams
             .get(sensor_id)
@@ -5672,11 +6786,17 @@ fn spawn_loaded_tiles(
             RecursiveDependencyLoadState::Failed(error) => {
                 panic!("glTF dependency failed to load: {error}");
             }
-            RecursiveDependencyLoadState::NotLoaded | RecursiveDependencyLoadState::Loading => continue,
+            RecursiveDependencyLoadState::NotLoaded | RecursiveDependencyLoadState::Loading => {
+                continue
+            }
         }
         // glTF makes `scene` optional; a file without a default scene is
         // still valid, so fall back to its first scene.
-        let Some(scene) = gltf.default_scene.clone().or_else(|| gltf.scenes.first().cloned()) else {
+        let Some(scene) = gltf
+            .default_scene
+            .clone()
+            .or_else(|| gltf.scenes.first().cloned())
+        else {
             panic!("GLB without any scene");
         };
         commands.entity(e).insert(SceneSpawned);
@@ -5717,35 +6837,51 @@ fn sync_staging(
     mut staging: ResMut<Staging>,
 ) {
     staging.0.retain(|b| {
-        targets
-            .0
-            .iter()
-            .any(|t| t.src_image == b.src_image && t.depth == b.depth && t.key == b.key)
+        targets.0.iter().any(|t| {
+            t.src_image == b.src_image
+                && t.depth == b.depth
+                && t.exposure == b.exposure
+                && t.key == b.key
+        })
     });
     let slot = capture.0.slot;
     for target in targets.0.iter() {
         if !capture.0.keys.iter().any(|k| *k == target.key)
-            || staging
-                .0
-                .iter()
-                .any(|b| b.src_image == target.src_image && b.depth == target.depth && b.slot == slot)
+            || staging.0.iter().any(|b| {
+                b.src_image == target.src_image
+                    && b.depth == target.depth
+                    && b.exposure == target.exposure
+                    && b.slot == slot
+            })
         {
             continue;
         }
         // Depth views share the colour target's extent.
-        let Some(gpu) = gpu_images.get(&target.src_image) else { continue };
-        let width = gpu.texture_descriptor.size.width;
-        let height = gpu.texture_descriptor.size.height;
-        let pixel: usize = if target.depth {
+        let Some(gpu) = gpu_images.get(&target.src_image) else {
+            continue;
+        };
+        let (width, height) = if target.exposure {
+            (4, 1)
+        } else {
+            (
+                gpu.texture_descriptor.size.width,
+                gpu.texture_descriptor.size.height,
+            )
+        };
+        let pixel: usize = if target.depth || target.exposure {
             4
         } else {
-            gpu.texture_descriptor.format.block_copy_size(None).unwrap_or(4) as usize
+            gpu.texture_descriptor
+                .format
+                .block_copy_size(None)
+                .unwrap_or(4) as usize
         };
         let padded_row = aligned_row(width as usize, pixel);
         staging.0.push(StagingBuffer {
             key: target.key.clone(),
             src_image: target.src_image.clone(),
             depth: target.depth,
+            exposure: target.exposure,
             width,
             height,
             padded_row,
@@ -5773,6 +6909,72 @@ fn targets_image(camera: &ExtractedCamera, image: &Handle<Image>) -> bool {
 /// requested pass whose camera was not extracted this frame (just
 /// registered, inactive, or removed) is not copied and therefore never
 /// reported: stale staging bytes cannot be relabelled as this frame.
+/// Cascade layout of every directional light (`RenderConfig.shadows`).
+#[derive(Resource, Clone, Copy, Debug, PartialEq)]
+pub struct ShadowCascadeSettings {
+    pub cascades: u32,
+    pub max_distance_m: f32,
+}
+
+impl Default for ShadowCascadeSettings {
+    fn default() -> Self {
+        Self {
+            cascades: 4,
+            max_distance_m: 400.0,
+        }
+    }
+}
+
+/// Keep every directional light's cascades on the configured layout (the
+/// lighting ladder respawns lights on relight).
+fn enforce_shadow_cascades(
+    settings: Res<ShadowCascadeSettings>,
+    mut lights: Query<(Ref<DirectionalLight>, &mut bevy::light::CascadeShadowConfig)>,
+) {
+    for (light, mut config) in &mut lights {
+        if settings.is_changed() || light.is_added() {
+            *config = bevy::light::cascade::CascadeShadowConfigBuilder {
+                minimum_distance: 1.0,
+                maximum_distance: settings.max_distance_m,
+                num_cascades: settings.cascades as usize,
+                ..Default::default()
+            }
+            .build();
+        }
+    }
+}
+
+/// Remove Bevy's background motion-vector pipeline and bind group from views
+/// that no longer have a motion-vector prepass (see `SceneApp::new`).
+fn drop_stale_background_motion_vectors(
+    mut commands: Commands,
+    stale: Query<
+        Entity,
+        (
+            With<bevy::core_pipeline::prepass::background_motion_vectors::BackgroundMotionVectorsPipelineId>,
+            Without<bevy::core_pipeline::prepass::MotionVectorPrepass>,
+        ),
+    >,
+) {
+    for entity in &stale {
+        commands.entity(entity).remove::<(
+            bevy::core_pipeline::prepass::background_motion_vectors::BackgroundMotionVectorsPipelineId,
+            bevy::core_pipeline::prepass::background_motion_vectors::BackgroundMotionVectorsBindGroup,
+        )>();
+    }
+}
+
+/// Threads that finish the frame's command encoders (see `SceneApp::new`).
+#[derive(Resource)]
+struct EncoderFinishThreads(usize);
+
+fn apply_encoder_finish_threads(
+    threads: Res<EncoderFinishThreads>,
+    mut pending: ResMut<bevy::render::renderer::PendingCommandBuffers>,
+) {
+    pending.set_finish_threads(threads.0);
+}
+
 fn copy_passes(
     mut ctx: RenderContext,
     capture: Res<ExtractedCapture>,
@@ -5780,6 +6982,8 @@ fn copy_passes(
     gpu_images: Res<RenderAssets<GpuImage>>,
     cameras: Query<&ExtractedCamera>,
     depth_views: Query<(&ExtractedCamera, &ViewDepthTexture)>,
+    model_views: Query<(&ExtractedCamera, &crate::camera_model::CameraModelBuffers)>,
+    hdr_views: Query<&crate::camera_model::HdrCapture, With<ExtractedCamera>>,
 ) {
     if capture.0.keys.is_empty() {
         return;
@@ -5794,7 +6998,16 @@ fn copy_passes(
             bytes_per_row: Some(b.padded_row as u32),
             rows_per_image: None,
         };
-        if b.depth {
+        if b.exposure {
+            let Some((_, buffers)) = model_views
+                .iter()
+                .find(|(camera, _)| targets_image(camera, &b.src_image))
+            else {
+                continue;
+            };
+            ctx.command_encoder()
+                .copy_buffer_to_buffer(&buffers.result, 0, &b.buffer, 0, 16);
+        } else if b.depth {
             let Some((_, view)) = depth_views
                 .iter()
                 .find(|(camera, _)| targets_image(camera, &b.src_image))
@@ -5803,11 +7016,20 @@ fn copy_passes(
             };
             ctx.command_encoder().copy_texture_to_buffer(
                 view.texture.as_image_copy(),
-                TexelCopyBufferInfo { buffer: &b.buffer, layout },
+                TexelCopyBufferInfo {
+                    buffer: &b.buffer,
+                    layout,
+                },
                 view.texture.size(),
             );
         } else {
-            if !cameras.iter().any(|camera| targets_image(camera, &b.src_image)) {
+            // A camera's own target, or the HDR copy its camera model made
+            // this frame.
+            if !cameras
+                .iter()
+                .any(|camera| targets_image(camera, &b.src_image))
+                && !hdr_views.iter().any(|hdr| hdr.0.id() == b.src_image.id())
+            {
                 continue;
             }
             let Some(src) = gpu_images.get(&b.src_image) else {
@@ -5815,7 +7037,10 @@ fn copy_passes(
             };
             ctx.command_encoder().copy_texture_to_buffer(
                 src.texture.as_image_copy(),
-                TexelCopyBufferInfo { buffer: &b.buffer, layout },
+                TexelCopyBufferInfo {
+                    buffer: &b.buffer,
+                    layout,
+                },
                 src.texture_descriptor.size,
             );
         }
@@ -5839,7 +7064,11 @@ fn receive_passes(
         return;
     }
     let slot = capture.0.slot;
-    let pending = staging.0.iter().filter(|b| b.copied && b.slot == slot).count();
+    let pending = staging
+        .0
+        .iter()
+        .filter(|b| b.copied && b.slot == slot)
+        .count();
     if pending == 0 {
         return;
     }
@@ -5945,13 +7174,21 @@ fn copy_device_passes(
                         .iter()
                         .find(|(camera, _)| targets_image(camera, &plane.src_image))
                         .map(|(_, view)| view.texture.as_image_copy())
-                } else if cameras.iter().any(|camera| targets_image(camera, &plane.src_image)) {
-                    gpu_images.get(&plane.src_image).map(|src| src.texture.as_image_copy())
+                } else if cameras
+                    .iter()
+                    .any(|camera| targets_image(camera, &plane.src_image))
+                {
+                    gpu_images
+                        .get(&plane.src_image)
+                        .map(|src| src.texture.as_image_copy())
                 } else {
                     None
                 };
                 let Some(src) = src else {
-                    return Err(format!("{}:{} was not rendered this frame", copy.sensor_id, plane.name));
+                    return Err(format!(
+                        "{}:{} was not rendered this frame",
+                        copy.sensor_id, plane.name
+                    ));
                 };
                 sources.push((plane.name, src));
             }
@@ -5966,7 +7203,11 @@ fn copy_device_passes(
             }
             interop.arm_ready(lease).map_err(|error| error.to_string())
         })();
-        let _ = sender.send(SentDevice { sensor_id: copy.sensor_id.clone(), generation, result });
+        let _ = sender.send(SentDevice {
+            sensor_id: copy.sensor_id.clone(),
+            generation,
+            result,
+        });
     }
 }
 
@@ -5981,10 +7222,17 @@ mod tests {
             bevy::render::render_resource::PrimitiveTopology::TriangleList,
             RenderAssetUsages::MAIN_WORLD,
         )
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![
-            [0.0, 1.0, 0.0], [10.0, 2.0, 0.0], [0.0, 1.0, 10.0],
-            [4.2, 20.0, 4.2], [4.8, 20.0, 4.2], [4.2, 20.0, 4.8],
-        ])
+        .with_inserted_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            vec![
+                [0.0, 1.0, 0.0],
+                [10.0, 2.0, 0.0],
+                [0.0, 1.0, 10.0],
+                [4.2, 20.0, 4.2],
+                [4.8, 20.0, 4.2],
+                [4.2, 20.0, 4.8],
+            ],
+        )
         .with_inserted_indices(bevy::mesh::Indices::U32(vec![0, 2, 1, 3, 4, 5]));
         let mesh = Mesh3d(meshes.add(mesh));
         let transform = GlobalTransform::IDENTITY;
@@ -6000,20 +7248,187 @@ mod tests {
         // A street at z=2 m over xodr x,y in [0,20]^2 and a deck at z=8 m
         // over x in [10,20] (xodr-local, mm).
         let vertices = [
-            [0, 0, 2000], [20000, 0, 2000], [20000, 20000, 2000], [0, 20000, 2000],
-            [10000, 0, 8000], [20000, 0, 8000], [20000, 20000, 8000], [10000, 20000, 8000],
+            [0, 0, 2000],
+            [20000, 0, 2000],
+            [20000, 20000, 2000],
+            [0, 20000, 2000],
+            [10000, 0, 8000],
+            [20000, 0, 8000],
+            [20000, 20000, 8000],
+            [10000, 20000, 8000],
         ];
         let triangles = [[0, 1, 2], [0, 2, 3], [4, 5, 6], [4, 6, 7]];
-        let classes = [SurfaceClass::Road, SurfaceClass::Road, SurfaceClass::Bridge, SurfaceClass::Bridge];
-        let surface = GroundSurface::decode(&encode_ground_mesh(&vertices, &triangles, &classes)).unwrap();
+        let classes = [
+            SurfaceClass::Road,
+            SurfaceClass::Road,
+            SurfaceClass::Bridge,
+            SurfaceClass::Bridge,
+        ];
+        let surface =
+            GroundSurface::decode(&encode_ground_mesh(&vertices, &triangles, &classes)).unwrap();
         // Scene (x, z) = xodr (x, -y): xodr (5, 7) is scene (5, -7).
         assert!((ground_mesh_height(&surface, 5.0, -7.0).unwrap() - 2.0).abs() < 1e-6);
         // xodr y = -7 is off the surface: an error, not a height.
         let off = ground_mesh_height(&surface, 5.0, 7.0).unwrap_err();
-        assert!(off.starts_with("[native_ground_height_unavailable]"), "{off}");
+        assert!(
+            off.starts_with("[native_ground_height_unavailable]"),
+            "{off}"
+        );
         // Two decks and no authored height: refuse to choose.
         let stacked = ground_mesh_height(&surface, 15.0, -7.0).unwrap_err();
-        assert!(stacked.starts_with("[native_ground_height_ambiguous]"), "{stacked}");
+        assert!(
+            stacked.starts_with("[native_ground_height_ambiguous]"),
+            "{stacked}"
+        );
+    }
+
+    #[test]
+    fn parallel_ground_field_is_bit_identical_to_the_serial_build() {
+        // Many overlapping instances with equal heights (signed zeros too):
+        // the chunked build must keep exactly the serial tie winners.
+        let mut meshes = Assets::<Mesh>::default();
+        let mut state = 0x2545_f491_4f6c_dd1du64;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            ((state >> 40) as f32) / (1u64 << 24) as f32
+        };
+        let mut instances = Vec::new();
+        for i in 0..200 {
+            let mut positions = Vec::new();
+            for _ in 0..30 {
+                let y = match i % 4 {
+                    0 => 0.0,
+                    1 => -0.0,
+                    _ => (next() * 4.0).floor() * 0.5,
+                };
+                positions.push([next() * 60.0, y, next() * 60.0]);
+            }
+            let indices: Vec<u32> = (0..30).collect();
+            let mesh = Mesh::new(
+                bevy::render::render_resource::PrimitiveTopology::TriangleList,
+                RenderAssetUsages::MAIN_WORLD,
+            )
+            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+            .with_inserted_indices(bevy::mesh::Indices::U32(indices));
+            let transform =
+                GlobalTransform::from(Transform::from_xyz(next() * 5.0, 0.0, next() * 5.0));
+            instances.push((Mesh3d(meshes.add(mesh)), transform));
+        }
+        let pairs: Vec<(&Mesh3d, &GlobalTransform)> =
+            instances.iter().map(|(m, t)| (m, t)).collect();
+        let parallel = GroundField::from_meshes(&meshes, pairs.iter().copied(), 2.0);
+        let serial = GroundField::from_meshes_serial(&meshes, pairs.iter().copied(), 2.0);
+        assert_eq!(parallel.min_y.len(), serial.min_y.len());
+        for (cell, y) in &serial.min_y {
+            assert_eq!(parallel.min_y[cell].to_bits(), y.to_bits(), "cell {cell:?}");
+        }
+    }
+
+    #[test]
+    fn map_load_pools_give_io_every_core_and_keep_the_other_pools() {
+        let cores = bevy::tasks::available_parallelism().max(1);
+        let options = map_load_task_pools();
+        assert_eq!(
+            (options.io.min_threads, options.io.max_threads),
+            (cores, cores)
+        );
+        let others = options.async_compute.max_threads + options.compute.max_threads;
+        assert_eq!(options.min_total_threads, cores + others);
+        assert_eq!(options.max_total_threads, options.min_total_threads);
+        // What Bevy's defaults leave the async and compute pools on this host.
+        let default_io = if cores >= 16 {
+            4
+        } else {
+            ((cores as f32 * 0.25).round() as usize).clamp(1, 4)
+        };
+        assert_eq!(
+            others,
+            cores - default_io,
+            "async + compute keep Bevy's default share"
+        );
+    }
+
+    /// Measurement probe (not a gate): CPU cost of turning a staged map's
+    /// KTX2 textures into GPU images, as Bevy's glTF loader does, on the
+    /// IO pool's thread count and on every core.
+    /// `SIMFORGE_KTX2_PROBE_DIR=<staged closure> cargo test --release -p render-core ktx2_transcode_probe -- --ignored --nocapture`
+    #[test]
+    #[ignore = "measurement probe over a staged map closure"]
+    fn ktx2_transcode_probe() {
+        let dir = std::env::var("SIMFORGE_KTX2_PROBE_DIR").expect("SIMFORGE_KTX2_PROBE_DIR");
+        let mut files = Vec::new();
+        let mut stack = vec![std::path::PathBuf::from(dir)];
+        while let Some(path) = stack.pop() {
+            for entry in std::fs::read_dir(&path).unwrap() {
+                let entry = entry.unwrap().path();
+                if entry.is_dir() {
+                    stack.push(entry);
+                } else if entry.extension().is_some_and(|ext| ext == "ktx2") {
+                    files.push(entry);
+                }
+            }
+        }
+        files.sort();
+        let read = Instant::now();
+        let buffers: Vec<Vec<u8>> = files
+            .iter()
+            .map(|path| std::fs::read(path).unwrap())
+            .collect();
+        let bytes: usize = buffers.iter().map(Vec::len).sum();
+        eprintln!(
+            "{} ktx2 files, {:.2} GB on disk, read in {:.1} s",
+            files.len(),
+            bytes as f64 / 1e9,
+            read.elapsed().as_secs_f64()
+        );
+        let formats = bevy::image::CompressedImageFormats::BC;
+        for threads in [
+            1usize,
+            4,
+            std::thread::available_parallelism().map_or(4, |n| n.get()),
+        ] {
+            let started = Instant::now();
+            let next = std::sync::atomic::AtomicUsize::new(0);
+            let gpu_bytes = std::sync::atomic::AtomicUsize::new(0);
+            let limit = if threads == 1 {
+                buffers.len().min(200)
+            } else {
+                buffers.len()
+            };
+            std::thread::scope(|scope| {
+                for _ in 0..threads {
+                    scope.spawn(|| loop {
+                        let index = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        if index >= limit {
+                            break;
+                        }
+                        let image =
+                            bevy::image::ktx2_buffer_to_image(&buffers[index], formats, true)
+                                .expect("transcode");
+                        gpu_bytes.fetch_add(
+                            image.data.as_ref().map_or(0, Vec::len),
+                            std::sync::atomic::Ordering::Relaxed,
+                        );
+                    });
+                }
+            });
+            let seconds = started.elapsed().as_secs_f64();
+            eprintln!(
+                "{threads:>2} threads: {limit} textures -> {:.2} GB GPU data in {seconds:.1} s{}",
+                gpu_bytes.load(std::sync::atomic::Ordering::Relaxed) as f64 / 1e9,
+                if limit < buffers.len() {
+                    format!(
+                        " (x{:.0} extrapolated: {:.0} s)",
+                        buffers.len() as f64 / limit as f64,
+                        seconds * buffers.len() as f64 / limit as f64
+                    )
+                } else {
+                    String::new()
+                }
+            );
+        }
     }
 
     #[test]
@@ -6142,7 +7557,10 @@ mod tests {
         let (_, resolved) = sunward.resolve();
         let view = resolved.atmosphere.as_ref().unwrap().view_sky.unwrap();
         assert!(view.sun_in_field > 0.99, "sun framed: {view:?}");
-        assert!(view.max_cdm2 > 4.0 * view.mean_cdm2, "aureole dominates: {view:?}");
+        assert!(
+            view.max_cdm2 > 4.0 * view.mean_cdm2,
+            "aureole dominates: {view:?}"
+        );
         assert!(
             resolved.ev100 > incident_only + 1.0,
             "sunward sunset stops down: {} vs {incident_only}",
@@ -6160,7 +7578,15 @@ mod tests {
         };
         let (_, away_resolved) = away.resolve();
         assert!((away_resolved.ev100 - incident_only).abs() < 1.0e-4);
-        assert_eq!(away_resolved.atmosphere.unwrap().view_sky.unwrap().sun_in_field, 0.0);
+        assert_eq!(
+            away_resolved
+                .atmosphere
+                .unwrap()
+                .view_sky
+                .unwrap()
+                .sun_in_field,
+            0.0
+        );
 
         let noon = Lighting {
             atmosphere: true,
@@ -6173,7 +7599,10 @@ mod tests {
             }),
             ..Default::default()
         };
-        let plain = Lighting { meter_view: None, ..noon.clone() };
+        let plain = Lighting {
+            meter_view: None,
+            ..noon.clone()
+        };
         assert!((noon.resolve().1.ev100 - plain.resolve().1.ev100).abs() < 1.0e-4);
     }
 
@@ -6192,9 +7621,18 @@ mod tests {
     #[test]
     fn ladder_tiers_follow_the_two_handovers() {
         assert_eq!(ladder_tier(30.0), LadderTier::Day);
-        assert_eq!(ladder_tier(PROBE_HANDOVER_ELEVATION_DEG + 0.01), LadderTier::Day);
-        assert_eq!(ladder_tier(PROBE_HANDOVER_ELEVATION_DEG), LadderTier::Twilight);
-        assert_eq!(ladder_tier(NIGHT_SOURCES_ELEVATION_DEG + 0.01), LadderTier::Twilight);
+        assert_eq!(
+            ladder_tier(PROBE_HANDOVER_ELEVATION_DEG + 0.01),
+            LadderTier::Day
+        );
+        assert_eq!(
+            ladder_tier(PROBE_HANDOVER_ELEVATION_DEG),
+            LadderTier::Twilight
+        );
+        assert_eq!(
+            ladder_tier(NIGHT_SOURCES_ELEVATION_DEG + 0.01),
+            LadderTier::Twilight
+        );
         assert_eq!(ladder_tier(NIGHT_SOURCES_ELEVATION_DEG), LadderTier::Night);
         assert_eq!(ladder_tier(-30.0), LadderTier::Night);
     }
@@ -6213,7 +7651,14 @@ mod tests {
                 }),
                 ..Default::default()
             };
-            lighting.resolve().1.atmosphere.unwrap().view_sky.unwrap().sun_in_field
+            lighting
+                .resolve()
+                .1
+                .atmosphere
+                .unwrap()
+                .view_sky
+                .unwrap()
+                .sun_in_field
         };
         // Half-field is 20 deg (tan 0.364): fully inside, on the ramp
         // (tangent between 0.8 and 1.25 of the half-field), fully outside.
@@ -6229,18 +7674,18 @@ mod tests {
         let lighting = Lighting::default();
         let env = crate::night::resolve_night(&lighting.night, 16.0, false);
         assert!((env.urban_skyglow_lux - 0.05).abs() < 1.0e-6);
-        assert!(env.source_ledger.iter().any(|source| source.id == "urban-skyglow"));
+        assert!(env
+            .source_ledger
+            .iter()
+            .any(|source| source.id == "urban-skyglow"));
     }
     #[test]
     #[ignore = "focused GPU integration test"]
     fn service_actor_catalog_models_instantiate_mesh_nodes() {
         let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
 
-        let vehicle = repo.join(
-            "catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb",
-        );
-        let pedestrian =
-            repo.join("catalog/pedestrians-carla/models/pedestrian_0015.glb");
+        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let pedestrian = repo.join("catalog/pedestrians-carla/models/pedestrian_0015.glb");
         assert!(vehicle.is_file() && pedestrian.is_file());
 
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
@@ -6256,8 +7701,15 @@ mod tests {
             [4.5, 1.6, 1.8],
             [0.5, 0.5, 0.5],
         );
-        app.attach_actor_asset("vehicle-test", &vehicle, 1.0, Some([0.56, 0.18, 0.18]), None, 0.0)
-            .unwrap();
+        app.attach_actor_asset(
+            "vehicle-test",
+            &vehicle,
+            1.0,
+            Some([0.56, 0.18, 0.18]),
+            None,
+            0.0,
+        )
+        .unwrap();
         app.upsert_actor(
             "walker-test",
             "pedestrian",
@@ -6296,40 +7748,92 @@ mod tests {
         let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let bike = repo.join("catalog/vehicles-carla/models/vehicle_motorcycle_harley_rider.glb");
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
-        app.load_tiles(&[repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb").to_string_lossy().into_owned()]).unwrap();
-        app.add_camera(
-            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera("cam", 160, 120) },
-            Profile::Sensor,
-        );
+        app.load_tiles(&[repo
+            .join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb")
+            .to_string_lossy()
+            .into_owned()])
+            .unwrap();
+        app.add_camera(CameraSpec {
+            passes: PassSet {
+                rgb: true,
+                id: true,
+                depth: false,
+                hdr: false,
+            },
+            ..test_camera("cam", 160, 120)
+        });
         app.wait_until_ready().unwrap();
-        app.upsert_actor("moto", "motorcycle", [0.0, 0.7, -20.0], Quat::IDENTITY, [2.1, 1.4, 0.75], [0.5, 0.5, 0.5]);
-        app.attach_actor_asset("moto", &bike, 0.9, None, Some("ride"), 0.25).unwrap();
-        app.set_actor_asset_pose("moto", [0.0, 0.0, -20.0], Quat::IDENTITY).unwrap();
-        app.set_actor_material_colors("moto", &[("rider_top".into(), [0.8, 0.1, 0.1])]).unwrap();
-        assert_eq!(app.actor_material_colors("moto", "rider_top").first().copied(), Some([0.8, 0.1, 0.1]));
-        assert!(app.set_actor_material_colors("moto", &[("no_such_slot".into(), [1.0, 1.0, 1.0])]).is_err());
+        app.upsert_actor(
+            "moto",
+            "motorcycle",
+            [0.0, 0.7, -20.0],
+            Quat::IDENTITY,
+            [2.1, 1.4, 0.75],
+            [0.5, 0.5, 0.5],
+        );
+        app.attach_actor_asset("moto", &bike, 0.9, None, Some("ride"), 0.25)
+            .unwrap();
+        app.set_actor_asset_pose("moto", [0.0, 0.0, -20.0], Quat::IDENTITY)
+            .unwrap();
+        app.set_actor_material_colors("moto", &[("rider_top".into(), [0.8, 0.1, 0.1])])
+            .unwrap();
+        assert_eq!(
+            app.actor_material_colors("moto", "rider_top")
+                .first()
+                .copied(),
+            Some([0.8, 0.1, 0.1])
+        );
+        assert!(app
+            .set_actor_material_colors("moto", &[("no_such_slot".into(), [1.0, 1.0, 1.0])])
+            .is_err());
         app.warmup(2);
         let bike_id = app.actor_instance_id("moto").unwrap();
-        let rider_id = app.actor_rider_instance_id("moto").expect("the Harley model carries a rider");
+        let rider_id = app
+            .actor_rider_instance_id("moto")
+            .expect("the Harley model carries a rider");
         assert_ne!(bike_id, rider_id);
         assert_eq!(app.actor_instance_class(rider_id), Some("rider"));
         assert_eq!(app.actor_instance_class(bike_id), Some("motorcycle"));
         let meshes = app.actor_sensor_meshes().unwrap();
-        let rider: Vec<_> = meshes.iter().filter(|m| m.instance_id == rider_id).collect();
-        assert!(!rider.is_empty() && rider.len() < meshes.len(), "rider and bike meshes both present");
-        assert!(rider.iter().any(|m| matches!(m.geometry, ActorSensorGeometry::Skinned { .. })), "the rider body is skinned");
+        let rider: Vec<_> = meshes
+            .iter()
+            .filter(|m| m.instance_id == rider_id)
+            .collect();
+        assert!(
+            !rider.is_empty() && rider.len() < meshes.len(),
+            "rider and bike meshes both present"
+        );
+        assert!(
+            rider
+                .iter()
+                .any(|m| matches!(m.geometry, ActorSensorGeometry::Skinned { .. })),
+            "the rider body is skinned"
+        );
         // Rider pixels sit above bike pixels in a side view.
-        app.set_pose("cam", &[0.0, 1.0, -14.0], &[0.0, 0.9, -20.0]).unwrap();
+        app.set_pose("cam", &[0.0, 1.0, -14.0], &[0.0, 0.9, -20.0])
+            .unwrap();
         let frame = app.render_once(1).unwrap();
         let id = &frame.passes["cam:id"].bytes;
         let rows_of = |instance: u32| -> Vec<usize> {
             let b = instance.to_le_bytes();
-            id.chunks_exact(4).enumerate().filter(|(_, px)| px[..3] == b[..3]).map(|(i, _)| i / 160).collect()
+            id.chunks_exact(4)
+                .enumerate()
+                .filter(|(_, px)| px[..3] == b[..3])
+                .map(|(i, _)| i / 160)
+                .collect()
         };
         let (rider_rows, bike_rows) = (rows_of(rider_id), rows_of(bike_id));
-        assert!(rider_rows.len() > 100 && bike_rows.len() > 100, "rider {} px, bike {} px", rider_rows.len(), bike_rows.len());
+        assert!(
+            rider_rows.len() > 100 && bike_rows.len() > 100,
+            "rider {} px, bike {} px",
+            rider_rows.len(),
+            bike_rows.len()
+        );
         let mean = |rows: &[usize]| rows.iter().sum::<usize>() as f32 / rows.len() as f32;
-        assert!(mean(&rider_rows) < mean(&bike_rows), "rider is drawn above the bike");
+        assert!(
+            mean(&rider_rows) < mean(&bike_rows),
+            "rider is drawn above the bike"
+        );
         app.remove_actor("moto");
         assert_eq!(app.actor_instance_class(rider_id), None);
     }
@@ -6341,67 +7845,134 @@ mod tests {
         let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
         let pedestrian = repo.join("catalog/pedestrians-carla/models/pedestrian_0015.glb");
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
-        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
-        app.add_camera(
-            CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera("cam", 128, 96) },
-            Profile::Sensor,
-        );
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
+            .unwrap();
+        app.add_camera(CameraSpec {
+            passes: PassSet {
+                rgb: true,
+                id: true,
+                depth: false,
+                hdr: false,
+            },
+            ..test_camera("cam", 128, 96)
+        });
         app.wait_until_ready().unwrap();
 
         let body = [0.0, 0.8, -20.0];
-        app.upsert_actor("car", "car", body, Quat::IDENTITY, [4.5, 1.6, 1.8], [0.5, 0.5, 0.5]);
+        app.upsert_actor(
+            "car",
+            "car",
+            body,
+            Quat::IDENTITY,
+            [4.5, 1.6, 1.8],
+            [0.5, 0.5, 0.5],
+        );
         let legend_max = app.legend().iter().map(|entry| entry.id).max().unwrap();
-        assert!(app.actor_instance_id("car").unwrap() > legend_max, "actor ids never reuse static legend ids");
+        assert!(
+            app.actor_instance_id("car").unwrap() > legend_max,
+            "actor ids never reuse static legend ids"
+        );
         // Before a model is attached the cuboid is what the camera draws
         // (read after an update, like the service's post-readiness snapshot).
         app.warmup(1);
         let cuboid = app.actor_sensor_meshes().unwrap();
         assert_eq!(cuboid.len(), 1);
-        let ActorSensorGeometry::Rigid { mesh, .. } = &cuboid[0].geometry else { panic!("cuboid is rigid") };
+        let ActorSensorGeometry::Rigid { mesh, .. } = &cuboid[0].geometry else {
+            panic!("cuboid is rigid")
+        };
         assert_eq!(app.mesh_asset_triangles(mesh, "cuboid").unwrap().len(), 12);
 
-        app.attach_actor_asset("car", &vehicle, 1.0, None, None, 0.0).unwrap();
-        app.set_actor_asset_pose("car", [0.0, 0.0, -20.0], Quat::IDENTITY).unwrap();
+        app.attach_actor_asset("car", &vehicle, 1.0, None, None, 0.0)
+            .unwrap();
+        app.set_actor_asset_pose("car", [0.0, 0.0, -20.0], Quat::IDENTITY)
+            .unwrap();
         app.warmup(2);
         let meshes = app.actor_sensor_meshes().unwrap();
-        assert_eq!(meshes.len(), app.actor_model_mesh_count("car"), "one sensor mesh per drawn model node");
+        assert_eq!(
+            meshes.len(),
+            app.actor_model_mesh_count("car"),
+            "one sensor mesh per drawn model node"
+        );
         let mut triangles = 0;
         for mesh in &meshes {
             assert_eq!(mesh.actor_id, "car");
-            let ActorSensorGeometry::Rigid { mesh: handle, world } = &mesh.geometry else { panic!("vehicle meshes are rigid") };
+            let ActorSensorGeometry::Rigid {
+                mesh: handle,
+                world,
+            } = &mesh.geometry
+            else {
+                panic!("vehicle meshes are rigid")
+            };
             triangles += app.mesh_asset_triangles(handle, &mesh.label).unwrap().len();
             // Every node sits on the actor (world translation within the body).
             let t = world.w_axis.truncate();
-            assert!((t - Vec3::new(0.0, 0.0, -20.0)).length() < 4.0, "{} at {t}", mesh.label);
+            assert!(
+                (t - Vec3::new(0.0, 0.0, -20.0)).length() < 4.0,
+                "{} at {t}",
+                mesh.label
+            );
         }
-        assert!(triangles > 1_000, "the sedan GLB, not a 12-triangle box ({triangles})");
+        assert!(
+            triangles > 1_000,
+            "the sedan GLB, not a 12-triangle box ({triangles})"
+        );
 
         // The ID pass draws the model: the silhouette differs from the box
         // (the box also fills the space above the hood and under the body).
-        app.set_pose("cam", &[6.0, 1.2, -20.0], &[0.0, 0.9, -20.0]).unwrap();
+        app.set_pose("cam", &[6.0, 1.2, -20.0], &[0.0, 0.9, -20.0])
+            .unwrap();
         let frame = app.render_once(1).unwrap();
         let id = &frame.passes["cam:id"].bytes;
         let actor_id = app.actor_instance_id("car").unwrap().to_le_bytes();
-        let hits = id.chunks_exact(4).filter(|px| px[..3] == actor_id[..3]).count();
-        assert!(hits > 200, "the actor is visible in the ID pass ({hits} px)");
+        let hits = id
+            .chunks_exact(4)
+            .filter(|px| px[..3] == actor_id[..3])
+            .count();
+        assert!(
+            hits > 200,
+            "the actor is visible in the ID pass ({hits} px)"
+        );
         let box_px = {
             let cols = 128usize;
             // Projected cuboid footprint is a solid rectangle; the car's is
             // not: some pixels inside the actor's ID bounding box are not the actor.
-            let rows: Vec<usize> = id.chunks_exact(4).enumerate().filter(|(_, px)| px[..3] == actor_id[..3]).map(|(i, _)| i).collect();
-            let (x0, x1) = rows.iter().fold((usize::MAX, 0), |(a, b), i| (a.min(i % cols), b.max(i % cols)));
-            let (y0, y1) = rows.iter().fold((usize::MAX, 0), |(a, b), i| (a.min(i / cols), b.max(i / cols)));
+            let rows: Vec<usize> = id
+                .chunks_exact(4)
+                .enumerate()
+                .filter(|(_, px)| px[..3] == actor_id[..3])
+                .map(|(i, _)| i)
+                .collect();
+            let (x0, x1) = rows.iter().fold((usize::MAX, 0), |(a, b), i| {
+                (a.min(i % cols), b.max(i % cols))
+            });
+            let (y0, y1) = rows.iter().fold((usize::MAX, 0), |(a, b), i| {
+                (a.min(i / cols), b.max(i / cols))
+            });
             (x1 - x0 + 1) * (y1 - y0 + 1)
         };
-        assert!(hits < box_px * 95 / 100, "ID silhouette is the car, not a filled box ({hits} of {box_px})");
+        assert!(
+            hits < box_px * 95 / 100,
+            "ID silhouette is the car, not a filled box ({hits} of {box_px})"
+        );
 
         // A walking pedestrian's skin is posed on the CPU and follows the clip.
-        app.upsert_actor("ped", "pedestrian", [3.0, 0.9, -20.0], Quat::IDENTITY, [0.5, 1.8, 0.5], [0.5, 0.5, 0.5]);
-        app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("walk"), 0.0).unwrap();
-        app.set_actor_asset_pose("ped", [3.0, 0.0, -20.0], Quat::IDENTITY).unwrap();
+        app.upsert_actor(
+            "ped",
+            "pedestrian",
+            [3.0, 0.9, -20.0],
+            Quat::IDENTITY,
+            [0.5, 1.8, 0.5],
+            [0.5, 0.5, 0.5],
+        );
+        app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("walk"), 0.0)
+            .unwrap();
+        app.set_actor_asset_pose("ped", [3.0, 0.0, -20.0], Quat::IDENTITY)
+            .unwrap();
         app.warmup(2);
         let posed = |app: &mut SceneApp| -> Vec<[Vec3; 3]> {
-            app.actor_sensor_meshes().unwrap().into_iter()
+            app.actor_sensor_meshes()
+                .unwrap()
+                .into_iter()
                 .filter(|mesh| mesh.actor_id == "ped")
                 .flat_map(|mesh| match mesh.geometry {
                     ActorSensorGeometry::Skinned { triangles, .. } => triangles,
@@ -6415,12 +7986,22 @@ mod tests {
         app.warmup(2);
         let at_later = posed(&mut app);
         assert_eq!(at_zero.len(), at_later.len());
-        assert!(at_zero.iter().zip(&at_later).any(|(a, b)| (a[0] - b[0]).length() > 0.01), "the skin follows the walk clip");
+        assert!(
+            at_zero
+                .iter()
+                .zip(&at_later)
+                .any(|(a, b)| (a[0] - b[0]).length() > 0.01),
+            "the skin follows the walk clip"
+        );
 
         // Rebinding the model (idle <-> walk GLB) keeps one ID clone set.
         app.detach_actor_asset("ped").unwrap();
-        assert!(app.actor_sensor_meshes().is_err(), "an actor whose model was detached has no visible geometry");
-        app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("idle"), 0.0).unwrap();
+        assert!(
+            app.actor_sensor_meshes().is_err(),
+            "an actor whose model was detached has no visible geometry"
+        );
+        app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("idle"), 0.0)
+            .unwrap();
         assert!(!posed(&mut app).is_empty());
         std::mem::forget(app);
     }
@@ -6428,8 +8009,7 @@ mod tests {
     /// Every ID-pass pixel decodes to the background, a static legend entry
     /// or a live actor: no dithered, blended or sRGB-rounded neighbour ids
     /// (formerly ~10k px per 960x540 frame decoded to id +/- 1, 256 or 65536).
-    /// A cinematic view (post-process AA on its RGB camera) and a sensor view
-    /// both hold. Runs on a GPU or on lavapipe (see the actor mesh test).
+    /// Two views (post-process AA on their RGB cameras) both hold. Runs on a GPU or on lavapipe (see the actor mesh test).
     #[test]
     #[ignore = "focused GPU integration test"]
     fn every_id_pass_pixel_decodes_to_a_known_instance() {
@@ -6437,51 +8017,258 @@ mod tests {
         let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
         let pedestrian = repo.join("catalog/pedestrians-carla/models/pedestrian_0015.glb");
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
-        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
-        for (sensor, profile) in [("sensor", Profile::Sensor), ("cinematic", Profile::Cinematic)] {
-            app.add_camera(
-                CameraSpec { passes: PassSet { rgb: true, id: true, depth: false }, ..test_camera(sensor, 320, 180) },
-                profile,
-            );
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
+            .unwrap();
+        for sensor in ["left", "right"] {
+            app.add_camera(CameraSpec {
+                passes: PassSet {
+                    rgb: true,
+                    id: true,
+                    depth: false,
+                    hdr: false,
+                },
+                ..test_camera(sensor, 320, 180)
+            });
         }
         app.wait_until_ready().unwrap();
         for (k, x) in [-6.0f32, 0.0, 6.0].into_iter().enumerate() {
             let id = format!("car{k}");
-            app.upsert_actor(&id, "car", [x, 0.8, -18.0], Quat::from_rotation_y(0.4 * k as f32), [4.5, 1.6, 1.8], [0.5, 0.5, 0.5]);
-            app.attach_actor_asset(&id, &vehicle, 1.0, Some([0.2, 0.3, 0.6]), None, 0.0).unwrap();
-            app.set_actor_asset_pose(&id, [x, 0.0, -18.0], Quat::from_rotation_y(0.4 * k as f32)).unwrap();
+            app.upsert_actor(
+                &id,
+                "car",
+                [x, 0.8, -18.0],
+                Quat::from_rotation_y(0.4 * k as f32),
+                [4.5, 1.6, 1.8],
+                [0.5, 0.5, 0.5],
+            );
+            app.attach_actor_asset(&id, &vehicle, 1.0, Some([0.2, 0.3, 0.6]), None, 0.0)
+                .unwrap();
+            app.set_actor_asset_pose(&id, [x, 0.0, -18.0], Quat::from_rotation_y(0.4 * k as f32))
+                .unwrap();
         }
-        app.upsert_actor("ped", "pedestrian", [3.0, 0.9, -14.0], Quat::IDENTITY, [0.5, 1.8, 0.5], [0.5, 0.5, 0.5]);
-        app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("walk"), 0.3).unwrap();
-        app.set_actor_asset_pose("ped", [3.0, 0.0, -14.0], Quat::IDENTITY).unwrap();
-        let mut known: std::collections::HashSet<u32> = app.legend().iter().map(|entry| entry.id).collect();
+        app.upsert_actor(
+            "ped",
+            "pedestrian",
+            [3.0, 0.9, -14.0],
+            Quat::IDENTITY,
+            [0.5, 1.8, 0.5],
+            [0.5, 0.5, 0.5],
+        );
+        app.attach_actor_asset("ped", &pedestrian, 1.0, None, Some("walk"), 0.3)
+            .unwrap();
+        app.set_actor_asset_pose("ped", [3.0, 0.0, -14.0], Quat::IDENTITY)
+            .unwrap();
+        let mut known: std::collections::HashSet<u32> =
+            app.legend().iter().map(|entry| entry.id).collect();
         for id in app.actor_ids() {
             known.insert(app.actor_instance_id(&id).unwrap());
         }
         known.insert(0);
         let mut tick = 0;
         for eye in [[9.0, 2.5, -8.0], [-10.0, 1.2, -12.0], [0.5, 6.0, -2.0]] {
-            for cam in ["sensor", "cinematic"] {
+            for cam in ["left", "right"] {
                 app.set_pose(cam, &eye, &[0.0, 0.8, -18.0]).unwrap();
             }
             app.warmup(2);
             tick += 1;
             let frame = app.render_once(tick).unwrap();
-            for cam in ["sensor", "cinematic"] {
+            for cam in ["left", "right"] {
                 let bytes = &frame.passes[&format!("{cam}:id")].bytes;
                 let raw = strip_padding(bytes, 320, 180, 4);
                 let mut hist: HashMap<u32, usize> = HashMap::new();
                 for px in raw.chunks_exact(4) {
-                    *hist.entry(u32::from_le_bytes([px[0], px[1], px[2], 0])).or_default() += 1;
+                    *hist
+                        .entry(u32::from_le_bytes([px[0], px[1], px[2], 0]))
+                        .or_default() += 1;
                 }
-                let unknown: Vec<(u32, usize)> = hist.iter().filter(|(id, _)| !known.contains(id)).map(|(id, n)| (*id, *n)).collect();
-                assert!(unknown.is_empty(), "{cam} at {eye:?}: pixels with unknown ids {unknown:?}");
-                let actor_px: usize = app.actor_ids().iter().map(|id| hist.get(&app.actor_instance_id(id).unwrap()).copied().unwrap_or(0)).sum();
-                assert!(actor_px > 100, "{cam} at {eye:?}: actors must be in view ({actor_px} px)");
-                assert!(raw.chunks_exact(4).all(|px| px[3] == 255), "{cam}: ID pixels are opaque");
+                let unknown: Vec<(u32, usize)> = hist
+                    .iter()
+                    .filter(|(id, _)| !known.contains(id))
+                    .map(|(id, n)| (*id, *n))
+                    .collect();
+                assert!(
+                    unknown.is_empty(),
+                    "{cam} at {eye:?}: pixels with unknown ids {unknown:?}"
+                );
+                let actor_px: usize = app
+                    .actor_ids()
+                    .iter()
+                    .map(|id| {
+                        hist.get(&app.actor_instance_id(id).unwrap())
+                            .copied()
+                            .unwrap_or(0)
+                    })
+                    .sum();
+                assert!(
+                    actor_px > 100,
+                    "{cam} at {eye:?}: actors must be in view ({actor_px} px)"
+                );
+                assert!(
+                    raw.chunks_exact(4).all(|px| px[3] == 255),
+                    "{cam}: ID pixels are opaque"
+                );
             }
         }
         std::mem::forget(app);
+    }
+
+    /// Measurement probe (not a gate): the shadow fill the renderer delivers
+    /// against the atmosphere model's own diffuse/total horizontal
+    /// illuminance. A 0.5-albedo, fully rough horizontal plane under a
+    /// floating box; no AO/contact shadows/SSR/bloom, linear output. Prints
+    /// the linear shadow/lit ratio beside the model's E_diffuse/E_total.
+    /// `SIMFORGE_SKY_FILL_ELEVATIONS=60,30,15` (default), GPU or lavapipe.
+    #[test]
+    #[ignore = "measurement probe"]
+    fn sky_fill_probe() {
+        use crate::profiles::{AntiAlias, CinematicFx, RenderProfileConfig, ToneMap};
+        let elevations: Vec<f32> = std::env::var("SIMFORGE_SKY_FILL_ELEVATIONS")
+            .unwrap_or_else(|_| "60,30,15".into())
+            .split(',')
+            .map(|v| v.trim().parse().unwrap())
+            .collect();
+        let weathers: Vec<String> = std::env::var("SIMFORGE_SKY_FILL_WEATHERS")
+            .unwrap_or_else(|_| "clear".into())
+            .split(',')
+            .map(|v| v.trim().to_string())
+            .collect();
+        let look = RenderProfileConfig {
+            cinematic: CinematicFx {
+                aa: AntiAlias::Off,
+                ssr: false,
+                ssao: false,
+                contact_shadows: false,
+                bloom_intensity: 0.0,
+                vignette_intensity: 0.0,
+                lens_distortion: 0.0,
+                chromatic_aberration: 0.0,
+                grading_exposure: 0.0,
+                grading_contrast: 1.0,
+                grading_post_saturation: 1.0,
+                tone_map: ToneMap::None,
+                ..Default::default()
+            },
+        };
+        for weather in &weathers {
+            for &elev in &elevations {
+                let lighting = Lighting {
+                    atmosphere: true,
+                    sun_elev_deg: elev,
+                    sun_azim_deg: 180.0,
+                    weather: serde_json::from_value(serde_json::json!(weather)).unwrap(),
+                    ..Default::default()
+                };
+                let mut app = SceneApp::new_with_profile_config(&lighting, look).unwrap();
+                // Readiness needs one loaded tile; it is moved out of view.
+                let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+                app.load_tiles(&[repo
+                    .join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb")
+                    .to_string_lossy()
+                    .into_owned()])
+                    .unwrap();
+                app.add_camera(CameraSpec {
+                    passes: PassSet {
+                        rgb: true,
+                        id: false,
+                        depth: false,
+                        hdr: false,
+                    },
+                    ..test_camera("cam", 256, 256)
+                });
+                app.wait_until_ready().unwrap();
+                {
+                    let world = app.app.world_mut();
+                    let roots: Vec<Entity> = world
+                        .query_filtered::<Entity, With<WorldAssetRoot>>()
+                        .iter(world)
+                        .collect();
+                    for root in roots {
+                        world
+                            .entity_mut(root)
+                            .insert(Transform::from_xyz(5000.0, 0.0, 5000.0));
+                    }
+                    let plane = world
+                        .resource_mut::<Assets<Mesh>>()
+                        .add(Plane3d::default().mesh().size(600.0, 600.0));
+                    let block = world
+                        .resource_mut::<Assets<Mesh>>()
+                        .add(Cuboid::new(40.0, 10.0, 40.0));
+                    let grey =
+                        world
+                            .resource_mut::<Assets<StandardMaterial>>()
+                            .add(StandardMaterial {
+                                base_color: Color::linear_rgb(0.5, 0.5, 0.5),
+                                perceptual_roughness: 1.0,
+                                metallic: 0.0,
+                                reflectance: 0.0,
+                                ..default()
+                            });
+                    world.spawn((
+                        Mesh3d(plane),
+                        MeshMaterial3d(grey.clone()),
+                        Transform::IDENTITY,
+                    ));
+                    world.spawn((
+                        Mesh3d(block),
+                        MeshMaterial3d(grey),
+                        Transform::from_xyz(0.0, 40.0, 0.0),
+                    ));
+                }
+                app.apply_lighting(&lighting, look).unwrap();
+                // Straight down from 150 m over the box's shadow (the sun is
+                // due south, -z; the shadow falls towards +z).
+                let shadow_z = 40.0 / elev.to_radians().tan();
+                app.set_pose("cam", &[0.0, 150.0, shadow_z + 0.01], &[0.0, 0.0, shadow_z])
+                    .unwrap();
+                app.warmup(4);
+                let frame = app.render_once(1).unwrap();
+                let pass = &frame.passes["cam:rgb"];
+                let raw = strip_padding(&pass.bytes, 256, 256, 4);
+                if let Ok(dir) = std::env::var("SIMFORGE_SKY_FILL_DUMP") {
+                    image::save_buffer(
+                        format!("{dir}/sky-fill-{weather}-{elev}.png"),
+                        &raw,
+                        256,
+                        256,
+                        image::ColorType::Rgba8,
+                    )
+                    .unwrap();
+                }
+                let decode = |v: u8| {
+                    let c = v as f32 / 255.0;
+                    if c <= 0.04045 {
+                        c / 12.92
+                    } else {
+                        ((c + 0.055) / 1.055).powf(2.4)
+                    }
+                };
+                let mut lum: Vec<f32> = raw
+                    .chunks_exact(4)
+                    .map(|p| 0.2126 * decode(p[0]) + 0.7152 * decode(p[1]) + 0.0722 * decode(p[2]))
+                    .collect();
+                lum.sort_by(|a, b| a.total_cmp(b));
+                // Shadow: the darkest 3% (the box's shadow is ~4-8% of the
+                // frame); lit: the brightest half.
+                let n = lum.len();
+                let shadow: f32 =
+                    lum[n / 200..n * 3 / 100].iter().sum::<f32>() / (n * 3 / 100 - n / 200) as f32;
+                let lit: f32 = lum[n / 2..].iter().sum::<f32>() / (n - n / 2) as f32;
+                let resolved = app.resolved_lighting();
+                let a = resolved.atmosphere.as_ref().unwrap();
+                eprintln!(
+                    "sky-fill weather={weather} elev={elev}: rendered shadow/lit {:.3} (shadow {:.4}, lit {:.4}, lit clipped {}) | model E_diff/E_total {:.3} (E_dir {:.0} lx, E_diff {:.0} lx) | ev100 {:.2}",
+                    shadow / lit,
+                    shadow,
+                    lit,
+                    lum[n - 1] >= 0.999,
+                    a.diffuse_horizontal_illuminance_lx / a.total_horizontal_illuminance_lx,
+                    a.direct_horizontal_illuminance_lx,
+                    a.diffuse_horizontal_illuminance_lx,
+                    resolved.ev100,
+                );
+                std::mem::forget(app);
+            }
+        }
     }
 
     fn test_camera(sensor_id: &str, width: u32, height: u32) -> CameraSpec {
@@ -6492,8 +8279,25 @@ mod tests {
             fov_y_deg: 58.0,
             near: 0.5,
             far: 200.0,
-            passes: PassSet { rgb: true, id: true, depth: true },
+            passes: PassSet {
+                rgb: true,
+                id: true,
+                depth: true,
+                hdr: false,
+            },
         }
+    }
+
+    fn sedan_scene_with(config: &crate::render_config::RenderConfig) -> SceneApp {
+        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let mut app =
+            SceneApp::new_with_profile_config(&Lighting::default(), config.profile_config())
+                .unwrap();
+        app.apply_render_config(config).unwrap();
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
+            .unwrap();
+        app
     }
 
     fn sedan_scene() -> SceneApp {
@@ -6501,7 +8305,8 @@ mod tests {
             .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
         assert!(vehicle.is_file());
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
-        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
+            .unwrap();
         app
     }
 
@@ -6509,7 +8314,9 @@ mod tests {
     #[ignore = "focused GPU integration test"]
     fn capture_returns_the_submission_it_names_and_follows_camera_lifecycle() {
         let mut app = sedan_scene();
-        app.add_camera(test_camera("cam", 96, 64), Profile::Sensor);
+        // Frames are compared across ticks, so time must not move the sky.
+        app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
+        app.add_camera(test_camera("cam", 96, 64));
         app.wait_until_ready().unwrap();
         app.warmup(3);
         let left = ([6.0, 1.5, 6.0], [0.0, 0.5, 0.0]);
@@ -6542,12 +8349,15 @@ mod tests {
 
         // Re-registering resizes in place and bumps the rig.
         let before = app.rig_revision();
-        app.add_camera(test_camera("cam", 128, 64), Profile::Sensor);
+        app.add_camera(test_camera("cam", 128, 64));
         app.set_pose("cam", &left.0, &left.1).unwrap();
         let wide = app.render_once(6).unwrap();
         assert!(wide.identity.rig_revision > before);
         assert_eq!(wide.passes["cam:rgb"].width, 128);
-        assert_eq!(wide.passes["cam:rgb"].bytes.len(), wide.passes["cam:rgb"].padded_row * 64);
+        assert_eq!(
+            wide.passes["cam:rgb"].bytes.len(),
+            wide.passes["cam:rgb"].padded_row * 64
+        );
 
         // Removal makes the pass unknown instead of serving stale bytes.
         assert!(app.remove_camera("cam"));
@@ -6561,27 +8371,44 @@ mod tests {
     /// warmup, retries, relights) must not change a single byte, for SMAA
     /// and for explicit N-sample TAA; the free (rc.73) clock is expected to
     /// drift with them, which is the determinism bug the pinned clock fixes.
-    fn pinned_scene(aa: crate::profiles::AntiAlias) -> SceneApp {
+    fn pinned_scene(aa: crate::profiles::AntiAlias, clock: CaptureClock) -> SceneApp {
         let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
-        let lighting = Lighting { atmosphere: true, cloud_cover: Some(0.6), ..Lighting::default() };
+        let lighting = Lighting {
+            atmosphere: true,
+            cloud_cover: Some(0.6),
+            ..Lighting::default()
+        };
         let mut config = RenderProfileConfig::default();
         config.cinematic.aa = aa;
         let mut app = SceneApp::new_with_profile_config(&lighting, config).unwrap();
+        // As the service does: the clock (and with it the light-clustering
+        // mode) is chosen before the scene loads.
+        app.set_capture_clock(clock);
         app.apply_lighting(&lighting, config).unwrap();
-        app.load_tiles(&[vehicle.to_string_lossy().into_owned()]).unwrap();
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
+            .unwrap();
         let mut spec = test_camera("cam", 160, 96);
-        spec.passes = PassSet { rgb: true, id: false, depth: false };
-        app.add_camera(spec, Profile::Cinematic);
+        spec.passes = PassSet {
+            rgb: true,
+            id: false,
+            depth: false,
+            hdr: false,
+        };
+        app.add_camera(spec);
         app.wait_until_ready().unwrap();
-        app.set_pose("cam", &[6.0, 1.8, 6.0], &[0.0, 0.8, 0.0]).unwrap();
+        app.set_pose("cam", &[6.0, 1.8, 6.0], &[0.0, 0.8, 0.0])
+            .unwrap();
+        app.wait_for_capture_ready().unwrap();
         app
     }
 
     fn capture_after(app: &mut SceneApp, extra_frames: u32, sim_time: f64) -> Vec<u8> {
         app.warmup(extra_frames);
         app.set_sim_time(sim_time);
-        app.capture(1, &["cam:rgb".into()]).unwrap().passes["cam:rgb"].bytes.clone()
+        app.capture(1, &["cam:rgb".into()]).unwrap().passes["cam:rgb"]
+            .bytes
+            .clone()
     }
 
     #[test]
@@ -6589,36 +8416,986 @@ mod tests {
     fn pinned_capture_does_not_depend_on_frames_drawn_before_it() {
         use crate::profiles::AntiAlias;
         for (aa, samples) in [(AntiAlias::SmaaHigh, 1), (AntiAlias::Taa, 4)] {
-            let mut app = pinned_scene(aa);
-            app.set_capture_clock(CaptureClock::Pinned { samples });
+            let mut app = pinned_scene(aa, CaptureClock::Pinned { samples });
             let first = capture_after(&mut app, 0, 12.5);
             let after_three = capture_after(&mut app, 3, 12.5);
             let after_eleven = capture_after(&mut app, 11, 12.5);
-            assert!(first == after_three && first == after_eleven, "{aa:?}: pinned capture changed with the frames drawn before it");
+            assert!(
+                first == after_three && first == after_eleven,
+                "{aa:?}: pinned capture changed with the frames drawn before it"
+            );
             let stats = app.last_capture_stats();
             assert_eq!(stats.accumulation_frames, samples - 1, "{aa:?}");
             // The sky is simulation time: a later time is a different sky.
             let later = capture_after(&mut app, 0, 40.0);
-            assert!(later != first, "{aa:?}: the sky did not follow simulation time");
+            assert!(
+                later != first,
+                "{aa:?}: the sky did not follow simulation time"
+            );
             std::mem::forget(app);
         }
         // The rc.73 clock drifts with every drawn frame (TAA history, jitter, clouds).
-        let mut app = pinned_scene(AntiAlias::Taa);
+        let mut app = pinned_scene(AntiAlias::Taa, CaptureClock::Free);
         let first = capture_after(&mut app, 0, 12.5);
         let after_three = capture_after(&mut app, 3, 12.5);
         assert!(first != after_three, "free clock unexpectedly stable");
         std::mem::forget(app);
     }
 
+    /// The training look with a pinned clock and one RGB camera, as the
+    /// golden jobs render (the sedan tile only makes the scene ready).
+    fn training_pinned_scene() -> SceneApp {
+        use crate::render_config::{Preset, RenderConfig};
+        let config = RenderConfig::preset(Preset::Training);
+        let lighting = Lighting::default();
+        let mut app =
+            SceneApp::new_with_profile_config(&lighting, config.profile_config()).unwrap();
+        app.apply_render_config(&config).unwrap();
+        app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
+        app.apply_lighting(&lighting, config.profile_config())
+            .unwrap();
+        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
+            .unwrap();
+        let mut spec = test_camera("cam", 320, 192);
+        spec.passes = PassSet {
+            rgb: true,
+            id: false,
+            depth: false,
+            hdr: false,
+        };
+        app.add_camera(spec);
+        app.wait_until_ready().unwrap();
+        app
+    }
+
+    /// Equal-depth ties inside one instanced draw. Many coplanar, partly
+    /// overlapping instances of one vertex-coloured mesh share a batch: with
+    /// indirect drawing the GPU preprocessing pass hands out their slots
+    /// with `atomicAdd`, so which instance wins a tie followed the device's
+    /// thread interleaving. On lavapipe that only shows under CPU load, so
+    /// this test loads every core while it captures the same pose and time
+    /// after different numbers of extra frames. A pinned RGB view must draw
+    /// in CPU order (`NoIndirectDrawing`). GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn pinned_capture_does_not_depend_on_frames_drawn_before_it_under_load() {
+        use bevy::mesh::VertexAttributeValues;
+        let mut app = training_pinned_scene();
+        {
+            let world = app.app.world_mut();
+            let mut mesh = Plane3d::default()
+                .mesh()
+                .size(1.6, 1.6)
+                .subdivisions(3)
+                .build();
+            let colors: Vec<[f32; 4]> = match mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
+                Some(VertexAttributeValues::Float32x3(positions)) => positions
+                    .iter()
+                    .map(|p| [0.5 + p[0] * 0.6, 0.5 + p[2] * 0.6, 0.5 - p[0] * 0.3, 1.0])
+                    .collect(),
+                _ => unreachable!("plane mesh has float3 positions"),
+            };
+            mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+            let mesh = world.resource_mut::<Assets<Mesh>>().add(mesh);
+            let material = world
+                .resource_mut::<Assets<StandardMaterial>>()
+                .add(StandardMaterial {
+                    perceptual_roughness: 0.3,
+                    metallic: 0.0,
+                    ..default()
+                });
+            // 600 instances (several preprocessing workgroups) in one plane,
+            // each overlapping its neighbours at a different in-plane offset
+            // and rotation: every overlap is an equal-depth tie.
+            let mut seed = 0x9e37_79b9u32;
+            let mut next = move || {
+                seed ^= seed << 13;
+                seed ^= seed >> 17;
+                seed ^= seed << 5;
+                seed as f32 / u32::MAX as f32
+            };
+            for _ in 0..600 {
+                let (x, z, yaw) = (
+                    next() * 10.0 - 5.0,
+                    20.0 + next() * 6.0 - 3.0,
+                    next() * std::f32::consts::TAU,
+                );
+                world.spawn((
+                    Mesh3d(mesh.clone()),
+                    MeshMaterial3d(material.clone()),
+                    Transform::from_xyz(x, 0.25, z).with_rotation(Quat::from_rotation_y(yaw)),
+                ));
+            }
+        }
+        app.set_pose("cam", &[0.0, 7.5, 20.01], &[0.0, 0.0, 20.0])
+            .unwrap();
+        app.wait_for_capture_ready().unwrap();
+        let rgb = app
+            .groups
+            .iter()
+            .find(|g| g.spec.sensor_id == "cam")
+            .unwrap()
+            .rgb_entity;
+        assert!(
+            app.app
+                .world()
+                .get::<bevy::render::view::NoIndirectDrawing>(rgb)
+                .is_some(),
+            "a pinned RGB view must draw in CPU order"
+        );
+
+        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let load: Vec<_> = (0..std::thread::available_parallelism().map_or(8, |n| n.get()))
+            .map(|_| {
+                let stop = stop.clone();
+                std::thread::spawn(move || {
+                    let mut x = 1u64;
+                    while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                        x = x.wrapping_mul(6364136223846793005).wrapping_add(1);
+                        std::hint::black_box(x);
+                    }
+                })
+            })
+            .collect();
+        let first = capture_after(&mut app, 0, 3.0);
+        let mut differing = Vec::new();
+        for extra in [3, 11, 0, 1, 7, 2] {
+            let again = capture_after(&mut app, extra, 3.0);
+            let pixels = first
+                .chunks(4)
+                .zip(again.chunks(4))
+                .filter(|(a, b)| a != b)
+                .count();
+            if pixels > 0 {
+                differing.push((extra, pixels));
+            }
+        }
+        stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        for thread in load {
+            thread.join().unwrap();
+        }
+        std::mem::forget(app);
+        assert!(
+            differing.is_empty(),
+            "(extra frames, differing pixels): {differing:?}"
+        );
+    }
+
+    /// Equal-depth ties between different meshes. The richmond-06 golden
+    /// differed between two runs under CPU load at, among others, a traffic
+    /// signal whose lit and unlit lens meshes are coplanar: binned draws were
+    /// ordered by their keys (pipeline id, material slot, mesh slab, mesh
+    /// asset index), which are allocation order, and allocation follows the
+    /// order assets finished loading. Here two coplanar quads are drawn
+    /// twice, the same entities in the same spawn order but with their
+    /// meshes and materials created in the opposite order and after a
+    /// different number of frames: a CPU-ordered view draws them in entity
+    /// order both times, so the capture must not change. GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn pinned_capture_does_not_depend_on_asset_allocation_order() {
+        let mut app = training_pinned_scene();
+        app.set_pose("cam", &[0.0, 3.0, 20.01], &[0.0, 0.0, 20.0])
+            .unwrap();
+        let mut captures = Vec::new();
+        let mut previous: Vec<Entity> = Vec::new();
+        for (reversed, frames_between) in [(false, 0), (true, 5), (false, 3)] {
+            let colors = [Color::srgb(0.9, 0.1, 0.1), Color::srgb(0.1, 0.8, 0.2)];
+            let mut assets: Vec<Option<(Handle<Mesh>, Handle<StandardMaterial>)>> =
+                vec![None, None];
+            let order: [usize; 2] = if reversed { [1, 0] } else { [0, 1] };
+            for index in order {
+                let world = app.app.world_mut();
+                let mesh = world
+                    .resource_mut::<Assets<Mesh>>()
+                    .add(Plane3d::default().mesh().size(6.0, 6.0).build());
+                let material =
+                    world
+                        .resource_mut::<Assets<StandardMaterial>>()
+                        .add(StandardMaterial {
+                            base_color: colors[index],
+                            perceptual_roughness: 0.4,
+                            ..default()
+                        });
+                assets[index] = Some((mesh, material));
+                app.warmup(frames_between);
+            }
+            let world = app.app.world_mut();
+            for entity in previous.drain(..) {
+                world.entity_mut(entity).insert(Visibility::Hidden);
+            }
+            // Always spawned in the same order: entity order is scene order.
+            for (mesh, material) in assets.into_iter().flatten() {
+                previous.push(
+                    world
+                        .spawn((
+                            Mesh3d(mesh),
+                            MeshMaterial3d(material),
+                            Transform::from_xyz(0.0, 0.25, 20.0),
+                        ))
+                        .id(),
+                );
+            }
+            app.wait_for_capture_ready().unwrap();
+            captures.push(capture_after(&mut app, 0, 3.0));
+        }
+        std::mem::forget(app);
+        let differing =
+            |a: &[u8], b: &[u8]| a.chunks(4).zip(b.chunks(4)).filter(|(x, y)| x != y).count();
+        assert_eq!(
+            differing(&captures[0], &captures[1]),
+            0,
+            "mesh and material creation order changed the capture"
+        );
+        assert_eq!(
+            differing(&captures[0], &captures[2]),
+            0,
+            "frames drawn before the quads changed the capture"
+        );
+    }
+
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn deferred_captures_return_the_frames_blocking_captures_return() {
+        use crate::profiles::AntiAlias;
+        let keys = vec!["cam:rgb".to_string()];
+        let poses = [
+            ([6.0, 1.8, 6.0], [0.0, 0.8, 0.0]),
+            ([-6.0, 1.8, 6.0], [0.0, 0.8, 0.0]),
+            ([0.0, 2.5, 8.0], [0.0, 0.5, 0.0]),
+        ];
+        let mut app = pinned_scene(AntiAlias::SmaaHigh, CaptureClock::Pinned { samples: 1 });
+        // Both sequences start from the same drawn history (the last pose),
+        // so only the readback path differs between them.
+        let prime = |app: &mut SceneApp| {
+            let (eye, target) = poses[2];
+            app.set_pose("cam", &eye, &target).unwrap();
+            app.set_sim_time(2.0);
+            app.capture(99, &keys).unwrap();
+        };
+        prime(&mut app);
+        let blocking: Vec<Vec<u8>> = poses
+            .iter()
+            .enumerate()
+            .map(|(tick, (eye, target))| {
+                app.set_pose("cam", eye, target).unwrap();
+                app.set_sim_time(tick as f64);
+                app.capture(tick as u64, &keys).unwrap().passes["cam:rgb"]
+                    .bytes
+                    .clone()
+            })
+            .collect();
+        prime(&mut app);
+        // Pipelined order: begin N+1 before finishing N.
+        let mut frames = Vec::new();
+        let mut pending: Option<CaptureTicket> = None;
+        for (tick, (eye, target)) in poses.iter().enumerate() {
+            app.set_pose("cam", eye, target).unwrap();
+            app.set_sim_time(tick as f64);
+            let ticket = app.capture_begin(tick as u64, &keys).unwrap();
+            if let Some(previous) = pending.replace(ticket) {
+                frames.push(app.capture_finish(previous).unwrap());
+            }
+        }
+        frames.push(app.capture_finish(pending.take().unwrap()).unwrap());
+        assert_eq!(frames.len(), blocking.len());
+        for (tick, (frame, expected)) in frames.iter().zip(&blocking).enumerate() {
+            assert_eq!(frame.identity.sim_tick, tick as u64);
+            assert!(
+                frame.passes["cam:rgb"].bytes == *expected,
+                "deferred frame {tick} differs from the blocking capture"
+            );
+        }
+        assert!(blocking[0] != blocking[1], "fixture poses must differ");
+        std::mem::forget(app);
+    }
+
+    /// Probe (reports, does not gate): does a pinned capture depend on the
+    /// pose drawn before it? The same pose and time captured after two
+    /// different predecessors; prints which passes of the frame differ.
+    /// A pinned capture is a function of (scene, sim time) only: the pose
+    /// drawn before it must not leak in. It did through the atmosphere's
+    /// per-view environment probe, filtered one frame late (fixed in the
+    /// vendored bevy_pbr, `downsampling_current_view`).
+    /// Reconfiguring a running app between looks (SMAA -> TAA adds the
+    /// motion-vector prepass, and back) must render like a fresh app: no
+    /// pipeline specialized for the old prepass set may meet the new pass.
+    /// GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn reconfigure_between_looks_keeps_rendering() {
+        use crate::render_config::{Preset, RenderConfig};
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let showcase = RenderConfig::preset(Preset::Showcase);
+        let mut app =
+            SceneApp::new_with_profile_config(&Lighting::default(), showcase.profile_config())
+                .unwrap();
+        app.apply_render_config(&showcase).unwrap();
+        app.load_tiles(&[repo
+            .join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb")
+            .to_string_lossy()
+            .into_owned()])
+            .unwrap();
+        app.add_camera(test_camera("cam", 96, 64));
+        app.wait_until_ready().unwrap();
+        app.render_once(1).unwrap();
+        let reference = RenderConfig::reference();
+        for (tick, config) in [reference, showcase, reference].into_iter().enumerate() {
+            app.reconfigure(&config).unwrap();
+            app.wait_for_capture_ready().unwrap();
+            app.render_once(2 + tick as u64).unwrap_or_else(|error| {
+                panic!("after reconfigure to {:?}: {error}", config.aa.mode)
+            });
+        }
+        std::mem::forget(app);
+    }
+
+    /// A car in a caster's shadow is darker than the same car in sun, in
+    /// both presets. Two identical catalog cars (the actor path the service
+    /// uses) on a ground plane, one under an overhead slab; each car is
+    /// masked by its instance-ID pixels and its mean linear luminance
+    /// compared, next to the ground's own shadowed/sunlit ratio. GPU or
+    /// lavapipe. `SIMFORGE_CAR_SHADE_DUMP=dir` writes the frames.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn a_car_in_shadow_is_darker_than_in_sun() {
+        use crate::render_config::{Preset, RenderConfig};
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let (w, h) = (256usize, 160usize);
+        let elev: f32 = 40.0;
+        let lighting = Lighting {
+            atmosphere: true,
+            sun_elev_deg: elev,
+            sun_azim_deg: 180.0,
+            ..Default::default()
+        };
+        for preset in [Preset::Showcase, Preset::Training] {
+            let config = RenderConfig::preset(preset);
+            let mut app =
+                SceneApp::new_with_profile_config(&lighting, config.profile_config()).unwrap();
+            app.apply_render_config(&config).unwrap();
+            app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
+            app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
+                .unwrap();
+            app.add_camera(CameraSpec {
+                passes: PassSet {
+                    rgb: true,
+                    id: true,
+                    depth: false,
+                    hdr: true,
+                },
+                ..test_camera("cam", w as u32, h as u32)
+            });
+            app.wait_until_ready().unwrap();
+            let slab_height = 6.0;
+            {
+                let world = app.app.world_mut();
+                let roots: Vec<Entity> = world
+                    .query_filtered::<Entity, With<WorldAssetRoot>>()
+                    .iter(world)
+                    .collect();
+                for root in roots {
+                    world
+                        .entity_mut(root)
+                        .insert(Transform::from_xyz(5000.0, 0.0, 5000.0));
+                }
+                let plane = world
+                    .resource_mut::<Assets<Mesh>>()
+                    .add(Plane3d::default().mesh().size(300.0, 300.0));
+                let slab = world
+                    .resource_mut::<Assets<Mesh>>()
+                    .add(Cuboid::new(10.0, 0.4, 10.0));
+                let grey = world
+                    .resource_mut::<Assets<StandardMaterial>>()
+                    .add(StandardMaterial {
+                        base_color: Color::linear_rgb(0.3, 0.3, 0.3),
+                        perceptual_roughness: 1.0,
+                        ..default()
+                    });
+                world.spawn((
+                    Mesh3d(plane),
+                    MeshMaterial3d(grey.clone()),
+                    Transform::IDENTITY,
+                ));
+                // Sun due south (-z) at `elev`: the shadow of a slab at
+                // height H lands H / tan(elev) towards +z.
+                let offset = slab_height / elev.to_radians().tan();
+                world.spawn((
+                    Mesh3d(slab),
+                    MeshMaterial3d(grey),
+                    Transform::from_xyz(-6.0, slab_height, -offset),
+                ));
+            }
+            for (id, x) in [("shaded", -6.0f32), ("sunlit", 6.0)] {
+                app.upsert_actor(
+                    id,
+                    "car",
+                    [x, 0.8, 0.0],
+                    Quat::IDENTITY,
+                    [4.5, 1.6, 1.8],
+                    [0.8, 0.8, 0.8],
+                );
+                app.attach_actor_asset(id, &vehicle, 1.0, None, None, 0.0)
+                    .unwrap();
+                app.set_actor_asset_pose(id, [x, 0.0, 0.0], Quat::IDENTITY)
+                    .unwrap();
+            }
+            app.set_pose("cam", &[0.0, 14.0, 16.0], &[0.0, 0.0, 0.0])
+                .unwrap();
+            app.wait_for_capture_ready().unwrap();
+            let frame = app.render_once(1).unwrap();
+            let hdr = strip_padding(&frame.passes["cam:hdr"].bytes, w, h, 8);
+            let ids = strip_padding(&frame.passes["cam:id"].bytes, w, h, 4);
+            if let Ok(dir) = std::env::var("SIMFORGE_CAR_SHADE_DUMP") {
+                let rgb = strip_padding(&frame.passes["cam:rgb"].bytes, w, h, 4);
+                image::save_buffer(
+                    format!("{dir}/car-shade-{preset:?}.png"),
+                    &rgb,
+                    w as u32,
+                    h as u32,
+                    image::ColorType::Rgba8,
+                )
+                .unwrap();
+            }
+            let luminance = |i: usize| {
+                let c = |k: usize| {
+                    half::f16::from_le_bytes([hdr[i * 8 + 2 * k], hdr[i * 8 + 2 * k + 1]]).to_f32()
+                };
+                0.2126 * c(0) + 0.7152 * c(1) + 0.0722 * c(2)
+            };
+            let id_at = |i: usize| {
+                u32::from(ids[i * 4])
+                    | (u32::from(ids[i * 4 + 1]) << 8)
+                    | (u32::from(ids[i * 4 + 2]) << 16)
+            };
+            let mean_of = |instance: u32| {
+                let px: Vec<f32> = (0..w * h)
+                    .filter(|&i| id_at(i) == instance)
+                    .map(luminance)
+                    .collect();
+                assert!(
+                    px.len() > 200,
+                    "{preset:?}: only {} pixels of instance {instance}",
+                    px.len()
+                );
+                px.iter().sum::<f32>() / px.len() as f32
+            };
+            let shaded = mean_of(app.actor_instance_id("shaded").unwrap());
+            let sunlit = mean_of(app.actor_instance_id("sunlit").unwrap());
+            // The ground next to each car (background pixels, id 0, in the
+            // lower half): the darkest and brightest deciles.
+            let mut ground: Vec<f32> = (w * h / 2..w * h)
+                .filter(|&i| id_at(i) == 0)
+                .map(luminance)
+                .collect();
+            ground.sort_by(f32::total_cmp);
+            let decile = ground.len() / 10;
+            let ground_ratio = (ground[..decile].iter().sum::<f32>() / decile as f32)
+                / (ground[ground.len() - decile..].iter().sum::<f32>() / decile as f32);
+            let ratio = shaded / sunlit;
+            eprintln!("{preset:?}: car shaded/sunlit {ratio:.3} (shaded {shaded:.4}, sunlit {sunlit:.4}); ground {ground_ratio:.3}");
+            assert!(ratio < 0.6, "{preset:?}: a car in shadow is {ratio:.3} of the same car in sun (ground {ground_ratio:.3})");
+            std::mem::forget(app);
+        }
+    }
+
+    /// Directional shadow cascades pick LODs from their own camera. The
+    /// vendored bevy_render resolved a cascade's camera by a main-world id in
+    /// a render-world query; the lookup always missed, so cascades picked
+    /// visibility ranges (LODs) from Bevy's fallback origin while CPU
+    /// visibility used the camera. A LOD chain member was drawn into the
+    /// shadow map only where both picks agreed: on Belmont every street tree
+    /// lost its shadow in the training preset (box 3 A/B in
+    /// docs/engineering/native-render-gpu-profile.md). Every cascade of every
+    /// camera, shared or not, must now resolve its camera. GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn directional_shadow_cascades_resolve_lods_from_their_camera() {
+        use crate::render_config::{Preset, RenderConfig};
+        for preset in [Preset::Showcase, Preset::Training] {
+            let config = RenderConfig::preset(preset);
+            let mut app = sedan_scene_with(&config);
+            // A camera that keeps its own cascades, and two sharing a set.
+            app.add_camera(test_camera("chase", 64, 48));
+            app.add_camera(test_camera("front", 96, 64));
+            app.add_camera(test_camera("rear", 96, 64));
+            app.set_camera_shared_shadows("chase", false);
+            for (cam, eye, target) in [
+                ("chase", [0.0, 3.0, 9.0], [0.0, 0.5, 0.0]),
+                ("front", [0.0, 1.5, 4.0], [0.0, 1.0, -10.0]),
+                ("rear", [0.0, 1.5, 4.0], [0.0, 1.0, 14.0]),
+            ] {
+                app.set_pose(cam, &eye, &target).unwrap();
+            }
+            app.wait_until_ready().unwrap();
+            app.render_once(1).unwrap();
+            app.render_once(2).unwrap();
+            let misses = app
+                .app
+                .sub_app(RenderApp)
+                .world()
+                .resource::<bevy::render::view::DirectionalShadowLodMisses>()
+                .0;
+            std::mem::forget(app);
+            assert_eq!(
+                misses, 0,
+                "{preset:?}: {misses} cascade views picked LODs from the fallback origin"
+            );
+        }
+    }
+
+    /// A wet road shows screen-space reflections. SSR reads the deferred
+    /// G-buffer, and road materials drew forward, so SSR on and off rendered
+    /// the same bytes even at wetness 0.85 (Belmont rain, box 3). A road
+    /// plane with a box standing on it, seen at a grazing angle, must
+    /// render differently with SSR on than off. GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn a_wet_road_reflects_in_screen_space() {
+        use crate::render_config::{Preset, RenderConfig};
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let lighting = Lighting {
+            atmosphere: true,
+            sun_elev_deg: 25.0,
+            sun_azim_deg: 180.0,
+            wetness: 0.85,
+            ..Default::default()
+        };
+        let render = |ssr: bool| {
+            let mut config = RenderConfig::preset(Preset::Showcase);
+            config.ssr.enabled = ssr;
+            let mut app =
+                SceneApp::new_with_profile_config(&lighting, config.profile_config()).unwrap();
+            app.apply_render_config(&config).unwrap();
+            app.load_tiles(&[repo
+                .join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb")
+                .to_string_lossy()
+                .into_owned()])
+                .unwrap();
+            app.add_camera(CameraSpec {
+                passes: PassSet {
+                    rgb: true,
+                    id: false,
+                    depth: false,
+                    hdr: false,
+                },
+                ..test_camera("cam", 160, 96)
+            });
+            app.wait_until_ready().unwrap();
+            {
+                let world = app.app.world_mut();
+                let plane = world
+                    .resource_mut::<Assets<Mesh>>()
+                    .add(Plane3d::default().mesh().size(200.0, 200.0));
+                let block = world
+                    .resource_mut::<Assets<Mesh>>()
+                    .add(Cuboid::new(2.0, 3.0, 2.0));
+                let road = world
+                    .resource_mut::<Assets<StandardMaterial>>()
+                    .add(StandardMaterial {
+                        base_color: Color::linear_rgb(0.05, 0.05, 0.05),
+                        perceptual_roughness: 0.9,
+                        ..default()
+                    });
+                let red = world
+                    .resource_mut::<Assets<StandardMaterial>>()
+                    .add(StandardMaterial {
+                        base_color: Color::linear_rgb(0.8, 0.05, 0.05),
+                        ..default()
+                    });
+                world.spawn((
+                    Name::new("asphalt1_road"),
+                    Mesh3d(plane),
+                    MeshMaterial3d(road),
+                    Transform::from_xyz(0.0, 0.0, 0.0),
+                ));
+                world.spawn((
+                    Mesh3d(block),
+                    MeshMaterial3d(red),
+                    Transform::from_xyz(0.0, 1.5, -12.0),
+                ));
+            }
+            // The relight applies the wetness to the road material spawned above.
+            app.apply_lighting(&lighting, config.profile_config())
+                .unwrap();
+            app.set_pose("cam", &[0.0, 1.2, 6.0], &[0.0, 0.6, -12.0])
+                .unwrap();
+            app.wait_for_capture_ready().unwrap();
+            let bytes = app.capture(1, &["cam:rgb".to_string()]).unwrap().passes["cam:rgb"]
+                .bytes
+                .clone();
+            std::mem::forget(app);
+            bytes
+        };
+        let (on, off) = (render(true), render(false));
+        let differing = on
+            .chunks(4)
+            .zip(off.chunks(4))
+            .filter(|(a, b)| a.iter().zip(b.iter()).any(|(x, y)| x.abs_diff(*y) > 2))
+            .count();
+        assert!(
+            differing > 100,
+            "SSR changed only {differing} pixels of a wet road"
+        );
+    }
+
+    /// A glossy car under overhead cover darkens like the road beside it.
+    /// Without canopy sky occlusion the car kept the environment probe's
+    /// open-sky reflection under a tree and read as sunlit (Easterbrook
+    /// chase, tick 100: the body kept a median 0.71 of its sunlit luminance
+    /// while the shaded road fell to about 0.1). Two catalog cars seen from
+    /// a low chase-like camera: one under a canopy-height slab (6 m), one in
+    /// sun; and, reported, a third car in the shadow of a 12 m building to
+    /// measure how much the approximation dims sky reflections there. GPU
+    /// or lavapipe. `SIMFORGE_CAR_SHADE_DUMP=dir` writes the frames.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn a_glossy_car_in_canopy_shade_darkens_like_the_road() {
+        use crate::render_config::{Preset, RenderConfig};
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let (w, h) = (320usize, 180usize);
+        let elev: f32 = 55.0;
+        let lighting = Lighting {
+            atmosphere: true,
+            sun_elev_deg: elev,
+            sun_azim_deg: 180.0,
+            ..Default::default()
+        };
+        let measure = |canopy: bool, preset: Preset| {
+            let mut config = RenderConfig::preset(preset);
+            config.lighting.canopy_sky_occlusion = canopy;
+            let mut app =
+                SceneApp::new_with_profile_config(&lighting, config.profile_config()).unwrap();
+            app.apply_render_config(&config).unwrap();
+            app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
+            app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
+                .unwrap();
+            app.add_camera(CameraSpec {
+                passes: PassSet {
+                    rgb: true,
+                    id: true,
+                    depth: false,
+                    hdr: true,
+                },
+                ..test_camera("cam", w as u32, h as u32)
+            });
+            app.wait_until_ready().unwrap();
+            let offset = |height: f32| height / elev.to_radians().tan();
+            {
+                let world = app.app.world_mut();
+                let roots: Vec<Entity> = world
+                    .query_filtered::<Entity, With<WorldAssetRoot>>()
+                    .iter(world)
+                    .collect();
+                for root in roots {
+                    world
+                        .entity_mut(root)
+                        .insert(Transform::from_xyz(5000.0, 0.0, 5000.0));
+                }
+                let plane = world
+                    .resource_mut::<Assets<Mesh>>()
+                    .add(Plane3d::default().mesh().size(400.0, 400.0));
+                let slab = world
+                    .resource_mut::<Assets<Mesh>>()
+                    .add(Cuboid::new(9.0, 0.5, 9.0));
+                let building = world
+                    .resource_mut::<Assets<Mesh>>()
+                    .add(Cuboid::new(12.0, 12.0, 6.0));
+                let grey = world
+                    .resource_mut::<Assets<StandardMaterial>>()
+                    .add(StandardMaterial {
+                        base_color: Color::linear_rgb(0.12, 0.12, 0.12),
+                        perceptual_roughness: 0.95,
+                        ..default()
+                    });
+                world.spawn((
+                    Mesh3d(plane),
+                    MeshMaterial3d(grey.clone()),
+                    Transform::IDENTITY,
+                ));
+                // Sun due south (-z): a caster at height H shades H / tan(elev) towards +z.
+                // The cars stand at z = 4: the slab centred over the canopy
+                // car's shadow, the building's sunward face 2 m behind the
+                // building car (its 12 m wall shades 8 m past it).
+                world.spawn((
+                    Mesh3d(slab),
+                    MeshMaterial3d(grey.clone()),
+                    Transform::from_xyz(-8.0, 6.0, 4.0 - offset(6.0)),
+                ));
+                world.spawn((
+                    Mesh3d(building),
+                    MeshMaterial3d(grey),
+                    Transform::from_xyz(8.0, 6.0, -1.0),
+                ));
+            }
+            for (id, x) in [("canopy", -8.0f32), ("sunlit", 0.0), ("building", 8.0)] {
+                app.upsert_actor(
+                    id,
+                    "car",
+                    [x, 0.8, 4.0],
+                    Quat::IDENTITY,
+                    [4.5, 1.6, 1.8],
+                    [0.8, 0.8, 0.8],
+                );
+                app.attach_actor_asset(id, &vehicle, 1.0, None, None, 0.0)
+                    .unwrap();
+                app.set_actor_asset_pose(id, [x, 0.0, 4.0], Quat::IDENTITY)
+                    .unwrap();
+            }
+            // Low, behind the cars: grazing views of glossy paint.
+            app.set_pose("cam", &[0.0, 3.0, 17.0], &[0.0, 0.8, 4.0])
+                .unwrap();
+            app.wait_for_capture_ready().unwrap();
+            let frame = app.render_once(1).unwrap();
+            let hdr = strip_padding(&frame.passes["cam:hdr"].bytes, w, h, 8);
+            let ids = strip_padding(&frame.passes["cam:id"].bytes, w, h, 4);
+            if let Ok(dir) = std::env::var("SIMFORGE_CAR_SHADE_DUMP") {
+                let rgb = strip_padding(&frame.passes["cam:rgb"].bytes, w, h, 4);
+                image::save_buffer(
+                    format!("{dir}/canopy-{preset:?}-{canopy}.png"),
+                    &rgb,
+                    w as u32,
+                    h as u32,
+                    image::ColorType::Rgba8,
+                )
+                .unwrap();
+            }
+            let luminance = |i: usize| {
+                let c = |k: usize| {
+                    half::f16::from_le_bytes([hdr[i * 8 + 2 * k], hdr[i * 8 + 2 * k + 1]]).to_f32()
+                };
+                0.2126 * c(0) + 0.7152 * c(1) + 0.0722 * c(2)
+            };
+            let id_at = |i: usize| {
+                u32::from(ids[i * 4])
+                    | (u32::from(ids[i * 4 + 1]) << 8)
+                    | (u32::from(ids[i * 4 + 2]) << 16)
+            };
+            let mean_of = |instance: u32| {
+                let px: Vec<f32> = (0..w * h)
+                    .filter(|&i| id_at(i) == instance)
+                    .map(luminance)
+                    .collect();
+                assert!(
+                    px.len() > 300,
+                    "only {} pixels of instance {instance}",
+                    px.len()
+                );
+                px.iter().sum::<f32>() / px.len() as f32
+            };
+            let cars = ["canopy", "sunlit", "building"]
+                .map(|id| mean_of(app.actor_instance_id(id).unwrap()));
+            std::mem::forget(app);
+            cars
+        };
+        for preset in [Preset::Showcase, Preset::Training] {
+            let off = measure(false, preset);
+            let on = measure(true, preset);
+            let ratio = |c: [f32; 3], k: usize| c[k] / c[1];
+            eprintln!(
+                "{preset:?}: canopy car / sunlit car {:.3} -> {:.3}; building-shadow car / sunlit {:.3} -> {:.3}; sunlit car {:.4} -> {:.4}",
+                ratio(off, 0), ratio(on, 0), ratio(off, 2), ratio(on, 2), off[1], on[1]
+            );
+            assert!(
+                (on[1] - off[1]).abs() <= 0.05 * off[1],
+                "{preset:?}: a sunlit car must barely change ({} -> {})",
+                off[1],
+                on[1]
+            );
+            assert!(
+                ratio(on, 0) < 0.45,
+                "{preset:?}: a glossy car under a canopy keeps {:.3} of its sunlit luminance",
+                ratio(on, 0)
+            );
+            assert!(
+                ratio(on, 0) < 0.85 * ratio(off, 0),
+                "{preset:?}: canopy sky occlusion barely changed the canopy car ({:.3} -> {:.3})",
+                ratio(off, 0),
+                ratio(on, 0)
+            );
+        }
+    }
+
+    /// A device error stops rendering for good; the next wait must fail at
+    /// once with the cause, not time out (an out-of-memory device used to
+    /// spin in `wait_until_ready` for its full 300 s). GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn a_device_error_fails_the_next_wait_with_its_cause() {
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut app = SceneApp::new(&Lighting::default()).unwrap();
+        app.load_tiles(&[repo
+            .join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb")
+            .to_string_lossy()
+            .into_owned()])
+            .unwrap();
+        app.add_camera(test_camera("cam", 64, 64));
+        app.wait_until_ready().unwrap();
+        let device = app.app.world().resource::<RenderDevice>().clone();
+        // A zero-sized texture is a validation error, reported uncaptured.
+        let _invalid = device.wgpu_device().create_texture(
+            &bevy::render::render_resource::TextureDescriptor {
+                label: Some("invalid"),
+                size: bevy::render::render_resource::Extent3d {
+                    width: 0,
+                    height: 0,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: bevy::render::render_resource::TextureDimension::D2,
+                format: TextureFormat::Rgba8Unorm,
+                usage: TextureUsages::TEXTURE_BINDING,
+                view_formats: &[],
+            },
+        );
+        let started = Instant::now();
+        let error = app.wait_for_capture_ready().expect_err("rendering stopped");
+        assert!(
+            error.to_string().contains("[native_render_device_error]"),
+            "{error}"
+        );
+        assert!(
+            started.elapsed() < Duration::from_secs(30),
+            "failed at once, not at the deadline"
+        );
+        assert!(app.render_once(1).is_err(), "every later capture fails too");
+        // Dropping a failed app must not crash the process (it is leaked).
+        drop(app);
+    }
+
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn pinned_capture_does_not_depend_on_the_previous_pose() {
+        use crate::profiles::AntiAlias;
+        let keys = vec!["cam:rgb".to_string()];
+        let mut app = pinned_scene(AntiAlias::SmaaHigh, CaptureClock::Pinned { samples: 1 });
+        let mut after = |app: &mut SceneApp, previous: ([f32; 3], [f32; 3])| {
+            app.set_pose("cam", &previous.0, &previous.1).unwrap();
+            app.set_sim_time(1.0);
+            app.capture(1, &keys).unwrap();
+            app.set_pose("cam", &[6.0, 1.8, 6.0], &[0.0, 0.8, 0.0])
+                .unwrap();
+            app.set_sim_time(1.0);
+            app.capture(2, &keys).unwrap().passes["cam:rgb"]
+                .bytes
+                .clone()
+        };
+        let same = after(&mut app, ([6.0, 1.8, 6.0], [0.0, 0.8, 0.0]));
+        let moved = after(&mut app, ([0.0, 2.5, 8.0], [0.0, 0.5, 0.0]));
+        let differing = same.iter().zip(&moved).filter(|(a, b)| a != b).count();
+        std::mem::forget(app);
+        assert_eq!(
+            differing,
+            0,
+            "{differing} of {} bytes depend on the previously drawn pose",
+            same.len()
+        );
+    }
+
+    /// The dash-cam camera model meters every frame from that frame alone:
+    /// tick t's exposure and pixels are the same rendered cold or after a
+    /// frame of a very different (brighter/darker) view. GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn camera_model_exposure_does_not_depend_on_the_previous_frame() {
+        use crate::render_config::{Preset, RenderConfig};
+        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let config = RenderConfig::preset(Preset::Training);
+        let lighting = Lighting {
+            atmosphere: true,
+            ..Lighting::default()
+        };
+        let mut app =
+            SceneApp::new_with_profile_config(&lighting, config.profile_config()).unwrap();
+        app.apply_render_config(&config).unwrap();
+        app.apply_lighting(&lighting, config.profile_config())
+            .unwrap();
+        app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
+            .unwrap();
+        let mut spec = test_camera("cam", 160, 96);
+        spec.passes = PassSet {
+            rgb: true,
+            id: false,
+            depth: false,
+            hdr: false,
+        };
+        app.add_camera(spec);
+        app.wait_until_ready().unwrap();
+        let keys = vec!["cam:rgb".to_string(), "cam:exposure".to_string()];
+        let target = ([6.0, 1.8, 6.0], [0.0, 0.8, 0.0]);
+        let mut shot = |app: &mut SceneApp, before: Option<([f32; 3], [f32; 3])>| {
+            if let Some(before) = before {
+                app.set_pose("cam", &before.0, &before.1).unwrap();
+                app.set_sim_time(1.0);
+                app.capture(1, &keys).unwrap();
+            }
+            app.set_pose("cam", &target.0, &target.1).unwrap();
+            app.set_sim_time(1.0);
+            let frame = app.capture(2, &keys).unwrap();
+            (
+                frame.passes["cam:rgb"].bytes.clone(),
+                frame.passes["cam:exposure"].bytes[..16].to_vec(),
+            )
+        };
+        app.wait_for_capture_ready().unwrap();
+        let cold = shot(&mut app, None);
+        // Straight up at the sky, then straight down at the ground: two
+        // frames metered far apart.
+        let after_sky = shot(&mut app, Some(([0.0, 2.0, 0.0], [0.01, 50.0, 0.0])));
+        let after_ground = shot(&mut app, Some(([0.0, 30.0, 0.0], [0.01, 0.0, 0.0])));
+        std::mem::forget(app);
+        let ev = |bytes: &[u8]| f32::from_le_bytes(bytes[..4].try_into().unwrap());
+        assert!(
+            ev(&cold.1).is_finite() && ev(&cold.1) > 5.0,
+            "metered EV100 {}",
+            ev(&cold.1)
+        );
+        assert_eq!(
+            cold.1, after_sky.1,
+            "exposure depends on the previous frame"
+        );
+        assert_eq!(
+            cold.1, after_ground.1,
+            "exposure depends on the previous frame"
+        );
+        assert_eq!(cold.0, after_sky.0, "pixels depend on the previous frame");
+        assert_eq!(
+            cold.0, after_ground.0,
+            "pixels depend on the previous frame"
+        );
+    }
+
     #[test]
     #[ignore = "focused GPU integration test"]
     fn mounted_camera_excludes_only_its_own_host() {
         let mut app = sedan_scene();
-        app.add_camera(test_camera("mounted", 96, 64), Profile::Sensor);
-        app.add_camera(test_camera("spectator", 96, 64), Profile::Sensor);
+        // Frames are compared across ticks, so time must not move the sky.
+        app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
+        app.add_camera(test_camera("mounted", 96, 64));
+        app.add_camera(test_camera("spectator", 96, 64));
         app.wait_until_ready().unwrap();
-        app.upsert_actor("ego", "car", [0.0, 0.0, 0.0], Quat::IDENTITY, [4.5, 1.6, 1.8], [0.9, 0.1, 0.1]);
-        app.upsert_actor("lead", "car", [0.0, 0.0, -6.0], Quat::IDENTITY, [4.5, 1.6, 1.8], [0.1, 0.1, 0.9]);
+        app.upsert_actor(
+            "ego",
+            "car",
+            [0.0, 0.0, 0.0],
+            Quat::IDENTITY,
+            [4.5, 1.6, 1.8],
+            [0.9, 0.1, 0.1],
+        );
+        app.upsert_actor(
+            "lead",
+            "car",
+            [0.0, 0.0, -6.0],
+            Quat::IDENTITY,
+            [4.5, 1.6, 1.8],
+            [0.1, 0.1, 0.9],
+        );
         let pose = ([0.0, 2.5, 8.0], [0.0, 0.5, -3.0]);
         for cam in ["mounted", "spectator"] {
             app.set_pose(cam, &pose.0, &pose.1).unwrap();
@@ -6629,18 +9406,28 @@ mod tests {
         let frame = app.render_once(1).unwrap();
         let hosted = &frame.passes["mounted:rgb"].bytes;
         let spectator = &frame.passes["spectator:rgb"].bytes;
-        assert_ne!(hosted, spectator, "the mounted view must not render its host");
-        // The instance-ID proxy of the host stays in the mounted view.
-        assert_eq!(frame.passes["mounted:id"].bytes, frame.passes["spectator:id"].bytes);
+        assert_ne!(
+            hosted, spectator,
+            "the mounted view must not render its host"
+        );
+        // The ID pass drops the host exactly where the RGB pass does, so
+        // labels match pixels.
+        assert_ne!(
+            frame.passes["mounted:id"].bytes, frame.passes["spectator:id"].bytes,
+            "the mounted view must not label its host"
+        );
 
         app.set_camera_host("mounted", None).unwrap();
         let unmounted = app.render_once(2).unwrap();
         assert_eq!(
-            unmounted.passes["mounted:rgb"].bytes,
-            unmounted.passes["spectator:rgb"].bytes,
+            unmounted.passes["mounted:rgb"].bytes, unmounted.passes["spectator:rgb"].bytes,
             "unmounting restores the host for that view"
         );
         assert_eq!(unmounted.passes["spectator:rgb"].bytes, *spectator);
+        assert_eq!(
+            unmounted.passes["mounted:id"].bytes, unmounted.passes["spectator:id"].bytes,
+            "unmounting restores the host's labels for that view"
+        );
         std::mem::forget(app);
     }
 }

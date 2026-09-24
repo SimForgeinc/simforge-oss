@@ -159,7 +159,10 @@ pub fn parse_incoming(line: &str) -> Incoming {
             }
         }
     };
-    let name = value.get("command").and_then(Value::as_str).map(str::to_owned);
+    let name = value
+        .get("command")
+        .and_then(Value::as_str)
+        .map(str::to_owned);
     let Some(name) = name else {
         return Incoming::Rejected {
             code: "missing_command",
@@ -169,13 +172,18 @@ pub fn parse_incoming(line: &str) -> Incoming {
     if V2_COMMANDS.contains(&name.as_str()) {
         return Incoming::Rejected {
             code: "command_not_implemented",
-            message: format!("`{name}` is documented as protocol v2 and is not implemented by this build"),
+            message: format!(
+                "`{name}` is documented as protocol v2 and is not implemented by this build"
+            ),
         };
     }
     if !COMMANDS.contains(&name.as_str()) {
         return Incoming::Rejected {
             code: "unknown_command",
-            message: format!("unknown command `{name}`; supported: {}", COMMANDS.join(", ")),
+            message: format!(
+                "unknown command `{name}`; supported: {}",
+                COMMANDS.join(", ")
+            ),
         };
     }
     match serde_json::from_value::<ControlCommand>(value) {
@@ -228,7 +236,8 @@ pub fn event_value(event: &str, fields: Value) -> Value {
 /// Write one newline-delimited event to stdout under the stdout lock, so a
 /// render-world thread and the main schedule cannot interleave a line.
 pub fn emit(event: &str, fields: Value) {
-    let line = serde_json::to_string(&event_value(event, fields)).expect("renderer event serializes");
+    let line =
+        serde_json::to_string(&event_value(event, fields)).expect("renderer event serializes");
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();
     let _ = handle.write_all(line.as_bytes());
@@ -237,7 +246,10 @@ pub fn emit(event: &str, fields: Value) {
 }
 
 pub fn emit_error(code: &str, message: impl AsRef<str>) {
-    emit("error", json!({ "code": code, "message": message.as_ref() }));
+    emit(
+        "error",
+        json!({ "code": code, "message": message.as_ref() }),
+    );
 }
 
 #[cfg(test)]
@@ -268,10 +280,14 @@ mod tests {
             );
         }
         assert_eq!(
-            parse_incoming(r#"{"command":"gizmo","operation":"translate","ids":[],"delta":[0,0,0]}"#),
+            parse_incoming(
+                r#"{"command":"gizmo","operation":"translate","ids":[],"delta":[0,0,0]}"#
+            ),
             Incoming::Rejected {
                 code: "command_not_implemented",
-                message: "`gizmo` is documented as protocol v2 and is not implemented by this build".to_owned(),
+                message:
+                    "`gizmo` is documented as protocol v2 and is not implemented by this build"
+                        .to_owned(),
             }
         );
     }
@@ -280,19 +296,31 @@ mod tests {
     fn unknown_and_malformed_commands_are_rejected_distinctly() {
         assert!(matches!(
             parse_incoming(r#"{"command":"teleport"}"#),
-            Incoming::Rejected { code: "unknown_command", .. }
+            Incoming::Rejected {
+                code: "unknown_command",
+                ..
+            }
         ));
         assert!(matches!(
             parse_incoming(r#"{"command":"camera","position":[1],"target":[0,0,0]}"#),
-            Incoming::Rejected { code: "malformed_command", .. }
+            Incoming::Rejected {
+                code: "malformed_command",
+                ..
+            }
         ));
         assert!(matches!(
             parse_incoming("not json"),
-            Incoming::Rejected { code: "malformed_json", .. }
+            Incoming::Rejected {
+                code: "malformed_json",
+                ..
+            }
         ));
         assert!(matches!(
             parse_incoming(r#"{"position":[1,2,3]}"#),
-            Incoming::Rejected { code: "missing_command", .. }
+            Incoming::Rejected {
+                code: "missing_command",
+                ..
+            }
         ));
     }
 
@@ -314,7 +342,10 @@ mod tests {
         // snake_case is not accepted: one casing, enforced.
         assert!(matches!(
             parse_incoming(r#"{"command":"resize","width":800,"height":600,"pixel_ratio":2}"#),
-            Incoming::Rejected { code: "malformed_command", .. }
+            Incoming::Rejected {
+                code: "malformed_command",
+                ..
+            }
         ));
     }
 

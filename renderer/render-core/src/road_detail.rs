@@ -171,7 +171,11 @@ impl RoadDetailSidecar {
         }
         for v in &self.variants {
             if v.role != "a" && v.role != "b" {
-                bail!("variant {} has unknown role {:?} (expected a|b)", v.id, v.role);
+                bail!(
+                    "variant {} has unknown role {:?} (expected a|b)",
+                    v.id,
+                    v.role
+                );
             }
             if !(v.tiling_per_meter > 0.0) {
                 bail!("variant {} tilingPerMeter must be > 0", v.id);
@@ -332,7 +336,11 @@ pub fn apply(app: &mut App, sidecar_path: &Path) -> Result<RoadDetailStats> {
         .find(|v| v.role == "a")
         .expect("validated: role a present");
     // Single-variant sidecars reuse variant A for the (zero-weighted) B slot.
-    let var_b = sidecar.variants.iter().find(|v| v.role == "b").unwrap_or(var_a);
+    let var_b = sidecar
+        .variants
+        .iter()
+        .find(|v| v.role == "b")
+        .unwrap_or(var_a);
 
     // Decode all textures up front so any I/O error aborts before the world
     // is touched.
@@ -347,7 +355,17 @@ pub fn apply(app: &mut App, sidecar_path: &Path) -> Result<RoadDetailStats> {
     let d_normal = load_texture(&dir.join(&sidecar.detail_normal.texture), false, true)?;
 
     let world = app.world_mut();
-    let (splat, decal_overlay, var_a_color, var_a_normal, var_a_orm, var_b_color, var_b_normal, var_b_orm, detail_normal) = {
+    let (
+        splat,
+        decal_overlay,
+        var_a_color,
+        var_a_normal,
+        var_a_orm,
+        var_b_color,
+        var_b_normal,
+        var_b_orm,
+        detail_normal,
+    ) = {
         let mut images = world.resource_mut::<Assets<Image>>();
         (
             images.add(splat_img),
@@ -409,14 +427,12 @@ pub fn apply(app: &mut App, sidecar_path: &Path) -> Result<RoadDetailStats> {
     // Swap materials: one extended material per (source material, mode),
     // preserving the authored StandardMaterial as the blend base.
     let targets: Vec<(Entity, AssetId<StandardMaterial>, f32)> = {
-        let mut q = world.query::<(
-            Entity,
-            &MeshMaterial3d<StandardMaterial>,
-            &GltfMaterialName,
-        )>();
+        let mut q = world.query::<(Entity, &MeshMaterial3d<StandardMaterial>, &GltfMaterialName)>();
         q.iter(world)
             .filter_map(|(e, mat, name)| {
-                target_modes.get(name.0.as_str()).map(|mode| (e, mat.id(), *mode))
+                target_modes
+                    .get(name.0.as_str())
+                    .map(|mode| (e, mat.id(), *mode))
             })
             .collect()
     };

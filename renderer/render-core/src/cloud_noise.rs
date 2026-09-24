@@ -28,8 +28,7 @@ const SEED_WORLEY: [u32; 3] = [0x27D4_EB2D, 0x1656_67B1, 0x85EB_CA6B];
 const SEED_DETAIL: [u32; 3] = [0x9E37_79B9, 0xC2B2_AE35, 0x7FEB_352D];
 
 fn hash3(x: i32, y: i32, z: i32, seed: u32) -> u32 {
-    let mut h = (x as u32)
-        .wrapping_mul(0x8DA6_B343)
+    let mut h = (x as u32).wrapping_mul(0x8DA6_B343)
         ^ (y as u32).wrapping_mul(0xD8163841)
         ^ (z as u32).wrapping_mul(0xCB1A_B31F)
         ^ seed;
@@ -175,7 +174,8 @@ impl CloudNoise {
             // no holes at any cover. Stretch the fBm over its own central
             // range first so the base channel really spans 0..1 and cover
             // thresholds carve real gaps.
-            let perlin = remap(perlin_fbm(p, 4, 6, SEED_PERLIN), 0.30, 0.70, 0.0, 1.0).clamp(0.0, 1.0);
+            let perlin =
+                remap(perlin_fbm(p, 4, 6, SEED_PERLIN), 0.30, 0.70, 0.0, 1.0).clamp(0.0, 1.0);
             let worley_low = worley_fbm(p, 4, SEED_WORLEY[0]);
             // Perlin-Worley: dilate the Perlin field by the billow field so
             // the base shape has rounded cauliflower edges instead of the
@@ -268,7 +268,11 @@ fn sample_volume(data: &[u8], size: usize, p: Vec3) -> Vec4 {
     let x00 = lerp(fetch(bx, by, bz), fetch(bx + 1, by, bz), f.x);
     let x10 = lerp(fetch(bx, by + 1, bz), fetch(bx + 1, by + 1, bz), f.x);
     let x01 = lerp(fetch(bx, by, bz + 1), fetch(bx + 1, by, bz + 1), f.x);
-    let x11 = lerp(fetch(bx, by + 1, bz + 1), fetch(bx + 1, by + 1, bz + 1), f.x);
+    let x11 = lerp(
+        fetch(bx, by + 1, bz + 1),
+        fetch(bx + 1, by + 1, bz + 1),
+        f.x,
+    );
     lerp(lerp(x00, x10, f.y), lerp(x01, x11, f.y), f.z)
 }
 

@@ -1,5 +1,5 @@
 import numpy as np
-from simforge_native.observation import dense_pinhole_depth, ftheta_depth, lidar_targets, lidar_to_policy
+from simforge_render.observation import dense_pinhole_depth, ftheta_depth, lidar_targets, lidar_to_policy
 
 
 def test_sparse_ftheta_uses_lidar_optical_z_and_off_axis_polynomial():

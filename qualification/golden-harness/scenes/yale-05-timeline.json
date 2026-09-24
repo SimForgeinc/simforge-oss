@@ -1,9 +1,7 @@
 {
   "sceneId": "yale-05-timeline",
   "mapId": "yale-street",
-  "profile": "sensor",
-  "description": "Cyclist occlusion conflict (edge case 05) on yale-street: car, truck, wrong-way cyclist and pedestrian replayed from the render timeline through scen-play --authored-height. Gates: pass hashes, a non-vacuous instance-ID pass, and observed actor transforms within the Bevy parity profile of the timeline sampler. Two-wheelers are drawn without their rider (--allow-riderless-two-wheelers, recorded as actor-model-substitution): scen-play draws rigid parts and cannot pose the skinned rider, so this golden keeps guarding the bike geometry; the ridden look is covered by native-render-service.",
-  "binary": "renderer/target/release/scen-play",
+  "description": "Cyclist occlusion conflict (edge case 05) on yale-street: car, truck, wrong-way cyclist and pedestrian replayed from the render timeline (scene-state.v1 sampled at 24 fps over 0..6 s; baked XODR heights, road + body attitude, wheel odometer) through `simforge-render job` (committed document lowered to the service stream with groundY 0: baked heights authoritative). Chase camera: the retired playback binary's follow camera on the first actor (delivery-truck). Ticks 0..119 render; tick 60 is hashed. Gates: pass hashes, a non-vacuous instance-ID pass, and observed actor transforms within the Bevy parity profile. The cyclist renders with its rider, posed from the timeline's wheelSpinRad odometer. Recorded substitution: the generic pedestrian.adult actor renders catalog walker walker.pedestrian.0015 (the model catalog/packs/starter-pedestrians maps pedestrian.adult to; pedestrians-carla has no pedestrian.adult entry and the service never substitutes).",
   "corpusRootEnv": "SIMFORGE_CORPUS_YALE",
   "corpusFiles": [
     "master.gltf"
@@ -11,38 +9,74 @@
   "sceneState": {
     "gz": "qualification/golden-harness/fixtures/yale-05.scene-state.json.gz"
   },
-  "invocationTemplate": [
-    "--glbs",
-    "{glbs}",
-    "--scene-state",
-    "{sceneState}",
-    "--authored-height",
-    "--width",
-    "640",
-    "--height",
-    "360",
-    "--warmup",
-    "20",
-    "--vehicle-models",
-    "{repo}/catalog/vehicles-carla",
-    "--pedestrian-models",
-    "{repo}/catalog/pedestrians-carla",
-    "--allow-pedestrian-substitution",
-    "--allow-riderless-two-wheelers",
-    "--out-dir",
-    "{out}"
-  ],
+  "actorCatalogSubstitutions": {
+    "pedestrian": "walker.pedestrian.0015"
+  },
+  "job": {
+    "scene": {
+      "lighting": {
+        "sun_elev_deg": 38,
+        "sun_azim_deg": 145,
+        "sun_lux": 28000,
+        "ambient": 0.6
+      },
+      "render": {
+        "preset": "training"
+      },
+      "warmupFrames": 20,
+      "vehicleModels": "{repo}/catalog/vehicles-carla",
+      "pedestrianModels": "{repo}/catalog/pedestrians-carla"
+    },
+    "rig": {
+      "cameras": [
+        {
+          "sensorId": "chase",
+          "width": 640,
+          "height": 360,
+          "fovDeg": 58,
+          "eye": [
+            0,
+            0,
+            0
+          ],
+          "target": [
+            0,
+            0,
+            1
+          ],
+          "attach": {
+            "actorId": "delivery-truck",
+            "offsetM": [
+              -9.0,
+              0.0,
+              3.0
+            ],
+            "pitchDeg": -10.008,
+            "hostVisible": true
+          }
+        }
+      ]
+    },
+    "ticks": {
+      "start": 0,
+      "count": 120
+    },
+    "passes": [
+      "rgb",
+      "id"
+    ]
+  },
   "expectedPasses": [
-    "frame60.rgb",
-    "frame60.id"
+    "chase.t60.rgb",
+    "chase.t60.id"
   ],
   "passPaths": {
-    "frame60.rgb": "frame-0060.rgb.png",
-    "frame60.id": "frame-0060.id.png"
+    "chase.t60.rgb": "chase/00000060.rgb.png",
+    "chase.t60.id": "chase/00000060.id.png"
   },
   "idPass": {
     "keys": [
-      "frame60.id"
+      "chase.t60.id"
     ],
     "minInstances": 20,
     "minCoverage": 0.2

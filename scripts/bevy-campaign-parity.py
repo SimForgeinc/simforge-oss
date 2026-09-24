@@ -187,24 +187,13 @@ def scenario_sensors(scenario: dict) -> tuple[str, list[dict]]:
     return subject, sensors
 
 
-def scene_documents(scenario: dict, map_id: str, fps: int) -> tuple[list[dict], dict]:
+def scene_documents(scenario: dict, map_id: str, fps: int) -> list[dict]:
     subject, _ = scenario_sensors(scenario)
     routes = route_table(scenario)
     duration = float(scenario.get("choreography", {}).get("clipSeconds", DURATION_S))
     count = int(round(duration * fps))
     roles = scenario.get("roles", [])
-    descriptors = []
-    for role in roles:
-        actor = role.get("actor", {})
-        dims = actor.get("dims", {})
-        descriptors.append({
-            "id": "ego" if role["id"] == subject else role["id"],
-            "catalogId": actor.get("catalogId", "unknown"),
-            "actorClass": actor.get("class", "prop"),
-            "dims": {"l": dims.get("length", 1), "w": dims.get("width", 1), "h": dims.get("height", 1)},
-            "color": role.get("extensions", {}).get("studio.presentation.bodyColor"),
-        })
-    frames, states = [], []
+    states = []
     weather_name = str(scenario.get("environment", {}).get("weather", "clear")).lower()
     weather = "rain" if "rain" in weather_name else "fog" if "fog" in weather_name else "clear"
     minutes = scenario.get("environment", {}).get("extensions", {}).get("org.simforge.sceneTime.v1", {}).get("minutes", 12 * 60)
@@ -226,18 +215,7 @@ def scene_documents(scenario: dict, map_id: str, fps: int) -> tuple[list[dict], 
             })
         states.append({"version": "simforge.scene-state.v1", "mapId": map_id, "tick": tick, "tickHz": fps,
                        "weather": {"preset": weather}, "timeOfDay": minutes / 60, "actors": records})
-        frames.append({"tick": tick, "t": t, "actors": [
-            {k: r[k] for k in ("id", "kind", "position", "rotation", "yawRad", "velocity")} for r in records
-        ]})
-    # scene-state.v1 field names are normative: the frame literal is `scene-yup`
-    # and weather keys are camelCase. Authored motion here is a campaign preview;
-    # deliverable renders consume engine-emitted scene state
-    # (artifacts/production-scenarios/compile-scenarios.mjs).
-    playback = {"version": "simforge.scene-state.v1", "mapId": map_id, "frame": "scene-yup", "dt": 1 / fps,
-                "tickHz": fps, "tickCount": count, "weather": {"preset": weather, "fogDensity": 0,
-                "rainIntensity": 0, "wetness": 0}, "timeOfDay": minutes / 60, "profile": "cinematic",
-                "actors": descriptors, "frames": frames}
-    return states, playback
+    return states
 
 
 def corpus_glbs(repo: Path, map_id: str) -> list[str]:
@@ -324,10 +302,9 @@ def prepare(args) -> None:
         doc_id, map_id = row["docId"], row["mapId"]
         scenario_path = campaign / "transformed" / f"{doc_id}.json"
         scenario = load(scenario_path)
-        states, playback = scene_documents(scenario, map_id, FPS)
+        states = scene_documents(scenario, map_id, FPS)
         job_dir = root / "jobs" / doc_id
         dump(job_dir / "scene-states.json", states)
-        dump(job_dir / "scene-playback.json", playback)
         shutil.copy2(scenario_path, job_dir / "scenario.json")
         veg_glbs, veg_sidecars = corpus_vegetation(repo, map_id)
         job = {"schema": "simforge.bevy-campaign-job/v1", **row, "fps": FPS, "width": WIDTH, "height": HEIGHT,
@@ -525,7 +502,6 @@ def service_cameras(job: dict) -> list[dict]:
         cameras.append({
             "sensorId": sensor["id"], "width": job["width"], "height": job["height"],
             "fovDeg": sensor["camera"]["verticalFovDeg"], "eye": [0, 0, 0], "target": [1, 0, 0],
-            "profile": "cinematic" if chase else "sensor",
             "attach": {
                 "actorId": "ego",
                 "offsetM": [position["x"], position.get("z", 0), position["y"]],
@@ -656,7 +632,7 @@ def write_actor_visuals(job: dict, campaign_root: Path, out: Path) -> None:
 def render_service(args) -> None:
     client_root = Path(args.client_root)
     sys.path.insert(0, str(client_root))
-    from simforge_native.client import NativeRenderClient
+    from simforge_render.client import NativeRenderClient
 
     job_path = Path(args.job)
     job = relocated_job(load(job_path), job_path)
@@ -666,8 +642,9 @@ def render_service(args) -> None:
     campaign_root = Path(os.environ.get("SIMFORGE_BEVY_CAMPAIGN_ROOT", REMOTE_ROOT))
     vegetation, vegetation_budget = budget_vegetation(job)
     scene = {
-        "glbs": job["corpusGlbs"], "vegGlbs": vegetation, "profile": "sensor",
-        "profileConfig": {"cinematic": {"taa": True, "ssr": True, "ssao": True, "ssaoUltra": True}},
+        "glbs": job["corpusGlbs"], "vegGlbs": vegetation,
+        # The legacy profileConfig {taa, ssr, ssao, ssaoUltra} resolved to exactly the showcase preset.
+        "render": {"preset": "showcase"},
         "nearM": 0.05, "farM": 1000, "warmupFrames": 20,
         "vehicleModels": str(campaign_root / "catalog" / "vehicles-carla"),
         "pedestrianModels": str(campaign_root / "catalog" / "pedestrians-carla"),
@@ -678,14 +655,14 @@ def render_service(args) -> None:
     shm_path.unlink(missing_ok=True)
     log_stream = (out / "renderer.log").open("w")
     service = subprocess.Popen([
-        args.binary, "--scene", str(scene_path), "--socket", str(socket_path),
+        args.binary, "serve", "--scene", str(scene_path), "--socket", str(socket_path),
         "--shm", str(shm_path), "--shm-size-mb", "512",
     ], stdout=log_stream, stderr=subprocess.STDOUT, text=True)
     deadline = time.time() + 300
     while not socket_path.exists() and service.poll() is None and time.time() < deadline:
         time.sleep(0.1)
     if not socket_path.exists():
-        raise RuntimeError("native-render-service did not become ready")
+        raise RuntimeError("simforge-render serve did not become ready")
     client = NativeRenderClient(str(socket_path))
     states = load(Path(job["jobDir"]) / "scene-states.json")[:frame_count]
     response = client.load_scene_state(states)
@@ -772,44 +749,6 @@ def render_service(args) -> None:
     print(json.dumps(benchmark))
 
 
-def render_playback(args) -> None:
-    job_path = Path(args.job)
-    job = relocated_job(load(job_path), job_path)
-    out = Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
-    frame_count = min(job["frameCount"], args.ticks) if args.ticks else job["frameCount"]
-    cmd = [args.binary, "--glbs", ",".join(job["corpusGlbs"]), "--scene-state", str(Path(job["jobDir"]) / "scene-playback.json"),
-           "--ticks", str(frame_count), "--width", str(job["width"]), "--height", str(job["height"]),
-           "--fov", str(job["chase"]["camera"]["verticalFovDeg"]), "--warmup", "20",
-           "--camera", "follow", "--chase-dist", "8.6", "--chase-height", "3.2", "--out-dir", str(out),
-           "--vehicle-models", job["vehicleModels"]]
-    started = time.time()
-    samples = []
-    process = subprocess.Popen(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    while process.poll() is None:
-        sample = subprocess.run(["nvidia-smi", "--query-gpu=utilization.gpu,memory.used", "--format=csv,noheader,nounits"],
-                                text=True, capture_output=True)
-        if sample.returncode == 0:
-            try:
-                samples.append([int(v.strip()) for v in sample.stdout.strip().split(",")])
-            except ValueError:
-                pass
-        time.sleep(1)
-    log = process.stdout.read() if process.stdout else ""
-    (out / "renderer.log").write_text(log)
-    if process.returncode:
-        raise SystemExit(f"renderer exited {process.returncode}")
-    wall = time.time() - started
-    benchmark = {"docId": job["docId"], "wallS": wall, "fps": frame_count / wall,
-                 "gpuUtilMeanPct": statistics.fmean(s[0] for s in samples) if samples else None,
-                 "gpuUtilMaxPct": max((s[0] for s in samples), default=None),
-                 "vramMaxMiB": max((s[1] for s in samples), default=None)}
-    video_path = out / "chase-cam-trailing.mp4"
-    encode_pngs(str(out / "frame-%04d.rgb.png"), video_path, job["fps"])
-    benchmark["coverage"] = video_coverage(video_path)
-    dump(out / "benchmark.json", benchmark)
-    print(json.dumps(benchmark))
-
 def render_shard(args) -> None:
     shard = load(Path(args.shard))
     failures, retries = [], []
@@ -841,8 +780,8 @@ def deploy(args) -> None:
     repo, parity = Path(args.repo), Path(args.parity)
     for host in HOSTS if not args.host else [args.host]:
         run(["ssh", f"root@{host}", f"mkdir -p {REMOTE_ROOT}/bin {REMOTE_ROOT}/corpus {REMOTE_ROOT}/catalog {REMOTE_ROOT}/jobs {REMOTE_ROOT}/outputs"])
-        run(["rsync", "-a", "--checksum", args.binary, f"root@{host}:{REMOTE_ROOT}/bin/native-render-service"])
-        run(["rsync", "-a", "--checksum", str(repo / "renderer/service/python/simforge_native") + "/", f"root@{host}:{REMOTE_ROOT}/bin/simforge_native/"])
+        run(["rsync", "-a", "--checksum", args.binary, f"root@{host}:{REMOTE_ROOT}/bin/simforge-render"])
+        run(["rsync", "-a", "--checksum", str(repo / "renderer/service/python/simforge_render") + "/", f"root@{host}:{REMOTE_ROOT}/bin/simforge_render/"])
         run(["rsync", "-a", "--checksum", str(repo / "scripts/bevy-campaign-parity.py"), f"root@{host}:{REMOTE_ROOT}/bin/bevy-campaign-parity.py"])
         run(["rsync", "-a", "--checksum", str(repo / "catalog/vehicles-carla") + "/", f"root@{host}:{REMOTE_ROOT}/catalog/vehicles-carla/"])
         run(["rsync", "-a", "--checksum", str(repo / "catalog/pedestrians-carla") + "/", f"root@{host}:{REMOTE_ROOT}/catalog/pedestrians-carla/"])
@@ -865,7 +804,7 @@ def fleet(args) -> None:
             f"SIMFORGE_BEVY_CAMPAIGN_ROOT={REMOTE_ROOT} "
             f"python3 {REMOTE_ROOT}/bin/bevy-campaign-parity.py render-shard "
             f"--shard {REMOTE_ROOT}/shard.json --jobs {REMOTE_ROOT}/jobs "
-            f"--binary {REMOTE_ROOT}/bin/native-render-service --client-root {REMOTE_ROOT}/bin "
+            f"--binary {REMOTE_ROOT}/bin/simforge-render --client-root {REMOTE_ROOT}/bin "
             f"--out {REMOTE_ROOT}/outputs"
         )
         result = subprocess.run(["ssh", f"root@{host}", remote], text=True, capture_output=True)
@@ -954,7 +893,6 @@ def parser() -> argparse.ArgumentParser:
     q = sub.add_parser("inventory"); q.add_argument("--campaign", required=True); q.add_argument("--repo", required=True); q.add_argument("--out", required=True); q.set_defaults(func=inventory)
     q = sub.add_parser("prepare"); q.add_argument("--campaign", required=True); q.add_argument("--repo", required=True); q.add_argument("--out", required=True); q.set_defaults(func=prepare)
     q = sub.add_parser("assemble"); q.add_argument("--job", required=True); q.add_argument("--raw", required=True); q.add_argument("--out", required=True); q.set_defaults(func=assemble)
-    q = sub.add_parser("render-playback"); q.add_argument("--job", required=True); q.add_argument("--binary", required=True); q.add_argument("--out", required=True); q.add_argument("--ticks", type=int); q.set_defaults(func=render_playback)
     q = sub.add_parser("render-service"); q.add_argument("--job", required=True); q.add_argument("--binary", required=True); q.add_argument("--client-root", required=True); q.add_argument("--out", required=True); q.add_argument("--ticks", type=int); q.set_defaults(func=render_service)
     q = sub.add_parser("render-shard"); q.add_argument("--shard", required=True); q.add_argument("--jobs", required=True); q.add_argument("--binary", required=True); q.add_argument("--client-root", required=True); q.add_argument("--out", required=True); q.add_argument("--ticks", type=int); q.set_defaults(func=render_shard)
     q = sub.add_parser("deploy"); q.add_argument("--repo", required=True); q.add_argument("--parity", required=True); q.add_argument("--binary", required=True); q.add_argument("--image-archive"); q.add_argument("--host"); q.set_defaults(func=deploy)

@@ -5,7 +5,7 @@
     mesh_view_bindings as view_bindings,
     shadow_sampling::{
         SPOT_SHADOW_TEXEL_SIZE, sample_shadow_cubemap, sample_shadow_cubemap_pcss,
-        sample_shadow_map, sample_shadow_map_pcss,
+        sample_shadow_map, sample_shadow_map_pcss, sample_shadow_map_hardware,
     }
 }
 
@@ -219,6 +219,52 @@ fn sample_directional_cascade(
         frag_coord_xy,
         texel_size,
     );
+}
+
+// SIMFORGE PATCH (canopy sky occlusion; see `CanopySkyOcclusion` in light.rs).
+// Share of the directional shadow map's taps around `world_point` that an
+// occluder covers, on a fixed ring of four taps 2.5 m out in the light's view
+// (each a hardware 2x2 comparison).
+// `world_point` is lifted above the receiver by the caller, so the receiver
+// and its own body never count.
+fn directional_cover_at(light_id: u32, cascade_index: u32, world_point: vec3<f32>) -> f32 {
+    let light = &view_bindings::lights.directional_lights[light_id];
+    let cascade = &(*light).cascades[cascade_index];
+    let depth_offset = (*light).shadow_depth_bias * (*light).direction_to_light.xyz;
+    let center = world_to_directional_light_local(light_id, cascade_index, vec4(world_point + depth_offset, 1.0));
+    if (center.w == 0.0) {
+        return 0.0;
+    }
+    let array_index = i32((*light).depth_texture_base_index + cascade_index);
+    let map_size = f32(textureDimensions(view_bindings::directional_shadow_textures).x);
+    let uv_per_m = 1.0 / ((*cascade).texel_size * map_size);
+    let radius = 2.5 * uv_per_m;
+    var lit = 0.0;
+    lit += sample_shadow_map_hardware(center.xy + vec2(radius, 0.0), center.z, array_index);
+    lit += sample_shadow_map_hardware(center.xy - vec2(radius, 0.0), center.z, array_index);
+    lit += sample_shadow_map_hardware(center.xy + vec2(0.0, radius), center.z, array_index);
+    lit += sample_shadow_map_hardware(center.xy - vec2(0.0, radius), center.z, array_index);
+    return 1.0 - lit * 0.25;
+}
+
+// Overhead cover of a fragment, in [0, 1]: occluders between 2 m and 15 m
+// above it (a canopy, an underpass deck), not the receiver's own body and
+// not tall distant structures (a building's roof above 15 m leaves most of
+// the sky in view), weighted by the sun's elevation (a low sun's shadow
+// comes from the side, and the sky overhead stays open).
+fn fetch_directional_canopy_cover(light_id: u32, frag_position: vec4<f32>, view_z: f32) -> f32 {
+    let light = &view_bindings::lights.directional_lights[light_id];
+    let cascade_index = get_cascade_index(light_id, view_z);
+    if (cascade_index >= (*light).num_cascades) {
+        return 0.0;
+    }
+    let near_cover = directional_cover_at(light_id, cascade_index, frag_position.xyz + vec3(0.0, 2.0, 0.0));
+    if (near_cover == 0.0) {
+        return 0.0;
+    }
+    let high_cover = directional_cover_at(light_id, cascade_index, frag_position.xyz + vec3(0.0, 15.0, 0.0));
+    let elevation = smoothstep(0.25, 0.8, (*light).direction_to_light.y);
+    return saturate(near_cover - high_cover) * elevation;
 }
 
 fn fetch_directional_shadow(

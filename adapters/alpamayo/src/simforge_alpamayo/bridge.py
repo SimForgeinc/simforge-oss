@@ -1,7 +1,7 @@
 """Bridge: shm frame bundles -> Alpamayo `act` observations.
 
 Maps Bevy-rendered rig frames (renderer/service `render_bundle`, consumed
-via ``simforge_native.BundleRingReader`` zero-copy views) onto the wire
+via ``simforge_render.BundleRingReader`` zero-copy views) onto the wire
 observation documented in ``obs.py``: correct ``camera_id`` assignment,
 RGBA->RGB packing, optional resize, and the 4-frame history window
 assembled across sim ticks.
@@ -202,7 +202,7 @@ class BundleObservationBridge:
         return elapsed
 
     def push_bundle(self, bundle: Any, pass_: str = "rgb") -> float:
-        """Ingest one ``simforge_native`` Bundle (zero-copy views, rgb pass)."""
+        """Ingest one ``simforge_render`` Bundle (zero-copy views, rgb pass)."""
         views: dict[str, np.ndarray] = {}
         for entry in bundle.entries:
             if entry.camera_id in self.camera_map and entry.pass_ == pass_:

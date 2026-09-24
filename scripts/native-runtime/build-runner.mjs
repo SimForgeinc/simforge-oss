@@ -7,12 +7,12 @@
 // Produces under native/target/[<triple>/]release:
 //   simforge-runner[.exe], runtime-manifest.json
 // and under renderer/target/[<triple>/]release:
-//   native-render-service[.exe], libsimforge_render.so | libsimforge_render.dylib | simforge_render.dll
+//   simforge-render[.exe], libsimforge_render.so | libsimforge_render.dylib | simforge_render.dll
 //   (built with --features gpu-interop on Linux targets only; the feature is
 //   the opaque-fd Vulkan->CUDA bridge and does not exist elsewhere)
 // and, only with --providers, wheels under dist/native-runtime/wheels/ for the
 // Python providers (simforge-oss-gym via maturin, -physics, -gpu,
-// -native-renderer, -splat via `python -m build`). The baseline bundle carries
+// -render, -splat via `python -m build`). The baseline bundle carries
 // no Python, CUDA or research environment.
 //
 // Sky plates: renderer/render-core/assets/sky/*.skytex (gitignored derivatives
@@ -110,7 +110,7 @@ export function buildRuntime(options) {
         fail(`${path.join(options.sky, plate)} missing; run renderer/tools/prepare_sky_assets.py (needs the NASA originals in renderer/assets-src) or pass --no-sky`);
       }
     }
-    run('cargo', [...cargoCommon, '-p', 'service', '-p', 'render-ffi', ...(gpuInterop ? ['--features', 'gpu-interop'] : [])], RENDERER_ROOT);
+    run('cargo', [...cargoCommon, '-p', 'simforge-render', '-p', 'simforge-render-ffi', ...(gpuInterop ? ['--features', 'gpu-interop'] : [])], RENDERER_ROOT);
     renderService = path.join(renderOut, layout.renderServiceName);
     renderLib = path.join(renderOut, layout.renderLibName);
     if (!existsSync(renderService)) fail(`${renderService} missing after build`);

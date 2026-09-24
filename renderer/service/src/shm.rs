@@ -64,7 +64,6 @@ pub struct ShmRing {
     cursor_total: u64,
 }
 
-
 /// Record payload format tags (shm header offset 20).
 pub const FORMAT_RGBA8: u32 = 1;
 pub const FORMAT_DEPTH32F: u32 = 2;
@@ -78,6 +77,8 @@ pub const FORMAT_LIDAR_PLY: u32 = 5;
 pub const FORMAT_RADAR_CSV: u32 = 6;
 /// Binary little-endian PLY (same five named properties as the ASCII product).
 pub const FORMAT_LIDAR_BINARY: u32 = 7;
+/// Row-padded RGBA half-float (the camera's pre-exposure linear HDR frame).
+pub const FORMAT_RGBA16F: u32 = 8;
 
 /// Reserved sensor id of bundle records in the ring.
 pub const BUNDLE_SENSOR_ID: &str = "__bundle__";
@@ -197,14 +198,22 @@ pub fn decode_bundle(payload: &[u8]) -> Result<Bundle> {
             digest: u32::from_le_bytes(b[92..96].try_into().unwrap()),
         });
     }
-    Ok(Bundle { sim_tick, start_cursor, entries })
+    Ok(Bundle {
+        sim_tick,
+        start_cursor,
+        entries,
+    })
 }
 
 /// Seqlock read of the latest-bundle pointer from a mapped ring.
 /// Returns None while no bundle has ever been published.
 pub fn read_bundle_pointer(map: &[u8]) -> Option<BundlePointer> {
     loop {
-        let s1 = u64::from_le_bytes(map[META_BUNDLE_SEQ..META_BUNDLE_SEQ + 8].try_into().unwrap());
+        let s1 = u64::from_le_bytes(
+            map[META_BUNDLE_SEQ..META_BUNDLE_SEQ + 8]
+                .try_into()
+                .unwrap(),
+        );
         if s1 == 0 {
             return None;
         }
@@ -213,16 +222,33 @@ pub fn read_bundle_pointer(map: &[u8]) -> Option<BundlePointer> {
             continue;
         }
         fence(Ordering::Acquire);
-        let record_offset =
-            u64::from_le_bytes(map[META_BUNDLE_OFFSET..META_BUNDLE_OFFSET + 8].try_into().unwrap());
-        let payload_len =
-            u64::from_le_bytes(map[META_BUNDLE_LEN..META_BUNDLE_LEN + 8].try_into().unwrap());
-        let sim_tick =
-            u64::from_le_bytes(map[META_BUNDLE_TICK..META_BUNDLE_TICK + 8].try_into().unwrap());
+        let record_offset = u64::from_le_bytes(
+            map[META_BUNDLE_OFFSET..META_BUNDLE_OFFSET + 8]
+                .try_into()
+                .unwrap(),
+        );
+        let payload_len = u64::from_le_bytes(
+            map[META_BUNDLE_LEN..META_BUNDLE_LEN + 8]
+                .try_into()
+                .unwrap(),
+        );
+        let sim_tick = u64::from_le_bytes(
+            map[META_BUNDLE_TICK..META_BUNDLE_TICK + 8]
+                .try_into()
+                .unwrap(),
+        );
         fence(Ordering::Acquire);
-        let s2 = u64::from_le_bytes(map[META_BUNDLE_SEQ..META_BUNDLE_SEQ + 8].try_into().unwrap());
+        let s2 = u64::from_le_bytes(
+            map[META_BUNDLE_SEQ..META_BUNDLE_SEQ + 8]
+                .try_into()
+                .unwrap(),
+        );
         if s1 == s2 {
-            return Some(BundlePointer { record_offset, payload_len, sim_tick });
+            return Some(BundlePointer {
+                record_offset,
+                payload_len,
+                sim_tick,
+            });
         }
     }
 }
@@ -251,15 +277,15 @@ impl ShmRing {
         map[..8].copy_from_slice(&RING_MAGIC.to_le_bytes());
         map[8..16].copy_from_slice(&0u64.to_le_bytes());
         map.flush()?;
-        Ok(Self { map, capacity: capacity_bytes, cursor_total: META_BYTES })
+        Ok(Self {
+            map,
+            capacity: capacity_bytes,
+            cursor_total: META_BYTES,
+        })
     }
 
     pub fn path_size_meta(&self) -> (u64, u64, u64) {
-        (
-            self.capacity as u64,
-            META_BYTES,
-            self.cursor_total,
-        )
+        (self.capacity as u64, META_BYTES, self.cursor_total)
     }
 
     fn usable(&self) -> usize {
@@ -297,7 +323,9 @@ impl ShmRing {
         )?;
         // Seqlock write: odd -> fields -> even. Single writer by design.
         let seq0 = u64::from_le_bytes(
-            self.map[META_BUNDLE_SEQ..META_BUNDLE_SEQ + 8].try_into().unwrap(),
+            self.map[META_BUNDLE_SEQ..META_BUNDLE_SEQ + 8]
+                .try_into()
+                .unwrap(),
         );
         self.map[META_BUNDLE_SEQ..META_BUNDLE_SEQ + 8].copy_from_slice(&(seq0 + 1).to_le_bytes());
         fence(Ordering::Release);
@@ -441,7 +469,9 @@ mod tests {
 
     /// Publish one camera frame; return its bundle entry.
     fn publish_frame(ring: &mut ShmRing, cam: &str, tick: u64, payload: &[u8]) -> BundleEntry {
-        let offset = ring.publish(cam, "rgb", 4, 2, FORMAT_RGBA8, tick, payload).unwrap();
+        let offset = ring
+            .publish(cam, "rgb", 4, 2, FORMAT_RGBA8, tick, payload)
+            .unwrap();
         BundleEntry {
             camera_id: cam.into(),
             pass: "rgb".into(),
@@ -454,7 +484,11 @@ mod tests {
         }
     }
 
-    fn publish_bundle_tick(ring: &mut ShmRing, tick: u64, cams: &[&str]) -> (u64, u64, Vec<BundleEntry>) {
+    fn publish_bundle_tick(
+        ring: &mut ShmRing,
+        tick: u64,
+        cams: &[&str],
+    ) -> (u64, u64, Vec<BundleEntry>) {
         let start_cursor = ring.cursor_total();
         let entries: Vec<BundleEntry> = cams
             .iter()
@@ -472,7 +506,11 @@ mod tests {
     fn validate_latest(ring: &ShmRing, expect_tick: u64) -> Result<Bundle> {
         let map = ring.as_bytes();
         let ptr = read_bundle_pointer(map).context("no bundle pointer")?;
-        anyhow::ensure!(ptr.sim_tick == expect_tick, "pointer tick {} != {expect_tick}", ptr.sim_tick);
+        anyhow::ensure!(
+            ptr.sim_tick == expect_tick,
+            "pointer tick {} != {expect_tick}",
+            ptr.sim_tick
+        );
         let header = read_record_header(map, ptr.record_offset as usize)?;
         anyhow::ensure!(header.sensor_id == BUNDLE_SENSOR_ID && header.format_tag == FORMAT_BUNDLE);
         anyhow::ensure!(header.tick_id == expect_tick);
@@ -486,8 +524,13 @@ mod tests {
             "bundle expired (writer lapped)"
         );
         for e in &bundle.entries {
-            let payload = &map[e.payload_offset as usize..(e.payload_offset + e.payload_len) as usize];
-            anyhow::ensure!(crc32fast::hash(payload) == e.digest, "frame digest mismatch for {}", e.camera_id);
+            let payload =
+                &map[e.payload_offset as usize..(e.payload_offset + e.payload_len) as usize];
+            anyhow::ensure!(
+                crc32fast::hash(payload) == e.digest,
+                "frame digest mismatch for {}",
+                e.camera_id
+            );
             let rh = read_record_header(map, e.payload_offset as usize - RECORD_HEADER_BYTES)?;
             anyhow::ensure!(rh.tick_id == expect_tick && rh.sensor_id == e.camera_id);
         }
@@ -549,15 +592,29 @@ mod tests {
     #[test]
     fn latest_bundle_pointer_and_digests_validate() {
         let (path, mut ring) = temp_ring("latest", META_BYTES as usize + 64 * 1024);
-        assert!(read_bundle_pointer(ring.as_bytes()).is_none(), "no pointer before first bundle");
+        assert!(
+            read_bundle_pointer(ring.as_bytes()).is_none(),
+            "no pointer before first bundle"
+        );
         publish_bundle_tick(&mut ring, 1, &["front", "rear"]);
         let (offset, len, entries) = publish_bundle_tick(&mut ring, 2, &["front", "rear"]);
         let ptr = read_bundle_pointer(ring.as_bytes()).unwrap();
-        assert_eq!(ptr, BundlePointer { record_offset: offset, payload_len: len, sim_tick: 2 });
+        assert_eq!(
+            ptr,
+            BundlePointer {
+                record_offset: offset,
+                payload_len: len,
+                sim_tick: 2
+            }
+        );
         let bundle = validate_latest(&ring, 2).unwrap();
         assert_eq!(bundle.entries, entries);
         // Seqlock is even and counted one increment pair per bundle.
-        let seq = u64::from_le_bytes(ring.as_bytes()[META_BUNDLE_SEQ..META_BUNDLE_SEQ + 8].try_into().unwrap());
+        let seq = u64::from_le_bytes(
+            ring.as_bytes()[META_BUNDLE_SEQ..META_BUNDLE_SEQ + 8]
+                .try_into()
+                .unwrap(),
+        );
         assert_eq!(seq, 4);
         drop(ring);
         let _ = std::fs::remove_file(path);
@@ -570,7 +627,9 @@ mod tests {
         let mut last_cursor = ring.cursor_total();
         for tick in 0..200u64 {
             let payload = vec![tick as u8; 100 + (tick as usize * 37) % 400];
-            let offset = ring.publish("cam", "rgb", 4, 2, FORMAT_RGBA8, tick, &payload).unwrap();
+            let offset = ring
+                .publish("cam", "rgb", 4, 2, FORMAT_RGBA8, tick, &payload)
+                .unwrap();
             assert!(offset >= META_BYTES, "record in meta page");
             assert!(
                 offset as usize + RECORD_HEADER_BYTES + payload.len() <= capacity,
@@ -596,11 +655,19 @@ mod tests {
         // Writer laps the ring with later frames (no new bundle).
         for tick in 2..40u64 {
             let payload = vec![tick as u8; 512];
-            ring.publish("front", "rgb", 4, 2, FORMAT_RGBA8, tick, &payload).unwrap();
+            ring.publish("front", "rgb", 4, 2, FORMAT_RGBA8, tick, &payload)
+                .unwrap();
         }
         // The stale pointer still points at tick 1's bundle record location...
         let ptr = read_bundle_pointer(ring.as_bytes()).unwrap();
-        assert_eq!(ptr, BundlePointer { record_offset: offset, payload_len: len, sim_tick: 1 });
+        assert_eq!(
+            ptr,
+            BundlePointer {
+                record_offset: offset,
+                payload_len: len,
+                sim_tick: 1
+            }
+        );
         // ...but the liveness window rejects it without touching payloads.
         let map = ring.as_bytes();
         let cursor_now = u64::from_le_bytes(map[8..16].try_into().unwrap());
@@ -609,7 +676,10 @@ mod tests {
             cursor_now - (start_cursor - RECORD_HEADER_BYTES as u64) > ring.usable_bytes(),
             "expected writer to have lapped"
         );
-        assert!(validate_latest(&ring, 1).is_err(), "stale bundle must fail validation");
+        assert!(
+            validate_latest(&ring, 1).is_err(),
+            "stale bundle must fail validation"
+        );
         // A fresh bundle after the lap validates again.
         publish_bundle_tick(&mut ring, 40, &["front"]);
         validate_latest(&ring, 40).unwrap();

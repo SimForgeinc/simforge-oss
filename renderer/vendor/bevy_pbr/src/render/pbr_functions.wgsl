@@ -594,6 +594,9 @@ fn apply_pbr_lighting(
     }
 
     // directional lights (direct)
+    // SIMFORGE PATCH (canopy sky occlusion): overhead cover seen by the
+    // shadow maps of lights that carry `CanopySkyOcclusion`.
+    var canopy_cover = 0.0;
     let n_directional_lights = view_bindings::lights.n_directional_lights;
     for (var i: u32 = 0u; i < n_directional_lights; i = i + 1u) {
         // check if this light should be skipped, which occurs if this light does not intersect with the view
@@ -615,6 +618,11 @@ fn apply_pbr_lighting(
         if ((in.flags & MESH_FLAGS_SHADOW_RECEIVER_BIT) != 0u
                 && (view_bindings::lights.directional_lights[i].flags & mesh_view_types::DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT) != 0u) {
             shadow = shadows::fetch_directional_shadow(i, in.world_position, in.world_normal, view_z, in.frag_coord.xy);
+            // Only shaded fragments look for overhead cover: a sunlit one keeps
+            // its sky (and the lookup's cost).
+            if (shadow < 0.999 && (view_bindings::lights.directional_lights[i].flags & mesh_view_types::DIRECTIONAL_LIGHT_FLAGS_CANOPY_SKY_OCCLUSION_BIT) != 0u) {
+                canopy_cover = max(canopy_cover, shadows::fetch_directional_canopy_cover(i, in.world_position, view_z));
+            }
         }
 
 #ifdef CONTACT_SHADOWS
@@ -744,9 +752,15 @@ fn apply_pbr_lighting(
         found_diffuse_indirect,
     );
 
-    indirect_light += environment_light.diffuse * diffuse_occlusion;
+    // SIMFORGE PATCH (canopy sky occlusion): under overhead cover the probe's
+    // open sky is mostly leaves. Upward reflections lose most of it, upward
+    // facing diffuse part of it (a canopy transmits and re-emits some light).
+    let canopy_R = reflect(-in.V, in.N);
+    let canopy_specular = 1.0 - 0.85 * canopy_cover * smoothstep(-0.2, 0.3, canopy_R.y);
+    let canopy_diffuse = 1.0 - 0.6 * canopy_cover * saturate(0.5 + 0.5 * in.N.y);
+    indirect_light += environment_light.diffuse * diffuse_occlusion * canopy_diffuse;
     if (!use_ssr) {
-        indirect_light += environment_light.specular * specular_occlusion;
+        indirect_light += environment_light.specular * specular_occlusion * canopy_specular;
     }
 #endif  // ENVIRONMENT_MAP
 

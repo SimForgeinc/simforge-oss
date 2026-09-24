@@ -21,12 +21,12 @@ use bevy::color::Color;
 use bevy::image::Image;
 use bevy::light::{DirectionalLight, EnvironmentMapLight, GlobalAmbientLight, LightProbe};
 use bevy::math::{Dir3, Quat, Vec3, Vec4};
-use bevy::transform::components::Transform;
 use bevy::pbr::{ContactShadows, ScreenSpaceAmbientOcclusion};
 use bevy::render::render_resource::{
     Extent3d, TextureDataOrder, TextureDimension, TextureFormat, TextureViewDescriptor,
     TextureViewDimension,
 };
+use bevy::transform::components::Transform;
 
 pub use crate::calibration::SUN_ANGULAR_DIAMETER_DEG;
 /// Ground-plane height of the yale-street corpus (see spike FINDINGS §5).
@@ -289,7 +289,11 @@ fn face_coords(dir: Vec3) -> (u32, f32, f32) {
 }
 
 fn orthonormal_basis(normal: Vec3) -> (Vec3, Vec3) {
-    let up = if normal.y.abs() < 0.999 { Vec3::Y } else { Vec3::X };
+    let up = if normal.y.abs() < 0.999 {
+        Vec3::Y
+    } else {
+        Vec3::X
+    };
     let tangent = up.cross(normal).normalize();
     (tangent, normal.cross(tangent))
 }
@@ -532,7 +536,6 @@ pub fn spawn_lighting(
     Ok(sky_handle)
 }
 
-
 /// Marker so weather.rs can attach `VolumetricLight` to the sun when fog is
 /// active without lighting.rs depending on the weather module.
 #[derive(bevy::prelude::Component)]
@@ -540,7 +543,9 @@ pub struct VolumetricLightMarker;
 
 /// Fixed-EV100 exposure for the sensor profile, calibrated per weather.
 pub fn sensor_exposure(weather_ev100: f32) -> Exposure {
-    Exposure { ev100: weather_ev100 }
+    Exposure {
+        ev100: weather_ev100,
+    }
 }
 
 /// Attach GTAO + contact shadows to a camera view (rung ≥ 3).

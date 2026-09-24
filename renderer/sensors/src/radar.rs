@@ -17,8 +17,8 @@
 //! `formats::write_radar_csv`.
 
 use crate::bvh::Raycast;
-use bevy::math::{Quat, Vec3};
 use crate::RAY_POOL;
+use bevy::math::{Quat, Vec3};
 use render_core::coordinates::SensorFrame;
 
 #[derive(Debug, Clone)]
@@ -33,26 +33,7 @@ pub struct RadarConfig {
 }
 
 impl RadarConfig {
-    /// Per-frame fan size from pointsPerSecond at a given tick rate, split
-    /// into a square-ish grid.
-    pub fn from_budget(
-        pps: Option<u32>,
-        tick_hz: f32,
-        hfov_deg: f32,
-        vfov_deg: f32,
-        range_m: f32,
-    ) -> RadarConfig {
-        let per_frame = pps
-            .map(|p| ((p as f32 / tick_hz.max(1e-6)).round() as u32).max(64))
-            .unwrap_or(256); // fallback-ok: sensor-capture harness budget; the render service uses from_points_per_second
-        let side = ((per_frame as f32).sqrt().round() as u32).max(4);
-        RadarConfig { hfov_deg, vfov_deg, range_m, azimuth_rays: side, elevation_rows: side }
-    }
-}
-
-impl RadarConfig {
-    /// The service's strict variant of [`Self::from_budget`]: the per-frame
-    /// ray budget is exactly `points_per_second / tick_hz` (rounded), laid out
+    /// The per-frame ray budget is exactly `points_per_second / tick_hz` (rounded), laid out
     /// as the model's square azimuth x elevation grid (the fan's documented
     /// discretisation). A budget the model cannot honour is an error, never
     /// silently raised to the 64-ray floor.
@@ -64,7 +45,9 @@ impl RadarConfig {
         range_m: f32,
     ) -> Result<RadarConfig, String> {
         if !(tick_hz.is_finite() && tick_hz > 0.0) {
-            return Err(format!("[native_radar_config_invalid] tick rate {tick_hz} Hz"));
+            return Err(format!(
+                "[native_radar_config_invalid] tick rate {tick_hz} Hz"
+            ));
         }
         let per_frame = (points_per_second as f32 / tick_hz).round() as u32;
         if per_frame < 64 {
@@ -73,7 +56,13 @@ impl RadarConfig {
             ));
         }
         let side = (per_frame as f32).sqrt().round() as u32;
-        Ok(RadarConfig { hfov_deg, vfov_deg, range_m, azimuth_rays: side, elevation_rows: side })
+        Ok(RadarConfig {
+            hfov_deg,
+            vfov_deg,
+            range_m,
+            azimuth_rays: side,
+            elevation_rows: side,
+        })
     }
 }
 

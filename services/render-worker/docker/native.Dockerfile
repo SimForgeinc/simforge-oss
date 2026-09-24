@@ -28,7 +28,7 @@ RUN apt-get update \
 COPY --from=source /renderer ./renderer
 # render-core decodes the map's ground mesh with simforge-core (path dependency ../../native).
 COPY --from=source /native ./native
-RUN cargo build --locked --manifest-path renderer/Cargo.toml --release -p service --bin native-render-service
+RUN cargo build --locked --manifest-path renderer/Cargo.toml --release -p simforge-render --bin simforge-render
 
 FROM debian:bookworm-slim AS sky-build
 RUN apt-get update \
@@ -52,11 +52,11 @@ RUN test -n "$SOURCE_REVISION" && test -n "$IMAGE_VERSION" \
  && mkdir -p /opt/simforge /scratch /cache /run/simforge \
  && chown -R node:node /scratch /cache /run/simforge
 COPY --from=node-build --chown=node:node /out/worker /opt/simforge/worker
-COPY --from=rust-build /src/renderer/target/release/native-render-service /usr/local/bin/native-render-service
+COPY --from=rust-build /src/renderer/target/release/simforge-render /usr/local/bin/simforge-render
 COPY --from=sky-build /renderer/render-core/assets/sky /opt/simforge/sky
 ENV NODE_ENV=production \
     PORT=8080 \
-    SIMFORGE_NATIVE_RENDER_BINARY=/usr/local/bin/native-render-service \
+    SIMFORGE_NATIVE_RENDER_BINARY=/usr/local/bin/simforge-render \
     SIMFORGE_SKY_ASSETS=/opt/simforge/sky \
     SIMFORGE_SCRATCH_DIR=/scratch \
     SIMFORGE_CACHE_DIR=/cache \

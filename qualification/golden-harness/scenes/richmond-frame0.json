@@ -1,42 +1,67 @@
 {
   "sceneId": "richmond-frame0",
   "mapId": "richmond-field-station",
-  "profile": "sensor",
-  "description": "richmond-field-station native master (single master.gltf) from the edge-case-06 focus vehicle start pose, native-render-job sensor profile. The ID pass must encode real map instances (idPass gate).",
+  "description": "richmond-field-station native master (single master.gltf) from the edge-case-06 focus vehicle start pose: one explicit service camera, static scene (no scene state), training preset. Ticks 0..9 render; the last one (steady state) is hashed. The ID pass must encode real map instances (idPass gate).",
   "corpusRootEnv": "SIMFORGE_CORPUS_RICHMOND",
   "corpusFiles": [
     "master.gltf"
   ],
-  "rendererArgs": {
-    "eye": [
-      -172.89,
-      7.01,
-      41.79
-    ],
-    "target": [
-      -164.0,
-      6.01,
-      13.14
-    ],
-    "fov": 70,
-    "width": 736,
-    "height": 416,
-    "warmup": 20,
-    "frames": 30,
-    "cameras": 1,
-    "sunElev": 38,
-    "sunAzim": 145,
-    "lux": 28000,
-    "ambient": 0.6
+  "job": {
+    "scene": {
+      "lighting": {
+        "sun_elev_deg": 38,
+        "sun_azim_deg": 145,
+        "sun_lux": 28000,
+        "ambient": 0.6
+      },
+      "render": {
+        "preset": "training"
+      },
+      "warmupFrames": 20
+    },
+    "rig": {
+      "cameras": [
+        {
+          "sensorId": "cam0",
+          "width": 736,
+          "height": 416,
+          "fovDeg": 70,
+          "eye": [
+            -172.89,
+            7.01,
+            41.79
+          ],
+          "target": [
+            -164.0,
+            6.01,
+            13.14
+          ]
+        }
+      ]
+    },
+    "ticks": {
+      "start": 0,
+      "count": 10
+    },
+    "passes": [
+      "rgb",
+      "id",
+      "depth"
+    ]
   },
   "expectedPasses": [
-    "rgb0",
-    "id0",
-    "depth0"
+    "cam0.rgb",
+    "cam0.id",
+    "cam0.depth"
   ],
+  "passPaths": {
+    "cam0.rgb": "cam0/00000009.rgb.png",
+    "cam0.id": "cam0/00000009.id.png",
+    "cam0.depth": "cam0/00000009.depth.f32.bin"
+  },
   "idPass": {
     "keys": [
-      "id0"
+      "cam0.id"
     ],
     "minInstances": 20,
     "minCoverage": 0.2

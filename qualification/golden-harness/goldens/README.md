@@ -4,52 +4,69 @@
 goldens/<gpuFingerprint>/<scene>.json
 ```
 
-- `<gpuFingerprint>`: first 16 hex of sha256 over canonical
-  `{gpus:[{name,driverVersion,vbiosVersion,pciBusId}], kernel, arch}` from the
-  same nvidia-smi query as WSB4's `qualification/render-determinism/gpu-fingerprint.mjs`.
-  Current entry: `75b333b1506af34f` = NVIDIA GeForce RTX 5080, driver 595.84,
-  vbios 98.03.6C.00.3E, PCI 00000000:02:00.0.
+- `<gpuFingerprint>`: the adapter-of-record fingerprint (lavapipe build + CPU
+  model; `lib/fingerprint.mjs`, docs/engineering/native-golden-ci.md). Goldens
+  are recorded and verified on Mesa lavapipe, never on a GPU: NVIDIA drivers
+  are not run-to-run byte-stable for this renderer.
+  Current entry: `c398eadcadbd2754` = llvmpipe (LLVM 20.1.2, 256 bits), Mesa
+  25.2.8-0ubuntu0.24.04.2, Intel Core Ultra 9 285K (the 5080 box's CPU).
 - One file per scene; full evidence manifest (schema
   `simforge-oss.render-determinism-manifest.v1`, extensions in
-  `docs/native-golden-ci.md`). Gates read `passHashes` + `timings.avgFrameMs`.
+  `docs/engineering/native-golden-ci.md`). Gates read `passHashes`.
 
-- `0c79cc9fe7b267f4` = NVIDIA GeForce RTX 3080, driver 595.91.07 (the dev
-  Bevy worker box): render-timeline actor scenes
-  (`richmond-06-timeline`, `yale-05-timeline`), recorded with a debug-profile
-  `scen-play` from `ws-b/bevy-timeline` (binary sha in each file).
+## Renderer
+
+Every scene renders through `simforge-render job --job <run>.job.json`
+(schema `simforge.render-job/v2`: the render service's own request path,
+`training` preset, pinned capture clock). The harness writes the job from the
+scene's `job` block (adding the corpus GLBs, the scene-state stream, `outDir`
+and, for parity scenes, `observe`); the manifest records the binary
+(`rendererPath.file`, `sha256`) and the full job (`rendererPath.invocation`).
+Artifacts follow the job layout: `<outDir>/<sensor>/<tick:08>.<pass>.png`
+(`rgb`, `id`, `semantic`), `.depth.f32.bin`, lidar `<tick:08>.ply`, plus
+`results.json` (per-tick timings, recorded and gated only with GOLDEN_FRAME_BUDGET; one-tick
+jobs have none).
+
+Actor substitutions a scene declares (`actorModelRefs`,
+`actorCatalogSubstitutions`, `allowPrimitiveActors`) are recorded in the
+manifest's `actorSubstitutions`.
 
 ## Keying rules
 
 Goldens are valid ONLY for the exact tuple recorded inside each file:
-gpu fingerprint × renderer binary (`rendererPath.sha256`) × render profile ×
-scene inputs (`rendererArgs` + `corpusChecksums`). Any element changing ⇒ new
-golden required. Known families on this program:
-- `native-render-job` (sensor profile, Tonemapping::None linear; identity-stamped
-  single-submission captures) — this store, from the 2026-09 migration on.
-- WSB3 `sensor-capture` (Tonemapping::None ID cam) — separate instance-hash family.
+gpu fingerprint × renderer binary (`rendererPath.sha256`) × render config
+(`renderConfig`) × scene inputs (the job + `corpusChecksums` +
+`sceneStateSha256`). Any element changing ⇒ new golden required.
 
-## Current status (2026-09-05)
+## Current status
 
-The `yale-frame0` golden under `75b333b1506af34f/` was recorded against the
-removed `native-render` spike CLI (AgX tonemapping, readback not ordered
-against the render graph). It is retired evidence: `verify yale-frame0` will
-report drift against it by construction and it must be re-recorded with
-`native-render-job` on the qualified GPU before the gate is armed again. The
-expected invariants across that re-record are that `id0` and `depth0`
-(geometry/unlit passes) match the spike values only if the scene inputs are
-identical; `rgb0` changes family (linear sensor output).
+Recorded 2026-09-23 on lavapipe (`c398eadcadbd2754`) with `simforge-render`
+(perf/gpu-deep: dash-cam camera model with the calibrated defaults, canopy sky
+occlusion, CPU-ordered draws under the pinned clock), each scene rendered twice
+at record time with identical pass hashes and verified by a third render. The
+yale-05 fixtures name the wrong-way rider's class `cyclist` (the scene-state
+vocabulary). The yale-frame0 and yale-pronto scenes render the
+yale-street master (same world frame as the retired spike and WSB1 tiles,
+which no longer exist). The GPU-keyed tables recorded with the retired
+binaries are deleted (git history keeps them).
 
-| yale-pronto | pronto-cam0.rgb `7d9091c1af4a6a1a` · depth `517cf5171b7016d2` · instance `3b8b2be27a00bd7e` · semantic `8455e0f311aaa64f` · lidar-front-left PLY `e9c48979b3331bff` | sensor-capture (Tonemapping::None ID/semantic) — separate artifact family; rgb/depth independently reproduce WSB3's paired-run hashes |
-
-yale-pronto reads WSB1's decoded corpus (`SCEN_SENSOR_CORPUS_WSB1` →
-`.corpus/yale-street`, tiles/ subdir auto-detected), the committed
-`run/evidence/scene-state.v1.json`, and `fixtures/yale-header.xodr`.
-It has no timing instrumentation — frame-time gate is skipped for it.
+The timeline scenes' fixtures were regenerated on 2026-09-23 from their
+source traces (edge cases 05/06, engine 0.7.0; trace `inputHash`
+`1ebb3cb0…` / `7defd6a3…`) with today's timeline builder on the maps' xodr
+elevation (`simforge render timeline <trace> --map <map>`, no ground
+derivative in those map versions), then `simforge render scene-state
+<timeline> --fps 24 --end 6`. They carry `contactOrigin`, `wheelSpinRad`,
+`bodyAttitude` and `wheelDropM`, so the two-wheelers render with their posed
+riders and `simforge render parity` reads the timelines. The job writes
+`observed-frames.jsonl` (`observe`), which the parity gate grades.
 
 ## Re-record
 
 ```sh
-cargo build --release -p render-core --bin native-render-job --manifest-path renderer/Cargo.toml
-SCEN_SENSOR_CORPUS=<corpus root> node qualification/golden-harness/golden.mjs record yale-frame0
+cargo build --release -p simforge-render --manifest-path renderer/Cargo.toml
+SIMFORGE_CORPUS_RICHMOND=<richmond corpus root> SIMFORGE_CORPUS_YALE=<yale corpus root> \
+SCEN_SENSOR_CORPUS_WSB1=<WSB1 decoded yale corpus> SCEN_SENSOR_CORPUS=<spike corpus> \
+  node qualification/golden-harness/golden.mjs plan all
+node qualification/golden-harness/golden.mjs record <scene>
 node qualification/golden-harness/golden.mjs verify all
 ```

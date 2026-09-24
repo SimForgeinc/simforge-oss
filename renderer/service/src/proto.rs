@@ -19,8 +19,14 @@ use serde::{Deserialize, Serialize};
 pub const NATIVE_SERVICE_PROTOCOL_VERSION: u32 = 5;
 
 /// Additive ops advertised in `hello.capabilities`.
-pub const NATIVE_SERVICE_CAPABILITIES: &[&str] =
-    &["observe_actors", "capture_clock.pinned", "render_bundle.observe", "render_bundle.pipeline", "ground_mesh"];
+pub const NATIVE_SERVICE_CAPABILITIES: &[&str] = &[
+    "observe_actors",
+    "render_config",
+    "capture_clock.pinned",
+    "render_bundle.observe",
+    "render_bundle.pipeline",
+    "ground_mesh",
+];
 
 /// Rigid attachment of a camera to a scene-state actor (CARLA
 /// `AttachmentType.Rigid` analogue): the pose is re-resolved from the
@@ -65,8 +71,10 @@ pub struct WireRequest {
 
 /// One rig camera in a render request. Poses are absolute world-space
 /// eye/target points (y-up), matching the spike / W0 camera convention.
+/// Unknown keys are refused: the retired per-camera `profile` (and any
+/// misspelt field) must fail loudly rather than be dropped.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ServiceCamera {
     pub sensor_id: String,
     pub width: u32,
@@ -89,11 +97,6 @@ pub struct ServiceCamera {
     /// excluded from this camera's view only.
     #[serde(default)]
     pub attach: Option<CameraAttach>,
-    /// Optional per-camera render profile. Omit to inherit the service scene
-    /// profile. A campaign chase camera can therefore be cinematic while the
-    /// retained Pronto cameras remain sensor-profile and hash-stable.
-    #[serde(default)]
-    pub profile: Option<render_core::engine::Profile>,
 }
 
 /// Retained spinning lidar declaration for `render_bundle`.
@@ -132,23 +135,45 @@ pub struct ServiceRadar {
     pub range_m: f32,
 }
 
-fn default_lidar_channels() -> u32 { 128 }
-fn default_lidar_rotation_hz() -> f32 { 10.0 }
-fn default_lidar_points_per_second() -> u32 { 1_300_000 }
-fn default_lidar_horizontal_fov() -> f32 { 120.0 }
-fn default_lidar_vertical_fov() -> f32 { 25.0 }
-fn default_lidar_range() -> f32 { 200.0 }
-fn default_radar_points_per_second() -> u32 { 1_500 }
-fn default_radar_horizontal_fov() -> f32 { 30.0 }
-fn default_radar_vertical_fov() -> f32 { 30.0 }
-fn default_radar_range() -> f32 { 100.0 }
+fn default_lidar_channels() -> u32 {
+    128
+}
+fn default_lidar_rotation_hz() -> f32 {
+    10.0
+}
+fn default_lidar_points_per_second() -> u32 {
+    1_300_000
+}
+fn default_lidar_horizontal_fov() -> f32 {
+    120.0
+}
+fn default_lidar_vertical_fov() -> f32 {
+    25.0
+}
+fn default_lidar_range() -> f32 {
+    200.0
+}
+fn default_radar_points_per_second() -> u32 {
+    1_500
+}
+fn default_radar_horizontal_fov() -> f32 {
+    30.0
+}
+fn default_radar_vertical_fov() -> f32 {
+    30.0
+}
+fn default_radar_range() -> f32 {
+    100.0
+}
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum RequestBody {
     /// Handshake: protocol version, prewarmed scene info, shm location.
     Hello,
-    DescribeProducts { profile: render_core::products::OutputMode },
+    DescribeProducts {
+        profile: render_core::products::OutputMode,
+    },
     /// Reset a caller-clocked episode with the declared consumer's cadence/history.
     /// Returns the initial observation through the existing shared-memory ring.
     ResetEpisode {
@@ -163,9 +188,13 @@ pub enum RequestBody {
         consumer: Option<render_core::products::ConsumerSpec>,
     },
     /// Advance exactly one policy interval, then block until the next request.
-    StepEpisode { action: crate::episode::Action },
+    StepEpisode {
+        action: crate::episode::Action,
+    },
     /// Add more tiles before first render (map prewarm extension).
-    Load { glbs: Vec<String> },
+    Load {
+        glbs: Vec<String>,
+    },
     /// Render one tick for the given cameras (rgb + id + depth, plus
     /// semantic per camera) and publish the frames individually. Cameras
     /// upsert the retained rig like `render_bundle`.
@@ -184,7 +213,9 @@ pub enum RequestBody {
     /// Load a scene-state.v1 stream (one document per tick, in order).
     /// Actors are created lazily on the first rendered tick that references
     /// them. `mapId`/`xodrSha256` must match the prewarmed scene contract.
-    LoadSceneState { states: Vec<crate::scene::SceneState> },
+    LoadSceneState {
+        states: Vec<crate::scene::SceneState>,
+    },
     /// Drop every registered camera, lidar and radar; the next render
     /// re-registers from its request.
     ResetCameras,
@@ -195,7 +226,9 @@ pub enum RequestBody {
     ObserveActors,
     /// JPEG-encode cached pass payloads from the last rendered tick and
     /// publish the results into the shm ring as `jpeg` records.
-    EncodeJpeg { items: Vec<JpegItem> },
+    EncodeJpeg {
+        items: Vec<JpegItem>,
+    },
     /// Render every rig camera for one sim tick and publish an atomic
     /// frame bundle (per-camera frames + one bundle table record + the
     /// meta-page latest-bundle pointer). `cameras`, when present, upserts the
@@ -278,7 +311,9 @@ pub enum RequestBody {
     },
     /// Export fresh handles for every slot of a sensor's device stream
     /// (see `ResponseBody::ExportDeviceStream`).
-    ExportDeviceStream { sensor_id: String },
+    ExportDeviceStream {
+        sensor_id: String,
+    },
     /// Tear down a sensor's device stream after waiting up to `graceMs` for
     /// outstanding consumer leases.
     CloseDeviceStream {
@@ -307,7 +342,10 @@ pub struct WireResponse {
 #[derive(Debug, Serialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum ResponseBody {
-    DescribeProducts { ok: bool, consumer: render_core::products::ConsumerSpec },
+    DescribeProducts {
+        ok: bool,
+        consumer: render_core::products::ConsumerSpec,
+    },
     Episode {
         ok: bool,
         observation: crate::episode::EpisodeObservation,
@@ -318,20 +356,24 @@ pub enum ResponseBody {
         server_ms: f64,
         consumer: render_core::products::ConsumerSpec,
         near_m: f32,
-        sensor_to_policy: std::collections::BTreeMap<String,render_core::coordinates::PolicyFromSensor>,
+        sensor_to_policy:
+            std::collections::BTreeMap<String, render_core::coordinates::PolicyFromSensor>,
         /// Authored pre-roll only on reset; each row retains its own submission.
         history: Vec<EpisodeImageHistory>,
     },
     Hello {
         ok: bool,
         protocol: u32,
-        profile: String,
         legend_entries: usize,
         shm: ShmInfo,
         /// Additive ops this build answers beyond the protocol baseline.
         /// Clients gate on this before sending one: an older service drops
         /// the connection on an op it cannot decode.
         capabilities: Vec<String>,
+        /// The resolved render configuration (`render_config` capability).
+        render_config: render_core::render_config::RenderConfig,
+        /// Deprecation notes from resolving the scene spec.
+        deprecations: Vec<String>,
         /// The scene's placement height source: `ground-mesh` (the map's
         /// ground derivative, with its sha256) or `legacy-mesh-field`.
         ground: GroundInfo,
@@ -408,7 +450,8 @@ pub enum ResponseBody {
         device: std::collections::HashMap<String, DeviceReady>,
         /// Server-side render+publish wall time, milliseconds.
         server_ms: f64,
-        sensor_to_policy: std::collections::BTreeMap<String,render_core::coordinates::PolicyFromSensor>,
+        sensor_to_policy:
+            std::collections::BTreeMap<String, render_core::coordinates::PolicyFromSensor>,
         /// Where `server_ms` went (additive; older clients ignore it).
         #[serde(skip_serializing_if = "Option::is_none")]
         stages: Option<BundleStages>,
@@ -418,6 +461,10 @@ pub enum ResponseBody {
         /// With `observe`: every scene actor as drawn by this bundle.
         #[serde(skip_serializing_if = "Option::is_none")]
         observed_actors: Option<Vec<ObservedActorPose>>,
+        /// Per RGB camera, the exposure the camera model metered for this
+        /// frame (the `dashcam-wdr` look only).
+        #[serde(skip_serializing_if = "Option::is_none")]
+        exposure: Option<std::collections::BTreeMap<String, CameraExposure>>,
     },
     /// Exportable device stream allocated for a camera.
     OpenDeviceStream {
@@ -431,7 +478,7 @@ pub enum ResponseBody {
     /// one `SFGX` frame (`b"SFGX" ++ u32le(len) ++ manifest JSON`) carrying
     /// every slot's memory/ready/release descriptors as `SCM_RIGHTS` on the
     /// same socket; the client must consume it before its next request
-    /// (`simforge_native.gpu.receive_stream`).
+    /// (`simforge_render.gpu.receive_stream`).
     ExportDeviceStream {
         ok: bool,
         sensor_id: String,
@@ -468,7 +515,7 @@ pub enum ResponseBody {
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct EpisodeImageHistory {
     pub time_seconds: f64,
     pub frame: FrameIdentity,
@@ -486,12 +533,14 @@ pub struct GroundInfo {
 impl From<render_core::engine::GroundSource> for GroundInfo {
     fn from(source: render_core::engine::GroundSource) -> Self {
         match source {
-            render_core::engine::GroundSource::GroundMesh { sha256 } => {
-                GroundInfo { source: "ground-mesh".into(), sha256: Some(sha256) }
-            }
-            render_core::engine::GroundSource::LegacyMeshField => {
-                GroundInfo { source: "legacy-mesh-field".into(), sha256: None }
-            }
+            render_core::engine::GroundSource::GroundMesh { sha256 } => GroundInfo {
+                source: "ground-mesh".into(),
+                sha256: Some(sha256),
+            },
+            render_core::engine::GroundSource::LegacyMeshField => GroundInfo {
+                source: "legacy-mesh-field".into(),
+                sha256: None,
+            },
         }
     }
 }
@@ -508,7 +557,13 @@ pub struct ShmInfo {
 
 impl WireResponse {
     pub fn error(i: u64, error: impl Into<String>) -> Self {
-        Self { i, body: ResponseBody::Error { ok: false, error: error.into() } }
+        Self {
+            i,
+            body: ResponseBody::Error {
+                ok: false,
+                error: error.into(),
+            },
+        }
     }
 }
 
@@ -583,8 +638,8 @@ impl FrameReader {
             if self.buf.len() < 4 {
                 return Ok(out);
             }
-            let len = u32::from_le_bytes([self.buf[0], self.buf[1], self.buf[2], self.buf[3]])
-                as usize;
+            let len =
+                u32::from_le_bytes([self.buf[0], self.buf[1], self.buf[2], self.buf[3]]) as usize;
             if len > MAX_FRAME_BYTES {
                 return Err(format!("frame length {len} exceeds cap"));
             }
@@ -620,25 +675,20 @@ pub fn decode_request_json(document: &str) -> Result<WireRequest, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use render_core::engine::Profile;
 
     #[test]
-    fn camera_profile_is_optional_and_camel_case() {
+    fn camera_is_camel_case_and_refuses_the_retired_profile() {
         let base = r#"{
             "sensorId":"pronto-cam0","width":1920,"height":1080,"fovDeg":60,
             "eye":[0,2,0],"target":[1,2,0]
         }"#;
-        let sensor: ServiceCamera = serde_json::from_str(base).unwrap();
-        assert_eq!(sensor.profile, None);
-
-        let cinematic: ServiceCamera = serde_json::from_str(
-            &base.replace(
-                "\"eye\"",
-                "\"profile\":\"cinematic\",\"eye\"",
-            ),
+        let camera: ServiceCamera = serde_json::from_str(base).unwrap();
+        assert_eq!(camera.sensor_id, "pronto-cam0");
+        let error = serde_json::from_str::<ServiceCamera>(
+            &base.replace("\"eye\"", "\"profile\":\"cinematic\",\"eye\""),
         )
-        .unwrap();
-        assert_eq!(cinematic.profile, Some(Profile::Cinematic));
+        .unwrap_err();
+        assert!(error.to_string().contains("profile"), "{error}");
     }
 
     #[test]
@@ -668,6 +718,23 @@ mod tests {
             _ => panic!("wrong request variant"),
         }
     }
+}
+
+/// The exposure one camera rendered a frame with: the metered EV100 and the
+/// aperture/shutter/gain the camera's exposure program realises it with.
+#[derive(Debug, Clone, Copy, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CameraExposure {
+    pub ev100: f32,
+    /// Metered adjustment over the lighting's incident exposure, stops
+    /// (positive: brighter).
+    pub adjust_ev: f32,
+    /// Weighted mean log2 luminance the metering read (pre-exposed units).
+    pub metered_log2_luminance: f32,
+    pub f_number: f32,
+    pub shutter_s: f32,
+    pub iso: f32,
+    pub gain_db: f32,
 }
 
 /// One actor as drawn (scene-yup world frame, metres).
@@ -727,6 +794,8 @@ pub struct BundleStages {
     pub radar_ms: f64,
     /// Lidar/radar scans ran on the ray pool while the GPU rendered.
     pub sensors_overlapped: bool,
+    /// Lidar beams were traced on the RT cores (`lidarBackend`).
+    pub lidar_gpu: bool,
     /// Time publication waited for the tick's scans to finish.
     pub sensor_wait_ms: f64,
     /// Ring publication of lidar/radar payloads and the bundle table.

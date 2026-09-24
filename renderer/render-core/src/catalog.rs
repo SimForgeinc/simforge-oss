@@ -19,7 +19,9 @@ pub enum ActorPartKind {
     /// Receives the authored body tint.
     Body,
     /// Spins about its local Z (axle) axis when the actor moves.
-    Wheel { radius: f32 },
+    Wheel {
+        radius: f32,
+    },
     Other,
 }
 
@@ -57,9 +59,21 @@ pub fn actor_body_color(actor: &ActorDesc) -> Color {
 /// Effective dims for an actor: authored, else per-class defaults.
 pub fn actor_dims(actor: &ActorDesc) -> Dims {
     actor.dims.unwrap_or(match actor.actor_class.as_str() {
-        "pedestrian" => Dims { l: 0.6, w: 0.6, h: 1.75 },
-        "bicycle" => Dims { l: 1.7, w: 0.5, h: 1.7 },
-        _ => Dims { l: 4.7, w: 1.82, h: 1.45 },
+        "pedestrian" => Dims {
+            l: 0.6,
+            w: 0.6,
+            h: 1.75,
+        },
+        "bicycle" => Dims {
+            l: 1.7,
+            w: 0.5,
+            h: 1.7,
+        },
+        _ => Dims {
+            l: 4.7,
+            w: 1.82,
+            h: 1.45,
+        },
     })
 }
 
@@ -242,7 +256,9 @@ fn axle_cyl(r: f32, width: f32) -> Mesh {
         radius: r,
         half_height: width / 2.0,
     });
-    mesh.rotate_by(bevy::math::Quat::from_rotation_x(std::f32::consts::FRAC_PI_2));
+    mesh.rotate_by(bevy::math::Quat::from_rotation_x(
+        std::f32::consts::FRAC_PI_2,
+    ));
     mesh
 }
 
@@ -262,12 +278,26 @@ mod tests {
 
     #[test]
     fn robot_components_are_single_rigid_bodies_on_the_origin() {
-        let chassis = actor_parts(&desc("robot.delivery-4w", Dims { l: 0.7, w: 0.5, h: 0.3 }));
+        let chassis = actor_parts(&desc(
+            "robot.delivery-4w",
+            Dims {
+                l: 0.7,
+                w: 0.5,
+                h: 0.3,
+            },
+        ));
         assert_eq!(chassis.len(), 1);
         assert_eq!(chassis[0].offset, Transform::IDENTITY);
         assert_eq!(chassis[0].kind, ActorPartKind::Body);
 
-        let wheel = actor_parts(&desc("robot.wheel", Dims { l: 0.2, w: 0.05, h: 0.2 }));
+        let wheel = actor_parts(&desc(
+            "robot.wheel",
+            Dims {
+                l: 0.2,
+                w: 0.05,
+                h: 0.2,
+            },
+        ));
         assert_eq!(wheel.len(), 1);
         assert_eq!(wheel[0].offset, Transform::IDENTITY);
         // The simulation carries wheel spin in the actor rotation; no
@@ -276,7 +306,16 @@ mod tests {
         assert!(body_centred_origin("robot.wheel") && !body_centred_origin("vehicle.hatchback"));
 
         // A same-dims prop still gets the vehicle grammar with wheels.
-        let prop = actor_parts(&desc("prop.box", Dims { l: 0.7, w: 0.5, h: 0.3 }));
-        assert!(prop.iter().any(|p| matches!(p.kind, ActorPartKind::Wheel { .. })));
+        let prop = actor_parts(&desc(
+            "prop.box",
+            Dims {
+                l: 0.7,
+                w: 0.5,
+                h: 0.3,
+            },
+        ));
+        assert!(prop
+            .iter()
+            .any(|p| matches!(p.kind, ActorPartKind::Wheel { .. })));
     }
 }

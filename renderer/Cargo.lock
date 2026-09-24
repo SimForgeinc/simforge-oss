@@ -537,6 +537,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4bfadbebfc6599aa59289b754ac30023959854304f3d393da2cf62bb3cd5df8f"
 dependencies = [
  "bevy_internal",
+ "tracing",
 ]
 
 [[package]]
@@ -644,6 +645,7 @@ dependencies = [
  "downcast-rs 2.0.2",
  "log",
  "thiserror 2.0.20",
+ "tracing",
  "variadics_please",
  "wasm-bindgen",
  "web-sys",
@@ -893,6 +895,7 @@ dependencies = [
  "slotmap",
  "smallvec",
  "thiserror 2.0.20",
+ "tracing",
  "variadics_please",
 ]
 
@@ -1238,6 +1241,8 @@ dependencies = [
  "bevy_platform",
  "bevy_utils",
  "tracing",
+ "tracing-chrome",
+ "tracing-error",
  "tracing-log",
  "tracing-oslog",
  "tracing-subscriber",
@@ -1506,8 +1511,6 @@ dependencies = [
 [[package]]
 name = "bevy_render"
 version = "0.19.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc86a32b2eef9859e1e7d323c6d1a9150fe77aa17c30fd05abebc12f645929dc"
 dependencies = [
  "async-channel",
  "bevy_app",
@@ -1546,6 +1549,7 @@ dependencies = [
  "naga",
  "nonmax",
  "offset-allocator",
+ "profiling",
  "send_wrapper",
  "smallvec",
  "thiserror 2.0.20",
@@ -3309,12 +3313,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc0fef456e4baa96da950455cd02c081ca953b141298e41db3fc7e36b1da849c"
 
 [[package]]
-name = "hex"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-
-[[package]]
 name = "hexasphere"
 version = "18.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4787,6 +4785,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d595e54a326bc53c1c197b32d295e14b169e3cfeaa8dc82b529f947fba6bcf5"
 dependencies = [
  "profiling-procmacros",
+ "tracing",
 ]
 
 [[package]]
@@ -5137,22 +5136,15 @@ dependencies = [
  "crossbeam-channel",
  "half",
  "image",
+ "ktx2",
  "libc",
+ "ruzstd",
  "serde",
  "serde_json",
  "sha2",
  "simforge-core",
  "walkdir",
  "wgpu",
-]
-
-[[package]]
-name = "render-ffi"
-version = "0.1.0"
-dependencies = [
- "render-core",
- "serde_json",
- "service",
 ]
 
 [[package]]
@@ -5322,15 +5314,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bevy",
- "clap",
- "crossbeam-channel",
- "hex",
- "image",
- "parking_lot",
  "render-core",
  "serde",
- "serde_json",
- "sha2",
  "wgpu",
 ]
 
@@ -5375,25 +5360,6 @@ dependencies = [
  "serde",
  "serde_core",
  "zmij",
-]
-
-[[package]]
-name = "service"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bevy",
- "crc32fast",
- "image",
- "libc",
- "memmap2",
- "render-core",
- "rmp-serde",
- "sensors",
- "serde",
- "serde_json",
- "sha2",
- "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5463,6 +5429,49 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror 2.0.20",
+]
+
+[[package]]
+name = "simforge-render"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bevy",
+ "crc32fast",
+ "flate2",
+ "image",
+ "memmap2",
+ "render-core",
+ "rmp-serde",
+ "sensors",
+ "serde",
+ "serde_json",
+ "sha2",
+ "simforge-render-view",
+ "wgpu",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "simforge-render-ffi"
+version = "0.1.0"
+dependencies = [
+ "render-core",
+ "serde_json",
+ "simforge-render",
+]
+
+[[package]]
+name = "simforge-render-view"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bevy",
+ "clap",
+ "serde",
+ "serde_json",
+ "sha2",
+ "wgpu",
 ]
 
 [[package]]
@@ -5852,6 +5861,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-chrome"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf0a738ed5d6450a9fb96e86a23ad808de2b727fd1394585da5cdd6788ffe724"
+dependencies = [
+ "serde_json",
+ "tracing-core",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "tracing-core"
 version = "0.1.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5859,6 +5879,16 @@ checksum = "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
 dependencies = [
  "once_cell",
  "valuable",
+]
+
+[[package]]
+name = "tracing-error"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b1581020d7a273442f5b45074a6a57d5757ad0a47dac0e9f0bd57b81936f3db"
+dependencies = [
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
