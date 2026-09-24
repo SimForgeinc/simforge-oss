@@ -28,6 +28,35 @@ pub struct SceneState {
     pub ground_y: Option<f32>,
     #[serde(default)]
     pub actors: Vec<ActorState>,
+    /// Signal-head lenses at this frame, keyed by the head's RoadRunner
+    /// asset GUID (the map GLB head node `{guid}<asset>`, the OpenDRIVE
+    /// `<vectorSignal signalId>`), lowercase with braces. Present on every
+    /// render-timeline frame (possibly empty): the timeline is then the
+    /// signal authority, and a head it does not name shows the engine's
+    /// null-signal indication (forced green). Absent (xosc-lowered legacy
+    /// frames): the map's heads keep their authored look and the service
+    /// records `native_signal_state_absent`.
+    #[serde(default)]
+    pub signals: Option<std::collections::BTreeMap<String, render_core::signal_heads::SignalLens>>,
+}
+
+/// Resolved vehicle lamp states at this frame (the render timeline's
+/// `lights_at`: flashing is already resolved to the frame's phase).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ActorLights {
+    #[serde(default)]
+    pub low_beam: bool,
+    #[serde(default)]
+    pub brake: bool,
+    #[serde(default)]
+    pub reverse: bool,
+    #[serde(default)]
+    pub indicator_left: bool,
+    #[serde(default)]
+    pub indicator_right: bool,
+    #[serde(default)]
+    pub emergency: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -61,6 +90,10 @@ pub struct ActorState {
     /// Four-wheelers: per-wheel drop `[FL, FR, RL, RR]`, metres.
     #[serde(rename = "wheelDropM", default)]
     pub wheel_drop_m: Option<[f32; 4]>,
+    /// Render-timeline vehicle lamps at this frame. Absent: the frame
+    /// carries no lamp state (xosc-lowered legacy frames, non-vehicles).
+    #[serde(default)]
+    pub lights: Option<ActorLights>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -128,7 +161,7 @@ impl SceneState {
 
 #[cfg(test)]
 mod tests {
-    use super::SceneState;
+    use super::{ActorLights, SceneState};
 
     #[test]
     fn actor_color_deserializes_from_scene_state() {
@@ -145,5 +178,35 @@ mod tests {
         )
         .unwrap();
         assert_eq!(state.actors[0].color.as_deref(), Some("#8f2f2f"));
+    }
+
+    #[test]
+    fn lamps_and_signal_lenses_deserialize_from_scene_state() {
+        use render_core::signal_heads::SignalLens;
+        let state: SceneState = serde_json::from_str(
+            r##"{
+                "version":"simforge.scene-state.v1","mapId":"san-ramon-phase-1",
+                "tick":3,"tickHz":60,
+                "signals":{"{792c9df6-88ce-45b8-a711-1db32acf567e}":"red"},
+                "actors":[
+                  {"id":"lead","kind":"update","catalogId":"vehicle.suv","actorClass":"car",
+                   "lights":{"brake":true,"lowBeam":true},
+                   "transform":{"position":[0,0,0],"rotation":[0,0,0,1]}},
+                  {"id":"ego","kind":"update","catalogId":"vehicle.sedan","actorClass":"car",
+                   "lights":{},
+                   "transform":{"position":[9,0,0],"rotation":[0,0,0,1]}}
+                ]
+            }"##,
+        )
+        .unwrap();
+        let lead = state.actors[0].lights.unwrap();
+        assert!(lead.brake && lead.low_beam && !lead.reverse);
+        assert_eq!(state.actors[1].lights, Some(ActorLights::default()));
+        assert_eq!(
+            state.signals.unwrap()["{792c9df6-88ce-45b8-a711-1db32acf567e}"],
+            SignalLens::Red
+        );
+        // A lamp this contract does not know is refused, never ignored.
+        assert!(serde_json::from_str::<ActorLights>(r#"{"fog":true}"#).is_err());
     }
 }

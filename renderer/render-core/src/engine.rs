@@ -1694,6 +1694,27 @@ pub(crate) struct IdClone;
 pub(crate) struct InstanceId(pub(crate) u32);
 #[derive(Component)]
 struct ActorModelRoot;
+/// A lit brake lens drawn over a catalog model's rear lamp.
+#[derive(Component)]
+struct BrakeLens;
+
+/// One map signal head: its lens nodes and the lens it currently shows.
+struct SignalHead {
+    /// `(lamp, lit lens?, node entity)`.
+    lenses: Vec<(crate::signal_heads::LampColor, bool, Entity)>,
+    shown: Option<crate::signal_heads::SignalLens>,
+}
+
+/// What [`SceneApp::set_signal_lenses`] applied.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct SignalLensReport {
+    /// Heads the map draws.
+    pub heads: usize,
+    /// Heads the frame named.
+    pub driven: usize,
+    /// GUIDs the frame named that the map draws no head for (sorted).
+    pub unknown: Vec<String>,
+}
 #[derive(Clone)]
 struct ActorAnimationBinding {
     players: Vec<Entity>,
@@ -1720,6 +1741,35 @@ pub struct SensorTriangle {
 /// [`SceneApp::actor_sensor_meshes`]).
 /// Whether a model mesh belongs to a rider: it or an ancestor up to the
 /// model root carries glTF node extras `{"semanticClass": "rider"}`.
+/// The lit-lens mesh of a lamp primitive: the selected triangles, moved
+/// [`crate::brake_lamps::LENS_OFFSET_M`] along their vertex normals.
+fn brake_lens_mesh(positions: &[[f32; 3]], normals: &[[f32; 3]], selected: &[u32]) -> Mesh {
+    use bevy::mesh::Indices;
+    use bevy::render::render_resource::PrimitiveTopology;
+    let mut remap: HashMap<u32, u32> = HashMap::new();
+    let mut out_positions: Vec<[f32; 3]> = Vec::new();
+    let mut out_normals: Vec<[f32; 3]> = Vec::new();
+    let mut out_indices: Vec<u32> = Vec::with_capacity(selected.len());
+    for &index in selected {
+        let next = out_positions.len() as u32;
+        let slot = *remap.entry(index).or_insert_with(|| {
+            let p = Vec3::from_array(positions[index as usize]);
+            let n = Vec3::from_array(normals[index as usize]).normalize_or_zero();
+            out_positions.push((p + n * crate::brake_lamps::LENS_OFFSET_M).to_array());
+            out_normals.push(n.to_array());
+            next
+        });
+        out_indices.push(slot);
+    }
+    Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::default(),
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, out_positions)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, out_normals)
+    .with_inserted_indices(Indices::U32(out_indices))
+}
+
 fn in_rider_subtree(world: &World, entity: Entity, model_root: Entity) -> bool {
     let mut current = Some(entity);
     while let Some(node) = current {
@@ -2542,6 +2592,18 @@ pub struct SceneApp {
     actor_tint_materials: HashMap<String, Vec<Handle<StandardMaterial>>>,
     /// Per-actor clones of palette-coloured material slots (ridden two-wheelers).
     actor_palette_materials: HashMap<String, Vec<Handle<StandardMaterial>>>,
+    /// Lit brake-lens entities of each attached model ([`crate::brake_lamps`]).
+    /// An empty list: the model has no brake-lamp slot.
+    actor_brake_lamps: HashMap<String, Vec<Entity>>,
+    /// Brake state last applied per actor (re-applied after a model rebind).
+    actor_brake_on: HashMap<String, bool>,
+    /// Brake-lens meshes per source primitive mesh (`None`: no brake
+    /// triangles), shared by every actor using that model.
+    brake_lens_meshes: HashMap<AssetId<Mesh>, Option<Handle<Mesh>>>,
+    /// The one lit brake-lens material.
+    brake_lens_material: Option<Handle<StandardMaterial>>,
+    /// Map signal heads by GUID ([`crate::signal_heads`]), built at readiness.
+    signal_heads: std::collections::BTreeMap<String, SignalHead>,
     /// A ridden two-wheeler's rider: its own instance id (class `rider`) and
     /// the model mesh entities drawn under it, so the ID pass, semantic
     /// output and lidar/radar label the rider apart from the bike.
@@ -2947,6 +3009,11 @@ impl SceneApp {
             actor_id_clones: HashMap::new(),
             actor_tint_materials: HashMap::new(),
             actor_palette_materials: HashMap::new(),
+            actor_brake_lamps: HashMap::new(),
+            actor_brake_on: HashMap::new(),
+            brake_lens_meshes: HashMap::new(),
+            brake_lens_material: None,
+            signal_heads: std::collections::BTreeMap::new(),
             actor_riders: HashMap::new(),
             actor_asset_cache: HashMap::new(),
             actor_animations: HashMap::new(),
@@ -4494,6 +4561,9 @@ impl SceneApp {
             .ok_or_else(|| anyhow::anyhow!("actor {actor_id} has no attached catalog asset"))?;
         self.actor_tint_materials.remove(actor_id);
         self.actor_palette_materials.remove(actor_id);
+        // The lenses are children of the model; the brake state is kept so
+        // the replacement model shows it.
+        self.actor_brake_lamps.remove(actor_id);
         self.actor_animations.remove(actor_id);
         if let Some((_, meshes)) = self.actor_riders.get_mut(actor_id) {
             meshes.clear();
@@ -4504,6 +4574,329 @@ impl SceneApp {
         // as its proxy; the caller attaches the replacement in the same tick.
         self.scene_revision += 1;
         Ok(())
+    }
+
+    /// Draw the brake-lamp slot of a freshly attached model
+    /// ([`crate::brake_lamps`]): one lit-lens child under every model
+    /// primitive that has brake triangles, hidden until a frame brakes.
+    /// Returns the lens entities (empty: the model has no brake slot).
+    fn spawn_brake_lenses(&mut self, model_root: Entity) -> Result<Vec<Entity>> {
+        use crate::brake_lamps::{select_brake_triangles, LampPrimitive, ModelExtent};
+        use bevy::mesh::{Indices, VertexAttributeValues};
+        use bevy::render::render_resource::PrimitiveTopology;
+        // Model-space transform of every mesh primitive: the local
+        // transforms up to (not including) the model root, so the actor's
+        // own pose and scale never enter the selection.
+        let primitives: Vec<(Entity, Handle<Mesh>, String, Mat4)> = {
+            let world = self.app.world();
+            let mut stack = vec![model_root];
+            let mut out = Vec::new();
+            while let Some(entity) = stack.pop() {
+                if let Some(children) = world.get::<Children>(entity) {
+                    stack.extend(children.iter());
+                }
+                if world.get::<IdClone>(entity).is_some()
+                    || world.get::<BrakeLens>(entity).is_some()
+                    || world.get::<SkinnedMesh>(entity).is_some()
+                {
+                    continue;
+                }
+                let Some(mesh) = world.get::<Mesh3d>(entity) else {
+                    continue;
+                };
+                let material = world
+                    .get::<GltfMaterialName>(entity)
+                    .map(|n| n.0.clone())
+                    .unwrap_or_default(); // fallback-ok: an unnamed material is not a lamp material; it still bounds the model
+                let mut local = Mat4::IDENTITY;
+                let mut node = Some(entity);
+                while let Some(current) = node {
+                    if current == model_root {
+                        break;
+                    }
+                    let t = world
+                        .get::<Transform>(current)
+                        .copied()
+                        .unwrap_or(Transform::IDENTITY); // fallback-ok: an entity without Transform sits at its parent's origin
+                    local = t.to_matrix() * local;
+                    node = world.get::<ChildOf>(current).map(|c| c.parent());
+                }
+                out.push((entity, mesh.0.clone(), material, local));
+            }
+            out.sort_by_key(|(entity, _, _, _)| entity.to_bits());
+            out
+        };
+        let read = |mesh: &Mesh| -> Option<(Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<u32>)> {
+            if mesh.primitive_topology() != PrimitiveTopology::TriangleList {
+                return None;
+            }
+            let Some(VertexAttributeValues::Float32x3(positions)) =
+                mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+            else {
+                return None;
+            };
+            let normals = match mesh.attribute(Mesh::ATTRIBUTE_NORMAL) {
+                Some(VertexAttributeValues::Float32x3(normals)) => normals.clone(),
+                _ => vec![[0.0; 3]; positions.len()],
+            };
+            let indices: Vec<u32> = match mesh.indices() {
+                Some(Indices::U16(i)) => i.iter().map(|v| *v as u32).collect(),
+                Some(Indices::U32(i)) => i.clone(),
+                None => (0..positions.len() as u32).collect(),
+            };
+            Some((positions.clone(), normals, indices))
+        };
+        // (entity, mesh, material, model-space positions, triangle indices)
+        let mut model_space: Vec<(Entity, Handle<Mesh>, String, Vec<[f32; 3]>, Vec<u32>)> =
+            Vec::new();
+        {
+            let meshes = self.app.world().resource::<Assets<Mesh>>();
+            for (entity, handle, material, local) in primitives {
+                let mesh = meshes.get(&handle).ok_or_else(|| {
+                    anyhow!("actor model mesh {:?} is not resident", handle.path())
+                })?;
+                let Some((positions, _normals, indices)) = read(mesh) else {
+                    continue;
+                };
+                let world_space: Vec<[f32; 3]> = positions
+                    .iter()
+                    .map(|p| local.transform_point3(Vec3::from_array(*p)).to_array())
+                    .collect();
+                model_space.push((entity, handle, material, world_space, indices));
+            }
+        }
+        let Some(extent) = ModelExtent::of(model_space.iter().flat_map(|m| m.3.iter())) else {
+            return Ok(Vec::new());
+        };
+        let material = match &self.brake_lens_material {
+            Some(material) => material.clone(),
+            None => {
+                let material = self
+                    .app
+                    .world_mut()
+                    .resource_mut::<Assets<StandardMaterial>>()
+                    .add(StandardMaterial {
+                        base_color: Color::srgb(0.45, 0.02, 0.02),
+                        emissive: crate::brake_lamps::brake_lamp_emissive(),
+                        perceptual_roughness: 0.25,
+                        double_sided: true,
+                        cull_mode: None,
+                        ..default()
+                    });
+                self.brake_lens_material = Some(material.clone());
+                material
+            }
+        };
+        let mut lenses = Vec::new();
+        for (entity, handle, material_name, positions_model, indices) in model_space {
+            let lens_mesh = match self.brake_lens_meshes.get(&handle.id()) {
+                Some(cached) => cached.clone(),
+                None => {
+                    let selected = select_brake_triangles(
+                        &LampPrimitive {
+                            material: &material_name,
+                            positions: &positions_model,
+                            indices: &indices,
+                        },
+                        extent,
+                    );
+                    let lens = if selected.is_empty() {
+                        None
+                    } else {
+                        let source = self
+                            .app
+                            .world()
+                            .resource::<Assets<Mesh>>()
+                            .get(&handle)
+                            .and_then(read)
+                            .ok_or_else(|| {
+                                anyhow!("actor model mesh disappeared while drawing its brake lamp")
+                            })?;
+                        Some(
+                            self.app
+                                .world_mut()
+                                .resource_mut::<Assets<Mesh>>()
+                                .add(brake_lens_mesh(&source.0, &source.1, &selected)),
+                        )
+                    };
+                    self.brake_lens_meshes.insert(handle.id(), lens.clone());
+                    lens
+                }
+            };
+            let Some(lens_mesh) = lens_mesh else {
+                continue;
+            };
+            let lens = self
+                .app
+                .world_mut()
+                .spawn((
+                    BrakeLens,
+                    Name::new("brake-lens"),
+                    Mesh3d(lens_mesh),
+                    MeshMaterial3d(material.clone()),
+                    Transform::IDENTITY,
+                    Visibility::Hidden,
+                    bevy::light::NotShadowCaster,
+                    ChildOf(entity),
+                ))
+                .id();
+            lenses.push(lens);
+        }
+        Ok(lenses)
+    }
+
+    /// Light or darken an actor's brake lamps. `Ok(false)`: the actor's
+    /// model has no brake-lamp slot (or no model), so nothing is drawn; the
+    /// caller records that.
+    pub fn set_actor_brake(&mut self, actor_id: &str, on: bool) -> Result<bool> {
+        let previous = self.actor_brake_on.insert(actor_id.to_string(), on);
+        let Some(lenses) = self.actor_brake_lamps.get(actor_id) else {
+            return Ok(false);
+        };
+        if lenses.is_empty() {
+            return Ok(false);
+        }
+        if previous != Some(on) {
+            let visibility = if on {
+                Visibility::Inherited
+            } else {
+                Visibility::Hidden
+            };
+            for lens in lenses.clone() {
+                self.app.world_mut().entity_mut(lens).insert(visibility);
+            }
+            self.scene_revision += 1;
+        }
+        Ok(true)
+    }
+
+    /// Whether this actor's attached model has a brake-lamp slot.
+    pub fn actor_has_brake_lamps(&self, actor_id: &str) -> bool {
+        self.actor_brake_lamps
+            .get(actor_id)
+            .is_some_and(|lenses| !lenses.is_empty())
+    }
+
+    /// Index the map's signal heads ([`crate::signal_heads`]): every lens
+    /// node under its nearest `{guid}` ancestor.
+    fn index_signal_heads(&mut self) {
+        use crate::signal_heads::{head_guid, lens_node};
+        let world = self.app.world_mut();
+        let lenses: Vec<(Entity, crate::signal_heads::LampColor, bool)> = {
+            let mut q = world.query::<(Entity, &Name)>();
+            q.iter(world)
+                .filter_map(|(e, name)| lens_node(name.as_str()).map(|(c, lit)| (e, c, lit)))
+                .collect()
+        };
+        let mut heads: std::collections::BTreeMap<String, SignalHead> = Default::default();
+        let mut orphans = 0usize;
+        for (entity, color, lit) in lenses {
+            let mut node = world.get::<ChildOf>(entity).map(|c| c.parent());
+            let mut guid = None;
+            while let Some(current) = node {
+                if let Some(g) = world
+                    .get::<Name>(current)
+                    .and_then(|n| head_guid(n.as_str()))
+                {
+                    guid = Some(g);
+                    break;
+                }
+                node = world.get::<ChildOf>(current).map(|c| c.parent());
+            }
+            match guid {
+                Some(guid) => heads
+                    .entry(guid)
+                    .or_insert_with(|| SignalHead {
+                        lenses: Vec::new(),
+                        shown: None,
+                    })
+                    .lenses
+                    .push((color, lit, entity)),
+                None => orphans += 1,
+            }
+        }
+        for head in heads.values_mut() {
+            head.lenses
+                .sort_by_key(|(c, lit, e)| (*c, *lit, e.to_bits()));
+        }
+        if !heads.is_empty() || orphans > 0 {
+            eprintln!(
+                "signal-heads: {} heads, {} lens nodes outside any head",
+                heads.len(),
+                orphans
+            );
+        }
+        self.signal_heads = heads;
+    }
+
+    /// Show the frame's lens on every map signal head: `lenses` by head
+    /// GUID; a head it does not name shows
+    /// [`crate::signal_heads::UNDRIVEN_HEAD_LENS`]. Each lamp draws exactly
+    /// one of its coplanar lit/unlit lens nodes.
+    pub fn set_signal_lenses(
+        &mut self,
+        lenses: &std::collections::BTreeMap<String, crate::signal_heads::SignalLens>,
+    ) -> SignalLensReport {
+        let mut report = SignalLensReport {
+            heads: self.signal_heads.len(),
+            ..Default::default()
+        };
+        report.unknown = lenses
+            .keys()
+            .filter(|guid| !self.signal_heads.contains_key(guid.as_str()))
+            .cloned()
+            .collect();
+        let mut changes: Vec<(Entity, Visibility)> = Vec::new();
+        for (guid, head) in self.signal_heads.iter_mut() {
+            let lens = match lenses.get(guid) {
+                Some(lens) => {
+                    report.driven += 1;
+                    *lens
+                }
+                None => crate::signal_heads::UNDRIVEN_HEAD_LENS,
+            };
+            if head.shown == Some(lens) {
+                continue;
+            }
+            head.shown = Some(lens);
+            for (color, lit_node, entity) in &head.lenses {
+                let show = lens.lights(*color) == *lit_node;
+                changes.push((
+                    *entity,
+                    if show {
+                        Visibility::Inherited
+                    } else {
+                        Visibility::Hidden
+                    },
+                ));
+            }
+        }
+        if !changes.is_empty() {
+            let world = self.app.world_mut();
+            for (entity, visibility) in changes {
+                if let Ok(mut e) = world.get_entity_mut(entity) {
+                    e.insert(visibility);
+                }
+            }
+            self.scene_revision += 1;
+        }
+        report
+    }
+
+    /// How many signal heads the map draws.
+    pub fn signal_head_count(&self) -> usize {
+        self.signal_heads.len()
+    }
+
+    /// The lens node entities of a map signal head, `(lamp, lit lens?, entity)`.
+    pub fn signal_head_lenses(
+        &self,
+        guid: &str,
+    ) -> Vec<(crate::signal_heads::LampColor, bool, Entity)> {
+        self.signal_heads
+            .get(guid)
+            .map(|h| h.lenses.clone())
+            .unwrap_or_default()
     }
 
     /// Apply a `simforge.road-detail/v1` sidecar (splat-blended asphalt
@@ -5013,6 +5406,18 @@ impl SceneApp {
         );
         self.actor_tint_materials
             .insert(actor_id.to_string(), tint_materials);
+        // After the ID clones: a lit lens is RGB-only (it lies on the
+        // modelled lamp, which the ID pass already draws).
+        let lenses = self.spawn_brake_lenses(model_root)?;
+        let braking = self.actor_brake_on.get(actor_id).copied().unwrap_or(false); // fallback-ok: a newly attached model starts with its brake lamps off until a frame says otherwise
+        for lens in &lenses {
+            self.app.world_mut().entity_mut(*lens).insert(if braking {
+                Visibility::Inherited
+            } else {
+                Visibility::Hidden
+            });
+        }
+        self.actor_brake_lamps.insert(actor_id.to_string(), lenses);
         self.apply_actor_layers(actor_id);
         self.scene_revision += 1;
         Ok(())
@@ -5203,6 +5608,8 @@ impl SceneApp {
             }
             self.actor_tint_materials.remove(id);
             self.actor_palette_materials.remove(id);
+            self.actor_brake_lamps.remove(id);
+            self.actor_brake_on.remove(id);
             self.actor_animations.remove(id);
             if let Some((rider_id, _)) = self.actor_riders.remove(id) {
                 self.actor_classes.remove(&rider_id);
@@ -5800,6 +6207,8 @@ impl SceneApp {
                 decals.opacity_scale
             );
         }
+
+        self.index_signal_heads();
 
         // One update so the newly spawned ID clones (and LOD levels, whose
         // ranges need propagated transforms) are extracted before the first
@@ -9572,6 +9981,293 @@ mod tests {
             unmounted.passes["mounted:id"].bytes, unmounted.passes["spectator:id"].bytes,
             "unmounting restores the host's labels for that view"
         );
+        std::mem::forget(app);
+    }
+
+    /// `SIMFORGE_TEST_DUMP_DIR`: write a capture as PNG for inspection.
+    fn dump_capture(name: &str, rgba: &[u8], width: u32, height: u32) {
+        if let Some(dir) = std::env::var_os("SIMFORGE_TEST_DUMP_DIR") {
+            let path = std::path::Path::new(&dir).join(format!("{name}.png"));
+            image::RgbaImage::from_raw(width, height, rgba.to_vec())
+                .expect("capture size")
+                .save(&path)
+                .expect("write test dump");
+        }
+    }
+
+    /// Pixels of `after` that are strongly red and got redder than `before`
+    /// (8-bit RGBA).
+    fn reddened_pixels(before: &[u8], after: &[u8]) -> usize {
+        before
+            .chunks_exact(4)
+            .zip(after.chunks_exact(4))
+            .filter(|(b, a)| {
+                let (r, g, bl) = (a[0] as i32, a[1] as i32, a[2] as i32);
+                r - b[0] as i32 > 40 && r > 2 * g && r > 2 * bl
+            })
+            .count()
+    }
+
+    /// A catalog vehicle seen from behind, 8 m back, in the training look
+    /// with a pinned clock (the golden configuration).
+    fn rear_view_of(model: &str, tint: Option<[f32; 3]>) -> SceneApp {
+        let mut app = training_pinned_scene();
+        let glb = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../catalog/vehicles-carla/models")
+            .join(model);
+        app.upsert_actor(
+            "lead",
+            "car",
+            [0.0, 0.9, 20.0],
+            Quat::IDENTITY,
+            [5.6, 1.8, 2.1],
+            [0.5, 0.5, 0.5],
+        );
+        app.attach_actor_asset("lead", &glb, 1.0, tint, None, 0.0)
+            .unwrap();
+        app.set_actor_asset_pose("lead", [0.0, 0.0, 20.0], Quat::IDENTITY)
+            .unwrap();
+        app.set_pose("cam", &[-9.0, 1.6, 20.0], &[0.0, 0.9, 20.0])
+            .unwrap();
+        app.wait_for_capture_ready().unwrap();
+        app
+    }
+
+    /// A braking actor's brake lamps light in the RGB pass: the timeline's
+    /// `brake` turns the model's rear lamp geometry red, and releasing it
+    /// restores the unlit frame exactly. GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn braking_actor_lights_its_brake_lamps_in_rgb() {
+        let mut app = rear_view_of("vehicle_suv_nissan_patrol.glb", None);
+        assert!(app.actor_has_brake_lamps("lead"));
+        assert!(app.set_actor_brake("lead", false).unwrap());
+        let off = capture_after(&mut app, 0, 12.5);
+        assert!(app.set_actor_brake("lead", true).unwrap());
+        app.wait_for_capture_ready().unwrap();
+        let on = capture_after(&mut app, 0, 12.5);
+        dump_capture("brake-off", &off, 320, 192);
+        dump_capture("brake-on", &on, 320, 192);
+        let lit = reddened_pixels(&off, &on);
+        assert!(lit >= 40, "brake lamps lit only {lit} px");
+        // Nothing but the lamps changed visibly (the metered exposure may
+        // move the rest of the frame by a few levels).
+        let changed = off
+            .chunks_exact(4)
+            .zip(on.chunks_exact(4))
+            .filter(|(a, b)| {
+                a.iter()
+                    .zip(b.iter())
+                    .any(|(x, y)| (*x as i32 - *y as i32).abs() > 12)
+            })
+            .count();
+        // The lamps and their bloom: a small part of the frame.
+        assert!(
+            changed < off.len() / 4 / 20,
+            "{changed} px changed for {lit} lit px"
+        );
+        assert!(app.set_actor_brake("lead", false).unwrap());
+        app.wait_for_capture_ready().unwrap();
+        assert_eq!(capture_after(&mut app, 0, 12.5), off);
+        std::mem::forget(app);
+    }
+
+    /// A model without rear lamp geometry has no brake-lamp slot: the
+    /// engine says so (the service records the evidence warning) and draws
+    /// nothing. GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn model_without_rear_lamps_reports_no_brake_slot() {
+        let mut app = rear_view_of("vehicle_suv_jeep_wrangler.glb", None);
+        assert!(!app.actor_has_brake_lamps("lead"));
+        assert!(!app.set_actor_brake("lead", true).unwrap());
+        std::mem::forget(app);
+    }
+
+    /// An authored body colour reaches the rendered paint: the same model
+    /// and pose render a visibly different body with and without it.
+    /// GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn authored_color_changes_the_rendered_paint() {
+        let mut plain = rear_view_of("vehicle_suv_nissan_patrol.glb", None);
+        let white = capture_after(&mut plain, 0, 12.5);
+        std::mem::forget(plain);
+        let mut painted = rear_view_of("vehicle_suv_nissan_patrol.glb", Some([0.56, 0.08, 0.08]));
+        assert_eq!(
+            painted.actor_model_tint_colors("lead"),
+            vec![[0.56, 0.08, 0.08, 1.0]]
+        );
+        let red = capture_after(&mut painted, 0, 12.5);
+        std::mem::forget(painted);
+        let repainted = white
+            .chunks_exact(4)
+            .zip(red.chunks_exact(4))
+            .filter(|(w, r)| (w[1] as i32 - r[1] as i32) > 40 && r[0] > r[1])
+            .count();
+        assert!(
+            repainted > 500,
+            "only {repainted} px took the authored paint"
+        );
+    }
+
+    /// Spawn one three-lamp head: `{guid}` root, a lit (emissive) and an
+    /// unlit lens per lamp, coplanar, facing +Z.
+    fn spawn_signal_head(app: &mut SceneApp, guid: &str, origin: Vec3) {
+        let world = app.app.world_mut();
+        let quad = world
+            .resource_mut::<Assets<Mesh>>()
+            .add(Rectangle::new(0.5, 0.5).mesh().build());
+        let root = world
+            .spawn((
+                Name::new(format!("{guid}Signal_3Light_Post01_RedYellowGreen")),
+                Transform::from_translation(origin),
+                Visibility::Inherited,
+            ))
+            .id();
+        for (k, (lamp, lit)) in [
+            ("red", Color::srgb(1.0, 0.05, 0.02)),
+            ("yellow", Color::srgb(1.0, 0.75, 0.0)),
+            ("green", Color::srgb(0.05, 1.0, 0.3)),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let y = 0.6 - 0.6 * k as f32;
+            let on = world
+                .resource_mut::<Assets<StandardMaterial>>()
+                .add(StandardMaterial {
+                    base_color: lit,
+                    emissive: lit.to_linear() * 1_500.0,
+                    unlit: false,
+                    ..default()
+                });
+            let off = world
+                .resource_mut::<Assets<StandardMaterial>>()
+                .add(StandardMaterial {
+                    base_color: Color::srgb(0.03, 0.03, 0.03),
+                    ..default()
+                });
+            let group = world
+                .spawn((
+                    Name::new(format!("light_{lamp}")),
+                    Transform::from_xyz(0.0, y, 0.0),
+                    Visibility::Inherited,
+                    ChildOf(root),
+                ))
+                .id();
+            for (suffix, material) in [("on", on), ("off", off)] {
+                world.spawn((
+                    Name::new(format!("light_{lamp}_{suffix}_Signal")),
+                    Mesh3d(quad.clone()),
+                    MeshMaterial3d(material),
+                    Transform::IDENTITY,
+                    Visibility::Inherited,
+                    ChildOf(group),
+                ));
+            }
+        }
+    }
+
+    /// Strongly red / amber / green pixels of an RGBA capture.
+    fn lamp_pixels(rgba: &[u8]) -> (usize, usize, usize) {
+        let mut out = (0, 0, 0);
+        for p in rgba.chunks_exact(4) {
+            let (r, g, b) = (p[0] as i32, p[1] as i32, p[2] as i32);
+            if r > 120 && r > g + 60 && r > b + 60 {
+                out.0 += 1;
+            } else if r > 120 && g > 90 && r > b + 60 && g > b + 40 {
+                out.1 += 1;
+            } else if g > 120 && g > r + 40 && g > b + 20 {
+                out.2 += 1;
+            }
+        }
+        out
+    }
+
+    /// A head the timeline drives red lights only its red lens; a head it
+    /// does not drive shows the engine's forced green; a head driven off
+    /// shows no lens. Before, both lenses of every lamp were drawn and all
+    /// three read lit. GPU or lavapipe.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn signal_state_lights_only_its_own_lens() {
+        use crate::signal_heads::{LampColor, SignalLens};
+        let mut app = training_pinned_scene();
+        let driven = "{00000000-0000-4000-8000-000000000001}";
+        let undriven = "{00000000-0000-4000-8000-000000000002}";
+        spawn_signal_head(&mut app, driven, Vec3::new(-1.0, 3.0, 20.0));
+        spawn_signal_head(&mut app, undriven, Vec3::new(1.0, 3.0, 20.0));
+        app.index_signal_heads();
+        assert_eq!(app.signal_head_count(), 2);
+        app.set_pose("cam", &[0.0, 3.0, 26.0], &[0.0, 3.0, 20.0])
+            .unwrap();
+        let visible = |app: &SceneApp, guid: &str| -> Vec<(LampColor, bool)> {
+            app.signal_head_lenses(guid)
+                .into_iter()
+                .filter(|(_, _, e)| {
+                    app.app.world().get::<Visibility>(*e) != Some(&Visibility::Hidden)
+                })
+                .map(|(c, lit, _)| (c, lit))
+                .collect()
+        };
+        let frame = |lens: SignalLens| {
+            std::iter::once((driven.to_string(), lens))
+                .collect::<std::collections::BTreeMap<_, _>>()
+        };
+
+        let report = app.set_signal_lenses(&frame(SignalLens::Red));
+        assert_eq!((report.heads, report.driven), (2, 1));
+        assert!(report.unknown.is_empty());
+        assert_eq!(
+            visible(&app, driven),
+            vec![
+                (LampColor::Red, true),
+                (LampColor::Yellow, false),
+                (LampColor::Green, false)
+            ]
+        );
+        assert_eq!(
+            visible(&app, undriven),
+            vec![
+                (LampColor::Red, false),
+                (LampColor::Yellow, false),
+                (LampColor::Green, true)
+            ]
+        );
+        app.wait_for_capture_ready().unwrap();
+        let red_frame = capture_after(&mut app, 0, 12.5);
+        dump_capture("signal-red", &red_frame, 320, 192);
+        let (red, amber, green) = lamp_pixels(&red_frame);
+        assert!(red > 30, "red lens not lit ({red} px)");
+        assert!(amber < 5, "amber lens lit ({amber} px)");
+        // Only the undriven head's green: about one lens' worth.
+        assert!(
+            green > 30 && green < 2 * red,
+            "green {green} px vs red {red} px"
+        );
+
+        app.set_signal_lenses(&frame(SignalLens::Off));
+        assert_eq!(
+            visible(&app, driven),
+            vec![
+                (LampColor::Red, false),
+                (LampColor::Yellow, false),
+                (LampColor::Green, false)
+            ]
+        );
+        let unknown = app.set_signal_lenses(
+            &std::iter::once((
+                "{ffffffff-0000-4000-8000-000000000009}".to_string(),
+                SignalLens::Red,
+            ))
+            .collect(),
+        );
+        assert_eq!(
+            unknown.unknown,
+            vec!["{ffffffff-0000-4000-8000-000000000009}"]
+        );
+        assert_eq!(unknown.driven, 0);
         std::mem::forget(app);
     }
 }

@@ -14,7 +14,8 @@ import { createHash } from 'node:crypto';
 
 import { unionFrameMicros, type FixedSchedule } from '../schedule.js';
 import { SCENE_FRAME_RECORD_LEN, openRenderTimeline, type RenderTimelineHandle } from '../timeline/index.js';
-import { canonicalSceneJson, nativeActorClass, type NativeActorAppearance, type NativeSceneLowering, type NativeSceneState } from './lowering.js';
+import { canonicalSceneJson, nativeActorClass, type NativeActorAppearance, type NativeActorLights, type NativeSceneLowering, type NativeSceneState } from './lowering.js';
+import { resolveFrameSignals, signalBindingWarnings } from './signal-heads.js';
 
 interface TimelineActorDesc {
   readonly id: string;
@@ -39,12 +40,32 @@ export interface TimelineLoweringOptions {
    * so the default sends yaw-only rotations whose yaw is exact.
    */
   readonly attitude?: boolean;
+  /**
+   * OpenDRIVE signal id -> map head GUID (`signalHeadGuids` of the job's
+   * OpenDRIVE). A timeline signal without a head is recorded as
+   * `native_signal_unbound`.
+   */
+  readonly signalHeads?: ReadonlyMap<string, string>;
 }
 
 export interface NativeTimelineLowering extends NativeSceneLowering {
   readonly source: 'render-timeline';
   readonly timelineSha256: string;
   readonly timelineKey: string;
+  /** Lamp and signal requests the lowering could not bind as asked. */
+  readonly warnings: readonly { readonly code: string; readonly message: string }[];
+}
+
+const LIGHT_KEYS = ['lowBeam', 'brake', 'reverse', 'indicatorLeft', 'indicatorRight', 'emergency'] as const;
+
+function litLights(json: string): NativeActorLights {
+  const states = JSON.parse(json) as Record<string, unknown>;
+  const out: Record<string, true> = {};
+  for (const key of LIGHT_KEYS) {
+    if (typeof states[key] !== 'boolean') throw new Error(`render timeline lights_at lacks ${key}`);
+    if (states[key]) out[key] = true;
+  }
+  return out;
 }
 
 function q(value: number): number {
@@ -71,6 +92,8 @@ export function lowerRenderTimelineToNative(
   const previous = new Array<boolean>(actors.length).fill(false);
   const rendered = new Set<string>();
   const classes = actors.map((actor) => nativeActorClass(actor.kind, `actor ${actor.id}`));
+  const signalHeads = options.signalHeads ?? new Map<string, string>();
+  const signalEvidence = { unbound: new Set<string>(), conflicts: new Map<string, Set<string>>(), substituted: new Set<string>() };
   const states = frameTimes.map((clipTime, tick): NativeSceneState => {
     const out: NativeSceneState['actors'][number][] = [];
     actors.forEach((actor, index) => {
@@ -104,6 +127,8 @@ export function lowerRenderTimelineToNative(
         ...(present && !Number.isNaN(values[o + 15]!)
           ? { wheelDropM: [q(values[o + 15]!), q(values[o + 16]!), q(values[o + 17]!), q(values[o + 18]!)] as [number, number, number, number] }
           : {}),
+        // The timeline's lamps at this frame (brake, low beam, ...).
+        ...(present ? { lights: litLights(timeline.lightsAtJson(actor.id, clipTime)) } : {}),
       });
     });
     const previousTime = tick === 0 ? frameTimes[1] ?? clipTime + header.dtS : frameTimes[tick - 1]!;
@@ -112,6 +137,7 @@ export function lowerRenderTimelineToNative(
       version: 'simforge.scene-state.v1', mapId: header.mapId, tick, tickHz,
       weather: { preset: header.environment.weather.preset }, timeOfDay: header.environment.timeOfDay,
       groundY: 0, actors: out,
+      signals: resolveFrameSignals(JSON.parse(timeline.signalsAtJson(clipTime)) as Record<string, string>, clipTime, signalHeads, signalEvidence),
     };
   });
   const appearances = actors
@@ -122,6 +148,11 @@ export function lowerRenderTimelineToNative(
   return {
     source: 'render-timeline', mapId: header.mapId, fixedTimestepSeconds: header.dtS,
     states, frameTimes, appearances, sha256, timelineSha256, timelineKey: header.identity.timelineKey,
+    warnings: signalBindingWarnings({
+      unbound: [...signalEvidence.unbound].sort(),
+      conflicts: new Map([...signalEvidence.conflicts].sort(([a], [b]) => a.localeCompare(b)).map(([guid, ids]) => [guid, [...ids].sort()])),
+      substituted: [...signalEvidence.substituted].sort(),
+    }),
   };
 }
 

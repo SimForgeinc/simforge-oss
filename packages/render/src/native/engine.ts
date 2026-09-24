@@ -24,6 +24,7 @@ import { RenderInputError } from '../render-input-error.js';
 import { LEGACY_XOSC_MOTION_SOURCE, parseRenderIntent, type RenderIntentV1, type RenderPreset, type RenderRequest, type RenderSourceV3 } from '@simforge-oss/scenario';
 
 import { lowerTimelineToNative, type NativeTimelineLowering } from './timeline-lowering.js';
+import { signalHeadGuids } from './signal-heads.js';
 import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
 import { RENDER_TIMELINE_INPUT_ID, checkTimelineContact, compareObserved, openRenderTimeline, type ContactGateReport, type ParityReport } from '../timeline/index.js';
 import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
@@ -699,7 +700,15 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       let lowering: NativeSceneLowering | NativeTimelineLowering;
       let timelineSha256: string | undefined;
       if (timelineInput) {
-        const timelineLowering = await lowerTimelineToNative(await fs.readFile(timelineInput.path), rgbSchedules, { attitude: applyAttitude });
+        // Timeline signals drive the map's rendered heads, bound through the
+        // job's OpenDRIVE (`<vectorSignal signalId>` = the GLB head GUID).
+        const signalXodr = [...context.inputs.values()].find((input) => input.sha256 === intent.scenarioRevision.map.sha256);
+        if (!signalXodr) {
+          throw new RenderInputError('native_signal_heads_unknown', `the map's OpenDRIVE (${intent.scenarioRevision.map.sha256}) was not delivered with the job; timeline signals cannot be bound to the map's heads`);
+        }
+        const signalHeads = signalHeadGuids(await fs.readFile(signalXodr.path, 'utf8'));
+        const timelineLowering = await lowerTimelineToNative(await fs.readFile(timelineInput.path), rgbSchedules, { attitude: applyAttitude, signalHeads });
+        warnings.push(...timelineLowering.warnings);
         timelineSha256 = timelineLowering.timelineSha256;
         if (timelineSha256 !== timelineInput.sha256) {
           throw new RenderInputError('render_timeline_digest_mismatch', `${RENDER_TIMELINE_INPUT_ID} bytes ${timelineInput.sha256} are not the canonical timeline ${timelineSha256}`);
@@ -772,6 +781,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       // Observed per-frame actor transforms (`observe_actors`): what the
       // renderer drew, graded against the shared sampler after the run.
       const observedFrames: string[] = [];
+      let serviceWarnings: readonly { code: string; message: string }[] = [];
 
       const scenePath = path.join(context.workspace, 'native-service-scene.json');
       // The scenario's environment as the renderer's physical lighting and
@@ -1004,6 +1014,11 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           for (const [stage, ms] of Object.entries(service.durations)) serverStages.add(stage, ms);
           serverStages.add('total', response.server_ms ?? 0);
           for (const [counter, value] of Object.entries(service.counts)) counters[counter] = (counters[counter] ?? 0) + value;
+          // What the service could not draw as the frames asked (brake lamps
+          // without a slot, undriven signal heads, ...): cumulative per
+          // scene, so the last response of the run holds every entry.
+          const reported = response.warnings as { code: string; message: string }[] | undefined;
+          if (reported) serviceWarnings = reported;
           const bundled = response.observed_actors as NativeActorObservation['actors'] | undefined;
           {
             const observation = bundled
@@ -1299,6 +1314,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         mediaType: 'application/json', frameCount: null,
       });
 
+      warnings.push(...serviceWarnings);
       return {
         schema: 'simforge.render-artifact-manifest/v1',
         intentSha256: context.intentSha256,

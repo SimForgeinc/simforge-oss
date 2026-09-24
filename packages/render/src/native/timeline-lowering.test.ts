@@ -166,4 +166,44 @@ describe('render timeline → native scene states', () => {
     flat.free();
     expect(typeof buildRenderTimeline).toBe('function');
   });
+
+  it('carries the timeline lamps and drives the bound signal heads', async () => {
+    const wasm = await timelineRuntime();
+    const trace = join(REPO, 'examples/edge-cases/07-protected-left-red-runner/scenario.trace.json.gz');
+    const built = wasm.RenderTimeline.buildFlat(readFileSync(trace), 0, undefined);
+    const timeline = await openRenderTimeline(new TextEncoder().encode(built.toCanonicalJson()));
+    built.free();
+    try {
+      const guid = (n: number) => `{00000000-0000-4000-8000-${String(n).padStart(12, '0')}}`;
+      const signalHeads = new Map([['2230', guid(1)], ['2232', guid(2)], ['2236', guid(3)]]);
+      const lowering = lowerRenderTimelineToNative(timeline, [schedule(10, 20)], { signalHeads });
+      for (const [tick, state] of lowering.states.entries()) {
+        const t = lowering.frameTimes[tick]!;
+        const indications = JSON.parse(timeline.signalsAtJson(t)) as Record<string, string>;
+        expect(state.signals).toEqual({
+          [guid(1)]: indications['signal:2230'],
+          [guid(2)]: indications['signal:2232'],
+          [guid(3)]: indications['signal:2236'],
+        });
+        for (const actor of state.actors) {
+          if (actor.kind === 'despawn') {
+            expect(actor.lights).toBeUndefined();
+            continue;
+          }
+          const lit = JSON.parse(timeline.lightsAtJson(actor.id, t)) as Record<string, boolean>;
+          expect(actor.lights?.brake === true).toBe(lit.brake);
+          expect(actor.lights?.lowBeam === true).toBe(lit.lowBeam);
+        }
+      }
+      // Some frame brakes, and some frame shows each of the three lenses.
+      expect(lowering.states.some((state) => state.actors.some((actor) => actor.lights?.brake))).toBe(true);
+      const shown = new Set(lowering.states.flatMap((state) => Object.values(state.signals ?? {})));
+      expect([...shown].sort()).toEqual(['green', 'red', 'yellow']);
+      // signal:2262 has no rendered head: recorded, not dropped in silence.
+      expect(lowering.warnings.map((w) => w.code)).toEqual(['native_signal_unbound']);
+      expect(lowering.warnings[0]!.message).toContain('2262');
+    } finally {
+      timeline.free();
+    }
+  });
 });

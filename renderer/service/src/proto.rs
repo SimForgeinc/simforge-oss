@@ -483,6 +483,11 @@ pub enum ResponseBody {
         /// frame (the `dashcam-wdr` look only).
         #[serde(skip_serializing_if = "Option::is_none")]
         exposure: Option<std::collections::BTreeMap<String, CameraExposure>>,
+        /// Lamp and signal requests of the frames applied so far that this
+        /// renderer did not draw as asked (cumulative since
+        /// `load_scene_state`; additive, older clients ignore it).
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        warnings: Vec<crate::server::SceneWarning>,
     },
     /// Exportable device stream allocated for a camera.
     OpenDeviceStream {

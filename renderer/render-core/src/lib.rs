@@ -16,6 +16,7 @@
 
 pub mod actor_lights;
 pub mod atmosphere;
+pub mod brake_lamps;
 pub mod calibration;
 pub mod camera_model;
 pub mod catalog;
@@ -49,6 +50,7 @@ pub mod render_config;
 pub mod road_detail;
 pub mod scene_state;
 pub mod shared_shadows;
+pub mod signal_heads;
 pub mod sky_pass;
 pub mod sky_texture;
 pub mod veg;

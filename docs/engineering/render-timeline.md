@@ -331,6 +331,18 @@ The companions follow the same domain rules:
     authoritative even at `z = 0`.
   - The native service currently applies yaw only; applying road/body
     pitch/roll is a follow-up.
+  - Each frame also carries the actor's lit lamps (`lights`, from
+    `lights_at`) and the frame's signal lenses (`signals`, from `signals_at`,
+    keyed by the map GLB head GUID that the OpenDRIVE `<vectorSignal
+    signalId>` names; flashing phased on the timeline clock). The renderer
+    lights brake lamps on the model's brake-lamp slot (its lamp-material
+    triangles at the rear of the body), shows exactly one lens per signal
+    lamp, and shows heads the timeline does not drive in the engine's
+    forced green. What it cannot draw as asked is a manifest warning:
+    `native_actor_brake_lamp_missing`, `native_actor_light_unrendered`
+    (low beams, indicators, reverse and emergency lamps are not drawn yet),
+    `native_signal_unbound`, `native_signal_head_undriven`,
+    `native_signal_lens_substituted`, `native_actor_color_untintable`.
   - xosc lowering remains only as a clearly marked fallback for execution
     packages that carry no timeline.
 - **CARLA** (trace replay):

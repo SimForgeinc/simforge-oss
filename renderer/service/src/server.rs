@@ -731,6 +731,116 @@ pub struct ServiceState {
     /// Handles to send behind the `export_device_stream` acknowledgement.
     #[cfg(feature = "gpu-interop")]
     pending_export: Option<render_core::gpu_interop::ExportedStream>,
+    /// What the frames asked for that this renderer could not draw
+    /// (reported on every `render_bundle` response as `warnings`).
+    scene_evidence: SceneEvidence,
+}
+
+/// Lamp and signal requests the renderer did not draw as asked. Every entry
+/// is surfaced to the caller (`render_bundle.warnings`) and lands in the
+/// render manifest's warnings: never a silent omission.
+#[derive(Debug, Default, Clone)]
+pub(crate) struct SceneEvidence {
+    /// Braking actors whose model has no brake-lamp slot: actor -> model.
+    brake_lamp_missing: std::collections::BTreeMap<String, String>,
+    /// Actors with an authored body colour whose model has no tintable
+    /// paint slot (an authored livery): actor -> model.
+    color_untintable: std::collections::BTreeMap<String, String>,
+    /// Lamp kind -> actors that lit it; this renderer draws brake lamps only.
+    unrendered_lights: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<String>>,
+    /// Frames without lamp state for a vehicle (xosc-lowered legacy frames).
+    light_state_absent: std::collections::BTreeSet<String>,
+    /// Frames without signal state (legacy): heads kept their authored look.
+    signal_state_absent: bool,
+    /// Signal GUIDs a frame drove that the map draws no head for.
+    signal_heads_unknown: std::collections::BTreeSet<String>,
+    /// Most map heads a frame left undriven (shown forced green), of how many.
+    signal_heads_undriven: Option<(usize, usize)>,
+}
+
+/// One `render_bundle.warnings` entry.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct SceneWarning {
+    pub code: String,
+    pub message: String,
+}
+
+fn list(ids: impl IntoIterator<Item = String>) -> String {
+    let ids: Vec<String> = ids.into_iter().collect();
+    let shown = ids.iter().take(12).cloned().collect::<Vec<_>>().join(", ");
+    if ids.len() > 12 {
+        format!("{shown} and {} more", ids.len() - 12)
+    } else {
+        shown
+    }
+}
+
+impl SceneEvidence {
+    pub(crate) fn warnings(&self) -> Vec<SceneWarning> {
+        let mut out = Vec::new();
+        if !self.brake_lamp_missing.is_empty() {
+            out.push(SceneWarning {
+                code: "native_actor_brake_lamp_missing".into(),
+                message: format!(
+                    "braking actor(s) whose model has no brake-lamp slot (no rear lamp geometry) render with unlit brake lamps: {}",
+                    list(self.brake_lamp_missing.iter().map(|(actor, model)| format!("{actor} ({model})")))
+                ),
+            });
+        }
+        if !self.color_untintable.is_empty() {
+            out.push(SceneWarning {
+                code: "native_actor_color_untintable".into(),
+                message: format!(
+                    "actor(s) with an authored body colour render their model's authored livery (the model has no tintable body_paint slot): {}",
+                    list(self.color_untintable.iter().map(|(actor, model)| format!("{actor} ({model})")))
+                ),
+            });
+        }
+        for (kind, actors) in &self.unrendered_lights {
+            out.push(SceneWarning {
+                code: "native_actor_light_unrendered".into(),
+                message: format!(
+                    "the timeline lights {kind} on {}; the native renderer draws brake lamps only, so {kind} is not drawn",
+                    list(actors.iter().cloned())
+                ),
+            });
+        }
+        if !self.light_state_absent.is_empty() {
+            out.push(SceneWarning {
+                code: "native_actor_light_state_absent".into(),
+                message: format!(
+                    "scene frames carry no lamp state for vehicle(s) {} (a legacy xosc-lowered scene); their brake lamps are not drawn",
+                    list(self.light_state_absent.iter().cloned())
+                ),
+            });
+        }
+        if self.signal_state_absent {
+            out.push(SceneWarning {
+                code: "native_signal_state_absent".into(),
+                message: "scene frames carry no signal state (a legacy xosc-lowered scene); the map's signal heads keep their authored look, every lens lit".into(),
+            });
+        }
+        if !self.signal_heads_unknown.is_empty() {
+            out.push(SceneWarning {
+                code: "native_signal_head_unknown".into(),
+                message: format!(
+                    "the timeline drives signal head(s) the map GLB does not draw: {}",
+                    list(self.signal_heads_unknown.iter().cloned())
+                ),
+            });
+        }
+        if let Some((undriven, heads)) = self.signal_heads_undriven {
+            if undriven > 0 {
+                out.push(SceneWarning {
+                    code: "native_signal_head_undriven".into(),
+                    message: format!(
+                        "{undriven} of the map's {heads} signal heads have no timeline indication; they show green, the engine's null-signal (forced green) indication"
+                    ),
+                });
+            }
+        }
+        out
+    }
 }
 
 /// What [`ServiceState::ensure_sensor_scenes_outcome`] did.
@@ -922,6 +1032,7 @@ impl ServiceState {
             actor_blas: ActorBlasCache::default(),
             spawned_actors: HashMap::new(),
             actor_model_bindings: HashMap::new(),
+            scene_evidence: SceneEvidence::default(),
             allow_primitive_actors: spec.allow_primitive_actors,
             static_sensor_classes: None,
             needs_settle: true,
@@ -1524,6 +1635,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
             // A new stream is a new world: nothing from a previous one stays.
             forget_all_actors(state);
             state.scene = states;
+            state.scene_evidence = SceneEvidence::default();
             state.episode = None;
             state.current_tick = None;
             WireResponse {
@@ -2009,6 +2121,7 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
             other => return Err(format!("unknown actor kind {other:?} for {}", actor.id)),
         }
     }
+    apply_frame_lamps(state, &frame)?;
     // Every frame is a complete snapshot of the live actors: one missing
     // without a despawn would otherwise stay frozen and visible.
     let mut unaccounted: Vec<String> = state
@@ -2025,6 +2138,85 @@ fn apply_scene_tick(state: &mut ServiceState, index: u32) -> Result<(), String> 
         ));
     }
     state.current_tick = Some(index);
+    Ok(())
+}
+
+/// The frame's vehicle lamps and signal lenses. Brake lamps are drawn on
+/// the model's brake-lamp slot; everything the renderer does not draw as
+/// asked is recorded in [`SceneEvidence`].
+fn apply_frame_lamps(state: &mut ServiceState, frame: &SceneState) -> Result<(), String> {
+    for actor in frame.actors.iter().filter(|a| a.kind != "despawn") {
+        let Some(lights) = actor.lights else {
+            if actor
+                .actor_class
+                .as_deref()
+                .is_some_and(render_core::actor_lights::is_vehicle_class)
+            {
+                state
+                    .scene_evidence
+                    .light_state_absent
+                    .insert(actor.id.clone());
+            }
+            continue;
+        };
+        let drawn = state
+            .app
+            .set_actor_brake(&actor.id, lights.brake)
+            .map_err(|error| format!("[native_actor_lamp_failed] actor {}: {error:#}", actor.id))?;
+        // A bicycle's timeline brake is kinematic (it decelerates); it has
+        // no brake lamp to draw, so nothing is missing.
+        let lampless = matches!(actor.actor_class.as_deref(), Some("cyclist" | "pedestrian"));
+        if lights.brake && !drawn && !lampless {
+            let model = state
+                .actor_model_bindings
+                .get(&actor.id)
+                .and_then(|(glb, _)| glb.file_name())
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "no catalog model".into()); // fallback-ok: evidence text only
+            state
+                .scene_evidence
+                .brake_lamp_missing
+                .insert(actor.id.clone(), model);
+        }
+        for (kind, lit) in [
+            ("lowBeam", lights.low_beam),
+            ("reverse", lights.reverse),
+            ("indicatorLeft", lights.indicator_left),
+            ("indicatorRight", lights.indicator_right),
+            ("emergency", lights.emergency),
+        ] {
+            if lit {
+                state
+                    .scene_evidence
+                    .unrendered_lights
+                    .entry(kind)
+                    .or_default()
+                    .insert(actor.id.clone());
+            }
+        }
+    }
+    match &frame.signals {
+        Some(lenses) => {
+            let report = state.app.set_signal_lenses(lenses);
+            state
+                .scene_evidence
+                .signal_heads_unknown
+                .extend(report.unknown.iter().cloned());
+            let undriven = report.heads - report.driven;
+            let worst = state
+                .scene_evidence
+                .signal_heads_undriven
+                .map_or(0, |(u, _)| u); // fallback-ok: no frame recorded yet
+            if state.scene_evidence.signal_heads_undriven.is_none() || undriven > worst {
+                state.scene_evidence.signal_heads_undriven = Some((undriven, report.heads));
+            }
+        }
+        None => {
+            if state.app.signal_head_count() > 0 {
+                state.scene_evidence.signal_state_absent = true;
+            }
+        }
+    }
     Ok(())
 }
 
@@ -2137,6 +2329,15 @@ fn apply_actor_model(
         // Only an authored colour tints the paint slot; without one the model
         // renders its own authored paint (never a class palette colour).
         let tint = (model.tintable && actor.color.is_some()).then_some(color);
+        if actor.color.is_some() && !model.tintable {
+            state.scene_evidence.color_untintable.insert(
+                actor.id.clone(),
+                glb_path
+                    .file_name()
+                    .map(|name| name.to_string_lossy().into_owned())
+                    .unwrap_or_default(), // fallback-ok: evidence text only
+            );
+        }
         state
             .app
             .attach_actor_asset(
@@ -3570,6 +3771,7 @@ pub(crate) fn finish_bundle(state: &mut ServiceState, flight: BundleInFlight) ->
                 observed_tick,
                 observed_actors,
                 exposure,
+                warnings: state.scene_evidence.warnings(),
             },
         },
         Err(error) => WireResponse::error(i, format!("publish bundle: {error}")),
@@ -4357,6 +4559,7 @@ mod tests {
             wheel_spin_rad: spin,
             body_attitude: None,
             wheel_drop_m: None,
+            lights: None,
         };
         // 6.3 m travelled = 1.5 cycles -> half-way through the clip.
         let t = rider_clip_time(&actor(Some(6.3 / 0.35)), &rider).unwrap();
@@ -4367,6 +4570,37 @@ mod tests {
             "{error}"
         );
         assert!(rider_clip_time(&actor(Some(f64::NAN)), &rider).is_err());
+    }
+
+    #[test]
+    fn undrawn_lamps_and_signals_are_reported_not_dropped() {
+        let mut evidence = super::SceneEvidence::default();
+        assert!(evidence.warnings().is_empty());
+        evidence
+            .brake_lamp_missing
+            .insert("lead".into(), "vehicle_suv_jeep_wrangler.glb".into());
+        evidence
+            .unrendered_lights
+            .entry("indicatorLeft")
+            .or_default()
+            .insert("lead".into());
+        evidence
+            .color_untintable
+            .insert("bus".into(), "vehicle_bus_mitsubishi_fusorosa.glb".into());
+        evidence.signal_heads_undriven = Some((3, 10));
+        let codes: Vec<String> = evidence.warnings().into_iter().map(|w| w.code).collect();
+        assert_eq!(
+            codes,
+            [
+                "native_actor_brake_lamp_missing",
+                "native_actor_color_untintable",
+                "native_actor_light_unrendered",
+                "native_signal_head_undriven",
+            ]
+        );
+        assert!(evidence.warnings()[0]
+            .message
+            .contains("lead (vehicle_suv_jeep_wrangler.glb)"));
     }
 
     #[test]
@@ -4386,6 +4620,7 @@ mod tests {
             wheel_spin_rad: None,
             body_attitude: None,
             wheel_drop_m: None,
+            lights: None,
         };
         let red = actor_color(&actor(Some("#8f2f2f")), "car").unwrap();
         assert_eq!(red, [143.0 / 255.0, 47.0 / 255.0, 47.0 / 255.0]);

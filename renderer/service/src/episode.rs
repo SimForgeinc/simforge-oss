@@ -203,6 +203,7 @@ impl Episode {
                         roll_rad: a.roll_rad as f32,
                     }),
                     wheel_drop_m: pose.wheel_drop_m.map(|d| d.map(|v| v as f32)),
+                    lights: None,
                 });
             }
             if !actors.iter().any(|a| a.id == ego_id && a.kind != "despawn") {
@@ -217,6 +218,7 @@ impl Episode {
                 time_of_day: Some(document.time_of_day as f32),
                 ground_y: document.ground_y.map(|v| v as f32),
                 actors,
+                signals: None,
             });
         }
         let ego = authored[0].actors.iter().find(|a| a.id == ego_id).unwrap();

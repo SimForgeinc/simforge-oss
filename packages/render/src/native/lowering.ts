@@ -46,7 +46,25 @@ export interface NativeActorState {
   readonly bodyAttitude?: { readonly pitchRad: number; readonly rollRad: number };
   /** Four-wheelers: per-wheel drop `[FL, FR, RL, RR]`, metres, applied to the `wheel_*` nodes. */
   readonly wheelDropM?: readonly [number, number, number, number];
+  /**
+   * Render-timeline lamps lit at this frame (`lights_at`, flashing already
+   * phased); only lit lamps are listed, `{}` is all off. Every present actor
+   * of a timeline lowering carries it; absent on the legacy xosc path.
+   */
+  readonly lights?: NativeActorLights;
 }
+
+export interface NativeActorLights {
+  readonly lowBeam?: true;
+  readonly brake?: true;
+  readonly reverse?: true;
+  readonly indicatorLeft?: true;
+  readonly indicatorRight?: true;
+  readonly emergency?: true;
+}
+
+/** The one lens a three-lamp signal head lights. */
+export type NativeSignalLens = 'red' | 'yellow' | 'green' | 'off';
 
 export interface NativeSceneState {
   readonly version: 'simforge.scene-state.v1';
@@ -61,6 +79,13 @@ export interface NativeSceneState {
    */
   readonly groundY?: number;
   readonly actors: readonly NativeActorState[];
+  /**
+   * Signal-head lenses by map head GUID (`signal-heads.ts`). Every timeline
+   * frame carries it (possibly `{}`: the timeline drives no head, and the
+   * renderer shows its undriven heads forced green); absent on the legacy
+   * xosc path.
+   */
+  readonly signals?: Readonly<Record<string, NativeSignalLens>>;
 }
 
 /**
