@@ -917,6 +917,15 @@ export async function signRenderInputsV2(input: {
       downloads[inputId] = { url: nativeActorAssetsInput().downloadUrl, headers: {} };
       continue;
     }
+    // The render timeline is a declared asset, but it lives in sim_timelines,
+    // not in artifacts/native_map_asset_blobs: the digest lookup below never
+    // finds it, and every timeline render failed with "control plane did not
+    // sign input render.timeline". The single-input path knows where it is.
+    if (inputId === RENDER_TIMELINE_INPUT_ID) {
+      const single = await refreshRenderInputV2({ ...input, inputId });
+      if (single) downloads[inputId] = single;
+      continue;
+    }
     const asset = declared.get(inputId);
     if (asset) {
       const key = `${asset.sha256}:${asset.sizeBytes}`;
