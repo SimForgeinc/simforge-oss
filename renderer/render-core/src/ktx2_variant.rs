@@ -170,6 +170,26 @@ pub fn gpu_variant(source: &[u8], supercompression: Supercompression) -> Result<
     })
 }
 
+/// A BC7 KTX2 of the given levels, for other modules' tests.
+#[cfg(test)]
+pub(crate) fn write_ktx2_for_tests(
+    width: u32,
+    height: u32,
+    levels: &[&[u8]],
+    supercompression: Supercompression,
+) -> Vec<u8> {
+    write_ktx2(
+        145,
+        134,
+        &[(0, 127, 0)],
+        16,
+        width,
+        height,
+        levels,
+        supercompression,
+    )
+}
+
 #[allow(clippy::too_many_arguments)]
 fn write_ktx2(
     vk_format: u32,

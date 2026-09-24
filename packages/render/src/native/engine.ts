@@ -17,7 +17,7 @@ import {
   type RenderInputSelectionContext,
 } from '../index.js';
 import {
-  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_ROAD_DECALS, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
+  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_ROAD_DECALS, CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_VRAM_DETECTED,
 } from '../worker-control.js';
 import { RenderInputError } from '../render-input-error.js';
@@ -38,9 +38,11 @@ import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema, nativeSensorVid
 import { resolveActorAssets, resolveEncoder, resolveNativeRenderService, type LocalExecutableSource } from './local-runtime.js';
 import { nativeLightingSiteFromOpenDrive, resolveNativeLighting } from './lighting.js';
 import { collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInputId, NATIVE_MAP_MASTER_INPUT_ID } from './map-closure.js';
-import { NativeGpuMemoryError, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
+import { NativeGpuMemoryError, nativeSceneEstimateBytes, nativeStartupTimeoutMs, NativeTextureCapacityError, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
 import { NATIVE_GEOMETRY_LOD_MANIFEST, planNativeGeometryLod, type NativeGeometryLodMode } from './geometry-lod.js';
 import { NATIVE_ROAD_DECALS_MANIFEST, planNativeRoadDecals } from './road-decals.js';
+import { nativeTextureResidencyLevels, nativeTextureResidencyPlan, planNativeTextureDensity } from './texture-residency.js';
+import type { NativeTextureResidency } from './texture-residency.js';
 import { NATIVE_STAGE_TIMINGS_V1_SCHEMA, StageSamples, splitServiceStages, type NativeStageTimings } from './stage-timings.js';
 import {
   DEFAULT_NVENC_MAX_SESSIONS, VideoEncoder, assignVideoCodecs, encoderCodecArgs, nvencAvailable,
@@ -563,19 +565,27 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       };
       const geometryLod = await planNativeGeometryLod(renderRequest.geometryLod, closureSource);
       const roadDecals = await planNativeRoadDecals(closureSource);
+      // Per-job mip residency (texture-residency.ts): full-resolution jobs on
+      // maps with the ingest-built density derivative upload only the levels
+      // their cameras can sample. Admission then waits for the camera poses.
+      const residencyDisabled = process.env.SIMFORGE_NATIVE_TEXTURE_RESIDENCY === 'off';
+      const textureDensity = intent.renderTextures === 'uastc-full' && !residencyDisabled ? await planNativeTextureDensity(closureSource) : undefined;
+      if (residencyDisabled) warnings.push({ code: 'texture_residency_disabled', message: 'SIMFORGE_NATIVE_TEXTURE_RESIDENCY=off: every texture uploads its full mip chain' });
+      const framePixels = sources.reduce((sum, source) => sum + (source.modality === 'rgb' ? source.attributes.width * source.attributes.height : sensorVideo.width * sensorVideo.height), 0);
       const textureProfile = await stageNativeTextureProfile({
         closure,
         renderTextures: intent.renderTextures,
         budgetBytes: intent.nativeVramBudgetBytes,
         capacityBytes: vram.capacityBytes,
-        framePixels: sources.reduce((sum, source) => sum + (source.modality === 'rgb' ? source.attributes.width * source.attributes.height : sensorVideo.width * sensorVideo.height), 0),
+        framePixels,
         cacheDirectory: options.nativeCacheDirectory,
         extraMembers: [...(geometryLod?.members ?? []), ...(roadDecals?.members ?? [])],
+        deferCapacityCheck: textureDensity !== undefined,
       });
       // Fail in seconds, not after a startup timeout, when the device the job
       // holds cannot take the scene at this tier (textures + geometry + frame
       // attachments + reserve, the same estimate the admission check uses).
-      if (context.gpuMemory && textureProfile.estimatedBytes > context.gpuMemory.freeBytes) {
+      if (!textureDensity && context.gpuMemory && textureProfile.estimatedBytes > context.gpuMemory.freeBytes) {
         throw new NativeGpuMemoryError(textureProfile.estimatedBytes, context.gpuMemory, intent.renderTextures);
       }
       phase('textureProfile');
@@ -669,6 +679,28 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       assertActorAnimationsBound(lowering.appearances, lowering.states, actorAssets);
       phase('lowering');
       const cameraSchedule = createNativeCameraSchedule(sources, intent.sensorHosts, lowering.states);
+      let textureResidency: (NativeTextureResidency & { readonly estimatedBytes: number }) | undefined;
+      let residencyPlanPath: string | undefined;
+      if (textureDensity) {
+        const levels = nativeTextureResidencyLevels(textureDensity.images, cameraSchedule, clipPlanes.nearM);
+        const residency = await nativeTextureResidencyPlan({
+          closureMasterPath: closure.members.get('master.gltf')!.path,
+          stagedMasterPath: textureProfile.masterPath,
+          levels,
+          density: textureDensity,
+        });
+        // The deferred admission check, on the textures this job uploads.
+        const textureBytes = textureProfile.textureBytes - residency.fullTextureBytes + residency.residentTextureBytes;
+        const estimatedBytes = nativeSceneEstimateBytes({ textureBytes, geometryBytes: textureProfile.geometryBytes, framePixels });
+        if (estimatedBytes > textureProfile.capacityBytes) throw new NativeTextureCapacityError(estimatedBytes, textureProfile.capacityBytes, textureProfile.capacitySource);
+        if (context.gpuMemory && estimatedBytes > context.gpuMemory.freeBytes) {
+          throw new NativeGpuMemoryError(estimatedBytes, context.gpuMemory, intent.renderTextures);
+        }
+        textureResidency = { ...residency, estimatedBytes };
+        residencyPlanPath = path.join(context.workspace, 'native-texture-residency.json');
+        await writeJson(residencyPlanPath, residency.plan);
+        phase('textureResidency');
+      }
       const sensorRigs = createNativeSensorRigs(sources, intent.sensorHosts);
       // Lidar and radar videos ride the cameras' fixed-step clock: one frame
       // per simulated tick, so every video of the run is time-locked.
@@ -722,6 +754,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         textureTier: intent.renderTextures,
         ...(geometryLod ? { geometryLod: path.join(path.dirname(masterPath), NATIVE_GEOMETRY_LOD_MANIFEST) } : {}),
         ...(roadDecals ? { roadDecals: path.join(path.dirname(masterPath), NATIVE_ROAD_DECALS_MANIFEST) } : {}),
+        ...(residencyPlanPath ? { textureResidency: residencyPlanPath } : {}),
         ...(groundMember ? { groundMesh: groundMember.path } : {}),
       });
       // Scene load is the longest silent stretch of a large-map job: report
@@ -1115,6 +1148,13 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         ...(features.has(CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK) ? { capture } : {}),
         ...(features.has(CONTROL_FEATURE_NATIVE_ROAD_DECALS) ? { roadDecals: roadDecals
           ? { manifestSha256: roadDecals.manifestSha256, buildKey: roadDecals.buildKey, opacityScale: roadDecals.opacityScale, materials: roadDecals.materials }
+          : null } : {}),
+        ...(features.has(CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY) ? { textureResidency: textureResidency && textureDensity
+          ? {
+            densityManifestSha256: textureDensity.manifestSha256, densityBuildKey: textureDensity.buildKey, planSha256: textureResidency.plan.planSha256,
+            levelsDropped: [...textureResidency.levelsDropped], fullTextureBytes: textureResidency.fullTextureBytes,
+            residentTextureBytes: textureResidency.residentTextureBytes, estimatedBytes: textureResidency.estimatedBytes,
+          }
           : null } : {}),
         ...gatedRenderEvidence(features, {
           lighting: look.lighting, autoMeter: options.autoMeter ?? true, provenance: look.provenance,

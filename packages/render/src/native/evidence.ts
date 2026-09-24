@@ -102,6 +102,22 @@ export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
     opacityScale: z.number().min(0).max(1),
     materials: z.number().int().nonnegative(),
   }).nullable().optional(),
+  /**
+   * The per-job mip residency this render applied
+   * (docs/engineering/texture-residency.md); gated by
+   * `native-evidence.texture-residency`. null: none (the map carries no
+   * texture density derivative, the tier is not full resolution, or the
+   * worker disabled it, which is also a warning).
+   */
+  textureResidency: z.strictObject({
+    densityManifestSha256: Sha256Schema,
+    densityBuildKey: Sha256Schema,
+    planSha256: Sha256Schema,
+    levelsDropped: z.array(z.number().int().nonnegative()).length(8),
+    fullTextureBytes: z.number().int().nonnegative(),
+    residentTextureBytes: z.number().int().nonnegative(),
+    estimatedBytes: z.number().int().nonnegative(),
+  }).nullable().optional(),
   capture: z.strictObject({
     clock: z.enum(['simulation-time', 'update-count']),
     antiAlias: z.string().min(1).max(32),

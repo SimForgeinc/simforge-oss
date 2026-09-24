@@ -234,6 +234,15 @@ export async function measureNativeTextureDemand(
   return { textureBytes, geometryBytes, sceneBytes: textureBytes + geometryBytes * 2 + NATIVE_SCENE_RESERVE_BYTES };
 }
 
+/**
+ * Admission ESTIMATE of a job's device memory: textures, geometry upload +
+ * CPU/GPU expansion allowance, frame attachments/readback, and a 512 MiB
+ * actor/lighting/driver reserve.
+ */
+export function nativeSceneEstimateBytes(input: { textureBytes: number; geometryBytes: number; framePixels: number }): number {
+  return input.textureBytes + input.geometryBytes * 2 + input.framePixels * 64 + NATIVE_SCENE_RESERVE_BYTES;
+}
+
 export async function stageNativeTextureProfile(input: {
   closure: NativeMapClosure<RenderInputFile>;
   renderTextures: NativeRenderTextures;
@@ -247,6 +256,11 @@ export async function stageNativeTextureProfile(input: {
    * staged tree's identity.
    */
   extraMembers?: readonly string[];
+  /**
+   * Skip the capacity check: the caller checks the textures it will
+   * actually upload (per-job mip residency) once it knows them.
+   */
+  deferCapacityCheck?: boolean;
 }) {
   const capacityBytes = input.budgetBytes ?? input.capacityBytes;
   if (!Number.isSafeInteger(capacityBytes) || capacityBytes! <= 0) throw new Error('native_vram_capacity_missing');
@@ -304,8 +318,8 @@ export async function stageNativeTextureProfile(input: {
   // Admission ESTIMATE: geometry upload + CPU/GPU expansion allowance, frame
   // attachments/readback, and a 512 MiB actor/lighting/driver reserve. This is
   // not a GPU allocator limit and cannot guarantee aggregate parallel VRAM.
-  const estimatedBytes = textureBytes + geometryBytes * 2 + input.framePixels * 64 + NATIVE_SCENE_RESERVE_BYTES;
-  if (estimatedBytes > capacityBytes!) throw new NativeTextureCapacityError(estimatedBytes, capacityBytes!, capacitySource);
+  const estimatedBytes = nativeSceneEstimateBytes({ textureBytes, geometryBytes, framePixels: input.framePixels });
+  if (!input.deferCapacityCheck && estimatedBytes > capacityBytes!) throw new NativeTextureCapacityError(estimatedBytes, capacityBytes!, capacitySource);
   const budgetBytes = input.budgetBytes ?? estimatedBytes;
   const profile = { ...(plan.transcodeAtLoad ? { transcodeAtLoad: plan.transcodeAtLoad } : {}), masterPath, renderTextures: input.renderTextures, memberCount: selected.size + 1, textureBytes, geometryBytes, estimatedBytes, budgetBytes, capacityBytes: capacityBytes!, capacitySource, cacheKey: identity };
   if (staged) return profile;

@@ -52,6 +52,12 @@
         "native.diagnostics:timings.stages"
       ]
     },
+    "native-evidence.texture-residency": {
+      "constant": "CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY",
+      "keys": [
+        "native.manifest:textureResidency"
+      ]
+    },
     "native-evidence.vram-detected": {
       "constant": "CONTROL_FEATURE_NATIVE_VRAM_DETECTED",
       "keys": [

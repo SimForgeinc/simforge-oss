@@ -2615,6 +2615,11 @@ pub struct SceneApp {
     /// Road decal layers and their opacity scale ([`crate::road_decals`]),
     /// applied when the scene is finalized.
     road_decals: Option<crate::road_decals::Manifest>,
+    /// Per-job mip residency of the master's textures
+    /// ([`crate::texture_residency`]): the slot the asset reader consults,
+    /// and the plan installed in it, if any.
+    texture_residency_slot: crate::texture_residency::Slot,
+    texture_residency: Option<std::sync::Arc<crate::texture_residency::Table>>,
     /// Static master mesh entity -> its ID-pass clone and ID material.
     id_clone_of: HashMap<Entity, (Entity, Handle<StandardMaterial>)>,
     /// Resolved render config ([`Self::apply_render_config`]).
@@ -2676,6 +2681,22 @@ impl SceneApp {
                 bevy::render::error_handler::RenderErrorPolicy::StopRendering
             }),
         );
+        // The default asset source reads files as they are, except the
+        // textures a residency plan lists (installed later, per job).
+        let texture_residency_slot = crate::texture_residency::Slot::default();
+        {
+            use bevy::asset::io::{AssetSourceBuilder, AssetSourceId};
+            let slot = texture_residency_slot.clone();
+            app.register_asset_source(
+                AssetSourceId::Default,
+                AssetSourceBuilder::new(move || {
+                    Box::new(crate::texture_residency::ResidencyReader::new(
+                        crate::platform::ASSET_ROOT,
+                        slot.clone(),
+                    ))
+                }),
+            );
+        }
         app.insert_resource(ClearColor(Color::BLACK))
             .insert_resource(DirectionalLightShadowMap { size: 2048 })
             .insert_resource(Legend::default())
@@ -2969,6 +2990,8 @@ impl SceneApp {
             shared_shadows: false,
             geometry_lods: None,
             road_decals: None,
+            texture_residency_slot,
+            texture_residency: None,
             id_clone_of: HashMap::new(),
             render_config: None,
         })
@@ -5593,6 +5616,7 @@ impl SceneApp {
         }
         let gpu_ready_s = started.elapsed().as_secs_f64();
         self.finalize_scene()?;
+        self.check_texture_residency()?;
         let finalized_s = started.elapsed().as_secs_f64();
         // The ground derivative, when the scene has one, is the only height
         // source; the legacy field is built only for scenes without it.
@@ -5790,6 +5814,62 @@ impl SceneApp {
     /// finalized, once the master's materials exist.
     pub fn load_road_decals(&mut self, manifest: &std::path::Path) -> Result<()> {
         self.road_decals = Some(crate::road_decals::Manifest::load(manifest)?);
+        Ok(())
+    }
+
+    /// Install a per-job texture residency plan for the master glTF
+    /// `master` ([`crate::texture_residency`]). Call before
+    /// [`Self::load_tiles`]: the plan applies to the textures read after it.
+    pub fn load_texture_residency(
+        &mut self,
+        plan: &std::path::Path,
+        master: &std::path::Path,
+    ) -> Result<()> {
+        anyhow::ensure!(
+            self.texture_residency.is_none(),
+            "a texture residency plan is already installed"
+        );
+        let parsed = crate::texture_residency::Plan::load(plan)?;
+        let table = std::sync::Arc::new(crate::texture_residency::Table::resolve(&parsed, master)?);
+        eprintln!(
+            "texture-residency: plan {} lists {} textures",
+            parsed.plan_sha256,
+            table.planned()
+        );
+        *self.texture_residency_slot.write().expect("residency slot") = Some(table.clone());
+        self.texture_residency = Some(table);
+        Ok(())
+    }
+
+    /// Every planned texture was loaded (trimmed): report the totals, or
+    /// fail naming the planned textures the scene never read.
+    fn check_texture_residency(&self) -> Result<()> {
+        let Some(table) = &self.texture_residency else {
+            return Ok(());
+        };
+        let missing = table.unserved();
+        if !missing.is_empty() {
+            bail!(
+                "[native_texture_residency_unserved] the scene loaded {} of the {} planned textures; not loaded: {}",
+                table.planned() - missing.len(),
+                table.planned(),
+                missing.iter().take(5).map(|p| p.display().to_string()).collect::<Vec<_>>().join(", ")
+            );
+        }
+        let served = table.served();
+        let (full, resident) = served.values().fold((0u64, 0u64), |(f, r), s| {
+            (f + s.full_bytes, r + s.resident_bytes)
+        });
+        let mut histogram = [0usize; 8];
+        for s in served.values() {
+            histogram[(s.dropped as usize).min(7)] += 1;
+        }
+        eprintln!(
+            "texture-residency: {} textures, {:.3} GiB of {:.3} GiB uploaded; dropped levels 0..7+: {histogram:?}",
+            served.len(),
+            resident as f64 / (1u64 << 30) as f64,
+            full as f64 / (1u64 << 30) as f64
+        );
         Ok(())
     }
 

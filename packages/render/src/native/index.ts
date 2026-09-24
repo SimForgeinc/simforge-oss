@@ -13,9 +13,11 @@ export {
   NATIVE_MAP_MAX_MEMBERS, NativeMapCapacityError, assertNativeMapMemberCapacity,
 } from './map-closure.js';
 export type { NativeMapClosure, NativeMapMemberInput } from './map-closure.js';
-export { NativeGpuMemoryError, ktx2VramBytes, measureNativeTextureDemand, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile, NativeTextureCapacityError, NATIVE_SCENE_RESERVE_BYTES } from './texture-profile.js';
+export { NativeGpuMemoryError, ktx2VramBytes, measureNativeTextureDemand, nativeSceneEstimateBytes, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile, NativeTextureCapacityError, NATIVE_SCENE_RESERVE_BYTES } from './texture-profile.js';
 export type { NativeMapMaster, NativeTextureMemberSource, NativeTexturePlan } from './texture-profile.js';
 export type { NativeRenderTextures } from './texture-profile.js';
+export { nativeCornerFocalPx, nativeTextureResidencyLevels, nativeTextureResidencyPlan, planNativeTextureDensity, NATIVE_MIN_MIP_BIAS, NATIVE_TEXTURE_DENSITY_MANIFEST, NATIVE_TEXTURE_RESIDENCY_SCHEMA } from './texture-residency.js';
+export type { NativeResidencyCamera, NativeTextureDensityImage, NativeTextureDensityPlan, NativeTextureResidency } from './texture-residency.js';
 export {
   DEFAULT_ACTOR_ASSETS_BASE_URL, NATIVE_ACTOR_ASSETS_INPUT_ID, NATIVE_ACTOR_ASSETS_RELATIVE_PATH,
   PINNED_ACTOR_ASSETS_DIGEST, PINNED_ACTOR_ASSETS_SIZE_BYTES, actorAssetsClosureUrl, assertActorAppearanceGrounded,

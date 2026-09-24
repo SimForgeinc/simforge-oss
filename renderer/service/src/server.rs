@@ -121,6 +121,12 @@ pub struct SceneSpec {
     /// decals composite at their authored opacity.
     #[serde(default)]
     pub road_decals: Option<String>,
+    /// Absolute path of the job's texture residency plan
+    /// (`simforge.texture-residency-plan.v1`): the finest mip levels of
+    /// `glbs[0]`'s textures this job's cameras never sample, which are not
+    /// uploaded. Absent: every texture keeps its full mip chain.
+    #[serde(default)]
+    pub texture_residency: Option<String>,
     /// Absolute path of the map's `derived/ground/ground-mesh.bin`: the one
     /// placement height source, shared with the simulator and the contact
     /// gate. Absent only for map versions published before their ground
@@ -287,6 +293,13 @@ pub fn prewarm(spec: &SceneSpec) -> Result<SceneApp> {
     // `set_lighting` request must still render the lighting it declared.
     app.apply_lighting(&spec.lighting, config.profile_config())?;
     phase("lighting", &mut mark);
+    if let Some(plan) = &spec.texture_residency {
+        let master = spec
+            .glbs
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("textureResidency needs the master glTF in glbs[0]"))?;
+        app.load_texture_residency(Path::new(plan), Path::new(master))?;
+    }
     app.load_tiles(&spec.glbs)?;
     if let (Some(manifest), true) = (&spec.geometry_lod, config.lod.enabled) {
         let master = spec

@@ -96,10 +96,17 @@ export const CONTROL_FEATURE_NATIVE_RENDER_CONFIG = 'native-evidence.render-conf
  * material count), or null when the map carries none.
  */
 export const CONTROL_FEATURE_NATIVE_ROAD_DECALS = 'native-evidence.road-decals' as const;
+/**
+ * `textureResidency` in the native render manifest: the per-job mip
+ * residency the render applied (density derivative digest and build key,
+ * plan digest, planned textures by levels dropped, full and uploaded texture
+ * bytes, the admission estimate), or null when it applied none.
+ */
+export const CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY = 'native-evidence.texture-residency' as const;
 export const CONTROL_FEATURES_V1 = [
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK,
   CONTROL_FEATURE_RENDER_SUBSTITUTIONS, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_VRAM_DETECTED, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
-  CONTROL_FEATURE_NATIVE_ROAD_DECALS,
+  CONTROL_FEATURE_NATIVE_ROAD_DECALS, CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY,
 ] as const;
 /**
  * Control-plane fields newer than a worker's baseline parsers, in the other
@@ -129,6 +136,7 @@ export const CONTROL_FEATURE_OUTPUTS: Readonly<Record<(typeof CONTROL_FEATURES_V
   [CONTROL_FEATURE_NATIVE_ENCODER]: ['native.manifest:encoder'],
   [CONTROL_FEATURE_NATIVE_VRAM_DETECTED]: ['native.manifest:textureProfile.detectedCapacityBytes', 'native.diagnostics:textureProfile.detectedCapacityBytes'],
   [CONTROL_FEATURE_NATIVE_ROAD_DECALS]: ['native.manifest:roadDecals'],
+  [CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY]: ['native.manifest:textureResidency'],
   [CONTROL_FEATURE_NATIVE_RENDER_CONFIG]: ['native.manifest:render', 'native.diagnostics:exposure'],
 };
 
