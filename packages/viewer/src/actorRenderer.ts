@@ -1121,15 +1121,19 @@ export class ActorRenderer {
       animated.mixer.setTime(riderClipTimeS(binding.rider, actor.odometerM ?? 0)); // fallback-ok: stationary, checked above
       return animated.drawCalls;
     }
-    const requestedName = (actor.speedMps ?? 0) > 0.1
-      ? binding.clips?.locomotion
-      : binding.clips?.idle;
+    const motion = (actor.speedMps ?? 0) > 0.1 ? 'locomotion' : 'idle';
+    const requestedName = binding.clips?.[motion];
     const clip = clips.find((candidate) => candidate.name === requestedName) ?? clips[0] ?? null;
     if (clip !== animated.activeClip) {
       animated.mixer.stopAllAction();
       if (clip) animated.mixer.clipAction(clip).reset().play();
       animated.activeClip = clip;
     }
+    // The template is grounded by its bind-pose bounds; a clip moves the hips
+    // (a child's walk puts its soles 28 cm below them). A measured per-clip
+    // lift stands the posed soles on the ground instead.
+    const lift = clip?.name === requestedName ? binding.groundOffsets?.[motion] : undefined;
+    if (lift !== undefined) animated.root.position.y = lift * (binding.scale ?? 1);
     animated.mixer.setTime(actor.animationTimeS ?? 0);
     return animated.drawCalls;
   }

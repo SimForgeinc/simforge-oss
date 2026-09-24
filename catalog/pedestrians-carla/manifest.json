@@ -61,6 +61,26 @@
       "rootMotion": "in-place",
       "sha256": "75785219de2948ed155a88007c26ac09f7a8a388ff3578d1d48b7ce6dc266cd7",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.01,
+        "idle": -0.025,
+        "run": -0.0124,
+        "walk": -0.0059
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0263,
+          -0.0236
+        ],
+        "run": [
+          -0.0306,
+          0.022
+        ],
+        "walk": [
+          -0.0274,
+          0.0013
+        ]
+      },
       "sourceMesh": "SK_AfroF01_A_G2",
       "textures": 12
     },
@@ -123,6 +143,26 @@
       "rootMotion": "in-place",
       "sha256": "2b217d5df0e984c2ebcbe65c6d1ec1aa3b7cf727a63541edb03197f7cdf9debd",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.01,
+        "idle": -0.025,
+        "run": -0.0124,
+        "walk": -0.0059
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0263,
+          -0.0236
+        ],
+        "run": [
+          -0.0306,
+          0.022
+        ],
+        "walk": [
+          -0.0274,
+          0.0013
+        ]
+      },
       "sourceMesh": "SK_AfroF01_A_G2",
       "textures": 11
     },
@@ -185,6 +225,26 @@
       "rootMotion": "in-place",
       "sha256": "771b81055de89dcbd739a0b22b40934c5250012e7f158e35783fdb79f73cc9cd",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0085,
+        "idle": -0.0225,
+        "run": -0.0058,
+        "walk": -0.0045
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0239,
+          -0.0213
+        ],
+        "run": [
+          -0.0263,
+          0.024
+        ],
+        "walk": [
+          -0.0267,
+          0.004
+        ]
+      },
       "sourceMesh": "SK_AfroF02_A_G2",
       "textures": 11
     },
@@ -231,6 +291,26 @@
       "rootMotion": "in-place",
       "sha256": "66c376db9580793ae9416d1e9519808a0713a769e1ec3d3e10680498f0c3cc40",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0085,
+        "idle": -0.0226,
+        "run": -0.006,
+        "walk": -0.0044
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.024,
+          -0.0213
+        ],
+        "run": [
+          -0.027,
+          0.0234
+        ],
+        "walk": [
+          -0.027,
+          0.0038
+        ]
+      },
       "sourceMesh": "SK_AfroF02_B_G2",
       "textures": 10
     },
@@ -285,6 +365,26 @@
       "rootMotion": "in-place",
       "sha256": "dc8c3ee0349a7e4f801899023f917f82a4ee64161a455fab457dcaa6faabc4d1",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0085,
+        "idle": -0.0225,
+        "run": -0.0058,
+        "walk": -0.0045
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0239,
+          -0.0213
+        ],
+        "run": [
+          -0.0263,
+          0.024
+        ],
+        "walk": [
+          -0.0267,
+          0.004
+        ]
+      },
       "sourceMesh": "SK_AfroF02_C_G2",
       "textures": 11
     },
@@ -371,6 +471,26 @@
       "rootMotion": "in-place",
       "sha256": "48e58cc481c26a3ec3049c188090813e14cc0c7dcebeedb4b26da82c8e44d151",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0085,
+        "idle": -0.0225,
+        "run": -0.0058,
+        "walk": -0.0045
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0239,
+          -0.0213
+        ],
+        "run": [
+          -0.0263,
+          0.024
+        ],
+        "walk": [
+          -0.0267,
+          0.004
+        ]
+      },
       "sourceMesh": "SK_AfroF02_Cop_G2",
       "textures": 13
     },
@@ -433,6 +553,26 @@
       "rootMotion": "in-place",
       "sha256": "20c388a5875083e7d36ebf0af21a645b5c14068c79e603220fbd7b09cf5f80d7",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0085,
+        "idle": -0.0225,
+        "run": -0.0058,
+        "walk": -0.0045
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0239,
+          -0.0213
+        ],
+        "run": [
+          -0.0263,
+          0.024
+        ],
+        "walk": [
+          -0.0267,
+          0.004
+        ]
+      },
       "sourceMesh": "SK_AfroF02_A_G2",
       "textures": 13
     },
@@ -495,6 +635,26 @@
       "rootMotion": "in-place",
       "sha256": "8131edfeeb6c4a7f28eae77aaf35d1587ce869381bd4dac43a927f5be2029695",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0268,
+        "idle": -0.029,
+        "run": 0.0094,
+        "walk": -0.0188
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0323,
+          -0.0273
+        ],
+        "run": [
+          -0.0491,
+          0.0499
+        ],
+        "walk": [
+          -0.0438,
+          0.0172
+        ]
+      },
       "sourceMesh": "SK_AfroF03_A_G2",
       "textures": 8
     },
@@ -557,6 +717,26 @@
       "rootMotion": "in-place",
       "sha256": "f30605ff180e57fa60bd9245c9db615af839b8d3db4980152d978e156ed24b2b",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0268,
+        "idle": -0.029,
+        "run": 0.0094,
+        "walk": -0.0188
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0323,
+          -0.0273
+        ],
+        "run": [
+          -0.0491,
+          0.0499
+        ],
+        "walk": [
+          -0.0438,
+          0.0172
+        ]
+      },
       "sourceMesh": "SK_AfroF03_A_G2",
       "textures": 8
     },
@@ -619,6 +799,26 @@
       "rootMotion": "in-place",
       "sha256": "dfef7f1a8f1a046bfe191b12c687b2f81a6721fc0bbbbbc2f3efd2eca92851f3",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0268,
+        "idle": -0.029,
+        "run": 0.0094,
+        "walk": -0.0188
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0323,
+          -0.0273
+        ],
+        "run": [
+          -0.0491,
+          0.0499
+        ],
+        "walk": [
+          -0.0438,
+          0.0172
+        ]
+      },
       "sourceMesh": "SK_AfroF03_A_G2",
       "textures": 8
     },
@@ -681,6 +881,26 @@
       "rootMotion": "in-place",
       "sha256": "ceba21725bba9ae3ff49ac82a8a5ad37c310d3ded7ec00739c75c6c584f8b1cb",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0111,
+        "idle": -0.0255,
+        "run": -0.0148,
+        "walk": -0.0024
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.027,
+          -0.0243
+        ],
+        "run": [
+          -0.0388,
+          0.0181
+        ],
+        "walk": [
+          -0.0464,
+          0.008
+        ]
+      },
       "sourceMesh": "SK_AfroM01_A_G2",
       "textures": 11
     },
@@ -743,6 +963,26 @@
       "rootMotion": "in-place",
       "sha256": "fe22eeb9f968548fd3fbdedc7d5d140af6b77aa6dc80b60865f5c4e8b2245ffb",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0111,
+        "idle": -0.0255,
+        "run": -0.0148,
+        "walk": -0.0024
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.027,
+          -0.0243
+        ],
+        "run": [
+          -0.0388,
+          0.0181
+        ],
+        "walk": [
+          -0.0464,
+          0.008
+        ]
+      },
       "sourceMesh": "SK_AfroM01_B_G2",
       "textures": 11
     },
@@ -813,6 +1053,26 @@
       "rootMotion": "in-place",
       "sha256": "a5c8583cecd8439768ac426b6c3db71da1ef6dd064dd1e5e6693628e8121e17f",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0149,
+        "idle": -0.0245,
+        "run": 0.0009,
+        "walk": 0.0013
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0272,
+          -0.0232
+        ],
+        "run": [
+          -0.0334,
+          0.0357
+        ],
+        "walk": [
+          -0.0222,
+          0.0134
+        ]
+      },
       "sourceMesh": "SK_AfroM02_A_G2",
       "textures": 13
     },
@@ -875,6 +1135,26 @@
       "rootMotion": "in-place",
       "sha256": "a85245f9ab887912b03b171cc0cf3fd538373b02caa5f4ba1629154d01731f64",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0111,
+        "idle": -0.0255,
+        "run": -0.0148,
+        "walk": -0.0024
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.027,
+          -0.0243
+        ],
+        "run": [
+          -0.0388,
+          0.0181
+        ],
+        "walk": [
+          -0.0464,
+          0.008
+        ]
+      },
       "sourceMesh": "SK_AmerM01_A_G2",
       "textures": 13
     },
@@ -929,6 +1209,26 @@
       "rootMotion": "in-place",
       "sha256": "3e2f2b935d84916b73f8e33f0860afc87745a2e44a71d0976fb1a2f3e6528c39",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0111,
+        "idle": -0.0255,
+        "run": -0.0148,
+        "walk": -0.0024
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.027,
+          -0.0243
+        ],
+        "run": [
+          -0.0388,
+          0.0181
+        ],
+        "walk": [
+          -0.0464,
+          0.008
+        ]
+      },
       "sourceMesh": "SK_AmerM01_A_G2",
       "textures": 13
     },
@@ -991,6 +1291,26 @@
       "rootMotion": "in-place",
       "sha256": "d694651f3c030872d25d93ed9b0bdafa7bf1e43e51180bb24e0910b435c22334",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0111,
+        "idle": -0.0255,
+        "run": -0.0148,
+        "walk": -0.0024
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.027,
+          -0.0243
+        ],
+        "run": [
+          -0.0388,
+          0.0181
+        ],
+        "walk": [
+          -0.0464,
+          0.008
+        ]
+      },
       "sourceMesh": "SK_AmerM01_A_G2",
       "textures": 14
     },
@@ -1077,6 +1397,26 @@
       "rootMotion": "in-place",
       "sha256": "65063903f8cda5a17beb2bca180b8c4ab0a3c560b3f03980ef51771e8c1a8314",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0109,
+        "idle": -0.0248,
+        "run": -0.0107,
+        "walk": -0.0023
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0261,
+          -0.0237
+        ],
+        "run": [
+          -0.035,
+          0.0215
+        ],
+        "walk": [
+          -0.0452,
+          0.0066
+        ]
+      },
       "sourceMesh": "SK_AmerM01_Cop_G2",
       "textures": 15
     },
@@ -1139,6 +1479,26 @@
       "rootMotion": "in-place",
       "sha256": "1de3397365b4fc868c0d2d86684bb43e9dce9f39466d002cc27d874b2883a1ce",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.01,
+        "idle": -0.025,
+        "run": -0.0126,
+        "walk": -0.006
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0264,
+          -0.0237
+        ],
+        "run": [
+          -0.0298,
+          0.0214
+        ],
+        "walk": [
+          -0.0268,
+          0.0013
+        ]
+      },
       "sourceMesh": "SK_AsiaF01_G2",
       "textures": 12
     },
@@ -1193,6 +1553,26 @@
       "rootMotion": "in-place",
       "sha256": "369e869956f9cc8b81e26236d900dac47130543cd4a82b0640acb9c5d3032df7",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.01,
+        "idle": -0.025,
+        "run": -0.0126,
+        "walk": -0.006
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0264,
+          -0.0237
+        ],
+        "run": [
+          -0.0298,
+          0.0214
+        ],
+        "walk": [
+          -0.0268,
+          0.0013
+        ]
+      },
       "sourceMesh": "SK_AsiaF01_G2",
       "textures": 12
     },
@@ -1255,6 +1635,26 @@
       "rootMotion": "in-place",
       "sha256": "53231297ed585ce37fdad4805f2354c1f759ab9e4266a626ef6a0022779aab81",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0111,
+        "idle": -0.0255,
+        "run": -0.0148,
+        "walk": -0.0024
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.027,
+          -0.0243
+        ],
+        "run": [
+          -0.0388,
+          0.0181
+        ],
+        "walk": [
+          -0.0464,
+          0.008
+        ]
+      },
       "sourceMesh": "SK_AsiaM01_A_G2",
       "textures": 10
     },
@@ -1317,6 +1717,26 @@
       "rootMotion": "in-place",
       "sha256": "c95a07bf884012f28b64f5c9275e99cf62392bc9fccb21ad6b7f25db0feb034f",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0111,
+        "idle": -0.0255,
+        "run": -0.0148,
+        "walk": -0.0024
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.027,
+          -0.0243
+        ],
+        "run": [
+          -0.0388,
+          0.0181
+        ],
+        "walk": [
+          -0.0464,
+          0.008
+        ]
+      },
       "sourceMesh": "SK_AsiaM01_B_G2",
       "textures": 11
     },
@@ -1371,6 +1791,26 @@
       "rootMotion": "in-place",
       "sha256": "c9e37a2c7dadc79010e97858b8f888b6ca55774b3a1d0e1a258755b11bff943f",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0163,
+        "idle": -0.0247,
+        "run": 0.003,
+        "walk": 0.0028
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0267,
+          -0.0234
+        ],
+        "run": [
+          -0.036,
+          0.032
+        ],
+        "walk": [
+          -0.0184,
+          0.0144
+        ]
+      },
       "sourceMesh": "SK_AsiaM02_A_G2",
       "textures": 9
     },
@@ -1425,6 +1865,26 @@
       "rootMotion": "in-place",
       "sha256": "212b4d713a21e5bc77734e1c42bc3f3e53dcff7f18dfd28e3f741c97d458bb66",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0163,
+        "idle": -0.0247,
+        "run": 0.003,
+        "walk": 0.0028
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0267,
+          -0.0234
+        ],
+        "run": [
+          -0.036,
+          0.032
+        ],
+        "walk": [
+          -0.0184,
+          0.0144
+        ]
+      },
       "sourceMesh": "SK_AsiaM02_A_G2",
       "textures": 9
     },
@@ -1487,6 +1947,26 @@
       "rootMotion": "in-place",
       "sha256": "a5e27a4883b3dfe1f88064192a4e731d6e06af1e23736192159202108e2380ae",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0163,
+        "idle": -0.0247,
+        "run": 0.003,
+        "walk": 0.0028
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0267,
+          -0.0234
+        ],
+        "run": [
+          -0.036,
+          0.032
+        ],
+        "walk": [
+          -0.0184,
+          0.0144
+        ]
+      },
       "sourceMesh": "SK_AsiaM02_A_G2",
       "textures": 10
     },
@@ -1541,6 +2021,26 @@
       "rootMotion": "in-place",
       "sha256": "18b9a8dff1b284e2b0b546f99f24ac6a049c5f5fc0b172bb9fe5e6fec4d7e83a",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0472,
+        "idle": -0.0608,
+        "run": -0.0381,
+        "walk": -0.0359
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0631,
+          -0.0581
+        ],
+        "run": [
+          -0.0556,
+          -0.0054
+        ],
+        "walk": [
+          -0.0554,
+          -0.025
+        ]
+      },
       "sourceMesh": "SK_EuroF01_A_G2",
       "textures": 9
     },
@@ -1595,6 +2095,26 @@
       "rootMotion": "in-place",
       "sha256": "d5bf5ff4bd33db7ab3bc48d88e66e9810eea72802e591941eef68bc63d40e605",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0472,
+        "idle": -0.0608,
+        "run": -0.0381,
+        "walk": -0.0359
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0631,
+          -0.0581
+        ],
+        "run": [
+          -0.0556,
+          -0.0054
+        ],
+        "walk": [
+          -0.0554,
+          -0.025
+        ]
+      },
       "sourceMesh": "SK_EuroF01_A_G2",
       "textures": 9
     },
@@ -1649,6 +2169,26 @@
       "rootMotion": "in-place",
       "sha256": "a6b00f499572697e989815f42e154e5716244a4161f2634a974e7f1fad2fda99",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0472,
+        "idle": -0.0608,
+        "run": -0.0381,
+        "walk": -0.0359
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0631,
+          -0.0581
+        ],
+        "run": [
+          -0.0556,
+          -0.0054
+        ],
+        "walk": [
+          -0.0554,
+          -0.025
+        ]
+      },
       "sourceMesh": "SK_EuroF01_A_G2",
       "textures": 9
     },
@@ -1711,6 +2251,26 @@
       "rootMotion": "in-place",
       "sha256": "4b1ef111b32fade8346d61e42ff4e40bbd264b39290b8415c88faf21d19ef79a",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.01,
+        "idle": -0.025,
+        "run": -0.0125,
+        "walk": -0.0061
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0264,
+          -0.0236
+        ],
+        "run": [
+          -0.0302,
+          0.0214
+        ],
+        "walk": [
+          -0.027,
+          0.0011
+        ]
+      },
       "sourceMesh": "SK_EuroF02_A_G2",
       "textures": 11
     },
@@ -1765,6 +2325,26 @@
       "rootMotion": "in-place",
       "sha256": "e5e8be62f3f13bd766b7fce54c98b5cd441c8f079d67fd7ce9809873179702e1",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.01,
+        "idle": -0.025,
+        "run": -0.0125,
+        "walk": -0.0061
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0264,
+          -0.0236
+        ],
+        "run": [
+          -0.0302,
+          0.0214
+        ],
+        "walk": [
+          -0.027,
+          0.0011
+        ]
+      },
       "sourceMesh": "SK_EuroF02_B_G2",
       "textures": 12
     },
@@ -1819,6 +2399,26 @@
       "rootMotion": "in-place",
       "sha256": "80fded41df3c39a0f819c6fffe6e51dfd4144175939bc2f508edd40c0d79cb2a",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.01,
+        "idle": -0.025,
+        "run": -0.0125,
+        "walk": -0.0061
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0264,
+          -0.0236
+        ],
+        "run": [
+          -0.0302,
+          0.0214
+        ],
+        "walk": [
+          -0.027,
+          0.0011
+        ]
+      },
       "sourceMesh": "SK_EuroF02_B_G2",
       "textures": 12
     },
@@ -1881,6 +2481,26 @@
       "rootMotion": "in-place",
       "sha256": "24ca9de4b75329b1ebef0c1bf6a6b93ae899e7f9d033d56126a749fce52ded87",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0111,
+        "idle": -0.0255,
+        "run": -0.0148,
+        "walk": -0.0024
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.027,
+          -0.0243
+        ],
+        "run": [
+          -0.0388,
+          0.0181
+        ],
+        "walk": [
+          -0.0464,
+          0.008
+        ]
+      },
       "sourceMesh": "SK_EuroM01_A_G2",
       "textures": 12
     },
@@ -1943,6 +2563,26 @@
       "rootMotion": "in-place",
       "sha256": "9d9edfc77e43f1214a715b8880946f5f34d3a1ecdc09c7fbbc29f25248d8b2d4",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0111,
+        "idle": -0.0255,
+        "run": -0.0148,
+        "walk": -0.0024
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.027,
+          -0.0243
+        ],
+        "run": [
+          -0.0388,
+          0.0181
+        ],
+        "walk": [
+          -0.0464,
+          0.008
+        ]
+      },
       "sourceMesh": "SK_EuroM01_B_G2",
       "textures": 11
     },
@@ -2005,6 +2645,26 @@
       "rootMotion": "in-place",
       "sha256": "0fe8b14e78832a821592dc8e3986fb61bc10eb1bef76dd1ea8aead531515adbe",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0215,
+        "idle": -0.0308,
+        "run": -0.0037,
+        "walk": -0.0034
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0331,
+          -0.0296
+        ],
+        "run": [
+          -0.0315,
+          0.0417
+        ],
+        "walk": [
+          -0.0238,
+          0.0101
+        ]
+      },
       "sourceMesh": "SK_EuroM02_A_G2",
       "textures": 12
     },
@@ -2067,6 +2727,26 @@
       "rootMotion": "in-place",
       "sha256": "727f489a287e0403362fb8ae86f372ece310570f4bc4f4e5d7d2f3d67da3986c",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0215,
+        "idle": -0.0308,
+        "run": -0.0037,
+        "walk": -0.0034
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0331,
+          -0.0296
+        ],
+        "run": [
+          -0.0315,
+          0.0417
+        ],
+        "walk": [
+          -0.0238,
+          0.0101
+        ]
+      },
       "sourceMesh": "SK_EuroM02_A_G2",
       "textures": 14
     },
@@ -2129,6 +2809,26 @@
       "rootMotion": "in-place",
       "sha256": "6505688a06dc9b1467790fac0113f8e0a66416c7e7bf172284d5937d01aee300",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0101,
+        "idle": -0.2739,
+        "run": -0.2518,
+        "walk": -0.2674
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.2739,
+          -0.2738
+        ],
+        "run": [
+          -0.2999,
+          -0.2286
+        ],
+        "walk": [
+          -0.2845,
+          -0.2508
+        ]
+      },
       "sourceMesh": "SK_EuroG02_A_G2",
       "textures": 12
     },
@@ -2199,6 +2899,26 @@
       "rootMotion": "in-place",
       "sha256": "0b750353f0538f3bc2f4bf2c673f9a538439977df22c9087e70abfa66b57e13f",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": -0.0123,
+        "idle": -0.2763,
+        "run": -0.2484,
+        "walk": -0.2659
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.2763,
+          -0.2762
+        ],
+        "run": [
+          -0.2814,
+          -0.2312
+        ],
+        "walk": [
+          -0.2744,
+          -0.2538
+        ]
+      },
       "sourceMesh": "SK_EuroB02_A_G2",
       "textures": 15
     },
@@ -2245,6 +2965,26 @@
       "rootMotion": "in-place",
       "sha256": "8be79fc3846afd065c19174a86f1d33edd69f65a74450bdb24093702afeef278",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": 0.0,
+        "idle": -0.009,
+        "run": -0.0109,
+        "walk": 0.0009
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0108,
+          -0.0066
+        ],
+        "run": [
+          -0.046,
+          0.0454
+        ],
+        "walk": [
+          -0.0565,
+          0.0148
+        ]
+      },
       "sourceMesh": "SK_AfroG01_A_G3",
       "textures": 10
     },
@@ -2291,6 +3031,26 @@
       "rootMotion": "in-place",
       "sha256": "8ea1af2bf9573b0be52369b83c460c032875a27b28dbd5baa4150f2539fce50b",
       "skeletonPreserved": true,
+      "soleHeightM": {
+        "bind": 0.0,
+        "idle": -0.009,
+        "run": -0.0108,
+        "walk": 0.0004
+      },
+      "soleRangeM": {
+        "idle": [
+          -0.0108,
+          -0.0066
+        ],
+        "run": [
+          -0.0439,
+          0.0455
+        ],
+        "walk": [
+          -0.0535,
+          0.0142
+        ]
+      },
       "sourceMesh": "SK_AfroB01_A_G3",
       "textures": 14
     }

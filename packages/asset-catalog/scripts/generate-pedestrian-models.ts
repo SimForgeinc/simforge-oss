@@ -8,12 +8,21 @@ const root = resolve(here, '../../../catalog/pedestrians-carla');
 const { pedestrians } = JSON.parse(readFileSync(resolve(root, 'manifest.json'), 'utf8')) as {
   pedestrians: Record<string, { file: string; display: string; age: string; dims_xyz_m: number[]; clips: Record<string, unknown> }>;
 };
+// Per-clip grounding lifts measured at ingest (tools/ground.py, emitted by
+// tools/finalize.py): the one derivation both renderers use.
+const { entries: sidecar } = JSON.parse(readFileSync(resolve(root, 'catalog-models.json'), 'utf8')) as {
+  entries: Record<string, { model: { clipGroundOffsetM?: Record<string, number> } }>;
+};
 const bindings: string[] = [];
 const entries: string[] = [];
 for (const [blueprint, item] of Object.entries(pedestrians).sort(([a], [b]) => a.localeCompare(b))) {
   if (!item.clips.walk || !item.clips.idle) throw new Error(`${blueprint}: missing locomotion clips`);
   const hash = createHash('sha256').update(readFileSync(resolve(root, item.file))).digest('hex');
-  bindings.push(`  '${blueprint}': { kind: 'glb', url: '/catalog/pedestrians-carla/${item.file}', contentHash: '${hash}', yawRad: Math.PI / 2, animated: true, clips: { idle: 'idle', locomotion: 'walk' } },`);
+  const lifts = sidecar[blueprint]?.model.clipGroundOffsetM;
+  if (typeof lifts?.idle !== 'number' || typeof lifts.locomotion !== 'number') {
+    throw new Error(`${blueprint}: catalog-models.json has no measured clipGroundOffsetM; run tools/ground.py and tools/finalize.py`);
+  }
+  bindings.push(`  '${blueprint}': { kind: 'glb', url: '/catalog/pedestrians-carla/${item.file}', contentHash: '${hash}', yawRad: Math.PI / 2, animated: true, clips: { idle: 'idle', locomotion: 'walk' }, groundOffsets: { idle: ${lifts.idle}, locomotion: ${lifts.locomotion} } },`);
   const id = blueprint.replace('walker.pedestrian.', 'pedestrian.carla.');
   // Source gait advances along +Z; the binding rotates it onto actor +X.
   const [w, h, l] = item.dims_xyz_m;

@@ -29,19 +29,40 @@ manifest = {
 }
 entries = {}
 assets = []
+# Motion state (catalog `model.clips` key) -> the clip it plays.
+MOTION_CLIPS = {"idle": "idle", "locomotion": "walk"}
+
+
+def ground_offset(blueprint, item, pose):
+    """Lift that puts the posed soles on y = 0, from tools/ground.py.
+
+    Never defaulted: a model whose soles were not measured would be drawn at
+    its origin, which for these rigs is 1-30 cm below the soles.
+    """
+    heights = item.get("soleHeightM") or {}
+    if pose not in heights:
+        raise SystemExit(f"{blueprint}: no measured sole height for {pose}; run tools/ground.py first")
+    return round(-heights[pose], 4) + 0.0
+
+
 for blueprint, item in sorted(stats.items()):
     line = attribution.format(display=item["display"])
+    animated = bool(item.get("clips"))
     entries[blueprint] = {
         "model": {
             "glbPath": f"catalog/pedestrians-carla/{item['file']}",
             "attribution": line,
             "source": "carla-0.10.0-ue5",
-            "animated": bool(item.get("clips")),
-            "clips": {"idle": "idle", "locomotion": "walk"} if item.get("clips") else {},
+            "animated": animated,
+            "clips": dict(MOTION_CLIPS) if animated else {},
+            "clipGroundOffsetM": {
+                motion: ground_offset(blueprint, item, clip) for motion, clip in MOTION_CLIPS.items()
+            } if animated else {},
         },
         "tintable": False,
         "scaleToDims": False,
         "yawOffsetRad": math.pi / 2,
+        "groundOffsetM": ground_offset(blueprint, item, "bind"),
         "age": item["age"],
         "gender": item["gender"],
     }

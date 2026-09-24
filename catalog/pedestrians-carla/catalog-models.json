@@ -3,9 +3,14 @@
     "walker.pedestrian.0015": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.01,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0015\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.025,
+          "locomotion": 0.0059
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -20,9 +25,14 @@
     "walker.pedestrian.0016": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.01,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0016\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.025,
+          "locomotion": 0.0059
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -37,9 +47,14 @@
     "walker.pedestrian.0017": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.0085,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0017\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0225,
+          "locomotion": 0.0045
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -54,9 +69,14 @@
     "walker.pedestrian.0018": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.0085,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0018\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0226,
+          "locomotion": 0.0044
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -71,9 +91,14 @@
     "walker.pedestrian.0019": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.0085,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0019\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0225,
+          "locomotion": 0.0045
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -88,9 +113,14 @@
     "walker.pedestrian.0020": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.0085,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0020\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0225,
+          "locomotion": 0.0045
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -105,9 +135,14 @@
     "walker.pedestrian.0021": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.0085,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0021\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0225,
+          "locomotion": 0.0045
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -122,9 +157,14 @@
     "walker.pedestrian.0022": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.0268,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0022\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.029,
+          "locomotion": 0.0188
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -139,9 +179,14 @@
     "walker.pedestrian.0023": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.0268,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0023\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.029,
+          "locomotion": 0.0188
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -156,9 +201,14 @@
     "walker.pedestrian.0024": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.0268,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0024\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.029,
+          "locomotion": 0.0188
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -173,9 +223,14 @@
     "walker.pedestrian.0025": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0111,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0025\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0255,
+          "locomotion": 0.0024
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -190,9 +245,14 @@
     "walker.pedestrian.0026": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0111,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0026\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0255,
+          "locomotion": 0.0024
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -207,9 +267,14 @@
     "walker.pedestrian.0027": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0149,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0027\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0245,
+          "locomotion": -0.0013
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -224,9 +289,14 @@
     "walker.pedestrian.0028": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0111,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0028\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0255,
+          "locomotion": 0.0024
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -241,9 +311,14 @@
     "walker.pedestrian.0029": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0111,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0029\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0255,
+          "locomotion": 0.0024
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -258,9 +333,14 @@
     "walker.pedestrian.0030": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0111,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0030\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0255,
+          "locomotion": 0.0024
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -275,9 +355,14 @@
     "walker.pedestrian.0031": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0109,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0031\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0248,
+          "locomotion": 0.0023
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -292,9 +377,14 @@
     "walker.pedestrian.0032": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.01,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0032\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.025,
+          "locomotion": 0.006
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -309,9 +399,14 @@
     "walker.pedestrian.0033": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.01,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0033\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.025,
+          "locomotion": 0.006
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -326,9 +421,14 @@
     "walker.pedestrian.0034": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0111,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0034\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0255,
+          "locomotion": 0.0024
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -343,9 +443,14 @@
     "walker.pedestrian.0035": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0111,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0035\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0255,
+          "locomotion": 0.0024
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -360,9 +465,14 @@
     "walker.pedestrian.0036": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0163,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0036\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0247,
+          "locomotion": -0.0028
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -377,9 +487,14 @@
     "walker.pedestrian.0037": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0163,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0037\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0247,
+          "locomotion": -0.0028
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -394,9 +509,14 @@
     "walker.pedestrian.0038": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0163,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0038\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0247,
+          "locomotion": -0.0028
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -411,9 +531,14 @@
     "walker.pedestrian.0039": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.0472,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0039\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0608,
+          "locomotion": 0.0359
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -428,9 +553,14 @@
     "walker.pedestrian.0040": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.0472,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0040\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0608,
+          "locomotion": 0.0359
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -445,9 +575,14 @@
     "walker.pedestrian.0041": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.0472,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0041\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0608,
+          "locomotion": 0.0359
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -462,9 +597,14 @@
     "walker.pedestrian.0042": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.01,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0042\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.025,
+          "locomotion": 0.0061
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -479,9 +619,14 @@
     "walker.pedestrian.0043": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.01,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0043\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.025,
+          "locomotion": 0.0061
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -496,9 +641,14 @@
     "walker.pedestrian.0044": {
       "age": "adult",
       "gender": "female",
+      "groundOffsetM": 0.01,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0044\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.025,
+          "locomotion": 0.0061
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -513,9 +663,14 @@
     "walker.pedestrian.0045": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0111,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0045\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0255,
+          "locomotion": 0.0024
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -530,9 +685,14 @@
     "walker.pedestrian.0046": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0111,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0046\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0255,
+          "locomotion": 0.0024
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -547,9 +707,14 @@
     "walker.pedestrian.0047": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0215,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0047\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0308,
+          "locomotion": 0.0034
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -564,9 +729,14 @@
     "walker.pedestrian.0048": {
       "age": "adult",
       "gender": "male",
+      "groundOffsetM": 0.0215,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0048\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.0308,
+          "locomotion": 0.0034
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -581,9 +751,14 @@
     "walker.pedestrian.0049": {
       "age": "child",
       "gender": "female",
+      "groundOffsetM": 0.0101,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0049\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.2739,
+          "locomotion": 0.2674
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -598,9 +773,14 @@
     "walker.pedestrian.0050": {
       "age": "child",
       "gender": "male",
+      "groundOffsetM": 0.0123,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0050\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.2763,
+          "locomotion": 0.2659
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -615,9 +795,14 @@
     "walker.pedestrian.0051": {
       "age": "child",
       "gender": "female",
+      "groundOffsetM": 0.0,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0051\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.009,
+          "locomotion": -0.0009
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"
@@ -632,9 +817,14 @@
     "walker.pedestrian.0052": {
       "age": "child",
       "gender": "male",
+      "groundOffsetM": 0.0,
       "model": {
         "animated": true,
         "attribution": "\"CARLA pedestrian 0052\" pedestrian model and animations \u00a9 Computer Vision Center (CVC), Universitat Aut\u00f2noma de Barcelona (UAB), and CARLA Simulator contributors (carla.org), CC BY 4.0; converted to glTF for SimForge.",
+        "clipGroundOffsetM": {
+          "idle": 0.009,
+          "locomotion": -0.0004
+        },
         "clips": {
           "idle": "idle",
           "locomotion": "walk"

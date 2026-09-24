@@ -1719,6 +1719,16 @@ pub struct SignalLensReport {
 struct ActorAnimationBinding {
     players: Vec<Entity>,
     node: AnimationNodeIndex,
+    /// Clip length: simulation time is wrapped into it, since a paused
+    /// player seeked past the end samples the last pose (a walker would
+    /// freeze mid-stride once the scene outlasts one cycle).
+    duration_s: f32,
+}
+
+/// Clip time for simulation time `time_s`: the clips loop (in-place gaits
+/// whose endpoints match to under a millimetre, catalog CONVENTIONS).
+fn looped_clip_time(time_s: f32, duration_s: f32) -> f32 {
+    time_s.max(0.0).rem_euclid(duration_s)
 }
 
 /// One legend entry: instance-ID value -> source mesh name.
@@ -5218,6 +5228,19 @@ impl SceneApp {
             }
         }
         if let Some(clip) = animation {
+            let duration_s = self
+                .app
+                .world()
+                .resource::<Assets<AnimationClip>>()
+                .get(&clip)
+                .map(AnimationClip::duration)
+                .filter(|d| d.is_finite() && *d > 0.0)
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "actor model {} clip {animation_clip:?} has no positive duration",
+                        glb_path.display()
+                    )
+                })?;
             let (graph, node) = AnimationGraph::from_clip(clip);
             let graph = self
                 .app
@@ -5244,7 +5267,7 @@ impl SceneApp {
                         .get_mut::<AnimationPlayer>()
                         .expect("animation player disappeared")
                         .play(node)
-                        .seek_to(animation_time_s.max(0.0))
+                        .seek_to(looped_clip_time(animation_time_s, duration_s))
                         .pause();
                 }
                 players
@@ -5257,7 +5280,11 @@ impl SceneApp {
             }
             self.actor_animations.insert(
                 actor_id.to_string(),
-                ActorAnimationBinding { players, node },
+                ActorAnimationBinding {
+                    players,
+                    node,
+                    duration_s,
+                },
             );
             self.app.update();
         }
@@ -5440,9 +5467,20 @@ impl SceneApp {
             let Some(mut player) = self.app.world_mut().get_mut::<AnimationPlayer>(entity) else {
                 continue;
             };
-            player.play(binding.node).seek_to(time_s.max(0.0)).pause();
+            player
+                .play(binding.node)
+                .seek_to(looped_clip_time(time_s, binding.duration_s))
+                .pause();
         }
         Ok(())
+    }
+
+    /// Length of an actor's bound animation clip, seconds.
+    pub fn actor_animation_duration(&self, actor_id: &str) -> Result<f32> {
+        self.actor_animations
+            .get(actor_id)
+            .map(|binding| binding.duration_s)
+            .ok_or_else(|| anyhow::anyhow!("actor {actor_id} has no animation binding"))
     }
 
     /// Write linear-RGB base colours into named material slots of an attached
@@ -8396,6 +8434,109 @@ mod tests {
         );
         app.remove_actor("moto");
         assert_eq!(app.actor_instance_class(rider_id), None);
+    }
+
+    /// The service's grounding, through Bevy's own skinning: a catalog
+    /// walker placed at the ground point plus the lift of the clip it plays
+    /// stands on its soles (median lowest posed vertex over the cycle within
+    /// 1 cm of the ground, no pose beyond the 6 cm gait spread; the CARLA
+    /// child once stood 27 cm deep), and its clip loops rather than freezing
+    /// on the last pose once simulation time passes the clip's length.
+    /// CPU-posed skins, so it runs on lavapipe. The GLB-level check over all
+    /// 38 walkers is `tests/walker_grounding.rs`.
+    #[test]
+    #[ignore = "focused GPU integration test"]
+    fn catalog_walkers_stand_on_their_soles_through_bevy_skinning() {
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let catalog = crate::vehicle_model::VehicleModelCatalog::load(
+            &repo.join("catalog/pedestrians-carla"),
+        )
+        .unwrap();
+        let tile = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let mut app = SceneApp::new(&Lighting::default()).unwrap();
+        app.load_tiles(&[tile.to_string_lossy().into_owned()])
+            .unwrap();
+        app.wait_until_ready().unwrap();
+        let lowest = |app: &mut SceneApp, id: &str| -> f32 {
+            app.actor_sensor_meshes()
+                .unwrap()
+                .into_iter()
+                .filter(|mesh| mesh.actor_id == id)
+                .flat_map(|mesh| match mesh.geometry {
+                    ActorSensorGeometry::Skinned { triangles, .. } => triangles,
+                    ActorSensorGeometry::Rigid { .. } => panic!("{id}: walker is skinned"),
+                })
+                .flat_map(|tri| tri.into_iter().map(|v| v.y))
+                .fold(f32::INFINITY, f32::min)
+        };
+        // Adult G2, G2 child (the showcase's pedestrian.child), G3 child.
+        for (k, walker) in [
+            "walker.pedestrian.0015",
+            "walker.pedestrian.0049",
+            "walker.pedestrian.0051",
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let entry = catalog.resolve(walker).unwrap();
+            for motion in ["walk", "idle"] {
+                let (glb, clip) = &entry.animations[motion];
+                let lift = entry.ground_offset_for(Some(motion)).unwrap();
+                let id = format!("{walker}-{motion}");
+                let x = 3.0 * k as f32;
+                app.upsert_actor(
+                    &id,
+                    "pedestrian",
+                    [x, 0.9, -12.0],
+                    Quat::IDENTITY,
+                    [0.5, 1.8, 0.5],
+                    [0.5; 3],
+                );
+                app.attach_actor_asset(&id, glb, 1.0, None, Some(clip), 0.0)
+                    .unwrap();
+                // As `apply_actor_model`: origin at the ground point plus the clip's lift.
+                app.set_actor_asset_pose(&id, [x, lift, -12.0], Quat::IDENTITY)
+                    .unwrap();
+                let mut samples = Vec::new();
+                for step in 0..24 {
+                    app.set_actor_animation_time(&id, step as f32 * 0.1)
+                        .unwrap();
+                    app.warmup(1);
+                    samples.push(lowest(&mut app, &id));
+                }
+                let mut sorted = samples.clone();
+                sorted.sort_by(f32::total_cmp);
+                let stance = sorted[sorted.len() / 2];
+                assert!(
+                    stance.abs() <= 0.01 && sorted[0] >= -0.06 && sorted[sorted.len() - 1] <= 0.06,
+                    "{walker} {motion}: stance sole {stance:+.3} m (lift {lift:.3} m); samples {samples:?}"
+                );
+                if motion == "walk" {
+                    // Simulation time runs past the clip: the pose loops.
+                    let early = {
+                        app.set_actor_animation_time(&id, 0.4).unwrap();
+                        app.warmup(1);
+                        lowest(&mut app, &id)
+                    };
+                    let looped = {
+                        app.set_actor_animation_time(
+                            &id,
+                            0.4 + 3.0 * app.actor_animation_duration(&id).unwrap(),
+                        )
+                        .unwrap();
+                        app.warmup(1);
+                        lowest(&mut app, &id)
+                    };
+                    assert!(
+                        (early - looped).abs() < 1e-3,
+                        "{walker}: walk clip froze instead of looping ({early} vs {looped})"
+                    );
+                }
+                app.detach_actor_asset(&id).unwrap();
+                app.remove_actor(&id);
+            }
+        }
+        std::mem::forget(app);
     }
 
     #[test]

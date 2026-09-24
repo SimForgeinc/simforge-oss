@@ -247,6 +247,14 @@ export type ExternalModelBinding =
       /** Clip names, when animated. */
       readonly clips?: { readonly idle?: string; readonly locomotion?: string };
       /**
+       * Per clip, the lift (GLB metres, before `scale`) from the model origin
+       * that puts the posed soles on the ground, measured at ingest from the
+       * lowest skinned vertex over the clip. A walker's bind-pose bounds are
+       * not where its clips put its feet; renderers place an animated model
+       * by the lift of the clip it plays.
+       */
+      readonly groundOffsets?: { readonly idle?: number; readonly locomotion?: number };
+      /**
        * The rider of a two-wheeler, part of this model (`rider` subtree, its
        * meshes tagged `semanticClass: 'rider'` in glTF node extras). Present
        * means the model must render with its rider; a renderer that cannot

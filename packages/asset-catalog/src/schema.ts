@@ -60,6 +60,10 @@ const externalModelSchema = z.discriminatedUnion('kind', [
       idle: z.string().min(1).optional(),
       locomotion: z.string().min(1).optional(),
     }).optional(),
+    groundOffsets: z.strictObject({
+      idle: z.number().finite().optional(),
+      locomotion: z.number().finite().optional(),
+    }).optional(),
     rider: z.strictObject({
       clip: z.string().min(1),
       clipDurationS: z.number().positive(),

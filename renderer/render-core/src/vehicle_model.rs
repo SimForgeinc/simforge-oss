@@ -41,9 +41,41 @@ pub struct VehicleModelEntry {
     pub ground_offset_m: f32,
     /// Motion-state animation GLBs and their named clips.
     pub animations: HashMap<String, (PathBuf, String)>,
+    /// Per motion state (`idle`, `walk`, `run`): the lift that puts the posed
+    /// soles on the ground while that clip plays, measured at ingest from the
+    /// lowest skinned vertex over the clip. It replaces `ground_offset_m`
+    /// (the bind pose's) for the bound motion. Required for every motion
+    /// clip: a walker's origin is not its sole, so an unmeasured clip is a
+    /// catalog error, never drawn at zero.
+    pub clip_ground_offset_m: HashMap<String, f32>,
     /// Ridden two-wheeler: the rider is part of the model and posed by one
     /// odometer-phased clip (catalog/vehicles-carla/CONVENTIONS.md).
     pub rider: Option<RiderSpec>,
+}
+
+/// Motion states whose clips pose a walker on its own feet, so each needs a
+/// measured ground offset. A ridden two-wheeler's `ride` clip is placed by
+/// the bike's wheels instead.
+pub const MOTION_CLIPS: [&str; 3] = ["idle", "walk", "run"];
+
+impl VehicleModelEntry {
+    /// The lift from the actor's ground point to the model origin while
+    /// `motion`'s clip plays (`None`: unanimated, the bind-pose offset).
+    pub fn ground_offset_for(&self, motion: Option<&str>) -> Result<f32> {
+        match motion {
+            Some(motion) if MOTION_CLIPS.contains(&motion) => self
+                .clip_ground_offset_m
+                .get(motion)
+                .copied()
+                .with_context(|| {
+                    format!(
+                        "{} plays its {motion} clip but has no measured ground offset for it",
+                        self.glb_path.display()
+                    )
+                }),
+            _ => Ok(self.ground_offset_m),
+        }
+    }
 }
 
 /// The render timeline's `wheelSpinRad` radius: `odometerM = wheelSpinRad * 0.35`.
@@ -293,6 +325,7 @@ impl VehicleModelCatalog {
                     .transpose()
             };
             let mut animations = HashMap::new();
+            let mut clip_ground_offset_m = HashMap::new();
             if let Some(table) = value.get("animations") {
                 let table = table
                     .as_object()
@@ -310,6 +343,16 @@ impl VehicleModelCatalog {
                         name.clone(),
                         (resolve_glb_path(dir, path), clip.to_string()),
                     );
+                    if let Some(offset) = animation.get("groundOffsetM") {
+                        let offset =
+                            offset.as_f64().filter(|v| v.is_finite()).with_context(|| {
+                                format!(
+                                    "{} animation {name} groundOffsetM is not a finite number",
+                                    entry()
+                                )
+                            })?;
+                        clip_ground_offset_m.insert(name.clone(), offset as f32);
+                    }
                 }
             }
             if let Some(clips) = model.get("clips") {
@@ -341,6 +384,37 @@ impl VehicleModelCatalog {
                         entry()
                     );
                 }
+                if let Some(offsets) = model.get("clipGroundOffsetM") {
+                    let offsets = offsets.as_object().with_context(|| {
+                        format!("{} model.clipGroundOffsetM is not an object", entry())
+                    })?;
+                    for (key, offset) in offsets {
+                        let motion = match key.as_str() {
+                            "idle" => "idle",
+                            "locomotion" => "walk",
+                            other => bail!(
+                                "{} model.clipGroundOffsetM.{other} is not a known motion (idle, locomotion)",
+                                entry()
+                            ),
+                        };
+                        let offset =
+                            offset.as_f64().filter(|v| v.is_finite()).with_context(|| {
+                                format!(
+                                    "{} model.clipGroundOffsetM.{key} is not a finite number",
+                                    entry()
+                                )
+                            })?;
+                        clip_ground_offset_m.insert(motion.to_string(), offset as f32);
+                    }
+                }
+            }
+            if let Some(motion) = MOTION_CLIPS.iter().find(|motion| {
+                animations.contains_key(**motion) && !clip_ground_offset_m.contains_key(**motion)
+            }) {
+                bail!(
+                    "{} binds a {motion} clip without a measured groundOffsetM; its walker would render at its origin, not on its soles",
+                    entry()
+                );
             }
             if model.get("animated").and_then(|v| v.as_bool()) == Some(true)
                 && animations.is_empty()
@@ -368,6 +442,7 @@ impl VehicleModelCatalog {
                     yaw_offset_rad: number_field("yawOffsetRad")?.unwrap_or(0.0) as f32,
                     ground_offset_m: number_field("groundOffsetM")?.unwrap_or(0.0) as f32,
                     animations,
+                    clip_ground_offset_m,
                     rider: value
                         .get("rider")
                         .map(RiderSpec::parse)
@@ -505,7 +580,7 @@ mod tests {
                 "uniformScale":2.5,
                 "yawOffsetRad":1.5707964,
                 "groundOffsetM":0.72,
-                "animations":{"walk":{"glbPath":"models/vehicle.sedan/animations/walk.glb","clip":"Walk"}}
+                "animations":{"walk":{"glbPath":"models/vehicle.sedan/animations/walk.glb","clip":"Walk","groundOffsetM":0.031}}
               }
             }"#,
         )
@@ -520,7 +595,26 @@ mod tests {
             entry.animations.get("walk").map(|(_, clip)| clip.as_str()),
             Some("Walk")
         );
+        assert_eq!(entry.ground_offset_for(Some("walk")).unwrap(), 0.031);
+        assert_eq!(entry.ground_offset_for(None).unwrap(), 0.72);
         assert!(catalog.resolve("vehicle.unmapped").is_none());
+
+        // A motion clip without a measured ground offset is refused by name.
+        fs::write(
+            root.join("catalog-models.json"),
+            r#"{"pedestrian.x": {
+                "model": {"glbPath":"models/vehicle.sedan/model.glb","source":"generated"},
+                "tintable":false, "scaleToDims":false,
+                "animations":{"walk":{"glbPath":"models/vehicle.sedan/animations/walk.glb","clip":"Walk"}}
+            }}"#,
+        )
+        .unwrap();
+        let error = format!("{:#}", VehicleModelCatalog::load(&root).unwrap_err());
+        assert!(
+            error.contains("pedestrian.x")
+                && error.contains("walk clip without a measured groundOffsetM"),
+            "{error}"
+        );
         fs::remove_dir_all(root).unwrap();
     }
 }

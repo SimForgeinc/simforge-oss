@@ -35,7 +35,12 @@
 //     `yawOffsetRad: 0`, `groundOffsetM: 0`, `uniformScale: 1`.
 //   - an entry bound to an external `glb` model is included only when the
 //     bound file resolves locally, hashes to the declared `contentHash`, and a
-//     sibling `catalog-models.json` provides its attribution and source. The
+//     sibling `catalog-models.json` provides its attribution and source. Its
+//     grounding comes from that sidecar too: `groundOffsetM` when measured
+//     (else 0, recorded as asserted in `provenance.grounding`), and for an
+//     animated walker `model.clipGroundOffsetM` per motion, carried as
+//     `animations.<motion>.groundOffsetM`; an animated walker without it
+//     fails the run. The
 //     placeholder box `buildProp` returns for such entries is never exported.
 //     An `animated` binding must name its clips with `model.clips`, and each
 //     named clip must be authored into that same GLB: the closure's
@@ -401,6 +406,29 @@ async function resolveExternal(externalRoot, id, binding) {
     }
     if (!('idle' in clips)) fail(`${id}: animated binding has no idle clip; a stationary walker would have nothing to play`);
   }
+  // Grounding is measured at ingest (catalog/pedestrians-carla/tools/ground.py:
+  // the lowest posed skin vertex over each clip), never assumed: a walker's
+  // origin is not its sole, and a clip moves the hips. Every motion clip must
+  // carry its own measured lift; an unmeasured one fails the run.
+  const measured = (value, what) => {
+    if (typeof value !== 'number' || !Number.isFinite(value)) fail(`${id}: sidecar entry for ${relative} has no measured ${what}; run the pack's grounding step`);
+    return value;
+  };
+  let groundOffsetM = 0;
+  let groundOffsetSource = 'asserted: catalog convention (ground origin), not measured';
+  if (sidecarEntry.groundOffsetM !== undefined) {
+    groundOffsetM = measured(sidecarEntry.groundOffsetM, 'groundOffsetM');
+    groundOffsetSource = 'measured: sidecar groundOffsetM';
+  }
+  let clipGroundOffsetsM = null;
+  if (binding.animated && !binding.rider) {
+    const table = model.clipGroundOffsetM ?? fail(`${id}: animated sidecar entry for ${relative} declares no clipGroundOffsetM; a walker would render at its origin, not on its soles`);
+    clipGroundOffsetsM = {};
+    for (const state of Object.keys(binding.clips)) {
+      clipGroundOffsetsM[NATIVE_MOTION_KEYS[state]] = measured(table[state], `clipGroundOffsetM.${state}`);
+    }
+    groundOffsetSource = 'measured: sidecar groundOffsetM (bind pose) and clipGroundOffsetM (per clip)';
+  }
   return {
     bytes,
     attribution: model.attribution,
@@ -410,6 +438,9 @@ async function resolveExternal(externalRoot, id, binding) {
     convention: typeof convention === 'string' ? convention : null,
     clips,
     rider: binding.rider ?? null,
+    groundOffsetM,
+    groundOffsetSource,
+    clipGroundOffsetsM,
     file,
   };
 }
@@ -473,15 +504,21 @@ for (const id of catalogIds) {
     const external = await resolveExternal(externalRoot, id, entry.model);
     const memberSha = sha256(external.bytes);
     members.set(relative, { sha256: memberSha, bytes: external.bytes.byteLength, provide: (destination) => placeBytes(destination, external.bytes) });
+    const scale = entry.model.scale ?? 1;
     const animations = Object.fromEntries(Object.entries(external.clips ?? {})
-      .map(([key, clip]) => [key, { glbPath: relative, clip, sha256: memberSha }]));
+      .map(([key, clip]) => [key, {
+        glbPath: relative,
+        clip,
+        sha256: memberSha,
+        ...(external.clipGroundOffsetsM ? { groundOffsetM: external.clipGroundOffsetsM[key] * scale } : {}),
+      }]));
     catalogTable[id] = {
       model: { glbPath: relative, attribution: external.attribution, source: external.source },
       tintable: external.tintable,
       scaleToDims: external.scaleToDims,
-      uniformScale: entry.model.scale ?? 1,
+      uniformScale: scale,
       yawOffsetRad: entry.model.yawRad ?? 0,
-      groundOffsetM: 0,
+      groundOffsetM: external.groundOffsetM * scale,
       sourceSha256: entry.model.contentHash,
       targetBounds: entry.dims,
       provenance: {
@@ -493,6 +530,7 @@ for (const id of catalogIds) {
         contentHash: entry.model.contentHash,
         frame: external.convention ?? 'y-up, meters, +X forward, ground origin (catalog sidecar convention)',
         origin: 'ground',
+        grounding: external.groundOffsetSource,
         tint: external.tintable ? 'body_paint slot receives the authored tint' : 'authored materials, not tintable',
         dimensions: external.scaleToDims ? 'uniform-scaled to actor length' : 'authored metres, rendered at uniformScale',
         ...(external.clips

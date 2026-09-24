@@ -10,10 +10,10 @@
 //
 //   node packages/render/scripts/fetch-actor-closure.mjs --out <dir> [--base-url <origin>] [--from <cas-dir>]
 //
-// The pinned closure `4f298a9f` carries the CARLA 0.10.0-UE5 vehicle and
-// pedestrian geometry and is not on the public origin: until a maintainer
-// uploads `closures/<digest>.json` and the 162 blobs it names, this script
-// needs `--from` pointed at the generated root (see
+// The pinned closure `218209f5` carries the CARLA 0.10.0-UE5 vehicle and
+// pedestrian geometry. It is served by the public origin under
+// `actor-assets/` (closure document and every blob), so no `--from` is needed;
+// `--from` stages it from a generated root instead (see
 // `scripts/actor-assets/complete-closure.mjs`).
 import { createHash } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
@@ -22,7 +22,7 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-const PINNED_DIGEST = '4f298a9fd7c8bbf8d19cc10f0a57ec4e5a9f955540c160e7985e335a8fad706f';
+const PINNED_DIGEST = '218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f';
 const PINNED_SIZE_BYTES = 22971;
 const DEFAULT_BASE_URL = 'https://da3tufozhdsvl.cloudfront.net';
 const CLOSURE_SCHEMA = 'simforge.actor-assets-closure/v1';
@@ -101,13 +101,13 @@ async function place(source, destination, expected) {
  * error rather than a silent fall back to the origin, since the whole point
  * of `--from` is an install that does not depend on the network.
  */
-async function ensure(relative, destination, expected) {
+async function ensure(relative, destination, expected, originRelative = relative) {
   if (await verified(destination, expected)) return 'kept';
   if (sourceRoot) {
     await place(path.join(sourceRoot, relative), destination, expected);
     return 'linked';
   }
-  await download(`${baseUrl}/${relative}`, destination, expected);
+  await download(`${baseUrl}/${originRelative}`, destination, expected);
   return 'downloaded';
 }
 
@@ -136,7 +136,10 @@ for (const [memberPath, member] of members) {
     throw new Error(`closure member ${memberPath} has an invalid declaration`);
   }
   const relative = `blobs/sha256/${member.sha256.slice(0, 2)}/${member.sha256}`;
-  tally[await ensure(relative, path.join(outputRoot, ...relative.split('/')), member)] += 1;
+  // As for the document: the origin serves blobs under `actor-assets/`
+  // (`actorAssetBlobUrl`), a local root at its top level.
+  const destination = path.join(outputRoot, ...relative.split('/'));
+  tally[await ensure(relative, destination, member, sourceRoot ? relative : `actor-assets/${relative}`)] += 1;
   totalBytes += member.bytes;
 }
 process.stdout.write(`${JSON.stringify({ digest: PINNED_DIGEST, members: members.length, bytes: totalBytes, ...tally, source: sourceRoot ?? baseUrl, out: outputRoot })}\n`);

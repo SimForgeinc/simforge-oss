@@ -49,6 +49,41 @@ absolute hips loop-endpoint discrepancy across all axes/clips/models is
 a sample at 23.7 s also remains actor-bound. Never integrate hips translation
 into actor position.
 
+## Grounding: measured per clip, never assumed
+
+A walker's model origin is not its sole. Renderers put the origin on the
+simulator's ground point, so each clip carries the lift that stands its posed
+soles on the ground, measured at ingest by `tools/ground.py` (run after
+`animate.py`, before `finalize.py`):
+
+- every keyframe and midpoint of each clip is posed exactly as glTF defines it
+  (node TRS, slerped rotations, 4-influence linear blend skinning) and its
+  lowest vertex taken;
+- `soleHeightM[clip]` (in `assembly-stats.json` and `manifest.json`) is the
+  **stance sole height**, the median of those lows; `soleRangeM[clip]` is
+  their [lowest, highest]. A constant lift cannot hold every pose at zero: in
+  one walk cycle the lows span 3-7 cm (hips bob; heel strike dips a few frames
+  below the stance, worst 5.7 cm on the G3 walk). Lifting by the single lowest
+  pose would float the walker for the rest of the cycle;
+- `finalize.py` writes `groundOffsetM` (bind pose) and
+  `model.clipGroundOffsetM.{idle,locomotion}` into `catalog-models.json`, and
+  refuses a model without a measurement. The native closure carries them as
+  `animations.<motion>.groundOffsetM`, the browser binding as
+  `groundOffsets`. Both renderers refuse or ignore nothing: the native service
+  fails a walker clip with no measured lift.
+
+Measured stance heights below the origin: G2 adults 2.2-6.1 cm idle and
+-0.3-3.6 cm walking, G3 0.9 cm idle and 0.0-0.1 cm walking, and the **G2
+children 0049/0050 27.4-27.6 cm idle and 26.6-26.7 cm walking**. The child figure is an `animate.py` retarget defect: the `AS_Girl_*`
+clips are authored on the child mesh (hips ~0.6 m), but the hips translation
+is retargeted against `Skel_Pedestrian_G2`'s shared adult reference pose
+(hips 1.05 m), so `target + (sample - reference) * ratio` lowers the child's
+hips by ~26 cm while the leg rotations stay intact. The pose is therefore
+unchanged apart from a vertical offset, which the measured lift removes
+exactly; the GLB bytes are left as shipped. (A future re-animation should
+retarget child clips against the child rest pose; `ground.py` must then be
+rerun.)
+
 ## Browser proof and known cadence limitation
 
 Real Chrome WebGL proof used the production viewer `ActorRenderer`, production

@@ -1619,6 +1619,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.025,
+        "locomotion": 0.0059
       }
     }
   },
@@ -1654,6 +1658,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.2739,
+        "locomotion": 0.2674
       }
     }
   },
@@ -1686,6 +1694,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0225,
+        "locomotion": 0.0045
       }
     }
   },
@@ -1717,6 +1729,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.025,
+        "locomotion": 0.0059
       }
     }
   },
@@ -1748,6 +1764,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.025,
+        "locomotion": 0.0059
       }
     }
   },
@@ -1779,6 +1799,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0225,
+        "locomotion": 0.0045
       }
     }
   },
@@ -1810,6 +1834,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0226,
+        "locomotion": 0.0044
       }
     }
   },
@@ -1841,6 +1869,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0225,
+        "locomotion": 0.0045
       }
     }
   },
@@ -1872,6 +1904,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0225,
+        "locomotion": 0.0045
       }
     }
   },
@@ -1903,6 +1939,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0225,
+        "locomotion": 0.0045
       }
     }
   },
@@ -1934,6 +1974,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.029,
+        "locomotion": 0.0188
       }
     }
   },
@@ -1965,6 +2009,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.029,
+        "locomotion": 0.0188
       }
     }
   },
@@ -1996,6 +2044,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.029,
+        "locomotion": 0.0188
       }
     }
   },
@@ -2027,6 +2079,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0255,
+        "locomotion": 0.0024
       }
     }
   },
@@ -2058,6 +2114,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0255,
+        "locomotion": 0.0024
       }
     }
   },
@@ -2089,6 +2149,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0245,
+        "locomotion": -0.0013
       }
     }
   },
@@ -2120,6 +2184,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0255,
+        "locomotion": 0.0024
       }
     }
   },
@@ -2151,6 +2219,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0255,
+        "locomotion": 0.0024
       }
     }
   },
@@ -2182,6 +2254,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0255,
+        "locomotion": 0.0024
       }
     }
   },
@@ -2213,6 +2289,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0248,
+        "locomotion": 0.0023
       }
     }
   },
@@ -2244,6 +2324,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.025,
+        "locomotion": 0.006
       }
     }
   },
@@ -2275,6 +2359,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.025,
+        "locomotion": 0.006
       }
     }
   },
@@ -2306,6 +2394,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0255,
+        "locomotion": 0.0024
       }
     }
   },
@@ -2337,6 +2429,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0255,
+        "locomotion": 0.0024
       }
     }
   },
@@ -2368,6 +2464,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0247,
+        "locomotion": -0.0028
       }
     }
   },
@@ -2399,6 +2499,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0247,
+        "locomotion": -0.0028
       }
     }
   },
@@ -2430,6 +2534,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0247,
+        "locomotion": -0.0028
       }
     }
   },
@@ -2461,6 +2569,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0608,
+        "locomotion": 0.0359
       }
     }
   },
@@ -2492,6 +2604,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0608,
+        "locomotion": 0.0359
       }
     }
   },
@@ -2523,6 +2639,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0608,
+        "locomotion": 0.0359
       }
     }
   },
@@ -2554,6 +2674,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.025,
+        "locomotion": 0.0061
       }
     }
   },
@@ -2585,6 +2709,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.025,
+        "locomotion": 0.0061
       }
     }
   },
@@ -2616,6 +2744,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.025,
+        "locomotion": 0.0061
       }
     }
   },
@@ -2647,6 +2779,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0255,
+        "locomotion": 0.0024
       }
     }
   },
@@ -2678,6 +2814,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0255,
+        "locomotion": 0.0024
       }
     }
   },
@@ -2709,6 +2849,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0308,
+        "locomotion": 0.0034
       }
     }
   },
@@ -2740,6 +2884,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.0308,
+        "locomotion": 0.0034
       }
     }
   },
@@ -2771,6 +2919,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.2739,
+        "locomotion": 0.2674
       }
     }
   },
@@ -2802,6 +2954,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.2763,
+        "locomotion": 0.2659
       }
     }
   },
@@ -2833,6 +2989,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.009,
+        "locomotion": -0.0009
       }
     }
   },
@@ -2864,6 +3024,10 @@
       "clips": {
         "idle": "idle",
         "locomotion": "walk"
+      },
+      "groundOffsets": {
+        "idle": 0.009,
+        "locomotion": -0.0004
       }
     }
   },

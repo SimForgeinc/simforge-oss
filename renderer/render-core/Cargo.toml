@@ -59,3 +59,8 @@ solari = ["bevy/bevy_solari"]
 # Exportable Vulkan/CUDA output path (`render_core::gpu_interop`). Linux
 # only; enabling it for another target is a compile error (src/lib.rs).
 gpu-interop = ["bevy/raw_vulkan_init", "wgpu/vulkan", "dep:ash", "dep:libc"]
+
+[dev-dependencies]
+# Walker grounding test (tests/walker_grounding.rs) poses skins straight from
+# glTF, independent of Bevy; same crate version bevy_gltf already locks.
+gltf = { version = "1.4", default-features = false, features = ["utils", "names"] }

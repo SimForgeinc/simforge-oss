@@ -1946,6 +1946,7 @@ fn resolve_actor_model(
             yaw_offset_rad: 0.0,
             ground_offset_m: 0.0,
             animations: HashMap::new(),
+            clip_ground_offset_m: HashMap::new(),
             rider: None,
         }));
     }
@@ -2271,11 +2272,15 @@ fn apply_actor_model(
         .transpose()?;
     // A catalog entry with animation clips must have the one this motion
     // needs: rendering it without would freeze the actor in its bind pose.
+    // The motion whose clip is bound (walkers only): its measured lift puts
+    // the posed soles, not the model origin, on the ground.
+    let mut bound_motion = None;
     let (glb_path, clip) = if let Some(rider) = &model.rider {
         (model.glb_path.clone(), Some(rider.clip.clone()))
     } else if model.animations.is_empty() {
         (model.glb_path.clone(), None)
     } else {
+        bound_motion = Some(motion);
         let (path, clip) = model.animations.get(motion).ok_or_else(|| {
             format!(
                 "[native_actor_animation_missing] actor {} ({}) is {motion}ing but its catalog model binds no {motion:?} clip (has {:?})",
@@ -2378,9 +2383,15 @@ fn apply_actor_model(
                 )
             })?;
     }
-    let asset_position = (Vec3::from_array(position)
-        + rotation * Vec3::new(0.0, model.ground_offset_m, 0.0))
-    .to_array();
+    let ground_offset_m = model.ground_offset_for(bound_motion).map_err(|error| {
+        format!(
+            "[native_actor_ground_offset_missing] actor {} ({}): {error:#}",
+            actor.id,
+            actor.catalog_id.as_deref().unwrap_or("-"), // fallback-ok: error message text only
+        )
+    })?;
+    let asset_position =
+        (Vec3::from_array(position) + rotation * Vec3::new(0.0, ground_offset_m, 0.0)).to_array();
     let asset_rotation = rotation * Quat::from_rotation_y(model.yaw_offset_rad);
     state
         .app

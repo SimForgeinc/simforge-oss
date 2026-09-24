@@ -31,17 +31,18 @@ export const NATIVE_ACTOR_ASSETS_CATALOG_PATH = 'catalog-models.json';
  * The immutable actor closure: sha256 and byte size of the closure document
  * `actor-assets/closures/<digest>.json` as served by the origin.
  *
- * `4f298a9f` carries the CARLA 0.10.0-UE5 vehicle and pedestrian geometry: 68
+ * `218209f5` carries the CARLA 0.10.0-UE5 vehicle and pedestrian geometry: 68
  * of its 165 catalog entries are `carla-0.10.0-ue5` (1,316.0 MiB of distinct
  * blobs), and the 35 generated and 62 procedural entries no CARLA model covers are
- * carried over unchanged. It differs from its predecessor `70dde8bb` only in
- * `vehicle.bicycle` and `vehicle.motorcycle`, which are now ridden (rider
- * contract in their catalog-models.json entries). It is not on the public origin: an
- * install resolves it from a packaged `share/actor-assets` directory or
- * `SIMFORGE_ACTOR_ASSETS_ROOT` until a maintainer uploads the closure document
- * and its blobs.
+ * carried over unchanged. It differs from its predecessor `4f298a9f` only in
+ * `catalog-models.json`: every walker entry carries its measured grounding
+ * (`groundOffsetM` for the bind pose, `animations.<motion>.groundOffsetM` per
+ * clip, from catalog/pedestrians-carla/tools/ground.py) instead of an asserted
+ * 0, which stood the CARLA child walkers 27 cm deep and the adults up to
+ * 6 cm deep in the ground. No model bytes changed. `4f298a9f` differed from `70dde8bb` only
+ * in the ridden `vehicle.bicycle` and `vehicle.motorcycle`.
  */
-export const PINNED_ACTOR_ASSETS_DIGEST = '4f298a9fd7c8bbf8d19cc10f0a57ec4e5a9f955540c160e7985e335a8fad706f';
+export const PINNED_ACTOR_ASSETS_DIGEST = '218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f';
 export const PINNED_ACTOR_ASSETS_SIZE_BYTES = 22971;
 export const DEFAULT_ACTOR_ASSETS_BASE_URL = 'https://da3tufozhdsvl.cloudfront.net';
 
@@ -109,7 +110,16 @@ export interface ActorClosureMember { readonly sha256: string; readonly bytes: n
 export interface ActorClosureAnimation {
   readonly glbPath: string;
   readonly clip: string;
+  /**
+   * Lift from the actor's ground point to the model origin while this clip
+   * plays, measured at ingest from the posed skin. Required for the motion
+   * clips (`idle`, `walk`, `run`): a walker's origin is not its sole.
+   */
+  readonly groundOffsetM?: number;
 }
+
+/** Motion states whose clips stand a walker on its own feet (a rider's clip is placed by its bike). */
+const MOTION_CLIPS: ReadonlySet<string> = new Set(['idle', 'walk', 'run']);
 
 /** A catalog id's model as `catalog-models.json` declares it, every path a closure member. */
 export interface ActorClosureModel {
@@ -249,7 +259,14 @@ export function parseActorClosureCatalog(
         if (typeof animation.clip !== 'string' || animation.clip.length === 0) {
           throw catalogError(`entry ${catalogId} animation ${name} names no clip`);
         }
-        animations.set(name, { glbPath: animationPath, clip: animation.clip });
+        if (animation.groundOffsetM !== undefined && !(typeof animation.groundOffsetM === 'number' && Number.isFinite(animation.groundOffsetM))) {
+          throw catalogError(`entry ${catalogId} animation ${name} groundOffsetM is not a finite number`);
+        }
+        animations.set(name, {
+          glbPath: animationPath,
+          clip: animation.clip,
+          ...(animation.groundOffsetM !== undefined ? { groundOffsetM: animation.groundOffsetM } : {}),
+        });
       }
     }
     if (model.clips !== undefined) {
@@ -259,7 +276,17 @@ export function parseActorClosureCatalog(
         if (!motion) throw catalogError(`entry ${catalogId} model.clips.${key} is not a known motion (idle, locomotion)`);
         if (typeof clip !== 'string' || clip.length === 0) throw catalogError(`entry ${catalogId} model.clips.${key} is not a clip name`);
         if (animations.has(motion)) throw catalogError(`entry ${catalogId} binds the ${motion} clip twice (animations and model.clips)`);
-        animations.set(motion, { glbPath, clip });
+        const offsets = isRecord(model.clipGroundOffsetM) ? model.clipGroundOffsetM : {};
+        const offset = offsets[key];
+        if (offset !== undefined && !(typeof offset === 'number' && Number.isFinite(offset))) {
+          throw catalogError(`entry ${catalogId} model.clipGroundOffsetM.${key} is not a finite number`);
+        }
+        animations.set(motion, { glbPath, clip, ...(offset !== undefined ? { groundOffsetM: offset } : {}) });
+      }
+    }
+    for (const [motion, animation] of animations) {
+      if (MOTION_CLIPS.has(motion) && animation.groundOffsetM === undefined) {
+        throw catalogError(`entry ${catalogId} binds a ${motion} clip without a measured groundOffsetM; its walker would render at its origin, not on its soles`);
       }
     }
     if (model.animated === true && animations.size === 0) {

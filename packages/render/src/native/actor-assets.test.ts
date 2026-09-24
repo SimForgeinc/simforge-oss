@@ -119,14 +119,17 @@ describe('parseActorClosureCatalog', () => {
   it('binds animations and in-model clips by motion, as the service does', () => {
     const models = parse({
       version: 3,
-      'pedestrian.adult': { ...entry, animations: { walk: { glbPath: 'models/pedestrian.adult/walk.glb', clip: 'Walk' } } },
-      'pedestrian.child': { ...entry, model: { glbPath: 'models/pedestrian.adult/model.glb', clips: { idle: 'Idle', locomotion: 'Run' } } },
+      'pedestrian.adult': { ...entry, animations: { walk: { glbPath: 'models/pedestrian.adult/walk.glb', clip: 'Walk', groundOffsetM: 0.027 } } },
+      'pedestrian.child': { ...entry, model: { glbPath: 'models/pedestrian.adult/model.glb', clips: { idle: 'Idle', locomotion: 'Run' }, clipGroundOffsetM: { idle: 0.274, locomotion: 0.285 } } },
+      'vehicle.bicycle': { ...entry, animations: { ride: { glbPath: 'models/pedestrian.adult/walk.glb', clip: 'ride' } } },
     });
-    expect(models.get('pedestrian.adult')!.animations.get('walk')).toEqual({ glbPath: 'models/pedestrian.adult/walk.glb', clip: 'Walk' });
+    expect(models.get('pedestrian.adult')!.animations.get('walk')).toEqual({ glbPath: 'models/pedestrian.adult/walk.glb', clip: 'Walk', groundOffsetM: 0.027 });
     expect([...models.get('pedestrian.child')!.animations]).toEqual([
-      ['idle', { glbPath: 'models/pedestrian.adult/model.glb', clip: 'Idle' }],
-      ['walk', { glbPath: 'models/pedestrian.adult/model.glb', clip: 'Run' }],
+      ['idle', { glbPath: 'models/pedestrian.adult/model.glb', clip: 'Idle', groundOffsetM: 0.274 }],
+      ['walk', { glbPath: 'models/pedestrian.adult/model.glb', clip: 'Run', groundOffsetM: 0.285 }],
     ]);
+    // A rider clip is placed by its bike's wheels, not by soles.
+    expect(models.get('vehicle.bicycle')!.animations.get('ride')).toEqual({ glbPath: 'models/pedestrian.adult/walk.glb', clip: 'ride' });
   });
 
   it('refuses every malformed entry by name instead of skipping it', () => {
@@ -137,6 +140,9 @@ describe('parseActorClosureCatalog', () => {
       [{ 'pedestrian.adult': { ...entry, uniformScale: 'big' } }, /uniformScale is not a finite number/],
       [{ 'pedestrian.adult': { ...entry, animations: { walk: { glbPath: 'models/pedestrian.adult/walk.glb' } } } }, /animation walk names no clip/],
       [{ 'pedestrian.adult': { ...entry, animations: [] } }, /animations is not an object/],
+      [{ 'pedestrian.adult': { ...entry, animations: { walk: { glbPath: 'models/pedestrian.adult/walk.glb', clip: 'Walk' } } } }, /walk clip without a measured groundOffsetM/],
+      [{ 'pedestrian.adult': { ...entry, animations: { walk: { glbPath: 'models/pedestrian.adult/walk.glb', clip: 'Walk', groundOffsetM: 'low' } } } }, /animation walk groundOffsetM is not a finite number/],
+      [{ 'pedestrian.adult': { ...entry, model: { ...entry.model, clips: { idle: 'Idle' } } } }, /idle clip without a measured groundOffsetM/],
       [{ 'pedestrian.adult': { ...entry, model: { ...entry.model, clips: { sprint: 'Run' } } } }, /model.clips.sprint is not a known motion/],
       [{ 'pedestrian.adult': { ...entry, model: { ...entry.model, animated: true } } }, /is animated but binds no animation clips/],
       [[], /expected an object/],
