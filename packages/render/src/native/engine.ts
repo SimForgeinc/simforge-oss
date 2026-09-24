@@ -17,7 +17,7 @@ import {
   type RenderInputSelectionContext,
 } from '../index.js';
 import {
-  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_ROAD_DECALS, CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY, CONTROL_FEATURE_NATIVE_FRAME_INTEGRITY, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
+  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_ROAD_DECALS, CONTROL_FEATURE_NATIVE_LUMINAIRES, CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY, CONTROL_FEATURE_NATIVE_FRAME_INTEGRITY, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_VRAM_DETECTED,
 } from '../worker-control.js';
 import { RenderInputError } from '../render-input-error.js';
@@ -42,6 +42,7 @@ import { collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInput
 import { NativeGpuMemoryError, nativeSceneEstimateBytes, nativeStartupTimeoutMs, NativeTextureCapacityError, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
 import { NATIVE_GEOMETRY_LOD_MANIFEST, planNativeGeometryLod, type NativeGeometryLodMode } from './geometry-lod.js';
 import { NATIVE_ROAD_DECALS_MANIFEST, planNativeRoadDecals } from './road-decals.js';
+import { NATIVE_LUMINAIRES_MANIFEST, NATIVE_LUMINAIRES_ON_ELEVATION_DEG, orderNativeFixtures, planNativeLuminaires } from './luminaires.js';
 import { NATIVE_TEXTURE_DENSITY_MANIFEST, nativeTextureResidencyLevels, nativeTextureResidencyPlan, planNativeTextureDensity } from './texture-residency.js';
 import type { NativeTextureResidency } from './texture-residency.js';
 import { NATIVE_STAGE_TIMINGS_V1_SCHEMA, StageSamples, splitServiceStages, type NativeStageTimings } from './stage-timings.js';
@@ -291,7 +292,9 @@ export async function selectNativeRenderInputs(context: RenderInputSelectionCont
  * and are selected by its plan.
  */
 export function nativeDerivativesRead(renderTextures: RenderIntentV1['renderTextures']): readonly string[] {
-  return renderTextures === 'uastc-full' ? [NATIVE_ROAD_DECALS_MANIFEST, NATIVE_TEXTURE_DENSITY_MANIFEST] : [NATIVE_ROAD_DECALS_MANIFEST];
+  return renderTextures === 'uastc-full'
+    ? [NATIVE_ROAD_DECALS_MANIFEST, NATIVE_LUMINAIRES_MANIFEST, NATIVE_TEXTURE_DENSITY_MANIFEST]
+    : [NATIVE_ROAD_DECALS_MANIFEST, NATIVE_LUMINAIRES_MANIFEST];
 }
 
 /**
@@ -615,6 +618,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       };
       const geometryLod = await planNativeGeometryLod(renderRequest.geometryLod, closureSource);
       const roadDecals = await planNativeRoadDecals(closureSource);
+      const luminaires = await planNativeLuminaires(closureSource);
       // Per-job mip residency (texture-residency.ts): full-resolution jobs on
       // maps with the ingest-built density derivative upload only the levels
       // their cameras can sample. Admission then waits for the camera poses.
@@ -629,7 +633,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         capacityBytes: vram.capacityBytes,
         framePixels,
         cacheDirectory: options.nativeCacheDirectory,
-        extraMembers: [...(geometryLod?.members ?? []), ...(roadDecals?.members ?? [])],
+        extraMembers: [...(geometryLod?.members ?? []), ...(roadDecals?.members ?? []), ...(luminaires?.members ?? [])],
         deferCapacityCheck: textureDensity !== undefined,
       });
       // Fail in seconds, not after a startup timeout, when the device the job
@@ -800,9 +804,20 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         cloudFixedStepS: 1 / Math.max(1, ...rgbSchedules.map((schedule) => schedule.framesPerSecond)),
       });
       const look = resolvedLook;
+      // The map's street luminaires light the night (luminaires.ts). A night
+      // render of a map without the derivative says so.
+      const night = look.lighting.sun_elev_deg <= NATIVE_LUMINAIRES_ON_ELEVATION_DEG;
+      if (night && !luminaires) {
+        warnings.push({ code: 'night_luminaires_absent', message: `the sun is ${look.lighting.sun_elev_deg.toFixed(1)} deg below the horizon but the map closure carries no ${NATIVE_LUMINAIRES_MANIFEST}: street lights stay dark (a map version published before its luminaires derivative)` });
+        console.error(JSON.stringify({ event: 'native.night_luminaires_absent', jobId: context.jobId }));
+      }
+      const ordered = luminaires && orderNativeFixtures(luminaires.fixtures, cameraSchedule.flatMap((cameras) => cameras.map((camera) => camera.eye)));
+      const lighting = ordered
+        ? { ...look.lighting, night: { ...look.lighting.night, fixtures: ordered.fixtures, ...(ordered.observer ? { observer_position: ordered.observer } : {}) } }
+        : look.lighting;
       await writeJson(scenePath, {
         glbs: [masterPath],
-        lighting: look.lighting,
+        lighting,
         autoMeter: options.autoMeter ?? true,
         nearM: clipPlanes.nearM,
         farM: clipPlanes.farM,
@@ -1228,6 +1243,9 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         ...(features.has(CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK) ? { capture } : {}),
         ...(features.has(CONTROL_FEATURE_NATIVE_ROAD_DECALS) ? { roadDecals: roadDecals
           ? { manifestSha256: roadDecals.manifestSha256, buildKey: roadDecals.buildKey, opacityScale: roadDecals.opacityScale, materials: roadDecals.materials }
+          : null } : {}),
+        ...(features.has(CONTROL_FEATURE_NATIVE_LUMINAIRES) ? { luminaires: luminaires
+          ? { manifestSha256: luminaires.manifestSha256, buildKey: luminaires.buildKey, fixtures: luminaires.fixtures.length, lit: night }
           : null } : {}),
         ...(features.has(CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY) ? { textureResidency: textureResidency && textureDensity
           ? {

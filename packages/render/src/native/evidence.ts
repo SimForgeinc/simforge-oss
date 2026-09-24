@@ -103,6 +103,17 @@ export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
     materials: z.number().int().nonnegative(),
   }).nullable().optional(),
   /**
+   * The map's street luminaire derivative this render handed the service;
+   * gated by `native-evidence.luminaires`. `lit`: the sun was at or below the
+   * luminaires' switch-on elevation. null: the map carries none.
+   */
+  luminaires: z.strictObject({
+    manifestSha256: Sha256Schema,
+    buildKey: Sha256Schema,
+    fixtures: z.number().int().nonnegative(),
+    lit: z.boolean(),
+  }).nullable().optional(),
+  /**
    * The per-job mip residency this render applied
    * (docs/engineering/texture-residency.md); gated by
    * `native-evidence.texture-residency`. null: none (the map carries no

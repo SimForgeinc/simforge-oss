@@ -24,6 +24,7 @@ import { composeNativeTextureClosure } from './native-texture-closure.js';
 import { buildGeometryLod, GEOMETRY_LOD_DIR, geometryLodFingerprint } from './geometry-lod/index.js';
 import { buildRoadDecals, ROAD_DECALS_DIR, roadDecalsFingerprint } from './road-decals.js';
 import { buildTextureDensity, TEXTURE_DENSITY_DIR, textureDensityFingerprint } from './texture-density.js';
+import { buildLuminaires, LUMINAIRES_DIR, luminairesFingerprint } from './luminaires.js';
 import type { GeometryLodOptions } from './geometry-lod/index.js';
 import { vegetationLodLevels } from './vegetation-lod-levels.js';
 import { buildTexturesFullBc7, resolveGpuVariantTool, TEXTURES_FULL_BC7_DIR, textureVariantBuildKey, textureVariantFingerprint, masterKtx2Images } from './texture-variant.js';
@@ -40,6 +41,7 @@ export { composeNativeTextureClosure } from './native-texture-closure.js';
 export * from './geometry-lod/index.js';
 export * from './road-decals.js';
 export * from './texture-density.js';
+export * from './luminaires.js';
 export { substituteLods } from './geometry-lod/substitute.js';
 export type { SubstituteOptions, SubstituteReport } from './geometry-lod/substitute.js';
 
@@ -335,7 +337,7 @@ export async function masterStage(options: RunMapPipelineOptions): Promise<Maste
   const lodKey = geometryLod === false ? '' : `\0geometryLod=${geometryLodFingerprint(geometryLod, options.ktx2)}`;
   // Always-built master derivatives (pure functions of the master): their
   // builder fingerprints key the stage, so a new revision rebuilds it.
-  const derivedKey = `\0roadDecals=${roadDecalsFingerprint()}\0textureDensity=${textureDensityFingerprint()}`;
+  const derivedKey = `\0roadDecals=${roadDecalsFingerprint()}\0textureDensity=${textureDensityFingerprint()}\0luminaires=${luminairesFingerprint()}`;
   const toolFingerprint = sha256(`${sceneTool}\0sidecars=${ROAD_SIDECAR_REVISION}\0sumo=${sumoKey}\0ground=${groundKey}${lodKey}${derivedKey}`);
   const inputDigest = sha256(`${scene.closureDigest}\0${semanticDigest}`);
   const cacheKey = sha256(`${inputDigest}\0${toolFingerprint}`);
@@ -386,6 +388,8 @@ export async function masterStage(options: RunMapPipelineOptions): Promise<Maste
     // Where each texture is drawn and how densely (texture-density.ts): what
     // a render job's per-job mip residency is planned from.
     await buildTextureDensity({ masterDir: contentDir, outputDir: path.join(contentDir, ...TEXTURE_DENSITY_DIR.split('/')) });
+    // Street luminaires (luminaires.ts): the night renderer's light fixtures.
+    await buildLuminaires({ masterDir: contentDir, outputDir: path.join(contentDir, ...LUMINAIRES_DIR.split('/')) });
     await writeFile(path.join(contentDir, 'source-manifest.json'), `${canonicalJson({ schema: 'simforge.map-source-receipt.v1', name: options.name, sceneSourceDigest: sceneSource, semanticSourceDigest: semanticDigest, sceneClosureDigest: scene.closureDigest, donorDigest: donorKey, toolFingerprint })}\n`);
     const stage = await finishStage('master', outputDir, 'canonical', keys, { master: true, viewerOnly: !source.xodrPath });
     const report = JSON.parse(await readFile(path.join(contentDir, 'master-report.json'), 'utf8')) as MasterReport;

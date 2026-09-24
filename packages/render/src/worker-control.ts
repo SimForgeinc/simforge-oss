@@ -109,10 +109,18 @@ export const CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY = 'native-evidence.texture
  * and per affected camera frame.
  */
 export const CONTROL_FEATURE_NATIVE_FRAME_INTEGRITY = 'native-evidence.frame-integrity' as const;
+/**
+ * `luminaires` in the native render manifest: the map's street luminaire
+ * derivative the render handed the service (manifest digest, build key,
+ * fixture count, and whether the sun was low enough to light them), or null
+ * when the map carries none.
+ */
+export const CONTROL_FEATURE_NATIVE_LUMINAIRES = 'native-evidence.luminaires' as const;
 export const CONTROL_FEATURES_V1 = [
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK,
   CONTROL_FEATURE_RENDER_SUBSTITUTIONS, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_VRAM_DETECTED, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
   CONTROL_FEATURE_NATIVE_ROAD_DECALS, CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY, CONTROL_FEATURE_NATIVE_FRAME_INTEGRITY,
+  CONTROL_FEATURE_NATIVE_LUMINAIRES,
 ] as const;
 /**
  * Control-plane fields newer than a worker's baseline parsers, in the other
@@ -183,6 +191,7 @@ export const CONTROL_FEATURE_OUTPUTS: Readonly<Record<(typeof CONTROL_FEATURES_V
   [CONTROL_FEATURE_NATIVE_ROAD_DECALS]: ['native.manifest:roadDecals'],
   [CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY]: ['native.manifest:textureResidency'],
   [CONTROL_FEATURE_NATIVE_FRAME_INTEGRITY]: ['native.diagnostics:frameIntegrity'],
+  [CONTROL_FEATURE_NATIVE_LUMINAIRES]: ['native.manifest:luminaires'],
   [CONTROL_FEATURE_NATIVE_RENDER_CONFIG]: ['native.manifest:render', 'native.diagnostics:exposure'],
 };
 

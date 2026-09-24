@@ -1,3 +1,4 @@
+export { NATIVE_LUMINAIRES_MANIFEST, orderNativeFixtures, planNativeLuminaires } from './luminaires.js';
 export { createRenderEngine, gatedSceneSourceEvidence, resolveBinary, selectNativeRenderInputs, NATIVE_RENDER_ENGINE_ID } from './engine.js';
 export type { NativeRenderEngineOptions } from './engine.js';
 export { ShmBundleReader, TornBundleError, crc32 } from './shm-bundles.js';

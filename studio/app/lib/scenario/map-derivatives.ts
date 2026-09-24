@@ -22,6 +22,8 @@
  * - `textureDensity`: `derived/texture-density/manifest.json`, where each
  *   texture is drawn and how densely: what a render job plans its per-job
  *   mip residency from (docs/engineering/texture-residency.md)
+ * - `luminaires`: `derived/luminaires/manifest.json`, the map's street
+ *   luminaires, the night renderer's light fixtures (docs/engineering/map-luminaires.md)
  *
  * Browser (served with the browser closure through the map asset gateway):
  * - `browserVariants`: per-GPU texture tiers and browser packs at their
@@ -43,7 +45,7 @@ export const MAP_DERIVATIVE_SET_CONTRACT = "simforge.map-derivative-set.v1";
 
 export interface MapDerivativeKind {
   /** `map_versions.descriptor` key of the binding. */
-  key: "geometryLod" | "texturesFullBc7" | "roadDecals" | "textureDensity" | "browserVariants" | "browserScene";
+  key: "geometryLod" | "texturesFullBc7" | "roadDecals" | "textureDensity" | "luminaires" | "browserVariants" | "browserScene";
   /** Which closure the members extend. */
   profile: "native" | "browser";
   /** Directory of the derivative's `manifest.json`. */
@@ -58,6 +60,7 @@ export const MAP_DERIVATIVES: readonly MapDerivativeKind[] = [
   { key: "texturesFullBc7", profile: "native", directory: "derived/textures-full-bc7", prefixes: ["derived/textures-full-bc7/"], schema: "simforge.map-texture-variant.v1" },
   { key: "roadDecals", profile: "native", directory: "derived/road-decals", prefixes: ["derived/road-decals/"], schema: "simforge.map-road-decals.v1" },
   { key: "textureDensity", profile: "native", directory: "derived/texture-density", prefixes: ["derived/texture-density/"], schema: "simforge.map-texture-density.v1" },
+  { key: "luminaires", profile: "native", directory: "derived/luminaires", prefixes: ["derived/luminaires/"], schema: "simforge.map-luminaires.v1" },
   { key: "browserVariants", profile: "browser", directory: "derived/browser-variants", prefixes: ["derived/browser-variants/", "3d/variants/", "3d/packs/"], schema: "simforge.map-browser-variants.v1" },
   { key: "browserScene", profile: "browser", directory: "derived/browser-scene", prefixes: ["derived/browser-scene/", "3d/tiles/", "images/", "3d/variants/", "3d/packs/"], schema: "simforge.map-browser-scene.v1" },
 ];
