@@ -2798,7 +2798,10 @@ fn render_tick(
 fn encode_jpeg_op(state: &mut ServiceState, i: u64, items: Vec<JpegItem>) -> WireResponse {
     let t0 = std::time::Instant::now();
     let mut frames = Vec::new();
-    let mut tick_id = 0;
+    // Gather every requested frame first, then encode them in parallel (one
+    // thread per camera: each JPEG depends only on its own pixels, so the
+    // bytes do not depend on scheduling), then publish in request order.
+    let mut sources = Vec::with_capacity(items.len());
     for item in &items {
         let key = format!("{}:{}", item.sensor_id, item.pass);
         if item.pass != "rgb" {
@@ -2809,20 +2812,42 @@ fn encode_jpeg_op(state: &mut ServiceState, i: u64, items: Vec<JpegItem>) -> Wir
         let Some(cached) = state.cache.get(&key) else {
             return WireResponse::error(i, format!("no cached pass {key} (render first)"));
         };
-        let rgba = crate::carla::strip_rgba_padding(
-            &cached.data,
-            cached.width,
-            cached.height,
-            cached.stride,
-        );
-        // RGBA -> RGB.
-        let mut rgb = Vec::with_capacity(cached.width as usize * cached.height as usize * 3);
-        for px in rgba.chunks_exact(4) {
-            rgb.extend_from_slice(&px[..3]);
-        }
-        tick_id = cached.tick_id;
-        let (w, h) = (cached.width, cached.height);
-        let jpeg = match crate::carla::encode_jpeg(&rgb, w, h, item.quality) {
+        sources.push((cached, item.quality));
+    }
+    let encoded: Vec<Result<Vec<u8>, String>> = std::thread::scope(|scope| {
+        let handles: Vec<_> = sources
+            .iter()
+            .map(|(cached, quality)| {
+                scope.spawn(move || {
+                    let rgba = crate::carla::strip_rgba_padding(
+                        &cached.data,
+                        cached.width,
+                        cached.height,
+                        cached.stride,
+                    );
+                    let mut rgb =
+                        Vec::with_capacity(cached.width as usize * cached.height as usize * 3);
+                    for px in rgba.chunks_exact(4) {
+                        rgb.extend_from_slice(&px[..3]);
+                    }
+                    crate::carla::encode_jpeg(&rgb, cached.width, cached.height, *quality)
+                })
+            })
+            .collect();
+        handles
+            .into_iter()
+            .map(|handle| handle.join().expect("jpeg encoder thread"))
+            .collect()
+    });
+    let shapes: Vec<(u32, u32, u64)> = sources
+        .iter()
+        .map(|(cached, _)| (cached.width, cached.height, cached.tick_id))
+        .collect();
+    drop(sources);
+    let mut tick_id = 0;
+    for (item, ((w, h, source_tick), jpeg)) in items.iter().zip(shapes.iter().zip(encoded)) {
+        tick_id = *source_tick;
+        let jpeg = match jpeg {
             Ok(j) => j,
             Err(error) => return WireResponse::error(i, error),
         };
@@ -2830,8 +2855,8 @@ fn encode_jpeg_op(state: &mut ServiceState, i: u64, items: Vec<JpegItem>) -> Wir
             state,
             &item.sensor_id,
             "jpeg",
-            w,
-            h,
+            *w,
+            *h,
             FORMAT_JPEG,
             "jpeg",
             tick_id,
@@ -3718,38 +3743,25 @@ fn prepare_sensor_work(
 /// actor layer on the CPU, merged by the same rule as
 /// [`CombinedSensorScene`] (an actor wins only strictly nearer; its search
 /// stops at the static hit). Byte-identical to the CPU scan.
-fn gpu_lidar_scan(
+/// Trace `rays` on hardware ray queries against the static scene, then the
+/// actor layer on the CPU (one chunk of rays per ray-pool task, concatenated
+/// in ray order, so the result does not depend on scheduling). Each ray keeps
+/// the nearer of its static and actor hit, exactly as the CPU scans do.
+fn gpu_trace(
     gpu: &sensors::gpu_rays::GpuRayScene,
     combined: &CombinedSensorScene<'_>,
-    config: &sensors::lidar::LidarConfig,
-    origin: Vec3,
-    rotation: Quat,
-    instance_class: &(dyn Fn(u32) -> sensors::taxonomy::SemanticClass + Sync),
-) -> Result<Vec<sensors::lidar::LidarPoint>, String> {
-    let t0 = std::time::Instant::now();
-    let (frame, dirs) = sensors::lidar::beams(config, origin, rotation);
-    let rays: Vec<sensors::gpu_rays::Ray> = dirs
-        .iter()
-        .map(|dir| sensors::gpu_rays::Ray {
-            origin,
-            dir: *dir,
-            t_max: config.range_m,
-        })
-        .collect();
-    let t1 = std::time::Instant::now();
+    rays: &[sensors::gpu_rays::Ray],
+) -> Result<Vec<Option<Hit>>, String> {
     let statics = gpu
-        .cast_hits(combined.static_scene, &rays)
-        .map_err(|error| format!("[native_lidar_gpu_trace] {error:#}"))?;
-    let t2 = std::time::Instant::now();
-    // Actor layer on the CPU, one chunk of beams per ray-pool task; chunks
-    // are concatenated in beam order, so the result is scheduling-free.
-    let merge = |dirs: &[Vec3], statics: &[Option<Hit>]| -> Vec<Option<Hit>> {
-        dirs.iter()
+        .cast_hits(combined.static_scene, rays)
+        .map_err(|error| format!("[native_sensor_gpu_trace] {error:#}"))?;
+    let merge = |rays: &[sensors::gpu_rays::Ray], statics: &[Option<Hit>]| -> Vec<Option<Hit>> {
+        rays.iter()
             .zip(statics)
-            .map(|(dir, static_hit)| {
+            .map(|(ray, static_hit)| {
                 let static_hit = *static_hit;
-                let reach = static_hit.map_or(config.range_m, |hit| hit.distance);
-                match combined.actor_scene.cast(origin, *dir, reach) {
+                let reach = static_hit.map_or(ray.t_max, |hit| hit.distance);
+                match combined.actor_scene.cast(ray.origin, ray.dir, reach) {
                     Some(actor_hit)
                         if static_hit.is_none_or(|hit| actor_hit.distance < hit.distance) =>
                     {
@@ -3761,32 +3773,26 @@ fn gpu_lidar_scan(
             .collect()
     };
     const CHUNK: usize = 4096;
-    let hits: Vec<Option<Hit>> = sensors::RAY_POOL
+    Ok(sensors::RAY_POOL
         .scope(|scope| {
-            for (dirs, statics) in dirs.chunks(CHUNK).zip(statics.chunks(CHUNK)) {
+            for (rays, statics) in rays.chunks(CHUNK).zip(statics.chunks(CHUNK)) {
                 let merge = &merge;
-                scope.spawn(async move { merge(dirs, statics) });
+                scope.spawn(async move { merge(rays, statics) });
             }
         })
         .into_iter()
         .flatten()
-        .collect();
-    let t3 = std::time::Instant::now();
-    let points = sensors::lidar::points_from_hits(frame, &dirs, &hits, instance_class);
-    if std::env::var_os("SIMFORGE_DEBUG_LIDAR_TIMING").is_some() {
-        eprintln!(
-            "lidar-gpu: {} rays: beams {:.1} ms, trace {:.1} ms, actors {:.1} ms, points {:.1} ms",
-            rays.len(),
-            (t1 - t0).as_secs_f64() * 1e3,
-            (t2 - t1).as_secs_f64() * 1e3,
-            (t3 - t2).as_secs_f64() * 1e3,
-            t3.elapsed().as_secs_f64() * 1e3
-        );
-    }
-    Ok(points)
+        .collect())
 }
 
 /// Build the actor scene and run every scan of `work` (pure; any thread).
+///
+/// With hardware rays (`lidarBackend` gpu/auto on a capable device) every
+/// lidar AND radar beam of the tick is traced in one dispatch; the radar
+/// fan and its detection rule are shared with the CPU scan
+/// (`sensors::radar::{beams, detections_from_hits}`, same f32 arithmetic),
+/// so the CSV is byte-identical to the CPU radar. `verify` re-scans every
+/// sensor on the CPU and fails the bundle on any byte difference.
 fn run_sensor_work(
     scenes: &MapSensorScenes,
     work: &SensorWork,
@@ -3819,109 +3825,176 @@ fn run_sensor_work(
             }
         }
     };
-    let mut payloads = Vec::with_capacity(work.lidars.len() + work.radars.len());
-    let mut error = None;
-    let lidar_gpu = scenes.gpu.is_some() && backend != LidarBackend::Cpu;
-    let started = std::time::Instant::now();
-    for job in &work.lidars {
-        let points = match (&scenes.gpu, lidar_gpu) {
-            (Some(gpu), true) => match gpu_lidar_scan(
-                gpu,
-                &combined_scene,
-                &job.config,
-                job.origin,
-                job.rotation,
-                &instance_class,
-            ) {
-                Ok(points) => {
-                    if backend == LidarBackend::Verify {
-                        let reference = sensors::lidar::scan(
-                            &combined_scene,
-                            &job.config,
-                            job.origin,
-                            job.rotation,
-                            &instance_class,
-                        );
-                        let bytes = |points: &[sensors::lidar::LidarPoint]| {
-                            sensors::formats::encode_lidar_ply_binary(points)
-                        };
-                        if bytes(&points) != bytes(&reference) {
-                            error = Some(format!(
-                                "[native_lidar_gpu_parity] lidar {}: hardware rays ({} points) differ from the CPU reference ({} points)",
-                                job.sensor_id,
-                                points.len(),
-                                reference.len()
-                            ));
-                        }
-                    }
-                    points
-                }
-                Err(message) => {
-                    error = Some(message);
-                    Vec::new()
-                }
-            },
-            _ => sensors::lidar::scan(
-                &combined_scene,
-                &job.config,
-                job.origin,
-                job.rotation,
-                &instance_class,
-            ),
-        };
-        payloads.push(SensorPayload {
-            sensor_id: job.sensor_id.clone(),
-            pass: "lidar",
-            format_tag: if job.binary {
-                FORMAT_LIDAR_BINARY
-            } else {
-                FORMAT_LIDAR_PLY
-            },
-            format_name: if job.binary {
-                "ply-binary"
-            } else {
-                "ply-ascii"
-            },
-            count: points.len() as u32,
-            data: if job.binary {
-                sensors::formats::encode_lidar_ply_binary(&points)
-            } else {
-                sensors::formats::encode_lidar_ply(&points)
-            },
-        });
-    }
-    let lidar_ms = started.elapsed().as_secs_f64() * 1000.0;
-    let started = std::time::Instant::now();
-    for job in &work.radars {
-        let detections = sensors::radar::scan(
-            &combined_scene,
-            &job.config,
-            job.origin,
-            job.rotation,
-            job.host_velocity,
-            &|instance_id| match work.instance_velocities.get(&instance_id) {
-                Some(velocity) => *velocity,
-                // Static geometry does not move.
-                None if work.static_classes.contains_key(&instance_id) => Vec3::ZERO,
-                None => {
-                    unknown
-                        .lock()
-                        .expect("unknown-instance set")
-                        .insert(instance_id);
-                    Vec3::ZERO
-                }
-            },
-        );
-        payloads.push(SensorPayload {
+    let velocity = |instance_id: u32| match work.instance_velocities.get(&instance_id) {
+        Some(velocity) => *velocity,
+        // Static geometry does not move.
+        None if work.static_classes.contains_key(&instance_id) => Vec3::ZERO,
+        None => {
+            unknown
+                .lock()
+                .expect("unknown-instance set")
+                .insert(instance_id);
+            Vec3::ZERO
+        }
+    };
+    let lidar_payload = |job: &LidarJob, points: &[sensors::lidar::LidarPoint]| SensorPayload {
+        sensor_id: job.sensor_id.clone(),
+        pass: "lidar",
+        format_tag: if job.binary {
+            FORMAT_LIDAR_BINARY
+        } else {
+            FORMAT_LIDAR_PLY
+        },
+        format_name: if job.binary {
+            "ply-binary"
+        } else {
+            "ply-ascii"
+        },
+        count: points.len() as u32,
+        data: if job.binary {
+            sensors::formats::encode_lidar_ply_binary(points)
+        } else {
+            sensors::formats::encode_lidar_ply(points)
+        },
+    };
+    let radar_payload =
+        |job: &RadarJob, detections: &[sensors::radar::RadarDetection]| SensorPayload {
             sensor_id: job.sensor_id.clone(),
             pass: "radar",
             format_tag: FORMAT_RADAR_CSV,
             format_name: "radar-csv",
             count: detections.len() as u32,
-            data: sensors::formats::encode_radar_csv(&detections),
-        });
+            data: sensors::formats::encode_radar_csv(detections),
+        };
+    let mut payloads = Vec::with_capacity(work.lidars.len() + work.radars.len());
+    let mut error = None;
+    let lidar_gpu = scenes.gpu.is_some() && backend != LidarBackend::Cpu;
+    let (lidar_ms, radar_ms);
+    match (&scenes.gpu, lidar_gpu) {
+        (Some(gpu), true) => {
+            let started = std::time::Instant::now();
+            let mut rays: Vec<sensors::gpu_rays::Ray> = Vec::new();
+            let mut lidar_spans = Vec::with_capacity(work.lidars.len());
+            for job in &work.lidars {
+                let (frame, dirs) = sensors::lidar::beams(&job.config, job.origin, job.rotation);
+                let start = rays.len();
+                rays.extend(dirs.iter().map(|dir| sensors::gpu_rays::Ray {
+                    origin: job.origin,
+                    dir: *dir,
+                    t_max: job.config.range_m,
+                }));
+                lidar_spans.push((frame, dirs, start));
+            }
+            let mut radar_spans = Vec::with_capacity(work.radars.len());
+            for job in &work.radars {
+                let beams = sensors::radar::beams(&job.config, job.origin, job.rotation);
+                let start = rays.len();
+                rays.extend(beams.iter().map(|beam| sensors::gpu_rays::Ray {
+                    origin: job.origin,
+                    dir: beam.dir_world,
+                    t_max: job.config.range_m,
+                }));
+                radar_spans.push((beams, start));
+            }
+            match gpu_trace(gpu, &combined_scene, &rays) {
+                Ok(hits) => {
+                    for (job, (frame, dirs, start)) in work.lidars.iter().zip(lidar_spans) {
+                        let points = sensors::lidar::points_from_hits(
+                            frame,
+                            &dirs,
+                            &hits[start..start + dirs.len()],
+                            &instance_class,
+                        );
+                        if backend == LidarBackend::Verify {
+                            let reference = sensors::lidar::scan(
+                                &combined_scene,
+                                &job.config,
+                                job.origin,
+                                job.rotation,
+                                &instance_class,
+                            );
+                            let bytes = |points: &[sensors::lidar::LidarPoint]| {
+                                sensors::formats::encode_lidar_ply_binary(points)
+                            };
+                            if bytes(&points) != bytes(&reference) {
+                                error = Some(format!(
+                                    "[native_lidar_gpu_parity] lidar {}: hardware rays ({} points) differ from the CPU reference ({} points)",
+                                    job.sensor_id,
+                                    points.len(),
+                                    reference.len()
+                                ));
+                            }
+                        }
+                        payloads.push(lidar_payload(job, &points));
+                    }
+                    lidar_ms = started.elapsed().as_secs_f64() * 1000.0;
+                    let started = std::time::Instant::now();
+                    for (job, (beams, start)) in work.radars.iter().zip(radar_spans) {
+                        let detections = sensors::radar::detections_from_hits(
+                            &beams,
+                            &hits[start..start + beams.len()],
+                            job.host_velocity,
+                            &velocity,
+                        );
+                        if backend == LidarBackend::Verify {
+                            let reference = sensors::radar::scan(
+                                &combined_scene,
+                                &job.config,
+                                job.origin,
+                                job.rotation,
+                                job.host_velocity,
+                                &velocity,
+                            );
+                            if sensors::formats::encode_radar_csv(&reference)
+                                != sensors::formats::encode_radar_csv(&detections)
+                            {
+                                error = Some(format!(
+                                    "[native_radar_gpu_parity] radar {}: hardware rays ({} detections) differ from the CPU reference ({})",
+                                    job.sensor_id,
+                                    detections.len(),
+                                    reference.len()
+                                ));
+                            }
+                        }
+                        payloads.push(radar_payload(job, &detections));
+                    }
+                    radar_ms = started.elapsed().as_secs_f64() * 1000.0;
+                }
+                Err(message) => {
+                    error = Some(message);
+                    lidar_ms = started.elapsed().as_secs_f64() * 1000.0;
+                    radar_ms = 0.0;
+                }
+            }
+        }
+        _ => {
+            let started = std::time::Instant::now();
+            for job in &work.lidars {
+                let points = sensors::lidar::scan(
+                    &combined_scene,
+                    &job.config,
+                    job.origin,
+                    job.rotation,
+                    &instance_class,
+                );
+                payloads.push(lidar_payload(job, &points));
+            }
+            lidar_ms = started.elapsed().as_secs_f64() * 1000.0;
+            let started = std::time::Instant::now();
+            for job in &work.radars {
+                let detections = sensors::radar::scan(
+                    &combined_scene,
+                    &job.config,
+                    job.origin,
+                    job.rotation,
+                    job.host_velocity,
+                    &velocity,
+                );
+                payloads.push(radar_payload(job, &detections));
+            }
+            radar_ms = started.elapsed().as_secs_f64() * 1000.0;
+        }
     }
-    let radar_ms = started.elapsed().as_secs_f64() * 1000.0;
     let unknown_instances = unknown
         .into_inner()
         .expect("unknown-instance set")
