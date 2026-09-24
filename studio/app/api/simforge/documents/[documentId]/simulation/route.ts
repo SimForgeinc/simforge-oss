@@ -5,13 +5,15 @@ import { ResolveScenarioSimulationSchema } from "@/app/lib/scenario/contracts";
 import { resolveDocumentSimulation } from "@/app/lib/scenario/document-simulation";
 import { readJson, requireScenarioContext, SCENARIO_PRIVATE_CACHE_HEADERS } from "@/app/lib/scenario/http";
 import { SimulationClosureUnavailableError } from "@/app/lib/scenario/sim-closure.server";
+import { SimulationRetryRefusedError } from "@/app/lib/scenario/sim-result-store";
 
 type Context = { params: Promise<{ documentId: string }> };
 
 /**
  * The authoritative simulation of the document's current draft: memoized by
  * content, joined when in flight, executed inline otherwise. The client sends
- * nothing but the draft version it is looking at.
+ * nothing but the draft version it is looking at, and `retry: true` to explicitly
+ * retry a failed simulation (409 `simulation_retry_limit_reached` past the bound).
  */
 export async function POST(request: Request, route: Context) {
   const auth = await requireScenarioContext();
@@ -37,6 +39,13 @@ export async function POST(request: Request, route: Context) {
       { status: result.status.state === "succeeded" || result.status.state === "failed" ? 200 : 202, headers: SCENARIO_PRIVATE_CACHE_HEADERS },
     );
   } catch (error) {
+    if (error instanceof SimulationRetryRefusedError) {
+      // The request stays failed; the refusal is explicit, never a silent no-op.
+      return NextResponse.json(
+        { error: error.code, message: error.message, status: error.status },
+        { status: 409, headers: SCENARIO_PRIVATE_CACHE_HEADERS },
+      );
+    }
     if (error instanceof GalleryCatalogResolutionError) {
       return NextResponse.json({ error: error.code, message: error.message, missing: error.missing }, { status: 422, headers: SCENARIO_PRIVATE_CACHE_HEADERS });
     }

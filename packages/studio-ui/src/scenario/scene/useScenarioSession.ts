@@ -182,7 +182,7 @@ export function useScenarioSession({
   const [sumoStatus, setSumoStatus] = useState<SumoTrafficStatus>(DISABLED_SUMO_STATUS);
   const [simulationVerification, setSimulationVerification] = useState<SimulationVerificationState>({ status: "local" });
   const [simulationEngineChange, setSimulationEngineChange] = useState<DraftEngineChange | null>(null);
-  const verifyPreviewRef = useRef<((nextBundle: PlaybackBundle, force?: boolean) => void) | null>(null);
+  const verifyPreviewRef = useRef<((nextBundle: PlaybackBundle, force?: boolean, retry?: boolean) => void) | null>(null);
   const workerRef = useRef<ScenarioWorkerClient | null>(null);
   /** The one in-flight or completed verification of the current trace, by content identity and saved version. */
   const verificationRef = useRef<{ key: string; abort: AbortController } | null>(null);
@@ -301,7 +301,8 @@ export function useScenarioSession({
     // the saved draft, once per (content, version). Unsaved edits stay "Local
     // preview": the autosave that lands later re-enters this effect and
     // verifies the same in-memory trace. Nothing is uploaded.
-    const verifyPreview = (nextBundle: PlaybackBundle, force = false) => {
+    // `retry` asks the host to run a failed simulation again (the user's explicit Retry).
+    const verifyPreview = (nextBundle: PlaybackBundle, force = false, retry = false) => {
       const persisted = persistedDocumentIdentityRef.current;
       if (persisted?.id !== document.id || persisted.contentIdentity !== sourceContentIdentity) {
         setSimulationVerification({ status: "local", detail: "Unsaved edits" });
@@ -319,10 +320,19 @@ export function useScenarioSession({
       setSimulationVerification({ status: "verifying" });
       void (async () => {
         for (let attempt = 0; attempt < VERIFY_ATTEMPTS && current(); attempt += 1) {
-          const status = await studioHost.projects.resolveSimulation(target, { waitMs: VERIFY_WAIT_MS, signal: abort.signal });
+          const status = await studioHost.projects.resolveSimulation(target, {
+            waitMs: VERIFY_WAIT_MS,
+            signal: abort.signal,
+            ...(retry && attempt === 0 ? { retry: true } : {}),
+          });
           if (!current()) return;
           if (status.state === "failed") {
-            setSimulationVerification({ status: "unavailable", message: status.message ?? status.failureCode });
+            setSimulationVerification({
+              status: "failed",
+              failureCode: status.failureCode,
+              message: status.message,
+              retriesRemaining: status.retriesRemaining ?? null,
+            });
             return;
           }
           if (status.state !== "succeeded") {
@@ -600,7 +610,10 @@ export function useScenarioSession({
       inspecting,
       simulationVerification,
       retrySimulationVerification: () => {
-        if (bundle) verifyPreviewRef.current?.(bundle, true);
+        if (!bundle) return;
+        // A failed simulation the host still allows retrying is re-run; anything else is re-checked.
+        const retry = simulationVerification.status === "failed" && (simulationVerification.retriesRemaining ?? 0) > 0;
+        verifyPreviewRef.current?.(bundle, true, retry);
       },
       simulationEngineChange,
       clearSimulationEngineChange: () => setSimulationEngineChange(null),

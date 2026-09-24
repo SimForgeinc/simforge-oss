@@ -25,6 +25,7 @@ import {
   type SimulationTimeline,
   SIMULATION_MAP_MEMBERS,
   simulationMemberSqlPredicate,
+  SIMFORGE_OSS_RELEASE,
 } from "@simforge-oss/compiler/node";
 import type {
   RevisionSimulationReason,
@@ -103,6 +104,51 @@ export class SimulationFailedError extends Error {
   }
 }
 
+/**
+ * The attempt budget a request gets when it is created (the `max_attempts` column default) and
+ * again each time a failed request is requeued: `max_attempts = attempt_count + budget`.
+ */
+export const SIMULATION_ATTEMPT_BUDGET = 3;
+/** Explicit user retries of one request, at most, over its lifetime (`manual_retry_count`). */
+export const SIMULATION_MANUAL_RETRY_LIMIT = 3;
+
+/** An explicit retry the store refuses (`simulation_retry_limit_reached`); the request stays failed. */
+export class SimulationRetryRefusedError extends Error {
+  constructor(readonly code: "simulation_retry_limit_reached", message: string, readonly status: ScenarioSimulationStatusDto) {
+    super(message);
+    this.name = "SimulationRetryRefusedError";
+  }
+}
+
+/**
+ * The code a failed request ran under, as one string: the TypeScript pipeline revision, the
+ * engine's semantics version, the engine build and the OSS release. The first three are request
+ * key material, so a change of them already makes a new request; the OSS release is not, and it is
+ * where fixes to the host's JavaScript land. A failed request whose recorded revision differs from
+ * this one (or that has none: failures recorded before rc.76) is requeued once with a fresh
+ * attempt budget the next time it is resolved; under the same revision it stays failed.
+ */
+export function simulationExecutionRevision(parts: {
+  pipeline?: number;
+  engineSemVer?: string;
+  engineBuild?: string;
+  ossRelease?: string;
+} = {}): string {
+  const build = parts.engineBuild ?? engineBuildIdentity();
+  return [
+    `pipeline=${parts.pipeline ?? SIMULATION_PIPELINE_REVISION}`,
+    `engine=${parts.engineSemVer ?? engineSemantics().engineSemVer}`,
+    `build=${build}`,
+    `oss=${parts.ossRelease ?? SIMFORGE_OSS_RELEASE}`,
+  ].join(";");
+}
+
+/** The engine build as the request key names it: the addon digest, else `engineVersion:abiVersion`. */
+function engineBuildIdentity(): string {
+  const build = engineBuildProvenance();
+  return String(build.addonSha256 ?? `${build.engineVersion}:${build.abiVersion}`);
+}
+
 function artifactBucket() {
   return simforgeEnv("ARTIFACT_BUCKET")?.trim() || "local-artifacts";
 }
@@ -142,7 +188,6 @@ async function requestIdentity(subject: SimulationSubject): Promise<RequestIdent
   const catalogEntries = await catalogEntriesFor(subject.canonicalContent);
   const catalogSha256 = canonicalJsonSha256(catalogEntries);
   const { engineSemVer } = engineSemantics();
-  const build = engineBuildProvenance();
   const requestKey = canonicalJsonSha256({
     contract: REQUEST_CONTRACT,
     // Simulation-relevant content only (WS-A `simContentHash`): a rename, a
@@ -155,7 +200,7 @@ async function requestIdentity(subject: SimulationSubject): Promise<RequestIdent
     // The request key is a memo of what a request resolves to, not an identity:
     // a new engine build or pipeline revision re-resolves once and then dedupes
     // into the same `sim_key` whenever the semantics did not change.
-    engineBuild: build.addonSha256 ?? `${build.engineVersion}:${build.abiVersion}`,
+    engineBuild: engineBuildIdentity(),
     pipeline: SIMULATION_PIPELINE_REVISION,
     // SUMO documents: the network and the pinned runtime their traffic step runs.
     sumo: sumoStepIdentity(subject.canonicalContent, map.sumoNetworkSha256),
@@ -266,12 +311,15 @@ type RequestRow = {
   lease_expires_at: string | null;
   attempt_count: number;
   max_attempts: number;
+  failed_under_revision: string | null;
+  manual_retry_count: number;
 };
 
 async function readRequest(workspaceId: string, requestKey: string): Promise<RequestRow | null> {
   return queryOne<RequestRow>(
     `SELECT request_key, request_state, sim_key, failure_code, failure_detail,
-            lease_expires_at::text AS lease_expires_at, attempt_count, max_attempts
+            lease_expires_at::text AS lease_expires_at, attempt_count, max_attempts,
+            failed_under_revision, manual_retry_count
        FROM simforge.sim_requests WHERE workspace_id = :workspace_id AND request_key = :request_key`,
     { workspace_id: workspaceId, request_key: requestKey },
   );
@@ -284,11 +332,15 @@ async function statusOf(workspaceId: string, request: RequestRow): Promise<Scena
   }
   if (request.request_state === "failed") {
     const detail = parseJsonObject(request.failure_detail as string | Record<string, unknown> | null) ?? {};
+    const retriesRemaining = Math.max(0, SIMULATION_MANUAL_RETRY_LIMIT - Number(request.manual_retry_count ?? 0));
     return {
       state: "failed",
       requestKey: request.request_key,
       failureCode: request.failure_code ?? "simulation_failed",
       message: typeof detail.message === "string" ? detail.message : null,
+      failedUnder: request.failed_under_revision,
+      retryable: retriesRemaining > 0,
+      retriesRemaining,
     };
   }
   return { state: request.request_state === "running" ? "running" : "queued", requestKey: request.request_key };
@@ -590,7 +642,7 @@ export async function failSimulationRequest(input: {
     `UPDATE simforge.sim_requests
         SET request_state = CASE WHEN :retryable AND attempt_count < max_attempts THEN 'queued' ELSE 'failed' END,
             failure_code = :code, failure_detail = CAST(:detail AS jsonb), lease_expires_at = NULL,
-            updated_at = NOW(),
+            failed_under_revision = :revision, updated_at = NOW(),
             completed_at = CASE WHEN :retryable AND attempt_count < max_attempts THEN NULL ELSE NOW() END
       WHERE workspace_id = :workspace_id AND request_key = :request_key
         AND request_state = 'running' AND fence_token_sha256 = :fence
@@ -602,8 +654,64 @@ export async function failSimulationRequest(input: {
       retryable: input.retryable,
       code: input.code.slice(0, 100),
       detail: { message: input.message.slice(0, 2000) },
+      revision: simulationExecutionRevision(),
     },
   );
+}
+
+/**
+ * A running request whose lease expired after its last attempt can be claimed by no one: close it
+ * as failed (`simulation_lease_expired`) under the current revision instead of leaving it
+ * `running` forever. `requestKey` narrows it to one request; without it every such row is closed.
+ */
+async function failExhaustedLeases(target?: { workspaceId: string; requestKey: string }): Promise<void> {
+  await queryRows(
+    `UPDATE simforge.sim_requests
+        SET request_state = 'failed', failure_code = 'simulation_lease_expired',
+            failure_detail = CAST(:detail AS jsonb), failed_under_revision = :revision,
+            lease_expires_at = NULL, completed_at = NOW(), updated_at = NOW()
+      WHERE request_state = 'running' AND lease_expires_at < NOW() AND attempt_count >= max_attempts
+        ${target ? "AND workspace_id = :workspace_id AND request_key = :request_key" : ""}
+      RETURNING request_key`,
+    {
+      detail: { message: "The simulation's executor stopped before finishing its last attempt." },
+      revision: simulationExecutionRevision(),
+      ...(target ? { workspace_id: target.workspaceId, request_key: target.requestKey } : {}),
+    },
+  );
+}
+
+/**
+ * Put a failed request back in the queue with a fresh attempt budget. `automatic` requeues a
+ * request that failed under another execution revision (or before revisions were recorded);
+ * `manual` is the user's explicit retry and counts against {@link SIMULATION_MANUAL_RETRY_LIMIT}.
+ * Compare-and-set on the failed row: false when it was not (or no longer) eligible.
+ */
+async function requeueFailedRequest(
+  workspaceId: string,
+  requestKey: string,
+  kind: "automatic" | "manual",
+  revision: string,
+): Promise<boolean> {
+  const rows = await queryRows<{ request_key: string }>(
+    `UPDATE simforge.sim_requests
+        SET request_state = 'queued', max_attempts = attempt_count + :budget, completed_at = NULL,
+            lease_expires_at = NULL, updated_at = NOW()
+            ${kind === "manual" ? ", manual_retry_count = manual_retry_count + 1" : ""}
+      WHERE workspace_id = :workspace_id AND request_key = :request_key AND request_state = 'failed'
+        AND ${kind === "manual"
+          ? "failed_under_revision IS NOT DISTINCT FROM :revision AND manual_retry_count < :manual_limit"
+          : "failed_under_revision IS DISTINCT FROM :revision"}
+      RETURNING request_key`,
+    {
+      workspace_id: workspaceId,
+      request_key: requestKey,
+      budget: SIMULATION_ATTEMPT_BUDGET,
+      revision,
+      manual_limit: SIMULATION_MANUAL_RETRY_LIMIT,
+    },
+  );
+  return rows.length > 0;
 }
 
 type InlineExecutor = (subject: SimulationSubject) => Promise<AuthoritativeSimulation>;
@@ -689,7 +797,7 @@ async function executeInline(
  */
 export async function resolveSimulation(
   subject: SimulationSubject,
-  options: { waitMs?: number; inline?: boolean } = {},
+  options: { waitMs?: number; inline?: boolean; retry?: boolean } = {},
 ): Promise<ScenarioSimulationStatusDto> {
   const identity = await requestIdentity(subject);
   const { workspaceId } = subject;
@@ -716,15 +824,35 @@ export async function resolveSimulation(
         user_id: subject.userId,
       },
     );
-  } else if (request.request_state === "failed" && request.attempt_count < request.max_attempts) {
-    // A retryable failure left attempts: requeue it for whoever asks next.
-    await queryRows(
-      `UPDATE simforge.sim_requests SET request_state = 'queued', updated_at = NOW()
-        WHERE workspace_id = :workspace_id AND request_key = :request_key AND request_state = 'failed'
-          AND attempt_count < max_attempts AND failure_code NOT LIKE 'template_invalid%'
-      RETURNING request_key`,
-      { workspace_id: workspaceId, request_key: identity.requestKey },
-    );
+  } else {
+    if (request.request_state === "running") {
+      await failExhaustedLeases({ workspaceId, requestKey: identity.requestKey });
+      request = await readRequest(workspaceId, identity.requestKey);
+    }
+    if (request?.request_state === "failed") {
+      // The retry policy (simulation-results.md, "Failed requests"): a failure recorded under
+      // another execution revision is retried once, automatically; under the same revision it
+      // stays failed unless the user explicitly retries, at most SIMULATION_MANUAL_RETRY_LIMIT times.
+      const revision = simulationExecutionRevision();
+      if (request.failed_under_revision !== revision) {
+        if (await requeueFailedRequest(workspaceId, identity.requestKey, "automatic", revision)) {
+          console.info(
+            `[simulation] requeued ${identity.requestKey} (failed ${request.failure_code ?? "simulation_failed"} under ${request.failed_under_revision ?? "an unrecorded revision"}, now ${revision})`,
+          );
+        }
+      } else if (options.retry) {
+        if (!(await requeueFailedRequest(workspaceId, identity.requestKey, "manual", revision))) {
+          const current = await readRequest(workspaceId, identity.requestKey);
+          if (current?.request_state === "failed") {
+            throw new SimulationRetryRefusedError(
+              "simulation_retry_limit_reached",
+              `This simulation was already retried ${Number(current.manual_retry_count)} times (the limit is ${SIMULATION_MANUAL_RETRY_LIMIT}); it runs again only when the engine, pipeline or release changes (now ${revision}).`,
+              await statusOf(workspaceId, current),
+            );
+          }
+        }
+      }
+    }
   }
   if ((options.inline ?? true) && inlineSimulationEnabled()) {
     const claim = await claimRequest(workspaceId, identity.requestKey, inlineProducer(), INLINE_LEASE_SECONDS);
@@ -758,6 +886,10 @@ const MAP_MEMBER_PATHS = ["3d/manifest.json", ...SIMULATION_MAP_MEMBERS.exact] a
  * members the editor loads (plus the collider derivative the manifest names).
  */
 export async function claimSimulationJob(input: { workerId: string; leaseSeconds: number }) {
+  // Failed rows are terminal for the runner: only `resolveSimulation` requeues them (a revision
+  // change or an explicit retry), after which they are claimable like any queued row. A dead
+  // executor's last attempt is closed as failed here so it does not sit `running` forever.
+  await failExhaustedLeases();
   const candidates = await queryRows<{ workspace_id: string; request_key: string }>(
     `SELECT workspace_id, request_key FROM simforge.sim_requests
       WHERE attempt_count < max_attempts

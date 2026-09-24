@@ -181,18 +181,39 @@ describe("scenario session trace residency", () => {
     expect(resolveSimulation).toHaveBeenCalledTimes(2);
   });
 
-  it("reports an unavailable simulation and retries without rebuilding the playable trace", async () => {
+  it("reports a failed simulation from a host without explicit retries and re-checks without rebuilding the playable trace", async () => {
     const { services, resolveSimulation } = host(documentAt(1));
     resolveSimulation.mockImplementationOnce(async () => ({
       state: "failed", requestKey: "r".repeat(64), draftVersion: 1, failureCode: "simulation_failed", message: "Runner offline",
     }) as never);
     worker.prepare.mockImplementation(async () => fakeBundle("retry"));
     const rendered = renderSession(services);
-    await waitFor(() => expect(rendered.result.current.playback.simulationVerification).toMatchObject({ status: "unavailable", message: "Runner offline" }));
+    await waitFor(() => expect(rendered.result.current.playback.simulationVerification).toEqual({
+      status: "failed", failureCode: "simulation_failed", message: "Runner offline", retriesRemaining: null,
+    }));
     const trace = rendered.result.current.bundle;
     act(() => rendered.result.current.playback.retrySimulationVerification?.());
     await waitFor(() => expect(rendered.result.current.playback.simulationVerification?.status).toBe("verified"));
+    // A host before rc.76 rejects `retry`: the editor only re-checks.
+    expect(resolveSimulation.mock.calls[1]?.[1]).not.toHaveProperty("retry");
     expect(rendered.result.current.bundle).toBe(trace);
+    expect(worker.prepare).toHaveBeenCalledTimes(1);
+  });
+
+  it("explicitly retries a failed simulation the host still allows retrying", async () => {
+    const { services, resolveSimulation } = host(documentAt(1));
+    resolveSimulation.mockImplementationOnce(async () => ({
+      state: "failed", requestKey: "r".repeat(64), draftVersion: 1, failureCode: "template_invalid", message: null,
+      failedUnder: "pipeline=4;engine=0.8.0;build=b;oss=0.1.0-rc.75.1", retryable: true, retriesRemaining: 2,
+    }) as never);
+    worker.prepare.mockImplementation(async () => fakeBundle("retry"));
+    const rendered = renderSession(services);
+    await waitFor(() => expect(rendered.result.current.playback.simulationVerification).toEqual({
+      status: "failed", failureCode: "template_invalid", message: null, retriesRemaining: 2,
+    }));
+    act(() => rendered.result.current.playback.retrySimulationVerification?.());
+    await waitFor(() => expect(rendered.result.current.playback.simulationVerification?.status).toBe("verified"));
+    expect(resolveSimulation.mock.calls[1]?.[1]).toMatchObject({ retry: true });
     expect(worker.prepare).toHaveBeenCalledTimes(1);
   });
 

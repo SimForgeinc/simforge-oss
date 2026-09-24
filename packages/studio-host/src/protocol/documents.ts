@@ -404,7 +404,16 @@ export type CreateRevisionRequest = {
   idempotencyKey: string;
 };
 
-export type ResolveSimulationRequest = { expectedVersion?: number; waitMs?: number };
+export type ResolveSimulationRequest = {
+  expectedVersion?: number;
+  waitMs?: number;
+  /**
+   * Explicitly retry a failed simulation of the draft with a fresh attempt budget (bounded per
+   * request; beyond it the host answers 409 `simulation_retry_limit_reached`). Hosts before rc.76
+   * reject the field, so send it only when a failed status carried `retryable: true`.
+   */
+  retry?: true;
+};
 /**
  * The draft's authoritative simulation. `engineChange` is set when the draft is unchanged but its
  * result moved (an engine upgrade) and the motion differs: the editor offers to keep the old motion.

@@ -176,10 +176,12 @@ export interface StudioProjectService {
   /**
    * The authoritative simulation of a document's current draft. `waitMs`
    * bounds how long the host waits on an execution someone else holds.
+   * `retry` explicitly retries a failed simulation (only when its status was
+   * `retryable`; past the host's bound it raises `simulation_retry_limit_reached`).
    */
   resolveSimulation(
     document: Pick<ScenarioDocumentDto, "id" | "draftVersion">,
-    options?: { waitMs?: number; signal?: AbortSignal },
+    options?: { waitMs?: number; retry?: boolean; signal?: AbortSignal },
   ): Promise<DraftSimulationStatusDto>;
   /** One immutable authoritative result by key. */
   getSimulation(simKey: string, signal?: AbortSignal): Promise<ScenarioSimulationResultDto>;

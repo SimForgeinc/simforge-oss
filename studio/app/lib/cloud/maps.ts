@@ -520,7 +520,13 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
     if (!(error instanceof CloudConnectionError)) throw error;
     reachability = { reachable: false, message: error.message };
   }
-  const pending = upstream.filter((map) => !seen.has(map.sourceMapId));
+  // An upstream or bundled descriptor is a copy made elsewhere (the bundle at
+  // build time); it cannot know that this installation retired that version
+  // since. Without this, a source map whose newest local version is not yet
+  // browsable fell back to the bundled descriptor even when it names a retired
+  // version, and the catalog listed the retired version again.
+  const retired = await retiredMapVersionIds(upstream.map((map) => map.mapVersionId));
+  const pending = upstream.filter((map) => !seen.has(map.sourceMapId) && !retired.has(map.mapVersionId));
   // Cache plans are fetched for their sizes alone, so they are worth a request
   // only when there is an uninstalled map to put a size on.
   const upstreamBytes = pending.length > 0 ? await upstreamClosureBytes(deadline, signal) : null;
@@ -538,6 +544,18 @@ export async function readLocalMapCatalog(signal?: AbortSignal): Promise<LocalMa
     });
   }
   return { maps, upstream: reachability };
+}
+
+/** Of `mapVersionIds`, the ones this installation's registry holds as retired. */
+export async function retiredMapVersionIds(mapVersionIds: readonly string[]): Promise<Set<string>> {
+  if (mapVersionIds.length === 0) return new Set();
+  const rows = await queryRows<{ id: string }>(
+    `SELECT id FROM simforge.map_versions
+      WHERE retired_at IS NOT NULL
+        AND id IN (SELECT value FROM jsonb_array_elements_text(CAST(:map_version_ids AS jsonb)))`,
+    { map_version_ids: [...new Set(mapVersionIds)] },
+  );
+  return new Set(rows.map((row) => row.id));
 }
 
 export async function listLocalMapCatalog(signal?: AbortSignal): Promise<LocalMapDescriptor[]> {

@@ -70,7 +70,10 @@ ARG CARLA_ASSET_REGISTRY_SHA256
 USER root
 # The pack's worlds were cooked by one engine build; loose cooked packages are
 # only valid for that build. Refuse to stack them on any other binary.
-RUN test -n "$SOURCE_REVISION" && test -n "$IMAGE_VERSION" && test -n "$CARLA_WORLDS" \
+# SOURCE_REVISION becomes the org.opencontainers.image.revision label, from which
+# every launcher derives SIMFORGE_WORKER_REVISION (40-hex) and refuses to start
+# the worker without it; refuse to build an image that cannot carry it.
+RUN printf '%s' "$SOURCE_REVISION" | grep -Eqx '[0-9a-f]{40}' && test -n "$IMAGE_VERSION" && test -n "$CARLA_WORLDS" \
  && echo "$CARLA_ENGINE_BINARY_SHA256  /home/carla/CarlaUnreal/Binaries/Linux/CarlaUnreal-Linux-Shipping" | sha256sum -c -
 COPY --from=world-pack --chown=carla:carla /out/ /home/carla/
 COPY --from=python-build /wheels /tmp/wheels

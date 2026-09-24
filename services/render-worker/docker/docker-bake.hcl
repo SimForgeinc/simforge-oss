@@ -1,7 +1,7 @@
 variable "SOURCE_REVISION" {
   validation {
-    condition = SOURCE_REVISION != ""
-    error_message = "SOURCE_REVISION must be an immutable source commit SHA"
+    condition = can(regex("^[0-9a-f]{40}$", SOURCE_REVISION))
+    error_message = "SOURCE_REVISION must be the immutable 40-hex source commit SHA (it becomes the org.opencontainers.image.revision label launchers derive SIMFORGE_WORKER_REVISION from)"
   }
 }
 

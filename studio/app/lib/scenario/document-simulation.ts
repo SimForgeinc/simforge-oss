@@ -17,13 +17,16 @@ import { resolveSimulation } from "./sim-result-store";
  * author as an explicit re-pin, never substituted. The editor compares its local preview against
  * this; nothing the client uploads takes part.
  *
+ * `retry` is the user's explicit retry of a failed simulation (`SimulationRetryRefusedError` past
+ * the per-request bound).
+ *
  * When the draft is unchanged but its result changed (an engine upgrade), `engineChange` carries
  * the previous and current results and their motion diff for the editor's banner.
  */
 export async function resolveDocumentSimulation(
   context: AppContext,
   documentId: string,
-  options: { expectedVersion?: number; waitMs?: number } = {},
+  options: { expectedVersion?: number; waitMs?: number; retry?: boolean } = {},
 ): Promise<
   | { kind: "not_found" }
   | { kind: "conflict"; draftVersion: number }
@@ -41,7 +44,7 @@ export async function resolveDocumentSimulation(
     canonicalContent: document.content,
     contentSha256: document.contentSha256,
     mapVersionId: pin.mapVersionId,
-  }, { waitMs: options.waitMs ?? 0 });
+  }, { waitMs: options.waitMs ?? 0, retry: options.retry === true });
   const engineChange = await recordDraftSimulation(context, documentId, document.draftVersion, status);
   return { kind: "status", draftVersion: document.draftVersion, status, engineChange };
 }

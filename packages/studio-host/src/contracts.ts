@@ -254,7 +254,22 @@ export type ScenarioSimulationResultDto = {
 export type ScenarioSimulationStatusDto =
   | { state: "succeeded"; requestKey: string; result: ScenarioSimulationResultDto }
   | { state: "queued" | "running"; requestKey: string }
-  | { state: "failed"; requestKey: string; failureCode: string; message: string | null };
+  | {
+      state: "failed";
+      requestKey: string;
+      failureCode: string;
+      message: string | null;
+      /**
+       * The execution revision the request failed under (pipeline, engine semantics, engine build,
+       * OSS release); null for a failure recorded before revisions were. A host on another
+       * revision retries it once by itself. Absent from hosts before rc.76.
+       */
+      failedUnder?: string | null;
+      /** Whether an explicit retry (`resolveSimulation` with `retry`) would run it again. Absent before rc.76. */
+      retryable?: boolean;
+      /** Explicit retries left for this request under its revision. Absent before rc.76. */
+      retriesRemaining?: number;
+    };
 
 /** Where a render timeline's body heights came from (`render-timeline.md` §4). */
 export type ScenarioTimelineContactOrigin = 'trace' | 'derived-at-timeline-build' | 'legacy-xodr-elevation';

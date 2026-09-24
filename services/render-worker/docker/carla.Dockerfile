@@ -38,7 +38,10 @@ FROM ghcr.io/simforgeinc/carla-rfs-munich-belmont:0.10.0-kia@sha256:baed0d038437
 ARG SOURCE_REVISION
 ARG IMAGE_VERSION
 USER root
-RUN test -n "$SOURCE_REVISION" && test -n "$IMAGE_VERSION" \
+# SOURCE_REVISION becomes the org.opencontainers.image.revision label, from which
+# every launcher derives SIMFORGE_WORKER_REVISION (40-hex) and refuses to start
+# the worker without it; refuse to build an image that cannot carry it.
+RUN printf '%s' "$SOURCE_REVISION" | grep -Eqx '[0-9a-f]{40}' && test -n "$IMAGE_VERSION" \
  && apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip tini ca-certificates libxml2-utils ffmpeg \
  && rm -rf /var/lib/apt/lists/* \

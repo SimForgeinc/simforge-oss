@@ -323,7 +323,12 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
     resolveSimulation(document, opts = {}) {
       return call(documents.resolveSimulation, {
         params: { documentId: document.id },
-        body: { expectedVersion: document.draftVersion, ...(opts.waitMs === undefined ? {} : { waitMs: opts.waitMs }) },
+        body: {
+          expectedVersion: document.draftVersion,
+          ...(opts.waitMs === undefined ? {} : { waitMs: opts.waitMs }),
+          // Only sent when asked: hosts before rc.76 reject the field.
+          ...(opts.retry ? { retry: true as const } : {}),
+        },
         signal: opts.signal,
       });
     },

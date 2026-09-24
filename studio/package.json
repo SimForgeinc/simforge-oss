@@ -39,6 +39,7 @@
     "worker:model-run": "tsx scripts/model-run-worker.ts",
     "worker:hifi-preview": "tsx scripts/hifi-preview-worker.ts",
     "test:models": "node --conditions=development --import tsx --test app/lib/models/__tests__/model-run-store.test.ts worker/__tests__/model-run-loop.test.ts",
+    "test:map-catalog": "node --conditions=development --conditions=react-server --import tsx --test app/lib/scenario/__tests__/map-catalog-retirement.test.ts",
     "test:map-descriptor": "node --conditions=development --import tsx --test app/lib/map-ingest/server/__tests__/ground-descriptor.test.ts app/lib/scenario/__tests__/digest-attestation.test.ts",
     "test:map-cache": "node --conditions=development --import tsx --test app/lib/map-cache/__tests__/service.test.ts && node --conditions=development --import tsx --test desktop/__tests__/map-cache.test.mjs",
     "test:gallery-scope": "node --conditions=development --import tsx --test app/lib/scenario/render/__tests__/gallery-scope.test.ts",

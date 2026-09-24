@@ -187,6 +187,20 @@ describe("response validation", () => {
       .resolves.toMatchObject({ outcome: "verified" });
     expect(fetchMock.mock.calls[2]?.[0]).toBe(`/api/simforge/simulations/${"k".repeat(64)}/verification`);
   });
+
+  it("sends an explicit retry of a failed simulation only when asked, and reads the failure's retryability", async () => {
+    const failed = {
+      state: "failed", requestKey: "r".repeat(64), draftVersion: 3, failureCode: "template_invalid", message: null,
+      failedUnder: "pipeline=4;engine=0.8.0;build=b;oss=0.1.0-rc.76", retryable: true, retriesRemaining: 2,
+    };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(failed));
+    const studio = host(fetchMock);
+    await expect(studio.projects.resolveSimulation({ id: "doc-1", draftVersion: 3 }, { retry: true }))
+      .resolves.toMatchObject({ state: "failed", failureCode: "template_invalid", retryable: true, retriesRemaining: 2 });
+    expect(JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body))).toEqual({ expectedVersion: 3, retry: true });
+    await studio.projects.resolveSimulation({ id: "doc-1", draftVersion: 3 }, { retry: false });
+    expect(JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body))).toEqual({ expectedVersion: 3 });
+  });
 });
 
 describe("error mapping", () => {

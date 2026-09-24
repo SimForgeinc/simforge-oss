@@ -683,6 +683,8 @@ export const ResolveScenarioSimulationSchema = z.strictObject({
   expectedVersion: z.number().int().positive().optional(),
   /** How long to wait on an execution another caller or a CPU runner holds. */
   waitMs: z.number().int().min(0).max(25_000).default(0),
+  /** Explicitly retry a failed simulation (bounded per request; `sim-result-store` retry policy). */
+  retry: z.literal(true).optional(),
 });
 
 export const VerifyScenarioSimulationSchema = z.strictObject({

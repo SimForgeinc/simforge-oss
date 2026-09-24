@@ -29,6 +29,17 @@ export type SimulationVerificationState =
       /** True once the authoritative trace replaced the local preview on screen. */
       readonly showingAuthoritative: boolean;
     }
+  /**
+   * The host could not simulate the saved draft. `message` is its reason (else `failureCode`);
+   * `retriesRemaining` is how many explicit retries the host still allows, null from a host
+   * that predates explicit retries (the editor then only re-checks).
+   */
+  | {
+      readonly status: "failed";
+      readonly failureCode: string;
+      readonly message: string | null;
+      readonly retriesRemaining: number | null;
+    }
   | { readonly status: "unavailable"; readonly message: string };
 
 /** The digest a local preview is compared against: SUMO documents preview their authored actors only. */

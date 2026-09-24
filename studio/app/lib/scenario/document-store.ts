@@ -1688,7 +1688,7 @@ export type ScenarioBrowserCacheMap = {
 export async function listScenarioBrowserCacheInventory(
   _context: AppContext,
 ): Promise<{ releaseKey: string; maps: ScenarioBrowserCacheMap[] }> {
-  const releaseKey = await readActiveEditorAssetReleaseCacheKey();
+  const releaseKey = await readScenarioMapCatalogCacheKey();
   type CacheInventoryRow = {
     map_version_id: string;
     closure_sha256: string;
@@ -1947,14 +1947,21 @@ function mapSumoStatus(
 }
 
 /**
- * The cacheable half of {@link listScenarioMapDescriptors}: storage
- * coordinates and hashes, no credentials.
+ * The key of the cached editor map catalog ({@link readScenarioMapDescriptorRows}):
+ * the active editor asset releases plus a fingerprint of EVERY map version,
+ * retired or not, over the columns the descriptor query reads.
  *
- * Signing deliberately does NOT happen here. Every media field is a stable,
- * authenticated first-party route, so cached descriptors cannot outlive a
- * short-lived S3 signature (§5.7 FINDING C).
+ * Retirement is part of each version's entry explicitly (`live`/`retired`)
+ * rather than implied by filtering retired rows out of the fingerprint:
+ * retirement is written out of band (release and rollout scripts update
+ * `map_versions.retired_at` directly), so there is no write path to hang a
+ * `revalidateTag` on, and the key is the only thing that can make a retire or
+ * an unretire visible on the next read. Unretiring restores the exact previous
+ * key, whose cached rows are again correct. The descriptor document is keyed
+ * whole (`MD5(descriptor)`) because the query reads `sumo`, `ground` and
+ * `ambientTurnVerdicts` from it.
  */
-async function readActiveEditorAssetReleaseCacheKey() {
+export async function readScenarioMapCatalogCacheKey(): Promise<string> {
   const row = await queryOne<{ release_cache_key: string | null }>(
     `SELECT CONCAT_WS(':',
        (SELECT COALESCE(STRING_AGG(
@@ -1962,15 +1969,16 @@ async function readActiveEditorAssetReleaseCacheKey() {
        ), 'no-active-editor-asset-release')
         FROM simforge.editor_asset_releases WHERE release_state = 'active'),
        (SELECT MD5(COALESCE(STRING_AGG(
-         CONCAT_WS(':', mv.id, mv.source_map_asset_id, mv.created_at,
+         CONCAT_WS(':', mv.id,
+           CASE WHEN mv.retired_at IS NULL THEN 'live' ELSE 'retired' END,
+           mv.source_map_asset_id, mv.created_at,
            mv.label, mv.locality, mv.topology_artifact_url, mv.xodr_artifact_id,
            mv.xodr_sha256, mv.coordinate_system_id, mv.coordinate_system_sha256,
-           mv.sumo_network_sha256, mv.descriptor->>'sumo', mv.browser_asset_set_id, bs.asset_set_state,
-           bs.closure_sha256), ',' ORDER BY mv.id
+           mv.sumo_network_sha256, MD5(COALESCE(mv.descriptor::text, '')), mv.browser_asset_set_id,
+           bs.asset_set_state, bs.closure_sha256), ',' ORDER BY mv.id
        ), ''))
         FROM simforge.map_versions mv
-        LEFT JOIN simforge.browser_asset_sets bs ON bs.id = mv.browser_asset_set_id
-        WHERE mv.retired_at IS NULL)
+        LEFT JOIN simforge.browser_asset_sets bs ON bs.id = mv.browser_asset_set_id)
      ) AS release_cache_key`,
     {},
   );
@@ -2061,11 +2069,25 @@ function mapDescriptorSql(mode: "newest" | "exact"): string {
      ORDER BY label, id`;
 }
 
-async function readScenarioMapDescriptorRows(_activeReleaseCacheKey: string) {
+/**
+ * The cacheable half of {@link listScenarioMapDescriptors}: storage
+ * coordinates and hashes, no credentials.
+ *
+ * Signing deliberately does NOT happen here. Every media field is a stable,
+ * authenticated first-party route, so cached descriptors cannot outlive a
+ * short-lived S3 signature (§5.7 FINDING C). `catalogCacheKey` is
+ * {@link readScenarioMapCatalogCacheKey}, read outside the cache on every call.
+ */
+async function readScenarioMapDescriptorRows(catalogCacheKey: string) {
   "use cache";
   cacheLife("days");
   cacheTag("scenario:maps:global");
 
+  return readNewestScenarioMapDescriptorRows(catalogCacheKey);
+}
+
+/** The uncached catalog query: the newest unretired publication of each source map. */
+export async function readNewestScenarioMapDescriptorRows(_catalogCacheKey: string): Promise<MapDescriptorRow[]> {
   return queryRows<MapDescriptorRow>(mapDescriptorSql("newest"), {});
 }
 
@@ -2090,8 +2112,7 @@ export async function listScenarioMapDescriptors(_context: AppContext) {
   // catalog. Reading its tiny identity outside the cached function makes a
   // release switch part of the cache key, so activation is visible immediately
   // without discarding the expensive descriptor cache between releases.
-  const activeReleaseCacheKey = await readActiveEditorAssetReleaseCacheKey();
-  const rows = await readScenarioMapDescriptorRows(activeReleaseCacheKey);
+  const rows = await readScenarioMapDescriptorRows(await readScenarioMapCatalogCacheKey());
   const thumbnailMapVersionIds = new Set(
     (await readAvailableThumbnailMapVersionIds()).map((row) => row.id),
   );

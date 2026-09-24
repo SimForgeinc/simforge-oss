@@ -10,6 +10,7 @@ import {
   gzipTrace,
   materializeTraceTraffic,
   simKey as computeSimKey,
+  SIMFORGE_OSS_RELEASE,
   simulationCompletion,
   TRACE_SCHEMA,
   type AuthoritativeSimulation,
@@ -42,7 +43,11 @@ import {
   RevisionReplayError,
   setRevisionActiveSimulation,
   setSimulationExecutorForTests,
+  SIMULATION_MANUAL_RETRY_LIMIT,
+  SIMULATION_PIPELINE_REVISION,
+  simulationExecutionRevision,
   simulationObjectKeys,
+  SimulationRetryRefusedError,
   type SimulationSubject,
 } from "../sim-result-store";
 
@@ -341,6 +346,226 @@ test("authoritative simulation results", async (t) => {
     setSimulationExecutorForTests(async () => simulation);
     const recovered = await resolveSimulation(subject({ roles: [], meta: { name: "flaky" } }));
     assert.equal(recovered.state, "succeeded");
+  });
+
+  // ── Retry policy for failed requests (simulation-results.md, "Failed requests") ──
+
+  type RetryRow = {
+    request_state: string;
+    failure_code: string | null;
+    failed_under_revision: string | null;
+    attempt_count: number;
+    max_attempts: number;
+    manual_retry_count: number;
+  };
+  const requestRow = async (requestKey: string) => (await queryOne<RetryRow>(
+    `SELECT request_state, failure_code, failed_under_revision, attempt_count, max_attempts, manual_retry_count
+       FROM simforge.sim_requests WHERE workspace_id = :ws AND request_key = :key`,
+    { ws: WORKSPACE, key: requestKey },
+  ))!;
+  const failing = (counter: { n: number }) => async (): Promise<AuthoritativeSimulation> => {
+    counter.n += 1;
+    throw new Error("materialization_infeasible:[]");
+  };
+  /** The revision an older release (the one the fix is not in) would have recorded. */
+  const olderRevision = simulationExecutionRevision({ ossRelease: "0.1.0-rc.75.1-older" });
+
+  await t.test("the execution revision composes the pipeline, engine semantics, engine build and OSS release", () => {
+    assert.equal(
+      simulationExecutionRevision({ pipeline: 4, engineSemVer: "0.8.0", engineBuild: "abc123", ossRelease: "0.1.0-rc.76" }),
+      "pipeline=4;engine=0.8.0;build=abc123;oss=0.1.0-rc.76",
+    );
+    const current = simulationExecutionRevision();
+    assert.equal(current, simulationExecutionRevision(), "deterministic");
+    assert.ok(current.startsWith(`pipeline=${SIMULATION_PIPELINE_REVISION};engine=`));
+    assert.ok(current.endsWith(`;oss=${SIMFORGE_OSS_RELEASE}`));
+    assert.notEqual(olderRevision, current);
+  });
+
+  await t.test("a failed request records its revision and, under the same revision, stays failed (no silent retry)", async () => {
+    const executions = { n: 0 };
+    setSimulationExecutorForTests(failing(executions));
+    const content = { roles: [], meta: { name: "retry-same-revision" } };
+    const failed = await resolveSimulation(subject(content));
+    assert.equal(failed.state, "failed");
+    assert.equal(executions.n, 1);
+    const row = await requestRow(failed.requestKey);
+    assert.equal(row.failed_under_revision, simulationExecutionRevision());
+    // The status carries the reason and the retryability.
+    assert.deepEqual(failed.state === "failed" && {
+      failureCode: failed.failureCode,
+      message: failed.message,
+      failedUnder: failed.failedUnder,
+      retryable: failed.retryable,
+      retriesRemaining: failed.retriesRemaining,
+    }, {
+      failureCode: "materialization_infeasible",
+      message: "materialization_infeasible:[]",
+      failedUnder: simulationExecutionRevision(),
+      retryable: true,
+      retriesRemaining: SIMULATION_MANUAL_RETRY_LIMIT,
+    });
+    // It had attempts left, but the same code fails the same way: nothing re-runs it.
+    for (let i = 0; i < 3; i += 1) {
+      const again = await resolveSimulation(subject(content));
+      assert.equal(again.state, "failed");
+    }
+    assert.equal(executions.n, 1);
+    assert.equal((await requestRow(failed.requestKey)).attempt_count, 1);
+  });
+
+  await t.test("a request that failed under another revision is requeued with a fresh budget and executed again", async () => {
+    const executions = { n: 0 };
+    setSimulationExecutorForTests(failing(executions));
+    const content = { roles: [], meta: { name: "retry-new-revision" } };
+    const failed = await resolveSimulation(subject(content));
+    assert.equal(failed.state, "failed");
+    // It failed on an older release with its attempts used up: terminal under the old policy.
+    await execute(
+      `UPDATE simforge.sim_requests SET attempt_count = 3, max_attempts = 3, failed_under_revision = :revision
+        WHERE workspace_id = :ws AND request_key = :key`,
+      { ws: WORKSPACE, key: failed.requestKey, revision: olderRevision },
+    );
+    const simulation = fakeSimulation("retry-new-revision");
+    setSimulationExecutorForTests(async () => { executions.n += 1; return simulation; });
+    const recovered = await resolveSimulation(subject(content));
+    assert.equal(recovered.state, "succeeded");
+    assert.equal(recovered.state === "succeeded" && recovered.result.simKey, simulation.simKey);
+    assert.equal(executions.n, 2);
+    const row = await requestRow(failed.requestKey);
+    assert.deepEqual(
+      { attempt_count: row.attempt_count, max_attempts: row.max_attempts, manual_retry_count: row.manual_retry_count },
+      { attempt_count: 4, max_attempts: 6, manual_retry_count: 0 },
+    );
+  });
+
+  await t.test("a legacy failure with no recorded revision is retried exactly once", async () => {
+    const executions = { n: 0 };
+    setSimulationExecutorForTests(failing(executions));
+    const content = { roles: [], meta: { name: "retry-legacy" } };
+    const failed = await resolveSimulation(subject(content));
+    assert.equal(failed.state, "failed");
+    // As an rc.75.1 host leaves it (e.g. request 628dcc26): template_invalid, no revision recorded.
+    await execute(
+      `UPDATE simforge.sim_requests SET failed_under_revision = NULL, failure_code = 'template_invalid',
+              attempt_count = 3, max_attempts = 3
+        WHERE workspace_id = :ws AND request_key = :key`,
+      { ws: WORKSPACE, key: failed.requestKey },
+    );
+    const legacy = await requestRow(failed.requestKey);
+    assert.equal(legacy.failed_under_revision, null);
+    const retried = await resolveSimulation(subject(content));
+    assert.equal(retried.state, "failed");
+    assert.equal(executions.n, 2);
+    assert.equal(retried.state === "failed" && retried.failedUnder, simulationExecutionRevision());
+    // Now recorded under this revision: it stays failed.
+    const again = await resolveSimulation(subject(content));
+    assert.equal(again.state, "failed");
+    assert.equal(executions.n, 2);
+  });
+
+  await t.test("a CPU runner never claims a failed request, and claims it as usual once requeued", async () => {
+    const executions = { n: 0 };
+    setSimulationExecutorForTests(failing(executions));
+    const content = { roles: [], meta: { name: "retry-runner" } };
+    const failed = await resolveSimulation(subject(content));
+    assert.equal(failed.state, "failed");
+    await execute(
+      `UPDATE simforge.sim_requests SET failed_under_revision = :revision WHERE workspace_id = :ws AND request_key = :key`,
+      { ws: WORKSPACE, key: failed.requestKey, revision: olderRevision },
+    );
+    process.env.SIMFORGE_SIMULATION_INLINE = "0";
+    try {
+      const before = await claimSimulationJob({ workerId: "runner-retry", leaseSeconds: 300 });
+      assert.notEqual(before?.requestKey, failed.requestKey);
+      if (before) await failSimulationRequest({ workspaceId: before.workspaceId, requestKey: before.requestKey, fenceToken: before.fenceToken, code: "test_done", message: "", retryable: false });
+      const requeued = await resolveSimulation(subject(content));
+      assert.equal(requeued.state, "queued");
+      const claim = await claimSimulationJob({ workerId: "runner-retry", leaseSeconds: 300 });
+      assert.equal(claim?.requestKey, failed.requestKey);
+      await failSimulationRequest({ workspaceId: WORKSPACE, requestKey: claim!.requestKey, fenceToken: claim!.fenceToken, code: "materialization_infeasible", message: "still infeasible", retryable: false });
+      const row = await requestRow(failed.requestKey);
+      assert.equal(row.request_state, "failed");
+      assert.equal(row.failed_under_revision, simulationExecutionRevision());
+      assert.equal(executions.n, 1);
+    } finally {
+      process.env.SIMFORGE_SIMULATION_INLINE = "1";
+    }
+  });
+
+  await t.test("a last attempt whose executor died is closed as failed, never left running", async () => {
+    const simulation = fakeSimulation("retry-dead-runner");
+    setSimulationExecutorForTests(async () => simulation);
+    const content = { roles: [], meta: { name: "retry-dead-runner" } };
+    process.env.SIMFORGE_SIMULATION_INLINE = "0";
+    let requestKey: string;
+    try {
+      requestKey = (await resolveSimulation(subject(content))).requestKey;
+      const claim = await claimSimulationJob({ workerId: "runner-dead", leaseSeconds: 300 });
+      assert.equal(claim?.requestKey, requestKey);
+      await execute(
+        `UPDATE simforge.sim_requests SET attempt_count = max_attempts, lease_expires_at = NOW() - INTERVAL '1 second'
+          WHERE workspace_id = :ws AND request_key = :key`,
+        { ws: WORKSPACE, key: requestKey },
+      );
+      assert.equal(await claimSimulationJob({ workerId: "runner-dead", leaseSeconds: 300 }), null);
+    } finally {
+      process.env.SIMFORGE_SIMULATION_INLINE = "1";
+    }
+    const row = await requestRow(requestKey);
+    assert.equal(row.request_state, "failed");
+    assert.equal(row.failure_code, "simulation_lease_expired");
+    assert.equal(row.failed_under_revision, simulationExecutionRevision());
+    const status = await resolveSimulation(subject(content));
+    assert.equal(status.state, "failed");
+    assert.equal(status.state === "failed" && status.failureCode, "simulation_lease_expired");
+    // The explicit retry runs it.
+    const retried = await resolveSimulation(subject(content), { retry: true });
+    assert.equal(retried.state, "succeeded");
+  });
+
+  await t.test("an explicit retry requeues a failed request with a fresh budget, at most the limit, then refuses explicitly", async () => {
+    const executions = { n: 0 };
+    setSimulationExecutorForTests(failing(executions));
+    const content = { roles: [], meta: { name: "retry-manual" } };
+    const failed = await resolveSimulation(subject(content));
+    assert.equal(failed.state, "failed");
+    for (let retry = 1; retry <= SIMULATION_MANUAL_RETRY_LIMIT; retry += 1) {
+      const before = await requestRow(failed.requestKey);
+      const status = await resolveSimulation(subject(content), { retry: true });
+      assert.equal(status.state, "failed");
+      assert.equal(executions.n, 1 + retry);
+      const row = await requestRow(failed.requestKey);
+      assert.equal(row.manual_retry_count, retry);
+      // A fresh budget: the requeue raised max_attempts to attempt_count + 3 before the claim.
+      assert.equal(row.max_attempts, before.attempt_count + 3);
+      assert.equal(status.state === "failed" && status.retriesRemaining, SIMULATION_MANUAL_RETRY_LIMIT - retry);
+      assert.equal(status.state === "failed" && status.retryable, retry < SIMULATION_MANUAL_RETRY_LIMIT);
+    }
+    await assert.rejects(resolveSimulation(subject(content), { retry: true }), (error: unknown) =>
+      error instanceof SimulationRetryRefusedError
+      && error.code === "simulation_retry_limit_reached"
+      && error.status.state === "failed"
+      && error.status.retriesRemaining === 0);
+    assert.equal(executions.n, 1 + SIMULATION_MANUAL_RETRY_LIMIT);
+    const row = await requestRow(failed.requestKey);
+    assert.equal(row.request_state, "failed");
+    assert.equal(row.manual_retry_count, SIMULATION_MANUAL_RETRY_LIMIT);
+    // A plain resolve still answers the failure (and does not run it).
+    assert.equal((await resolveSimulation(subject(content))).state, "failed");
+    assert.equal(executions.n, 1 + SIMULATION_MANUAL_RETRY_LIMIT);
+
+    // A retry that succeeds, and a retry of a request that is not failed, which changes nothing.
+    const flakyContent = { roles: [], meta: { name: "retry-manual-success" } };
+    setSimulationExecutorForTests(failing(executions));
+    assert.equal((await resolveSimulation(subject(flakyContent))).state, "failed");
+    const simulation = fakeSimulation("retry-manual-success");
+    setSimulationExecutorForTests(async () => simulation);
+    const succeeded = await resolveSimulation(subject(flakyContent), { retry: true });
+    assert.equal(succeeded.state, "succeeded");
+    const noop = await resolveSimulation(subject(flakyContent), { retry: true });
+    assert.equal(noop.state, "succeeded");
+    assert.equal((await requestRow(succeeded.requestKey)).manual_retry_count, 1);
   });
 
   await t.test("renders replay a revision's original result; re-simulation is explicit and never moves it", async () => {

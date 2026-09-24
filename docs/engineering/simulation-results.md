@@ -50,7 +50,7 @@ paint, parked-car and ambient digests recorded before the move.
 | Table | Role |
 |---|---|
 | `simforge.sim_results` `(workspace_id, sim_key)` | Immutable memo: identities, `engine_sem_ver`, provenance, object keys, traffic artifact and ambient provenance, timeline. A trigger refuses any change to a stored trace. |
-| `simforge.sim_requests` `(workspace_id, request_key)` | The unit of work and the in-flight join: queued, then running under a fenced lease (inline in the API, or a CPU runner), then succeeded or failed. An expired lease can be claimed again. |
+| `simforge.sim_requests` `(workspace_id, request_key)` | The unit of work and the in-flight join: queued, then running under a fenced lease (inline in the API, or a CPU runner), then succeeded or failed. An expired lease can be claimed again. A failure records `failed_under_revision`; explicit retries count in `manual_retry_count` (see Failed requests). |
 | `simforge.revision_simulations` `(workspace_id, revision_id, engine_sem_ver)` | Binds a revision to the result it renders. `origin = 'lazy'` marks a revision committed before (or under another engine than) its result; the UI reports it as re-simulated. |
 | `simforge.sim_verification_events` | The editor's local-vs-authoritative comparisons. A mismatch is a determinism bug. |
 | `render_jobs.sim_key / trace_sha256 / timeline_sha256` | What each render replays. |
@@ -110,6 +110,30 @@ checksum-bound PUTs → `complete`. The host verifies every object and records t
 result. A completion with a stale fence is refused. Scenario errors fail the
 request; infrastructure errors requeue it. `SIMFORGE_SIMULATION_INLINE=0` routes
 every request to runners.
+
+**Failed requests.** A request fails for a scenario error (it would fail
+again on the same code), when a retryable error used up its attempt budget
+(3), or when its executor died during its last attempt
+(`simulation_lease_expired`). The failure records the **execution revision**
+it happened under, `simulationExecutionRevision()`:
+`pipeline=<SIMULATION_PIPELINE_REVISION>;engine=<engineSemVer>;build=<engine build>;oss=<SIMFORGE_OSS_RELEASE>`.
+The first three are request key material, so changing them already makes a new
+request. The OSS release is not, and it is where fixes to the host's JavaScript
+land. The policy is deterministic:
+- Resolving a failed request whose recorded revision differs from the host's
+  (or is unrecorded: failures from before rc.76 or from an rc.75.1 host)
+  requeues it with a fresh attempt budget (`max_attempts = attempt_count + 3`).
+  It then runs like any queued request, inline or on a CPU runner.
+- Under the same revision it stays failed. Nothing retries it silently.
+- An explicit retry (`POST /documents/:id/simulation {retry: true}`, the
+  editor's Retry) requeues it with a fresh budget, at most 3 times per request
+  (`manual_retry_count`). Past that bound the host answers
+  `409 simulation_retry_limit_reached` and the request stays failed.
+- A CPU runner never claims a failed row. It claims a requeued one as usual.
+
+The failed status carries `failureCode`, `message`, `failedUnder`, `retryable`
+and `retriesRemaining`. The editor shows the reason (the message, else the
+humanized code) and offers Retry while `retriesRemaining > 0`.
 
 **SUMO traffic.** A SUMO document's traffic is part of its simulation. Every
 executor (the API inline, the local worker lane and the SC runner) builds the
