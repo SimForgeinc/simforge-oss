@@ -5,7 +5,7 @@ import type { RenderSourceV3, ScenarioTemplateV2 } from '@simforge-oss/scenario'
 import { describe, expect, it } from 'vitest';
 
 import {
-  assertNativeSourcesSupported, assertNativeVideoProfileSupported, createRenderEngine, nativeCameraClipPlanes, nativeEncoderVersion,
+  assertNativeRadarBudgets, assertNativeSourcesSupported, assertNativeVideoProfileSupported, createRenderEngine, nativeCameraClipPlanes, nativeEncoderVersion,
   nativeTextureEvidence, nativeVramCapacity, resolveBinary, resolveNativeEncoder,
   nativeBundleBytes,
   nativeShmSizeMb,
@@ -96,6 +96,39 @@ describe('native engine input policy', () => {
 
   it('covers cameras with different clip planes: nearest near, farthest far', () => {
     expect(nativeCameraClipPlanes([camera('front'), camera('rear', { nearM: 0.5, farM: 1_200 })])).toEqual({ nearM: 0.1, farM: 1_200 });
+  });
+
+  it("accepts the wizard's default radar at every frame rate the wizard offers, and refuses a budget below one ray", () => {
+    const sensors = instantiateSensorRig('pronto', { class: 'car', dims: { length: 4.6, width: 1.9, height: 1.5 } });
+    const content = {
+      scenarioVersion: 2,
+      meta: { name: 'Render', description: '', createdAt: '2026-09-24T00:00:00.000Z', modifiedAt: '2026-09-24T00:00:00.000Z', appVersion: 'test', tags: [], negativeControl: false },
+      params: { declarations: [], constraints: [] },
+      environment: { weather: 'clear', timeOfDay: 'noon', surfacePatches: [] },
+      anchor: { id: 'anchor', corridor: {}, features: [], policy: {} },
+      roles: [{ id: 'ego', label: 'Ego', actor: { class: 'car', sensors } }],
+      props: [], trafficControls: [], mapSignalPlans: [],
+      choreography: { warmupSeconds: 0, clipSeconds: 10, interactions: [] },
+      perception: {}, invariants: [], variants: [], reasoningTrace: [],
+    } as unknown as ScenarioTemplateV2;
+    const options = authoredRenderSensors(content);
+    const selections = options.map((option) => ({
+      actorId: option.actorId, sensorId: option.sensor.id,
+      modalities: defaultModalities(option.sensor).filter((modality) => backendModalities('native', option.sensor).includes(modality)),
+    })).filter((selection) => selection.modalities.length > 0);
+    // RenderConfigPanel RENDERER_FPS_OPTIONS.
+    for (const fps of [20, 24, 30]) {
+      const spec = buildCanonicalRenderSpec({
+        content, selections,
+        clip: { startSeconds: 0, endSeconds: 10 },
+        video: { width: 1280, height: 720, fps, container: 'mp4', codec: 'h264', quality: 'standard' },
+        artifacts: ['video', 'manifest'], staticSemantics: false, fidelity: 'review',
+      });
+      expect(spec.sources.some((source) => source.modality === 'radar'), `${fps} fps`).toBe(true);
+      expect(() => assertNativeRadarBudgets(spec.sources), `${fps} fps`).not.toThrow();
+    }
+    expect(() => assertNativeRadarBudgets([camera('front'), { ...radar, attributes: { ...radar.attributes, pointsPerSecond: 10 } } as RenderSourceV3]))
+      .toThrow(expect.objectContaining({ code: 'native_radar_budget_invalid' }));
   });
 
   it("renders the wizard's default selection (the Pronto rig plus the trailing chase camera) with each camera's own planes", () => {

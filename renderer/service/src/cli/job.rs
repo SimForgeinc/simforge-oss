@@ -659,7 +659,7 @@ fn plan_from_job(path: &std::path::Path, args: &Args) -> Result<Plan> {
     let mut lidars = job.rig.lidars;
     let mut radars = job.rig.radars;
     if let Some(pronto) = &job.rig.pronto {
-        // The radar fan needs at least 64 rays per rendered tick.
+        // The radar budget is per rendered tick.
         let tick_hz = frames.first().and_then(|frame| frame["tickHz"].as_f64())
             .context("rig.pronto needs a sceneState whose frames carry tickHz (the radar budget is per tick)")?;
         let (c, l, r) = pronto_rig(pronto, tick_hz)?;

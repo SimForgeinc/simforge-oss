@@ -400,6 +400,33 @@ export function nativeEncoderVersion(ffmpeg: string): string {
 }
 
 /**
+ * The fewest rays per rendered frame the service's radar fan casts
+ * (render `sensors::radar::MIN_RAYS_PER_FRAME`).
+ */
+export const NATIVE_RADAR_MIN_RAYS_PER_FRAME = 1;
+
+/**
+ * Refuses, before any lease, a radar whose points per second give fewer rays
+ * per rendered frame than the fan casts. The frame clock is the cameras'
+ * (the fastest camera's rate). Never raised to fit
+ * (docs/engineering/no-silent-fallbacks.md).
+ */
+export function assertNativeRadarBudgets(sources: readonly RenderSourceV3[]): void {
+  const fps = Math.max(0, ...sources.flatMap((source) => (source.modality === 'rgb' ? [source.attributes.fps] : [])));
+  if (!(fps > 0)) return;
+  for (const source of sources) {
+    if (source.modality !== 'radar') continue;
+    const rays = Math.round(source.attributes.pointsPerSecond / fps);
+    if (rays < NATIVE_RADAR_MIN_RAYS_PER_FRAME) {
+      throw new RenderInputError(
+        'native_radar_budget_invalid',
+        `radar ${source.outputName}: ${source.attributes.pointsPerSecond} points/s at ${fps} fps is ${rays} rays per frame; the radar model needs at least ${NATIVE_RADAR_MIN_RAYS_PER_FRAME}`,
+      );
+    }
+  }
+}
+
+/**
  * The scene's clip planes: the nearest near plane and the farthest far plane
  * of the RGB cameras. Each camera renders with its own planes (the camera
  * schedule sends them per camera); the scene pair covers them all and is
@@ -568,6 +595,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const unsupported = sources.find((source) => source.modality !== 'rgb' && source.modality !== 'lidar' && source.modality !== 'radar');
       if (unsupported) throw new RenderInputError('native_modality_unsupported', `native retained engine does not render ${unsupported.modality} source ${unsupported.outputName}`);
       assertNativeSourcesSupported(sources);
+      assertNativeRadarBudgets(sources);
       assertNativeVideoProfileSupported(intent.renderSpec.video);
       const clipPlanes = nativeCameraClipPlanes(sources);
       // Bundle pipelining needs a ring that holds every published-but-unread

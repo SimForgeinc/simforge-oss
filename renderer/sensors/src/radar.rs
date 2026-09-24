@@ -21,6 +21,10 @@ use crate::RAY_POOL;
 use bevy::math::{Quat, Vec3};
 use render_core::coordinates::SensorFrame;
 
+/// The fewest rays per rendered frame a radar fan can cast. Submission
+/// checks the same floor (`@simforge-oss/render` `NATIVE_RADAR_MIN_RAYS_PER_FRAME`).
+pub const MIN_RAYS_PER_FRAME: u32 = 1;
+
 #[derive(Debug, Clone)]
 pub struct RadarConfig {
     pub hfov_deg: f32,
@@ -35,8 +39,10 @@ pub struct RadarConfig {
 impl RadarConfig {
     /// The per-frame ray budget is exactly `points_per_second / tick_hz` (rounded), laid out
     /// as the model's square azimuth x elevation grid (the fan's documented
-    /// discretisation). A budget the model cannot honour is an error, never
-    /// silently raised to the 64-ray floor.
+    /// discretisation). The fan works at any size; a budget below one ray
+    /// per frame is an error, never silently raised. (It used to be refused
+    /// below 64 rays, a leftover of the old silent 64-ray clamp: the default
+    /// 1500 points/s radar then failed at 24 and 30 fps.)
     pub fn from_points_per_second(
         points_per_second: u32,
         tick_hz: f32,
@@ -50,12 +56,12 @@ impl RadarConfig {
             ));
         }
         let per_frame = (points_per_second as f32 / tick_hz).round() as u32;
-        if per_frame < 64 {
+        if per_frame < MIN_RAYS_PER_FRAME {
             return Err(format!(
-                "[native_radar_config_invalid] {points_per_second} points/s at {tick_hz} Hz is {per_frame} rays per frame; the radar model needs at least 64"
+                "[native_radar_config_invalid] {points_per_second} points/s at {tick_hz} Hz is {per_frame} rays per frame; the radar model needs at least {MIN_RAYS_PER_FRAME}"
             ));
         }
-        let side = (per_frame as f32).sqrt().round() as u32;
+        let side = ((per_frame as f32).sqrt().round() as u32).max(1);
         Ok(RadarConfig {
             hfov_deg,
             vfov_deg,
@@ -176,4 +182,36 @@ pub fn scan(
         }
     });
     columns.into_iter().flatten().collect()
+}
+
+#[cfg(test)]
+mod budget_tests {
+    use super::*;
+
+    /// The render wizard's default radar (1500 points/s) at every frame rate
+    /// the wizard offers (20, 24 and 30 fps; 24 fps renders at the scene's
+    /// 23.999807 Hz): a valid fan whose size follows the budget.
+    #[test]
+    fn the_wizard_default_radar_renders_at_every_offered_frame_rate() {
+        for (tick_hz, rays) in [(20.0f32, 81u32), (23.999807, 64), (30.0, 49)] {
+            let config = RadarConfig::from_points_per_second(1_500, tick_hz, 60.0, 30.0, 100.0)
+                .unwrap_or_else(|error| panic!("{tick_hz} Hz: {error}"));
+            assert_eq!(
+                config.azimuth_rays * config.elevation_rows,
+                rays,
+                "{tick_hz} Hz"
+            );
+        }
+    }
+
+    #[test]
+    fn a_budget_below_one_ray_per_frame_is_refused_not_raised() {
+        let error = RadarConfig::from_points_per_second(10, 30.0, 60.0, 30.0, 100.0).unwrap_err();
+        assert!(
+            error.contains("[native_radar_config_invalid]") && error.contains("0 rays per frame"),
+            "{error}"
+        );
+        let one = RadarConfig::from_points_per_second(30, 30.0, 60.0, 30.0, 100.0).unwrap();
+        assert_eq!((one.azimuth_rays, one.elevation_rows), (1, 1));
+    }
 }

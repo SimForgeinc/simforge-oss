@@ -2,7 +2,7 @@ import type { AppContext } from "@/app/lib/db/app-context";
 import { activeNativeGpuCapacities, knownNativeSceneDemand, NATIVE_GPU_HEADROOM_BYTES, NativeSceneMemoryError } from "./workers-prewarm-store";
 import { withTransaction } from "@/app/lib/db/data-api";
 import { hashRenderIntent, PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID, RENDER_INTENT_V1_SCHEMA, type RenderSpecV3 } from "@simforge-oss/scenario";
-import { NATIVE_ACTOR_ASSETS_INPUT_ID, NATIVE_TEXTURE_DENSITY_MANIFEST, nativeActorAssetsInput, assertNativeMapMemberCapacity } from "@simforge-oss/render/native";
+import { NATIVE_ACTOR_ASSETS_INPUT_ID, NATIVE_TEXTURE_DENSITY_MANIFEST, assertNativeRadarBudgets, nativeActorAssetsInput, assertNativeMapMemberCapacity } from "@simforge-oss/render/native";
 import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import { boundMapDerivatives, derivativeMembers, MAP_DERIVATIVE_DESCRIPTOR_SQL, MAP_DERIVATIVE_MEMBERS_JOIN_SQL, mapDerivativeExtraMembers, type MapDerivativeMemberRow } from "./map-derivatives";
@@ -337,6 +337,18 @@ function buildIntent(
     )
   ) {
     throw new Error("native_render_video_format_invalid");
+  }
+  // A radar budget the native fan cannot cast is refused here (422), not by
+  // the worker after a lease.
+  if (input.engine === "native") {
+    try {
+      assertNativeRadarBudgets(input.renderSpec.sources);
+    } catch (error) {
+      if (error instanceof Error && "code" in error && (error as { code: unknown }).code === "native_radar_budget_invalid") {
+        throw renderIntentRefusal("native_radar_budget_invalid", error.message);
+      }
+      throw error;
+    }
   }
   const sensorHosts = selectedSensorHosts(input, lineage);
   if (
