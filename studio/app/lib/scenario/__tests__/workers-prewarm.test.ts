@@ -279,7 +279,7 @@ async function seedNativeSet() {
  * Publish a derivative set (map-derivatives.ts) for the seeded map version and
  * bind it by descriptor, the way SimCloud's reconcile-map-derivatives does.
  */
-async function bindDerivative(key: "geometryLod" | "texturesFullBc7", schema: string, setId: string, members: ReadonlyArray<readonly [string, string, number]>, manifestSha256: string, objectCount = members.length) {
+async function bindDerivative(key: "geometryLod" | "texturesFullBc7" | "textureDensity", schema: string, setId: string, members: ReadonlyArray<readonly [string, string, number]>, manifestSha256: string, objectCount = members.length) {
   await execute(
     `INSERT INTO simforge.native_map_asset_sets (
        id, workspace_id, map_version_id, contract_version, closure_sha256, registry_release_digest, canonical_digest,
@@ -492,6 +492,20 @@ test("workers prewarm published native sets, sign only their blobs, and lease wi
     ),
     (error: unknown) => error instanceof NativeSceneMemoryError && /largest available render GPU has 24.0 GB/.test(error.detail),
   );
+  // With the texture density derivative bound, a full-resolution render is
+  // admitted on per-job residency: the worker checks the job's own bytes.
+  const densityManifestSha = "de".repeat(32);
+  await bindDerivative("textureDensity", "simforge.map-texture-density.v1", "usnset_density_prewarm", [["derived/texture-density/manifest.json", densityManifestSha, 2048]], densityManifestSha);
+  const residencyJob = await createRenderIntentJob(
+    { workspaceId: LOCAL_WORKSPACE_ID, userId: LOCAL_USER_ID },
+    {
+      schema: "simforge.submit-render-intent/v1", revisionId: REVISION_ID, executionPackageId: EXECUTION_PACKAGE_ID,
+      engine: "native", motionSource: "original-xosc", renderSpec: RENDER_SPEC, idempotencyKey: "prewarm-native-residency",
+    } as Parameters<typeof createRenderIntentJob>[1],
+  );
+  assert.ok(residencyJob, "full-chain demand does not refuse a map with per-job residency");
+  // ML quality (512 px textures) has no residency: its measured demand still applies.
+  await execute(`UPDATE simforge.map_versions SET descriptor = descriptor - 'textureDensity' WHERE id = 'usmapv_prewarm'`);
   // With geometry derivatives bound, a native intent declares them as map members.
   await execute(
     `UPDATE simforge.map_versions SET descriptor = descriptor || jsonb_build_object('geometryLod', CAST(:lod AS jsonb)) WHERE id = 'usmapv_prewarm'`,

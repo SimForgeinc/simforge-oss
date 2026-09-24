@@ -2,7 +2,7 @@ import type { AppContext } from "@/app/lib/db/app-context";
 import { activeNativeGpuCapacities, knownNativeSceneDemand, NATIVE_GPU_HEADROOM_BYTES, NativeSceneMemoryError } from "./workers-prewarm-store";
 import { withTransaction } from "@/app/lib/db/data-api";
 import { hashRenderIntent, PRONTO_CHASE_CAMERA_SENSOR, PRONTO_CHASE_CAMERA_SENSOR_ID, RENDER_INTENT_V1_SCHEMA, type RenderSpecV3 } from "@simforge-oss/scenario";
-import { NATIVE_ACTOR_ASSETS_INPUT_ID, nativeActorAssetsInput, assertNativeMapMemberCapacity } from "@simforge-oss/render/native";
+import { NATIVE_ACTOR_ASSETS_INPUT_ID, NATIVE_TEXTURE_DENSITY_MANIFEST, nativeActorAssetsInput, assertNativeMapMemberCapacity } from "@simforge-oss/render/native";
 import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import { boundMapDerivatives, derivativeMembers, MAP_DERIVATIVE_DESCRIPTOR_SQL, MAP_DERIVATIVE_MEMBERS_JOIN_SQL, mapDerivativeExtraMembers, type MapDerivativeMemberRow } from "./map-derivatives";
@@ -526,17 +526,6 @@ export async function createRenderIntentJob(
     if (input.engine === "native") {
       const fleet = await activeNativeGpuCapacities(tx);
       fleetGpuBytes = fleet.length > 0 ? Math.max(...fleet) : undefined;
-      // Refuse at submission, with advice, when warm workers have measured
-      // this map at this tier and no native worker's GPU can hold it; the
-      // alternative was a lease, minutes of scene loading and a timeout.
-      const renderTextures = nativeRenderTextureTier(input.renderProfile, renderSpec.sources);
-      const sceneBytes = await knownNativeSceneDemand(lineage.map_revision_id, renderTextures, tx);
-      if (sceneBytes !== null) {
-        const needed = sceneBytes + resources.estimatedGpuBytes;
-        if (fleet.length > 0 && fleet.every((bytes) => needed > bytes - NATIVE_GPU_HEADROOM_BYTES)) {
-          throw new NativeSceneMemoryError(needed, Math.max(...fleet), renderTextures);
-        }
-      }
       const nativeMembers = await tx.queryRows<NativeMapMemberRow>(
         `SELECT s.id AS asset_set_id, m.relative_path, b.sha256, b.byte_length, s.object_count
            FROM simforge.map_versions mv
@@ -566,6 +555,24 @@ export async function createRenderIntentJob(
       // GPU texture tier) ride with the closure as ordinary map members.
       const derivatives = await boundDerivativeMembers(tx, lineage.map_revision_id, new Set(renderMembers.map((member) => member.relative_path)));
       renderMembers.push(...derivatives.members);
+      // Refuse at submission, with advice, when warm workers have measured
+      // this map at this tier and no native worker's GPU can hold it; the
+      // alternative was a lease, minutes of scene loading and a timeout.
+      // A full-resolution render of a map with the texture density derivative
+      // uploads only the mip levels its cameras sample (per-job texture
+      // residency), so the measured full-chain bytes overstate its demand:
+      // the worker admits it on the job's own bytes and fails in seconds when
+      // they do not fit (docs/engineering/texture-residency.md).
+      const renderTextures = nativeRenderTextureTier(input.renderProfile, renderSpec.sources);
+      const perJobResidency = renderTextures === "uastc-full"
+        && renderMembers.some((member) => member.relative_path === NATIVE_TEXTURE_DENSITY_MANIFEST);
+      const sceneBytes = perJobResidency ? null : await knownNativeSceneDemand(lineage.map_revision_id, renderTextures, tx);
+      if (sceneBytes !== null) {
+        const needed = sceneBytes + resources.estimatedGpuBytes;
+        if (fleet.length > 0 && fleet.every((bytes) => needed > bytes - NATIVE_GPU_HEADROOM_BYTES)) {
+          throw new NativeSceneMemoryError(needed, Math.max(...fleet), renderTextures);
+        }
+      }
       assertNativeMapMemberCapacity(renderMembers.length);
       const memberAssets = renderMembers.map((member) => nativeMapMemberAsset(member.relative_path, member.sha256, member.byte_length));
       if (new Set(memberAssets.map((asset) => asset.assetId)).size !== memberAssets.length) {
