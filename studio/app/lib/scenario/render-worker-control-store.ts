@@ -19,6 +19,7 @@ import {
   nativeEvidenceFailure,
   nativeRunExpectations,
   type NativeRunDiagnostics,
+  NATIVE_TEXTURE_DENSITY_MANIFEST,
 } from "@simforge-oss/render/native";
 import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { CONTROL_FEATURES_V1, WORKER_CONTROL_FEATURES_V1, WORKER_INTENT_FEATURES_LABEL, workerCanParseIntent } from "@simforge-oss/render";
@@ -44,7 +45,7 @@ import { z } from "zod";
 import { canonicalJsonSha256, sha256, scenarioId } from "./core";
 import { boundMapDerivatives, derivativeMembers, MAP_DERIVATIVE_DESCRIPTOR_SQL, MAP_DERIVATIVE_MEMBERS_JOIN_SQL, mapDerivativeExtraMembers, type MapDerivativeMemberRow } from "./map-derivatives";
 import { expectedNativeClosure } from "./jobs/local-native-render-store";
-import { readRenderIntent } from "./render-intent-closure";
+import { RENDER_INTENT_CLOSURE_REF_KEY, readRenderIntent } from "./render-intent-closure";
 import {
   ScenarioRenderIntentSchema,
   ScenarioRendererCapabilitySchema,
@@ -236,6 +237,12 @@ export type Candidate = {
   render_textures?: string | null;
   /** The intent's `render` (native preset and overrides); null when it carries none. */
   render_request?: unknown;
+  /**
+   * A `uastc-full` intent that declares the map's texture density derivative:
+   * the worker uploads only the mip levels its cameras sample (per-job
+   * texture residency) and admits the job on those bytes itself.
+   */
+  texture_residency?: boolean | null;
 };
 
 export type WorkerRow = {
@@ -300,7 +307,11 @@ export function workerCanRun(worker: WorkerRow, candidate: Candidate) {
         const demand = entry as { mapVersionId?: unknown; renderTextures?: unknown };
         return demand.mapVersionId === candidate.map_version_id && demand.renderTextures === candidate.render_textures;
       }) as { sceneBytes?: unknown } | undefined;
-    if (typeof measured?.sceneBytes === "number"
+    // The measured bytes are the whole map's full mip chains. A job with
+    // per-job texture residency uploads a fraction of them, and the worker
+    // refuses it in seconds if even that does not fit
+    // (docs/engineering/texture-residency.md), so they do not route it.
+    if (typeof measured?.sceneBytes === "number" && !candidate.texture_residency
       && measured.sceneBytes + resources.estimatedGpuBytes > (Number(worker.gpu_memory_mib) - 1024) * 1024 * 1024) return false;
   }
   const physicalSensors = new Set(sources.map((source) => `${source.actorId}\0${source.sensorId}`));
@@ -466,12 +477,26 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
     `SELECT id, renderer_engine, render_intent->'renderSpec' AS render_spec, intent_sha256, resource_request,
             render_intent->'scenarioRevision'->'map'->>'revisionId' AS map_version_id,
             render_intent->>'renderTextures' AS render_textures,
-            render_intent->'render' AS render_request
+            render_intent->'render' AS render_request,
+            (render_intent->>'renderTextures' = 'uastc-full' AND (
+              render_intent->'assets' @> jsonb_build_array(jsonb_build_object('assetId', CAST(:density_input_id AS text)))
+              OR EXISTS (
+                SELECT 1 FROM simforge.native_map_asset_members dm
+                 WHERE dm.relative_path = :density_path
+                   AND dm.asset_set_id IN (
+                     SELECT jsonb_array_elements_text(render_intent->'${RENDER_INTENT_CLOSURE_REF_KEY}'->'derivativeSetIds')
+                   )
+              )
+            )) AS texture_residency
        FROM simforge.render_jobs
       WHERE job_state = 'queued' AND cancel_requested_at IS NULL
         AND request_contract_version = :contract
       ORDER BY priority DESC, created_at, id LIMIT 32`,
-    { contract: RENDER_INTENT_V1_SCHEMA },
+    {
+      contract: RENDER_INTENT_V1_SCHEMA,
+      density_path: NATIVE_TEXTURE_DENSITY_MANIFEST,
+      density_input_id: `map.resource.${sha256(NATIVE_TEXTURE_DENSITY_MANIFEST)}`,
+    },
   );
   for (const candidate of candidates) {
     const claimed = await withTransaction(async (tx): Promise<Claimed | null> => {

@@ -44,4 +44,9 @@ test("a native worker leaves a job whose measured map demand it cannot hold to a
   assert.equal(workerCanRun(worker(10_240, belmont), candidate("uastc-full")), true, "6.4 GB fits a 10 GB card with 1 GB headroom");
   assert.equal(workerCanRun(worker(6_144, belmont), candidate("uastc-full")), false, "a 6 GB card leaves it to a larger worker");
   assert.equal(workerCanRun(worker(6_144, belmont), candidate("bc7-512")), true);
+  // Per-job texture residency: the measured full chains do not route the
+  // job; the worker admits it on the levels its cameras sample.
+  const residency: Candidate = { ...candidate("uastc-full"), texture_residency: true };
+  assert.equal(workerCanRun(worker(6_144, belmont), residency), true, "a residency job is admitted by the worker on its own bytes");
+  assert.equal(workerCanRun(worker(6_144, belmont), { ...residency, texture_residency: false }), false);
 });

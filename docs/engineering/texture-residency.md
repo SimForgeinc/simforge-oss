@@ -85,6 +85,11 @@ The worker then:
 - runs the admission check (capacity, and the device's free memory) on the
   bytes the job will upload. The staging check is deferred until then.
 
+The control plane leaves such a job's admission to the worker. The submission
+check skips the map's measured full-chain demand, and so does lease routing:
+a worker's `cacheStatus.demand` (full mip chains) does not keep the job off
+that worker (`workerCanRun`, `texture_residency`).
+
 ## The load (`render-core` `texture_residency`)
 
 The service's default asset source is `ResidencyReader`, the file reader plus
