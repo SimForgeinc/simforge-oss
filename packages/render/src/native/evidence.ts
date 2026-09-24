@@ -91,6 +91,17 @@ export const NativeRenderManifestSchema = NativeRunLineageSchema.extend({
    * AA samples). `update-count`: rc.73 and earlier, where the sky and the
    * TAA history advanced with every frame the renderer drew.
    */
+  /**
+   * The map's road decal derivative this render applied; gated by
+   * `native-evidence.road-decals`. null: the map carries none (wear decals
+   * composited at their authored opacity).
+   */
+  roadDecals: z.strictObject({
+    manifestSha256: Sha256Schema,
+    buildKey: Sha256Schema,
+    opacityScale: z.number().min(0).max(1),
+    materials: z.number().int().nonnegative(),
+  }).nullable().optional(),
   capture: z.strictObject({
     clock: z.enum(['simulation-time', 'update-count']),
     antiAlias: z.string().min(1).max(32),

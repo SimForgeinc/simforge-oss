@@ -2612,6 +2612,9 @@ pub struct SceneApp {
     shared_shadows: bool,
     /// Distance LODs of the static map ([`crate::geometry_lod`]).
     geometry_lods: Option<crate::geometry_lod::GeometryLods>,
+    /// Road decal layers and their opacity scale ([`crate::road_decals`]),
+    /// applied when the scene is finalized.
+    road_decals: Option<crate::road_decals::Manifest>,
     /// Static master mesh entity -> its ID-pass clone and ID material.
     id_clone_of: HashMap<Entity, (Entity, Handle<StandardMaterial>)>,
     /// Resolved render config ([`Self::apply_render_config`]).
@@ -2965,6 +2968,7 @@ impl SceneApp {
             env_gain: 1.0,
             shared_shadows: false,
             geometry_lods: None,
+            road_decals: None,
             id_clone_of: HashMap::new(),
             render_config: None,
         })
@@ -5764,6 +5768,14 @@ impl SceneApp {
                 crate::geometry_lod::spawn_levels(self.app.world_mut(), lods, &self.id_clone_of)?;
             eprintln!("geometry-lod: {masters} master primitives, {levels} level entities");
         }
+        if let Some(decals) = self.road_decals.clone() {
+            let touched = self.apply_road_decal_opacity(&decals)?;
+            eprintln!(
+                "road-decals: {} materials listed, {touched} drawn, opacity x{}",
+                decals.materials.len(),
+                decals.opacity_scale
+            );
+        }
 
         // One update so the newly spawned ID clones (and LOD levels, whose
         // ranges need propagated transforms) are extracted before the first
@@ -5771,6 +5783,53 @@ impl SceneApp {
         self.app.update();
         self.refresh_lod_ranges();
         Ok(())
+    }
+
+    /// Load the map's road decal derivative (`derived/road-decals/manifest.json`).
+    /// Call before readiness; the opacity is applied when the scene is
+    /// finalized, once the master's materials exist.
+    pub fn load_road_decals(&mut self, manifest: &std::path::Path) -> Result<()> {
+        self.road_decals = Some(crate::road_decals::Manifest::load(manifest)?);
+        Ok(())
+    }
+
+    /// Scale the base-colour alpha of every listed decal material. A listed
+    /// material the scene does not draw is fine (a map version whose
+    /// closure dropped it); a listed material that is not alpha-blended is
+    /// not a decal and fails, rather than being made transparent.
+    fn apply_road_decal_opacity(&mut self, decals: &crate::road_decals::Manifest) -> Result<usize> {
+        let names = decals.names();
+        let world = self.app.world_mut();
+        let mut handles: Vec<(String, Handle<StandardMaterial>)> = {
+            let mut meshes =
+                world.query::<(&MeshMaterial3d<StandardMaterial>, &GltfMaterialName)>();
+            meshes
+                .iter(world)
+                .filter(|(_, name)| names.contains(&name.0))
+                .map(|(material, name)| (name.0.clone(), material.0.clone()))
+                .collect()
+        };
+        handles.sort_by(|a, b| a.0.cmp(&b.0));
+        handles.dedup_by(|a, b| a.1.id() == b.1.id());
+        let mut assets = world.resource_mut::<Assets<StandardMaterial>>();
+        let mut touched = 0usize;
+        for (name, handle) in handles {
+            let Some(mut material) = assets.get_mut(&handle) else {
+                continue;
+            }; // fallback-ok: an unloaded handle has no pixels to change
+            if !matches!(
+                material.alpha_mode,
+                AlphaMode::Blend | AlphaMode::Premultiplied
+            ) {
+                bail!("[native_road_decal_not_blended] road decal material {name} is {:?}, not alpha-blended", material.alpha_mode);
+            }
+            let mut color = material.base_color.to_linear();
+            color.alpha *= decals.opacity_scale;
+            material.base_color = Color::from(color);
+            touched += 1;
+        }
+        self.scene_revision += 1;
+        Ok(touched)
     }
 
     /// Load the map's geometry LOD derivative (`manifest.json` beside its

@@ -116,6 +116,11 @@ pub struct SceneSpec {
     /// rig's most demanding camera; lidar/radar keep full detail.
     #[serde(default)]
     pub geometry_lod: Option<String>,
+    /// Absolute path of the map's `derived/road-decals/manifest.json`: the
+    /// RoadRunner wear-decal layers and their calibrated opacity. Absent:
+    /// decals composite at their authored opacity.
+    #[serde(default)]
+    pub road_decals: Option<String>,
     /// Absolute path of the map's `derived/ground/ground-mesh.bin`: the one
     /// placement height source, shared with the simulator and the contact
     /// gate. Absent only for map versions published before their ground
@@ -289,6 +294,9 @@ pub fn prewarm(spec: &SceneSpec) -> Result<SceneApp> {
             .first()
             .ok_or_else(|| anyhow::anyhow!("geometryLod needs the master glTF in glbs[0]"))?;
         app.load_geometry_lods(Path::new(manifest), master)?;
+    }
+    if let Some(manifest) = &spec.road_decals {
+        app.load_road_decals(Path::new(manifest))?;
     }
     app.load_vegetation(&spec.veg_glbs)?;
     if let Some(ground_mesh) = &spec.ground_mesh {

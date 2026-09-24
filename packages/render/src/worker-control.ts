@@ -90,9 +90,16 @@ export const CONTROL_FEATURE_NATIVE_VRAM_DETECTED = 'native-evidence.vram-detect
  * (`profile: cinematic`, `profileConfig` = the resolved config).
  */
 export const CONTROL_FEATURE_NATIVE_RENDER_CONFIG = 'native-evidence.render-config' as const;
+/**
+ * `roadDecals` in the native render manifest: the map's road decal
+ * derivative the render applied (manifest digest, build key, opacity scale,
+ * material count), or null when the map carries none.
+ */
+export const CONTROL_FEATURE_NATIVE_ROAD_DECALS = 'native-evidence.road-decals' as const;
 export const CONTROL_FEATURES_V1 = [
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK,
   CONTROL_FEATURE_RENDER_SUBSTITUTIONS, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_VRAM_DETECTED, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
+  CONTROL_FEATURE_NATIVE_ROAD_DECALS,
 ] as const;
 /**
  * Control-plane fields newer than a worker's baseline parsers, in the other
@@ -121,6 +128,7 @@ export const CONTROL_FEATURE_OUTPUTS: Readonly<Record<(typeof CONTROL_FEATURES_V
   [CONTROL_FEATURE_RENDER_SUBSTITUTIONS]: ['render.artifact-manifest:substitutions'],
   [CONTROL_FEATURE_NATIVE_ENCODER]: ['native.manifest:encoder'],
   [CONTROL_FEATURE_NATIVE_VRAM_DETECTED]: ['native.manifest:textureProfile.detectedCapacityBytes', 'native.diagnostics:textureProfile.detectedCapacityBytes'],
+  [CONTROL_FEATURE_NATIVE_ROAD_DECALS]: ['native.manifest:roadDecals'],
   [CONTROL_FEATURE_NATIVE_RENDER_CONFIG]: ['native.manifest:render', 'native.diagnostics:exposure'],
 };
 

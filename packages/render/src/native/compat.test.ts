@@ -14,7 +14,7 @@ import { NativeRenderManifestSchema, NativeRunDiagnosticsSchema } from './eviden
  */
 const BASELINE_MANIFEST_KEYS = ['schema', 'intentSha256', 'executionPackageControlSha256', 'sourceXoscSha256', 'loweringSha256', 'actorAssetsSha256', 'frameCount', 'textureProfile', 'look', 'videos'];
 const BASELINE_DIAGNOSTICS_KEYS = ['schema', 'intentSha256', 'executionPackageControlSha256', 'sourceXoscSha256', 'loweringSha256', 'actorAssetsSha256', 'frameCount', 'textureProfile', 'fixedTimestepSeconds', 'traceSha256', 'videoCount', 'videos', 'service', 'frames', 'timings'];
-const GATED_KEYS = ['sceneSource', 'timelineSha256', 'parity', 'capture', 'encoder', 'render', 'exposure'];
+const GATED_KEYS = ['sceneSource', 'timelineSha256', 'parity', 'capture', 'encoder', 'render', 'exposure', 'roadDecals'];
 /** `timings` keys the rc.72 plane accepts; `stages` rides `native-evidence.stage-timings`. */
 const BASELINE_TIMINGS_KEYS = ['wallMs', 'serverMs'];
 const GATED_TIMINGS_KEYS = ['stages'];

@@ -23,6 +23,7 @@ import { buildSumoDerivative, SUMO_DERIVATIVE_FINGERPRINT, SUMO_DERIVED_DIR } fr
 import { buildGroundDerivative, GROUND_DERIVED_DIR, GROUND_FINGERPRINT } from './ground/index.js';
 import { composeNativeTextureClosure } from './native-texture-closure.js';
 import { buildGeometryLod, GEOMETRY_LOD_DIR, geometryLodFingerprint } from './geometry-lod/index.js';
+import { buildRoadDecals, ROAD_DECALS_DIR } from './road-decals.js';
 import type { GeometryLodOptions } from './geometry-lod/index.js';
 import { vegetationLodLevels } from './vegetation-lod-levels.js';
 import { buildTexturesFullBc7, resolveGpuVariantTool, TEXTURES_FULL_BC7_DIR, textureVariantBuildKey, textureVariantFingerprint, masterKtx2Images } from './texture-variant.js';
@@ -37,6 +38,7 @@ export { browserVariantInput, browserVariantsBuildKey, browserVariantsFingerprin
 export type { BrowserVariantsManifest } from './browser-variants.js';
 export { composeNativeTextureClosure } from './native-texture-closure.js';
 export * from './geometry-lod/index.js';
+export * from './road-decals.js';
 export { substituteLods } from './geometry-lod/substitute.js';
 export type { SubstituteOptions, SubstituteReport } from './geometry-lod/substitute.js';
 
@@ -373,6 +375,9 @@ export async function masterStage(options: RunMapPipelineOptions): Promise<Maste
       const lod = await geometryLodStage(scene, options.workDir, geometryLod, options.ktx2);
       await copyMembers(lod.outputDir, path.join(contentDir, ...GEOMETRY_LOD_DIR.split('/')), Object.keys(lod.closure.members));
     }
+    // Road wear-decal layers and their calibrated opacity (road-decals.ts):
+    // a pure function of the master's materials.
+    await buildRoadDecals({ masterDir: contentDir, outputDir: path.join(contentDir, ...ROAD_DECALS_DIR.split('/')) });
     await writeFile(path.join(contentDir, 'source-manifest.json'), `${canonicalJson({ schema: 'simforge.map-source-receipt.v1', name: options.name, sceneSourceDigest: sceneSource, semanticSourceDigest: semanticDigest, sceneClosureDigest: scene.closureDigest, donorDigest: donorKey, toolFingerprint })}\n`);
     const stage = await finishStage('master', outputDir, 'canonical', keys, { master: true, viewerOnly: !source.xodrPath });
     const report = JSON.parse(await readFile(path.join(contentDir, 'master-report.json'), 'utf8')) as MasterReport;

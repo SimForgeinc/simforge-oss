@@ -17,6 +17,8 @@
  * - `geometryLod`: `derived/geometry-lod/*` (docs/engineering/map-geometry-lod.md)
  * - `texturesFullBc7`: `derived/textures-full-bc7/*`, the full-resolution
  *   GPU-block texture tier (docs/engineering/map-texture-variants.md)
+ * - `roadDecals`: `derived/road-decals/manifest.json`, the RoadRunner
+ *   wear-decal layers and their calibrated opacity (docs/engineering/map-road-decals.md)
  *
  * Browser (served with the browser closure through the map asset gateway):
  * - `browserVariants`: per-GPU texture tiers and browser packs at their
@@ -38,7 +40,7 @@ export const MAP_DERIVATIVE_SET_CONTRACT = "simforge.map-derivative-set.v1";
 
 export interface MapDerivativeKind {
   /** `map_versions.descriptor` key of the binding. */
-  key: "geometryLod" | "texturesFullBc7" | "browserVariants" | "browserScene";
+  key: "geometryLod" | "texturesFullBc7" | "roadDecals" | "browserVariants" | "browserScene";
   /** Which closure the members extend. */
   profile: "native" | "browser";
   /** Directory of the derivative's `manifest.json`. */
@@ -51,6 +53,7 @@ export interface MapDerivativeKind {
 export const MAP_DERIVATIVES: readonly MapDerivativeKind[] = [
   { key: "geometryLod", profile: "native", directory: "derived/geometry-lod", prefixes: ["derived/geometry-lod/"], schema: "simforge.map-geometry-lod.v1" },
   { key: "texturesFullBc7", profile: "native", directory: "derived/textures-full-bc7", prefixes: ["derived/textures-full-bc7/"], schema: "simforge.map-texture-variant.v1" },
+  { key: "roadDecals", profile: "native", directory: "derived/road-decals", prefixes: ["derived/road-decals/"], schema: "simforge.map-road-decals.v1" },
   { key: "browserVariants", profile: "browser", directory: "derived/browser-variants", prefixes: ["derived/browser-variants/", "3d/variants/", "3d/packs/"], schema: "simforge.map-browser-variants.v1" },
   { key: "browserScene", profile: "browser", directory: "derived/browser-scene", prefixes: ["derived/browser-scene/", "3d/tiles/", "images/", "3d/variants/", "3d/packs/"], schema: "simforge.map-browser-scene.v1" },
 ];

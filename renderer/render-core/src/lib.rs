@@ -27,6 +27,7 @@ pub mod fixture;
 pub mod geometry_lod;
 pub mod gpu_diagnostics;
 pub mod ktx2_variant;
+pub mod road_decals;
 #[cfg(all(feature = "gpu-interop", not(target_os = "linux")))]
 compile_error!(
     "render-core: the `gpu-interop` feature is the Linux NVIDIA Vulkan->CUDA opaque-fd bridge \

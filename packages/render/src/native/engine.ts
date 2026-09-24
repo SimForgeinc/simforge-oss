@@ -17,7 +17,7 @@ import {
   type RenderInputSelectionContext,
 } from '../index.js';
 import {
-  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
+  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_ROAD_DECALS, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_VRAM_DETECTED,
 } from '../worker-control.js';
 import { RenderInputError } from '../render-input-error.js';
@@ -40,6 +40,7 @@ import { nativeLightingSiteFromOpenDrive, resolveNativeLighting } from './lighti
 import { collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInputId, NATIVE_MAP_MASTER_INPUT_ID } from './map-closure.js';
 import { NativeGpuMemoryError, nativeStartupTimeoutMs, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
 import { NATIVE_GEOMETRY_LOD_MANIFEST, planNativeGeometryLod, type NativeGeometryLodMode } from './geometry-lod.js';
+import { NATIVE_ROAD_DECALS_MANIFEST, planNativeRoadDecals } from './road-decals.js';
 import { NATIVE_STAGE_TIMINGS_V1_SCHEMA, StageSamples, splitServiceStages, type NativeStageTimings } from './stage-timings.js';
 import {
   DEFAULT_NVENC_MAX_SESSIONS, VideoEncoder, assignVideoCodecs, encoderCodecArgs, nvencAvailable,
@@ -556,10 +557,12 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       // smaller of the two.
       const vram = nativeVramCapacity(intent.nativeVramCapacityBytes, context.gpuMemory?.totalBytes);
       const renderRequest = nativeRenderRequest(intent, options);
-      const geometryLod = await planNativeGeometryLod(renderRequest.geometryLod, {
-        sha256: (uri) => closure.members.get(uri)?.sha256,
-        readText: (uri) => fs.readFile(closure.members.get(uri)!.path, 'utf8'),
-      });
+      const closureSource = {
+        sha256: (uri: string) => closure.members.get(uri)?.sha256,
+        readText: (uri: string) => fs.readFile(closure.members.get(uri)!.path, 'utf8'),
+      };
+      const geometryLod = await planNativeGeometryLod(renderRequest.geometryLod, closureSource);
+      const roadDecals = await planNativeRoadDecals(closureSource);
       const textureProfile = await stageNativeTextureProfile({
         closure,
         renderTextures: intent.renderTextures,
@@ -567,7 +570,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         capacityBytes: vram.capacityBytes,
         framePixels: sources.reduce((sum, source) => sum + (source.modality === 'rgb' ? source.attributes.width * source.attributes.height : sensorVideo.width * sensorVideo.height), 0),
         cacheDirectory: options.nativeCacheDirectory,
-        extraMembers: geometryLod?.members,
+        extraMembers: [...(geometryLod?.members ?? []), ...(roadDecals?.members ?? [])],
       });
       // Fail in seconds, not after a startup timeout, when the device the job
       // holds cannot take the scene at this tier (textures + geometry + frame
@@ -718,6 +721,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         render: renderRequest.request,
         textureTier: intent.renderTextures,
         ...(geometryLod ? { geometryLod: path.join(path.dirname(masterPath), NATIVE_GEOMETRY_LOD_MANIFEST) } : {}),
+        ...(roadDecals ? { roadDecals: path.join(path.dirname(masterPath), NATIVE_ROAD_DECALS_MANIFEST) } : {}),
         ...(groundMember ? { groundMesh: groundMember.path } : {}),
       });
       // Scene load is the longest silent stretch of a large-map job: report
@@ -1109,6 +1113,9 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         actorAssetsSha256: actorAssets.digest,
         frameCount: lowering.states.length,
         ...(features.has(CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK) ? { capture } : {}),
+        ...(features.has(CONTROL_FEATURE_NATIVE_ROAD_DECALS) ? { roadDecals: roadDecals
+          ? { manifestSha256: roadDecals.manifestSha256, buildKey: roadDecals.buildKey, opacityScale: roadDecals.opacityScale, materials: roadDecals.materials }
+          : null } : {}),
         ...gatedRenderEvidence(features, {
           lighting: look.lighting, autoMeter: options.autoMeter ?? true, provenance: look.provenance,
         }, renderRequest, renderConfig, geometryLod),
