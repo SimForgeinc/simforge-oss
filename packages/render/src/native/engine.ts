@@ -41,7 +41,7 @@ import { collectNativeMapMembers, isNativeMapMemberInputId, nativeMapMemberInput
 import { NativeGpuMemoryError, nativeSceneEstimateBytes, nativeStartupTimeoutMs, NativeTextureCapacityError, planNativeTextureMembers, stageNativeTextureProfile } from './texture-profile.js';
 import { NATIVE_GEOMETRY_LOD_MANIFEST, planNativeGeometryLod, type NativeGeometryLodMode } from './geometry-lod.js';
 import { NATIVE_ROAD_DECALS_MANIFEST, planNativeRoadDecals } from './road-decals.js';
-import { nativeTextureResidencyLevels, nativeTextureResidencyPlan, planNativeTextureDensity } from './texture-residency.js';
+import { NATIVE_TEXTURE_DENSITY_MANIFEST, nativeTextureResidencyLevels, nativeTextureResidencyPlan, planNativeTextureDensity } from './texture-residency.js';
 import type { NativeTextureResidency } from './texture-residency.js';
 import { NATIVE_STAGE_TIMINGS_V1_SCHEMA, StageSamples, splitServiceStages, type NativeStageTimings } from './stage-timings.js';
 import {
@@ -275,7 +275,39 @@ export async function selectNativeRenderInputs(context: RenderInputSelectionCont
   // fallback-ok: the documented default mode; the worker re-plans with the same mode and records it
   const lod = await planNativeGeometryLod(intent.render?.geometryLod ?? 'auto', memberSource);
   if (lod) for (const uri of lod.members) selected.add(nativeMapMemberInputId(uri));
+  // Every derivative the run reads (`nativeDerivativesRead`) is downloaded:
+  // a derivative left out here would render as if the map had none.
+  for (const uri of nativeDerivativesRead(intent.renderTextures)) {
+    if (byPath.has(uri)) selected.add(nativeMapMemberInputId(uri));
+  }
   return selected;
+}
+
+/**
+ * The single-file map derivatives a native run reads when the map carries
+ * them: the road decal manifest, and at `uastc-full` the texture density
+ * manifest (per-job residency). Geometry LOD members depend on the LOD mode
+ * and are selected by its plan.
+ */
+export function nativeDerivativesRead(renderTextures: RenderIntentV1['renderTextures']): readonly string[] {
+  return renderTextures === 'uastc-full' ? [NATIVE_ROAD_DECALS_MANIFEST, NATIVE_TEXTURE_DENSITY_MANIFEST] : [NATIVE_ROAD_DECALS_MANIFEST];
+}
+
+/**
+ * Refuses a run whose intent declares a derivative the run reads that did
+ * not reach the job's inputs: without it the run would silently render
+ * without the decals, or upload every mip level and fail admission.
+ */
+export function assertNativeDerivativesDelivered(
+  intent: Pick<RenderIntentV1, 'assets' | 'renderTextures'>,
+  delivered: ReadonlySet<string>,
+): void {
+  const declared = new Set(intent.assets.map((asset) => asset.assetId));
+  for (const uri of nativeDerivativesRead(intent.renderTextures)) {
+    if (declared.has(nativeMapMemberInputId(uri)) && !delivered.has(uri)) {
+      throw new RenderInputError('native_derivative_not_delivered', `the intent declares ${uri} but the job's inputs do not carry it`);
+    }
+  }
 }
 
 /**
@@ -559,6 +591,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       if (!xoscInput) throw new Error('native render requires scenario.xosc');
       const closure = collectNativeMapMembers(context.inputs.values());
       if (!intent.renderTextures) throw new Error('native_render_texture_profile_missing');
+      assertNativeDerivativesDelivered(intent, new Set(closure.members.keys()));
       if (!intent.nativeVramBudgetBytes && !intent.nativeVramCapacityBytes) throw new Error('native_vram_capacity_missing');
       const warnings: { code: string; message: string }[] = [];
       const sensorVideo = nativeSensorVideoFormat(intent);

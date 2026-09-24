@@ -53,8 +53,13 @@ the road decals' fingerprint).
 
 ## The plan (`@simforge-oss/render` `texture-residency.ts`)
 
-For a `uastc-full` job on a map with the derivative, the worker computes the
-plan after lowering, from the camera schedule:
+For a `uastc-full` job on a map with the derivative, the worker downloads the
+density manifest with the job's inputs (`selectNativeRenderInputs`, which also
+takes the road decal manifest). A run whose intent declares a derivative the
+run reads, but whose inputs do not carry it, fails
+`native_derivative_not_delivered`: it would otherwise upload every mip level
+without saying so. The worker computes the plan after lowering, from the camera
+schedule:
 
 ```
 texels per pixel >= density * max(near plane, closest horizontal approach) / focalCorner

@@ -105,6 +105,38 @@ it('selects exactly one tier before any texture is downloaded, and stages from o
   expect(staged.textureBytes).toBe(1024 ** 2);
 });
 
+it('downloads the road decal and texture density derivatives the run reads, and refuses a run without them', async () => {
+  const value = await fixture();
+  const inputs = [...value.closure.members.values()];
+  for (const relativePath of ['derived/road-decals/manifest.json', 'derived/texture-density/manifest.json']) {
+    const file = path.join(value.directory, relativePath);
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, '{}');
+    inputs.push({ inputId: nativeMapMemberInputId(relativePath), relativePath, path: file, sha256: createHash('sha256').update('{}').digest('hex'), sizeBytes: 2 });
+  }
+  const byId = new Map(inputs.map((input) => [input.inputId, input]));
+  const context = (renderTextures: 'uastc-full' | 'bc7-512') => ({
+    intent: { renderTextures } as never,
+    inputs: inputs.map(({ inputId, relativePath, sha256, sizeBytes }) => ({ inputId, relativePath, sha256, sizeBytes })),
+    read: async (inputId: string) => fs.readFile(byId.get(inputId)!.path),
+    signal: new AbortController().signal,
+  });
+  const { assertNativeDerivativesDelivered, selectNativeRenderInputs } = await import('./engine.js');
+  vi.spyOn(await import('@simforge-oss/scenario'), 'parseRenderIntent').mockImplementation((intent) => intent as never);
+  const paths = async (tier: 'uastc-full' | 'bc7-512') => [...await selectNativeRenderInputs(context(tier))].map((id) => byId.get(id)!.relativePath).filter((p) => p!.startsWith('derived/')).sort();
+  expect(await paths('uastc-full')).toEqual(['derived/road-decals/manifest.json', 'derived/texture-density/manifest.json']);
+  expect(await paths('bc7-512')).toEqual(['derived/road-decals/manifest.json']);
+
+  const assets = inputs.map((input) => ({ assetId: input.inputId }));
+  const all = new Set(inputs.map((input) => input.relativePath!));
+  expect(() => assertNativeDerivativesDelivered({ assets, renderTextures: 'uastc-full' } as never, all)).not.toThrow();
+  const withoutDensity = new Set([...all].filter((p) => p !== 'derived/texture-density/manifest.json'));
+  expect(() => assertNativeDerivativesDelivered({ assets, renderTextures: 'uastc-full' } as never, withoutDensity))
+    .toThrow(expect.objectContaining({ code: 'native_derivative_not_delivered' }));
+  // The density manifest is read only at uastc-full.
+  expect(() => assertNativeDerivativesDelivered({ assets, renderTextures: 'bc7-512' } as never, withoutDensity)).not.toThrow();
+});
+
 it('does not re-hash a staged member that is already a link to the verified blob', async () => {
   const value = await fixture();
   await stageNativeTextureProfile({ ...value, renderTextures: 'uastc-full', framePixels: 1, capacityBytes: 16 * 1024 ** 3 });
