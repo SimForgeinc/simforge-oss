@@ -25,7 +25,7 @@ const LUMA = vec3<f32>(0.2126, 0.7152, 0.0722);
 
 @group(0) @binding(0) var<uniform> apply_params: CameraParams;
 @group(0) @binding(1) var apply_frame: texture_2d<f32>;
-@group(0) @binding(2) var<storage, read> apply_result: array<f32, 4>;
+@group(0) @binding(2) var<storage, read> apply_result: array<f32, 8>;
 
 @fragment
 fn apply_pass(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {

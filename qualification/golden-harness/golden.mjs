@@ -31,6 +31,8 @@
  * 7 vacuous ID pass (it
  * encodes too few instances: a golden of a blank pass proves nothing) ·
  * 8 observed actor transforms fail parity with the render timeline ·
+ * 9 non-finite (NaN/inf) pixels in a frame before tone mapping (a shading
+ * bug that prints as black; a golden of it would enshrine it) ·
  * 1 usage/environment error.
  *
  * Scene definition (scenes/<sceneId>.json):
@@ -345,6 +347,13 @@ function runRenderer(binPath, invocation, label) {
   if (!fs.existsSync(resultsPath)) fail(1, `renderer wrote no ${resultsPath}`);
   const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
   if (results.schema !== 'simforge.render-job-results/v2') fail(1, `${resultsPath}: schema ${results.schema}`);
+  // Every frame's HDR image must be finite (the camera model counts NaN/inf
+  // pixels per camera; results.exposure has them per tick).
+  if (!Number.isInteger(results.nonFinitePixels)) fail(1, `${resultsPath}: no nonFinitePixels (renderer predates the frame-integrity count)`);
+  if (results.nonFinitePixels > 0) {
+    const where = Object.entries(results.exposure ?? {}).flatMap(([tick, cams]) => Object.entries(cams).filter(([, c]) => c.nonFinitePixels > 0).map(([sensor, c]) => `tick ${Number(tick)} ${sensor}: ${c.nonFinitePixels}`));
+    throw new GateFailure(9, `${label}: ${results.nonFinitePixels} non-finite pixels before tone mapping (${where.slice(0, 5).join('; ')})`);
+  }
   const ticks = results.tickMs ?? [];
   if (ticks.length === 0) return null;
   const sorted = [...ticks].sort((a, b) => a - b);

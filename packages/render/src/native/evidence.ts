@@ -206,6 +206,20 @@ export const NativeRunDiagnosticsSchema = NativeRunLineageSchema.extend({
    * aperture/shutter/ISO/gain the camera's program realises it with. Gated
    * by `native-evidence.render-config`.
    */
+  /**
+   * Non-finite (NaN/inf) pixels of the HDR frames before tone mapping, as
+   * the camera model counted them: the total and the first 100 affected
+   * camera frames. A correct render has none. Gated by
+   * `native-evidence.frame-integrity`.
+   */
+  frameIntegrity: z.strictObject({
+    nonFinitePixels: z.number().int().nonnegative(),
+    frames: z.array(z.strictObject({
+      tick: z.number().int().nonnegative(),
+      sensorId: z.string().min(1),
+      pixels: z.number().int().positive(),
+    })).max(100),
+  }).optional(),
   exposure: z.array(z.strictObject({
     tick: z.number().int().nonnegative(),
     cameras: z.record(z.string(), z.strictObject({

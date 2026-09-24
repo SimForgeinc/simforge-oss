@@ -3126,6 +3126,7 @@ fn camera_exposures(
                 shutter_s: program.shutter_s,
                 iso: program.iso,
                 gain_db: program.gain_db,
+                non_finite_pixels: value(4) as u32,
             },
         );
     }

@@ -7000,7 +7000,7 @@ fn sync_staging(
             continue;
         };
         let (width, height) = if target.exposure {
-            (4, 1)
+            (crate::camera_model::EXPOSURE_READBACK_BYTES as u32 / 4, 1)
         } else {
             (
                 gpu.texture_descriptor.size.width,
@@ -7144,8 +7144,13 @@ fn copy_passes(
             else {
                 continue;
             };
-            ctx.command_encoder()
-                .copy_buffer_to_buffer(&buffers.result, 0, &b.buffer, 0, 16);
+            ctx.command_encoder().copy_buffer_to_buffer(
+                &buffers.result,
+                0,
+                &b.buffer,
+                0,
+                crate::camera_model::EXPOSURE_READBACK_BYTES,
+            );
         } else if b.depth {
             let Some((_, view)) = depth_views
                 .iter()

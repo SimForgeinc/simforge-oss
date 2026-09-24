@@ -18,6 +18,12 @@
         "native.manifest:encoder"
       ]
     },
+    "native-evidence.frame-integrity": {
+      "constant": "CONTROL_FEATURE_NATIVE_FRAME_INTEGRITY",
+      "keys": [
+        "native.diagnostics:frameIntegrity"
+      ]
+    },
     "native-evidence.parity": {
       "constant": "CONTROL_FEATURE_NATIVE_PARITY",
       "keys": [

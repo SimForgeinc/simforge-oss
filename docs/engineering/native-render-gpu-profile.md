@@ -137,6 +137,42 @@ Directional shadow cascades selected LOD levels on the GPU from the wrong positi
 
 SSR reads the deferred G-buffer, but every material drew forward, so SSR contributed nothing. Belmont rain at wetness 0.85 rendered identical bytes with SSR on and off. With SSR in the look, wet road materials now draw deferred. Dry roads and every other material stay forward, so dry frames are unchanged (`a_wet_road_reflects_in_screen_space`).
 
+### NaN foliage quads and the frame-integrity gate (fixed)
+
+The camera model's metering pass counts every non-finite pixel of the HDR
+frame: a pixel with NaN or infinity in any channel, tested on the exponent
+bits. Before this count, such pixels printed as black and nobody noticed.
+The count is read back with each camera's exposure and reported in three
+places:
+
+- job results: `nonFinitePixels`;
+- run diagnostics: `frameIntegrity`, gated by
+  `native-evidence.frame-integrity`;
+- a `non_finite_pixels` warning.
+
+The golden gate fails (exit 9) on any frame that has one.
+
+On the San Ramon CEO-comparison and fit frames, 5 of 31 frames had 4-20 NaN
+pixels, in 2x2 quads on pine and bush foliage. They appeared only with SSAO
+on, because SSAO enables the normal prepass. With `LOAD_PREPASS_NORMALS`, the
+main pass lit each fragment with the 10-bit normal the prepass stored for its
+pixel.
+
+The main pass now computes its own normal; SSAO still uses the prepass. This
+removes every NaN on all 5 frames. Ruled out as causes: a non-finite prepass
+normal, the default clearcoat normal, and a cause limited to masked materials.
+
+Measured effect of the fix:
+
+- **Pixels changed:** Easterbrook 1.1-1.3% of pixels (99.9th percentile 1
+  level); San Ramon 8.7% (99.9th percentile 2 levels).
+- **GPU time:** Belmont 8×720p on the RTX 5080, beside CARLA, A/B interleaved.
+  Showcase 98.2/98.0 → 98.3/97.7 ms; training 61.8/62.4 → 60.9/63.8 ms. The
+  differences are within run-to-run noise.
+- **Dash-cam calibration:** re-scored against the NVIDIA PhysicalAI-AV
+  reference on 4 Belmont lighting scenes × 30 frames. Showcase 1.168 → 1.167;
+  training 1.189 → 1.188.
+
 ### Cars under trees: canopy sky occlusion (`lighting.canopySkyOcclusion`, on in both presets)
 
 On the Easterbrook chase (tick 100), a white car under dappled canopy read as sunlit. It does receive the tree shadows, but two things hid them:

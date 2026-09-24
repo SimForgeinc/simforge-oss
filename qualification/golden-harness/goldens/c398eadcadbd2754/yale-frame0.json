@@ -1,6 +1,6 @@
 {
   "schema": "simforge-oss.render-determinism-manifest.v1",
-  "generatedAt": "2026-09-24T00:08:18.613Z",
+  "generatedAt": "2026-09-24T08:03:15.257Z",
   "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
   "mode": "golden-record",
   "renderConfig": {
@@ -16,13 +16,13 @@
   },
   "rendererPath": {
     "engine": "native-bevy",
-    "file": "../../.cache/gpu-deep-target/release/simforge-render",
-    "sha256": "8397e2bc03fde0fc05d121dfb7ce53d9c8cb88f92f3e1871663b7503753f2b04",
+    "file": "../../../../../tmp/claude-1000/-home-path/bb0d75f9-19c6-4010-a03b-2bb79dd806bc/scratchpad/goldens-nan/simforge-render.golden",
+    "sha256": "b174732521581a20f1f394d606aef583b238ec49bb3452863a373d417584350c",
     "invocation": {
       "args": [
         "job",
         "--job",
-        "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/yale-frame0/runA/yale-frame0.job.json"
+        "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/yale-frame0/runA/yale-frame0.job.json"
       ],
       "job": {
         "schema": "simforge.render-job/v2",
@@ -38,7 +38,7 @@
           },
           "warmupFrames": 20,
           "glbs": [
-            "/home/path/tmp/renderfleet/maps/.corpus/yale-street/master.gltf"
+            "/home/path/.local/share/simforge/maps/.corpus/yale-street/master.gltf"
           ]
         },
         "rig": {
@@ -70,7 +70,7 @@
           "id",
           "depth"
         ],
-        "outDir": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/yale-frame0/runA/yale-frame0"
+        "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/yale-frame0/runA/yale-frame0"
       },
       "passesRenderedSequentially": false
     },
@@ -82,7 +82,7 @@
     }
   },
   "hardware": {
-    "collectedAt": "2026-09-24T00:01:34.942Z",
+    "collectedAt": "2026-09-24T07:56:57.035Z",
     "gpuFingerprint": "c398eadcadbd2754",
     "host": {
       "osPrettyName": "Ubuntu 24.04.4 LTS",
@@ -102,8 +102,8 @@
   "passHashes": {
     "cam0.rgb": {
       "file": "cam0/00000009.rgb.png",
-      "sha256": "6c598b4b8cba1b63253f7feb9306afd5e4eea0782dc6e311977a996ca7b977ba",
-      "bytes": 504376
+      "sha256": "8171a06884446d478a9afc7a86737f143ae768259aad32320a2cd7facbfab161",
+      "bytes": 504415
     },
     "cam0.id": {
       "file": "cam0/00000009.id.png",
@@ -130,20 +130,171 @@
     }
   ],
   "timings": {
-    "avgFrameMs": 5426.142784666667,
-    "p50FrameMs": 5295.49936,
-    "p99FrameMs": 6241.298058,
-    "fps": 0.18429297563378275,
+    "avgFrameMs": 5159.634486999999,
+    "p50FrameMs": 5158.368428,
+    "p99FrameMs": 6051.27259,
+    "fps": 0.19381217846333076,
     "measuredFrames": 9
   },
   "twoRunEvidence": {
     "runsCompared": 2,
     "byteStable": true,
-    "runBTimingsAvgFrameMs": 5322.975305555556
+    "runBTimingsAvgFrameMs": 4898.851407333334
   },
   "verdict": {
     "byteStable": true,
     "driftedPasses": [],
     "scope": "render-job pass hashes (pinned capture clock), one lavapipe build on one CPU model (the adapter of record) — cross-adapter reproducibility NOT claimed (docs/determinism-claim.md)"
-  }
+  },
+  "previousVersions": [
+    {
+      "schema": "simforge-oss.render-determinism-manifest.v1",
+      "generatedAt": "2026-09-24T00:08:18.613Z",
+      "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
+      "mode": "golden-record",
+      "renderConfig": {
+        "preset": "training"
+      },
+      "scenario": {
+        "instanceId": null,
+        "mapId": "yale-street",
+        "sceneId": "yale-frame0",
+        "inputs": {
+          "sceneDefinition": "qualification/golden-harness/scenes/yale-frame0.json"
+        }
+      },
+      "rendererPath": {
+        "engine": "native-bevy",
+        "file": "../../.cache/gpu-deep-target/release/simforge-render",
+        "sha256": "8397e2bc03fde0fc05d121dfb7ce53d9c8cb88f92f3e1871663b7503753f2b04",
+        "invocation": {
+          "args": [
+            "job",
+            "--job",
+            "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/yale-frame0/runA/yale-frame0.job.json"
+          ],
+          "job": {
+            "schema": "simforge.render-job/v2",
+            "scene": {
+              "lighting": {
+                "sun_elev_deg": 38,
+                "sun_azim_deg": 145,
+                "sun_lux": 28000,
+                "ambient": 0.6
+              },
+              "render": {
+                "preset": "training"
+              },
+              "warmupFrames": 20,
+              "glbs": [
+                "/home/path/tmp/renderfleet/maps/.corpus/yale-street/master.gltf"
+              ]
+            },
+            "rig": {
+              "cameras": [
+                {
+                  "sensorId": "cam0",
+                  "width": 736,
+                  "height": 416,
+                  "fovDeg": 58,
+                  "eye": [
+                    580.45,
+                    14.44,
+                    -1655.66
+                  ],
+                  "target": [
+                    590.4,
+                    14.35,
+                    -1648.96
+                  ]
+                }
+              ]
+            },
+            "ticks": {
+              "start": 0,
+              "count": 10
+            },
+            "passes": [
+              "rgb",
+              "id",
+              "depth"
+            ],
+            "outDir": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/yale-frame0/runA/yale-frame0"
+          },
+          "passesRenderedSequentially": false
+        },
+        "versions": {
+          "bevy": "0.19.1",
+          "wgpu": "29.0.4",
+          "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+          "backend": "vulkan"
+        }
+      },
+      "hardware": {
+        "collectedAt": "2026-09-24T00:01:34.942Z",
+        "gpuFingerprint": "c398eadcadbd2754",
+        "host": {
+          "osPrettyName": "Ubuntu 24.04.4 LTS",
+          "kernel": "7.0.0-31-generic",
+          "arch": "x64",
+          "cpuModel": "Intel(R) Core(TM) Ultra 9 285K",
+          "cpuCount": 24,
+          "hostname": "path-pc",
+          "adapter": {
+            "icd": "/usr/share/vulkan/icd.d/lvp_icd.json",
+            "deviceName": "llvmpipe (LLVM 20.1.2, 256 bits)",
+            "driverName": "llvmpipe",
+            "driverInfo": "Mesa 25.2.8-0ubuntu0.24.04.2 (LLVM 20.1.2)"
+          }
+        }
+      },
+      "passHashes": {
+        "cam0.rgb": {
+          "file": "cam0/00000009.rgb.png",
+          "sha256": "6c598b4b8cba1b63253f7feb9306afd5e4eea0782dc6e311977a996ca7b977ba",
+          "bytes": 504376
+        },
+        "cam0.id": {
+          "file": "cam0/00000009.id.png",
+          "sha256": "6f9605ab85530fa97cfaf52600c3ebd8cf0ec96491ee535ad3f89adb81439180",
+          "bytes": 70974
+        },
+        "cam0.depth": {
+          "file": "cam0/00000009.depth.f32.bin",
+          "sha256": "a7bfdb5a8e447b893da5dbebf7e3c9cbc64e027d957a346cae73b8911ef8d94a",
+          "bytes": 1224704
+        }
+      },
+      "idPasses": {
+        "cam0.id": {
+          "distinctIds": 209,
+          "coveredFraction": 0.8676
+        }
+      },
+      "corpusChecksums": [
+        {
+          "path": "master.gltf",
+          "sha256": "600f824537784bd9ca675ad8156f4ded5a66f5314158112c19cb66a013283495",
+          "bytes": 2364602
+        }
+      ],
+      "timings": {
+        "avgFrameMs": 5426.142784666667,
+        "p50FrameMs": 5295.49936,
+        "p99FrameMs": 6241.298058,
+        "fps": 0.18429297563378275,
+        "measuredFrames": 9
+      },
+      "twoRunEvidence": {
+        "runsCompared": 2,
+        "byteStable": true,
+        "runBTimingsAvgFrameMs": 5322.975305555556
+      },
+      "verdict": {
+        "byteStable": true,
+        "driftedPasses": [],
+        "scope": "render-job pass hashes (pinned capture clock), one lavapipe build on one CPU model (the adapter of record) — cross-adapter reproducibility NOT claimed (docs/determinism-claim.md)"
+      }
+    }
+  ]
 }

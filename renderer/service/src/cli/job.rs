@@ -901,6 +901,8 @@ pub fn run(argv: Vec<String>) -> Result<()> {
     let mut server_ms = Vec::new();
     let mut digests: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut exposures: BTreeMap<String, serde_json::Value> = BTreeMap::new();
+    // Non-finite HDR pixels over every tick and camera (see `exposure`).
+    let mut non_finite_pixels = 0u64;
     let mut gpu: BTreeMap<String, (f64, usize)> = BTreeMap::new();
     let mut first_tick_ms = 0.0;
     let mut stages: BTreeMap<String, f64> = BTreeMap::new();
@@ -943,6 +945,15 @@ pub fn run(argv: Vec<String>) -> Result<()> {
             bail!("tick {tick}: unexpected response");
         };
         if let Some(exposure) = exposure {
+            for (sensor, camera) in &exposure {
+                if camera.non_finite_pixels > 0 {
+                    eprintln!(
+                        "simforge-render job: tick {tick} {sensor}: {} non-finite (NaN/inf) pixels before tone mapping",
+                        camera.non_finite_pixels
+                    );
+                    non_finite_pixels += u64::from(camera.non_finite_pixels);
+                }
+            }
             exposures.insert(format!("{tick:08}"), serde_json::to_value(exposure)?);
         }
         if let Some(dir) = &out_dir {
@@ -1118,8 +1129,11 @@ pub fn run(argv: Vec<String>) -> Result<()> {
         "gpuPerTick": gpu_rows.iter().map(|(p, v, c)| serde_json::json!({"path": p, "perTick": v, "spansPerTick": c})).collect::<Vec<_>>(),
         "stagesPerTick": stages.iter().map(|(k, v)| (k.clone(), serde_json::json!(v / measured))).collect::<serde_json::Map<_, _>>(),
         "digests": digests,
-        // Per tick, per RGB camera: the metered exposure (dash-cam camera model).
+        // Per tick, per RGB camera: the metered exposure (dash-cam camera
+        // model), with the frame's non-finite pixel count.
         "exposure": exposures,
+        // Their sum: a correct render has none (the golden gate requires 0).
+        "nonFinitePixels": non_finite_pixels,
         "artifacts": artifacts,
     });
     if let Some(dir) = &out_dir {
@@ -1127,6 +1141,13 @@ pub fn run(argv: Vec<String>) -> Result<()> {
             dir.join("results.json"),
             serde_json::to_vec_pretty(&result)?,
         )?;
+        // With an instance-ID pass: which static mesh each id is, so an ID
+        // pixel can be traced to the map object that drew it.
+        if passes.iter().any(|pass| pass == "id") {
+            let legend: BTreeMap<u32, &String> =
+                state.legend.iter().map(|(id, name)| (*id, name)).collect();
+            std::fs::write(dir.join("legend.json"), serde_json::to_vec_pretty(&legend)?)?;
+        }
     }
     if let Some(out) = &args.out {
         std::fs::write(out, serde_json::to_vec_pretty(&result)?)?;

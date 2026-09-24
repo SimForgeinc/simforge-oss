@@ -1,6 +1,6 @@
 {
   "schema": "simforge-oss.render-determinism-manifest.v1",
-  "generatedAt": "2026-09-24T01:55:02.746Z",
+  "generatedAt": "2026-09-24T08:57:12.598Z",
   "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
   "mode": "golden-record",
   "renderConfig": {
@@ -16,13 +16,13 @@
   },
   "rendererPath": {
     "engine": "native-bevy",
-    "file": "../../.cache/gpu-deep-target/release/simforge-render",
-    "sha256": "8397e2bc03fde0fc05d121dfb7ce53d9c8cb88f92f3e1871663b7503753f2b04",
+    "file": "../../../../../tmp/claude-1000/-home-path/bb0d75f9-19c6-4010-a03b-2bb79dd806bc/scratchpad/goldens-nan/simforge-render.golden",
+    "sha256": "b174732521581a20f1f394d606aef583b238ec49bb3452863a373d417584350c",
     "invocation": {
       "args": [
         "job",
         "--job",
-        "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/richmond-06-timeline/runA/richmond-06-timeline.job.json"
+        "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/richmond-06-timeline/runA/richmond-06-timeline.job.json"
       ],
       "job": {
         "schema": "simforge.render-job/v2",
@@ -37,10 +37,10 @@
             "preset": "training"
           },
           "warmupFrames": 20,
-          "vehicleModels": "/home/path/worktrees/oss-gpu-deep/catalog/vehicles-carla",
-          "pedestrianModels": "/home/path/worktrees/oss-gpu-deep/catalog/pedestrians-carla",
+          "vehicleModels": "/home/path/worktrees/sc-road-decals/oss/catalog/vehicles-carla",
+          "pedestrianModels": "/home/path/worktrees/sc-road-decals/oss/catalog/pedestrians-carla",
           "glbs": [
-            "/home/path/tmp/renderfleet/maps/.corpus/richmond-field-station/master.gltf"
+            "/home/path/.local/share/simforge/maps/.corpus/richmond-field-station/master.gltf"
           ]
         },
         "rig": {
@@ -81,8 +81,8 @@
           "rgb",
           "id"
         ],
-        "outDir": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/richmond-06-timeline/runA/richmond-06-timeline",
-        "sceneState": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/richmond-06-timeline/runA/richmond-06-timeline.scene-state.json",
+        "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/richmond-06-timeline/runA/richmond-06-timeline",
+        "sceneState": "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/richmond-06-timeline/runA/richmond-06-timeline.scene-state.json",
         "observe": true
       },
       "passesRenderedSequentially": false
@@ -95,7 +95,7 @@
     }
   },
   "hardware": {
-    "collectedAt": "2026-09-24T01:37:07.166Z",
+    "collectedAt": "2026-09-24T08:40:36.693Z",
     "gpuFingerprint": "c398eadcadbd2754",
     "host": {
       "osPrettyName": "Ubuntu 24.04.4 LTS",
@@ -115,8 +115,8 @@
   "passHashes": {
     "chase.t60.rgb": {
       "file": "chase/00000060.rgb.png",
-      "sha256": "9f93027aa4a9c135578fd80a6d2efe6e11e0c84d5c8507af048bf770cd28dd5f",
-      "bytes": 233438
+      "sha256": "198a5c6ccae24b1a7de43cd5c63481270c70a728711179064cfb5671b5e62c4f",
+      "bytes": 233788
     },
     "chase.t60.id": {
       "file": "chase/00000060.id.png",
@@ -151,20 +151,192 @@
     }
   ],
   "timings": {
-    "avgFrameMs": 3636.669458756303,
-    "p50FrameMs": 3602.580531,
-    "p99FrameMs": 4338.43738,
-    "fps": 0.2749768741264673,
+    "avgFrameMs": 3381.534839159663,
+    "p50FrameMs": 3386.1047009999997,
+    "p99FrameMs": 3480.498174,
+    "fps": 0.29572370168113,
     "measuredFrames": 119
   },
   "twoRunEvidence": {
     "runsCompared": 2,
     "byteStable": true,
-    "runBTimingsAvgFrameMs": 3626.7108247310935
+    "runBTimingsAvgFrameMs": 3370.057294663866
   },
   "verdict": {
     "byteStable": true,
     "driftedPasses": [],
     "scope": "render-job pass hashes (pinned capture clock), one lavapipe build on one CPU model (the adapter of record) — cross-adapter reproducibility NOT claimed (docs/determinism-claim.md)"
-  }
+  },
+  "previousVersions": [
+    {
+      "schema": "simforge-oss.render-determinism-manifest.v1",
+      "generatedAt": "2026-09-24T01:55:02.746Z",
+      "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
+      "mode": "golden-record",
+      "renderConfig": {
+        "preset": "training"
+      },
+      "scenario": {
+        "instanceId": null,
+        "mapId": "richmond-field-station",
+        "sceneId": "richmond-06-timeline",
+        "inputs": {
+          "sceneDefinition": "qualification/golden-harness/scenes/richmond-06-timeline.json"
+        }
+      },
+      "rendererPath": {
+        "engine": "native-bevy",
+        "file": "../../.cache/gpu-deep-target/release/simforge-render",
+        "sha256": "8397e2bc03fde0fc05d121dfb7ce53d9c8cb88f92f3e1871663b7503753f2b04",
+        "invocation": {
+          "args": [
+            "job",
+            "--job",
+            "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/richmond-06-timeline/runA/richmond-06-timeline.job.json"
+          ],
+          "job": {
+            "schema": "simforge.render-job/v2",
+            "scene": {
+              "lighting": {
+                "sun_elev_deg": 38,
+                "sun_azim_deg": 145,
+                "sun_lux": 28000,
+                "ambient": 0.6
+              },
+              "render": {
+                "preset": "training"
+              },
+              "warmupFrames": 20,
+              "vehicleModels": "/home/path/worktrees/oss-gpu-deep/catalog/vehicles-carla",
+              "pedestrianModels": "/home/path/worktrees/oss-gpu-deep/catalog/pedestrians-carla",
+              "glbs": [
+                "/home/path/tmp/renderfleet/maps/.corpus/richmond-field-station/master.gltf"
+              ]
+            },
+            "rig": {
+              "cameras": [
+                {
+                  "sensorId": "chase",
+                  "width": 640,
+                  "height": 360,
+                  "fovDeg": 58,
+                  "eye": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "target": [
+                    0,
+                    0,
+                    1
+                  ],
+                  "attach": {
+                    "actorId": "focus-vehicle",
+                    "offsetM": [
+                      -9,
+                      0,
+                      3
+                    ],
+                    "pitchDeg": -10.008,
+                    "hostVisible": true
+                  }
+                }
+              ]
+            },
+            "ticks": {
+              "start": 0,
+              "count": 120
+            },
+            "passes": [
+              "rgb",
+              "id"
+            ],
+            "outDir": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/richmond-06-timeline/runA/richmond-06-timeline",
+            "sceneState": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/richmond-06-timeline/runA/richmond-06-timeline.scene-state.json",
+            "observe": true
+          },
+          "passesRenderedSequentially": false
+        },
+        "versions": {
+          "bevy": "0.19.1",
+          "wgpu": "29.0.4",
+          "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+          "backend": "vulkan"
+        }
+      },
+      "hardware": {
+        "collectedAt": "2026-09-24T01:37:07.166Z",
+        "gpuFingerprint": "c398eadcadbd2754",
+        "host": {
+          "osPrettyName": "Ubuntu 24.04.4 LTS",
+          "kernel": "7.0.0-31-generic",
+          "arch": "x64",
+          "cpuModel": "Intel(R) Core(TM) Ultra 9 285K",
+          "cpuCount": 24,
+          "hostname": "path-pc",
+          "adapter": {
+            "icd": "/usr/share/vulkan/icd.d/lvp_icd.json",
+            "deviceName": "llvmpipe (LLVM 20.1.2, 256 bits)",
+            "driverName": "llvmpipe",
+            "driverInfo": "Mesa 25.2.8-0ubuntu0.24.04.2 (LLVM 20.1.2)"
+          }
+        }
+      },
+      "passHashes": {
+        "chase.t60.rgb": {
+          "file": "chase/00000060.rgb.png",
+          "sha256": "9f93027aa4a9c135578fd80a6d2efe6e11e0c84d5c8507af048bf770cd28dd5f",
+          "bytes": 233438
+        },
+        "chase.t60.id": {
+          "file": "chase/00000060.id.png",
+          "sha256": "6822e190baf38a0b23d44d42f7886a5ca96ddedd78b974831b646289e1d4f933",
+          "bytes": 36503
+        }
+      },
+      "idPasses": {
+        "chase.t60.id": {
+          "distinctIds": 403,
+          "coveredFraction": 0.7671
+        }
+      },
+      "parity": {
+        "schema": "simforge.render-parity/v1",
+        "pass": true,
+        "profile": "bevy",
+        "comparedPoses": 480,
+        "maxPositionErrorM": 0.000007769932825680706,
+        "maxHeadingErrorDeg": 0.00001709657629973217,
+        "maxPitchErrorDeg": 4.772075827799628e-7,
+        "maxRollErrorDeg": 6.48206063737772e-7,
+        "presenceMismatches": 0,
+        "timelineSha256": "7b7eb6ec5dbdae19fe1bc9b048859f468b6872b229cd6b02826b08c8752c13df"
+      },
+      "sceneStateSha256": "a2eaeeb9071a1bc1c75cf176b60f4354dcdbf8114ae6201942e43137aa1f3a63",
+      "corpusChecksums": [
+        {
+          "path": "master.gltf",
+          "sha256": "2303ba35feb847f5e7037a21ed73a3f0917cf8a8e47c4dcb15f1baf1661c69b6",
+          "bytes": 1812765
+        }
+      ],
+      "timings": {
+        "avgFrameMs": 3636.669458756303,
+        "p50FrameMs": 3602.580531,
+        "p99FrameMs": 4338.43738,
+        "fps": 0.2749768741264673,
+        "measuredFrames": 119
+      },
+      "twoRunEvidence": {
+        "runsCompared": 2,
+        "byteStable": true,
+        "runBTimingsAvgFrameMs": 3626.7108247310935
+      },
+      "verdict": {
+        "byteStable": true,
+        "driftedPasses": [],
+        "scope": "render-job pass hashes (pinned capture clock), one lavapipe build on one CPU model (the adapter of record) — cross-adapter reproducibility NOT claimed (docs/determinism-claim.md)"
+      }
+    }
+  ]
 }

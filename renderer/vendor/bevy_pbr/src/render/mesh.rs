@@ -3476,9 +3476,14 @@ impl SpecializedMeshPipeline for MeshPipeline {
             shader_defs.push("DEFERRED_PREPASS".into());
         }
 
-        if key.contains(MeshPipelineKey::NORMAL_PREPASS) && key.msaa_samples() == 1 && is_opaque {
-            shader_defs.push("LOAD_PREPASS_NORMALS".into());
-        }
+        // SIMFORGE PATCH: the main pass computes its own normals and never
+        // loads the normal prepass (which SSAO still renders and reads). With
+        // `LOAD_PREPASS_NORMALS` a fragment was lit with the 10-bit normal the
+        // prepass stored for its pixel; on dense foliage a few 2x2 quads per
+        // frame came out NaN (black), caught by the camera model's
+        // non-finite count. Computing the normal here costs one normal-map
+        // sample per pixel.
+        let _ = is_opaque;
 
         let view_projection = key.intersection(MeshPipelineKey::VIEW_PROJECTION_RESERVED_BITS);
         if view_projection == MeshPipelineKey::VIEW_PROJECTION_NONSTANDARD {

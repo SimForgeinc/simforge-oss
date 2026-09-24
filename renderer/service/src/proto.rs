@@ -735,6 +735,9 @@ pub struct CameraExposure {
     pub shutter_s: f32,
     pub iso: f32,
     pub gain_db: f32,
+    /// Pixels of the frame's HDR image that were NaN or infinite in any
+    /// channel before tone mapping (a shading bug; they print as black).
+    pub non_finite_pixels: u32,
 }
 
 /// One actor as drawn (scene-yup world frame, metres).

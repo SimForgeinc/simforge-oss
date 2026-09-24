@@ -1,6 +1,6 @@
 {
   "schema": "simforge-oss.render-determinism-manifest.v1",
-  "generatedAt": "2026-09-24T00:01:34.587Z",
+  "generatedAt": "2026-09-24T07:56:56.811Z",
   "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
   "mode": "golden-record",
   "renderConfig": {
@@ -16,13 +16,13 @@
   },
   "rendererPath": {
     "engine": "native-bevy",
-    "file": "../../.cache/gpu-deep-target/release/simforge-render",
-    "sha256": "8397e2bc03fde0fc05d121dfb7ce53d9c8cb88f92f3e1871663b7503753f2b04",
+    "file": "../../../../../tmp/claude-1000/-home-path/bb0d75f9-19c6-4010-a03b-2bb79dd806bc/scratchpad/goldens-nan/simforge-render.golden",
+    "sha256": "b174732521581a20f1f394d606aef583b238ec49bb3452863a373d417584350c",
     "invocation": {
       "args": [
         "job",
         "--job",
-        "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/richmond-frame0/runA/richmond-frame0.job.json"
+        "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/richmond-frame0/runA/richmond-frame0.job.json"
       ],
       "job": {
         "schema": "simforge.render-job/v2",
@@ -38,7 +38,7 @@
           },
           "warmupFrames": 20,
           "glbs": [
-            "/home/path/tmp/renderfleet/maps/.corpus/richmond-field-station/master.gltf"
+            "/home/path/.local/share/simforge/maps/.corpus/richmond-field-station/master.gltf"
           ]
         },
         "rig": {
@@ -70,7 +70,7 @@
           "id",
           "depth"
         ],
-        "outDir": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/richmond-frame0/runA/richmond-frame0"
+        "outDir": "/mnt/storage/gpu-deep-scratch/golden-artifacts/record/richmond-frame0/runA/richmond-frame0"
       },
       "passesRenderedSequentially": false
     },
@@ -82,7 +82,7 @@
     }
   },
   "hardware": {
-    "collectedAt": "2026-09-23T23:56:54.229Z",
+    "collectedAt": "2026-09-24T07:52:35.997Z",
     "gpuFingerprint": "c398eadcadbd2754",
     "host": {
       "osPrettyName": "Ubuntu 24.04.4 LTS",
@@ -102,8 +102,8 @@
   "passHashes": {
     "cam0.rgb": {
       "file": "cam0/00000009.rgb.png",
-      "sha256": "8147195bf94900febbc9309affd2731c8ccf3faed493a6487b3b83d2f99dd3dc",
-      "bytes": 197487
+      "sha256": "1689da536c9e9a60b6d393c82be91611f18e7a2247d2a7b185c58545e1d025e9",
+      "bytes": 197196
     },
     "cam0.id": {
       "file": "cam0/00000009.id.png",
@@ -130,20 +130,171 @@
     }
   ],
   "timings": {
-    "avgFrameMs": 4165.4108312222215,
-    "p50FrameMs": 4168.10537,
-    "p99FrameMs": 4203.440261,
-    "fps": 0.2400723579303169,
+    "avgFrameMs": 3592.708977333333,
+    "p50FrameMs": 3589.332634,
+    "p99FrameMs": 3611.938776,
+    "fps": 0.278341498381604,
     "measuredFrames": 9
   },
   "twoRunEvidence": {
     "runsCompared": 2,
     "byteStable": true,
-    "runBTimingsAvgFrameMs": 5292.942397222223
+    "runBTimingsAvgFrameMs": 3766.5052774444443
   },
   "verdict": {
     "byteStable": true,
     "driftedPasses": [],
     "scope": "render-job pass hashes (pinned capture clock), one lavapipe build on one CPU model (the adapter of record) — cross-adapter reproducibility NOT claimed (docs/determinism-claim.md)"
-  }
+  },
+  "previousVersions": [
+    {
+      "schema": "simforge-oss.render-determinism-manifest.v1",
+      "generatedAt": "2026-09-24T00:01:34.587Z",
+      "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
+      "mode": "golden-record",
+      "renderConfig": {
+        "preset": "training"
+      },
+      "scenario": {
+        "instanceId": null,
+        "mapId": "richmond-field-station",
+        "sceneId": "richmond-frame0",
+        "inputs": {
+          "sceneDefinition": "qualification/golden-harness/scenes/richmond-frame0.json"
+        }
+      },
+      "rendererPath": {
+        "engine": "native-bevy",
+        "file": "../../.cache/gpu-deep-target/release/simforge-render",
+        "sha256": "8397e2bc03fde0fc05d121dfb7ce53d9c8cb88f92f3e1871663b7503753f2b04",
+        "invocation": {
+          "args": [
+            "job",
+            "--job",
+            "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/richmond-frame0/runA/richmond-frame0.job.json"
+          ],
+          "job": {
+            "schema": "simforge.render-job/v2",
+            "scene": {
+              "lighting": {
+                "sun_elev_deg": 38,
+                "sun_azim_deg": 145,
+                "sun_lux": 28000,
+                "ambient": 0.6
+              },
+              "render": {
+                "preset": "training"
+              },
+              "warmupFrames": 20,
+              "glbs": [
+                "/home/path/tmp/renderfleet/maps/.corpus/richmond-field-station/master.gltf"
+              ]
+            },
+            "rig": {
+              "cameras": [
+                {
+                  "sensorId": "cam0",
+                  "width": 736,
+                  "height": 416,
+                  "fovDeg": 70,
+                  "eye": [
+                    -172.89,
+                    7.01,
+                    41.79
+                  ],
+                  "target": [
+                    -164,
+                    6.01,
+                    13.14
+                  ]
+                }
+              ]
+            },
+            "ticks": {
+              "start": 0,
+              "count": 10
+            },
+            "passes": [
+              "rgb",
+              "id",
+              "depth"
+            ],
+            "outDir": "/home/path/worktrees/oss-gpu-deep/artifacts/golden-harness/record/richmond-frame0/runA/richmond-frame0"
+          },
+          "passesRenderedSequentially": false
+        },
+        "versions": {
+          "bevy": "0.19.1",
+          "wgpu": "29.0.4",
+          "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+          "backend": "vulkan"
+        }
+      },
+      "hardware": {
+        "collectedAt": "2026-09-23T23:56:54.229Z",
+        "gpuFingerprint": "c398eadcadbd2754",
+        "host": {
+          "osPrettyName": "Ubuntu 24.04.4 LTS",
+          "kernel": "7.0.0-31-generic",
+          "arch": "x64",
+          "cpuModel": "Intel(R) Core(TM) Ultra 9 285K",
+          "cpuCount": 24,
+          "hostname": "path-pc",
+          "adapter": {
+            "icd": "/usr/share/vulkan/icd.d/lvp_icd.json",
+            "deviceName": "llvmpipe (LLVM 20.1.2, 256 bits)",
+            "driverName": "llvmpipe",
+            "driverInfo": "Mesa 25.2.8-0ubuntu0.24.04.2 (LLVM 20.1.2)"
+          }
+        }
+      },
+      "passHashes": {
+        "cam0.rgb": {
+          "file": "cam0/00000009.rgb.png",
+          "sha256": "8147195bf94900febbc9309affd2731c8ccf3faed493a6487b3b83d2f99dd3dc",
+          "bytes": 197487
+        },
+        "cam0.id": {
+          "file": "cam0/00000009.id.png",
+          "sha256": "6d7b1dcff34e7d88a8bdefa403c74ec99646f18e7526a200d9d09a5dee526eda",
+          "bytes": 33460
+        },
+        "cam0.depth": {
+          "file": "cam0/00000009.depth.f32.bin",
+          "sha256": "a55bae48bf87b7e20dcdd42bbaf41e5ad586eca6b02bd005b5fb25a429e46cb3",
+          "bytes": 1224704
+        }
+      },
+      "idPasses": {
+        "cam0.id": {
+          "distinctIds": 437,
+          "coveredFraction": 0.5949
+        }
+      },
+      "corpusChecksums": [
+        {
+          "path": "master.gltf",
+          "sha256": "2303ba35feb847f5e7037a21ed73a3f0917cf8a8e47c4dcb15f1baf1661c69b6",
+          "bytes": 1812765
+        }
+      ],
+      "timings": {
+        "avgFrameMs": 4165.4108312222215,
+        "p50FrameMs": 4168.10537,
+        "p99FrameMs": 4203.440261,
+        "fps": 0.2400723579303169,
+        "measuredFrames": 9
+      },
+      "twoRunEvidence": {
+        "runsCompared": 2,
+        "byteStable": true,
+        "runBTimingsAvgFrameMs": 5292.942397222223
+      },
+      "verdict": {
+        "byteStable": true,
+        "driftedPasses": [],
+        "scope": "render-job pass hashes (pinned capture clock), one lavapipe build on one CPU model (the adapter of record) — cross-adapter reproducibility NOT claimed (docs/determinism-claim.md)"
+      }
+    }
+  ]
 }

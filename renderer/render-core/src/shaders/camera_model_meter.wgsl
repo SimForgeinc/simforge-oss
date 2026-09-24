@@ -10,6 +10,11 @@
 //    the sensor's EV100 range. It clears the histogram for the next frame and
 //    writes `result` (final EV100, adjustment, metered log2 luminance).
 // 3. `apply` (camera_model_apply.wgsl) tone-maps the frame with it.
+//
+// The histogram pass also counts the frame's non-finite pixels (any channel
+// NaN or infinite, by its exponent bits: NaN compares are not reliable in
+// WGSL). A shading bug that writes NaN would otherwise print as black and
+// go unnoticed; the count is read back with the exposure (`result[4]`).
 
 struct CameraParams {
     // x: base EV100 (the incident meter), y: compensation (stops),
@@ -32,10 +37,18 @@ const LUMA = vec3<f32>(0.2126, 0.7152, 0.0722);
 
 @group(0) @binding(0) var<uniform> params: CameraParams;
 @group(0) @binding(1) var frame: texture_2d<f32>;
-@group(0) @binding(2) var<storage, read_write> histogram: array<atomic<u32>, 128>;
-@group(0) @binding(3) var<storage, read_write> result: array<f32, 4>;
+// Bins 0..127; element 128 counts non-finite pixels.
+@group(0) @binding(2) var<storage, read_write> histogram: array<atomic<u32>, 129>;
+// EV100, adjustment, metered log2 luminance, weight, non-finite pixels, 0, 0, 0.
+@group(0) @binding(3) var<storage, read_write> result: array<f32, 8>;
 
 var<workgroup> local_bins: array<atomic<u32>, 128>;
+var<workgroup> local_non_finite: atomic<u32>;
+
+fn non_finite(color: vec3<f32>) -> bool {
+    let bits = bitcast<vec3<u32>>(color) & vec3<u32>(0x7f800000u);
+    return any(bits == vec3<u32>(0x7f800000u));
+}
 
 fn metering_weight(uv: vec2<f32>) -> u32 {
     let mode = u32(params.metering.y + 0.5);
@@ -66,18 +79,31 @@ fn histogram_pass(
     if local < BINS {
         atomicStore(&local_bins[local], 0u);
     }
+    if local == 0u {
+        atomicStore(&local_non_finite, 0u);
+    }
     workgroupBarrier();
     let dims = vec2<u32>(u32(params.misc.w), u32(params.size.x));
     if id.x < dims.x && id.y < dims.y {
         let color = textureLoad(frame, vec2<i32>(id.xy), 0).rgb;
         let uv = (vec2<f32>(id.xy) + 0.5) / vec2<f32>(dims);
-        atomicAdd(&local_bins[bin_of(dot(max(color, vec3(0.0)), LUMA))], metering_weight(uv));
+        if non_finite(color) {
+            atomicAdd(&local_non_finite, 1u);
+        } else {
+            atomicAdd(&local_bins[bin_of(dot(max(color, vec3(0.0)), LUMA))], metering_weight(uv));
+        }
     }
     workgroupBarrier();
     if local < BINS {
         let count = atomicLoad(&local_bins[local]);
         if count > 0u {
             atomicAdd(&histogram[local], count);
+        }
+    }
+    if local == 0u {
+        let count = atomicLoad(&local_non_finite);
+        if count > 0u {
+            atomicAdd(&histogram[BINS], count);
         }
     }
 }
@@ -121,5 +147,10 @@ fn average_pass() {
     result[1] = params.exposure.x - ev;
     result[2] = metered;
     result[3] = weight;
+    result[4] = f32(atomicLoad(&histogram[BINS]));
+    atomicStore(&histogram[BINS], 0u);
+    result[5] = 0.0;
+    result[6] = 0.0;
+    result[7] = 0.0;
 }
 

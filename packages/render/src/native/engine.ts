@@ -17,7 +17,7 @@ import {
   type RenderInputSelectionContext,
 } from '../index.js';
 import {
-  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_ROAD_DECALS, CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
+  CONTROL_FEATURE_NATIVE_CAPTURE_CLOCK, CONTROL_FEATURE_NATIVE_ROAD_DECALS, CONTROL_FEATURE_NATIVE_TEXTURE_RESIDENCY, CONTROL_FEATURE_NATIVE_FRAME_INTEGRITY, CONTROL_FEATURE_NATIVE_ENCODER, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_RENDER_CONFIG,
   CONTROL_FEATURE_NATIVE_SCENE_SOURCE, CONTROL_FEATURE_NATIVE_STAGE_TIMINGS, CONTROL_FEATURE_NATIVE_VRAM_DETECTED,
 } from '../worker-control.js';
 import { RenderInputError } from '../render-input-error.js';
@@ -164,6 +164,11 @@ export function nativeTextureEvidence<T extends { capacityBytes: number; capacit
   return features.has(CONTROL_FEATURE_NATIVE_VRAM_DETECTED) && vram.measuredBytes !== undefined
     ? { ...baseline, detectedCapacityBytes: vram.measuredBytes }
     : baseline;
+}
+
+/** Diagnostics `frameIntegrity`: the non-finite pixel total and the first 100 affected camera frames. */
+export function nativeFrameIntegrity(frames: readonly { tick: number; sensorId: string; pixels: number }[]) {
+  return { nonFinitePixels: frames.reduce((sum, frame) => sum + frame.pixels, 0), frames: frames.slice(0, 100).map((frame) => ({ ...frame })) };
 }
 
 /** The preset a render without one uses: platform renders are delivery video. */
@@ -522,6 +527,8 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       const tickRecords: string[] = [];
       // Per tick, the exposure each RGB camera metered (dash-cam camera model).
       const exposures: { tick: number; cameras: Record<string, never> }[] = [];
+      // Frames whose HDR image had non-finite pixels (a shading bug), per camera.
+      const nonFinite: { tick: number; sensorId: string; pixels: number }[] = [];
       await fs.mkdir(context.workspace, { recursive: true });
       const intent = parseRenderIntent(context.intent);
       const sources = intent.renderSpec.sources;
@@ -1018,8 +1025,17 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
           clientMark = clientStage('pipelineWait', clientMark);
           // The exposure each RGB camera metered for this frame (dash-cam camera
           // model): EV100, adjustment, aperture/shutter/ISO/gain.
-          const exposure = (response as { exposure?: unknown }).exposure ?? null; // fallback-ok: a look without the camera model reports no exposure
-          if (exposure) exposures.push({ tick, cameras: exposure as Record<string, never> });
+          const exposure = (response as { exposure?: Record<string, { nonFinitePixels?: number }> }).exposure ?? null; // fallback-ok: a look without the camera model reports no exposure
+          if (exposure) {
+            // The frame's non-finite (NaN/inf) HDR pixel count rides with the
+            // exposure; it is reported on its own (`frameIntegrity`).
+            const cameras: Record<string, unknown> = {};
+            for (const [sensorId, { nonFinitePixels, ...metered }] of Object.entries(exposure)) {
+              if (nonFinitePixels !== undefined && nonFinitePixels > 0) nonFinite.push({ tick, sensorId, pixels: nonFinitePixels });
+              cameras[sensorId] = metered;
+            }
+            exposures.push({ tick, cameras: cameras as Record<string, never> });
+          }
           const detail: Record<string, unknown> = { tick, serverMs: response.server_ms ?? null, server: response.stages ?? null, client: tickClient, crc32: digests, exposure };
           tickDetails.push(detail);
           const consumed = consumeTick(tick, items, tickClient);
@@ -1145,6 +1161,13 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       // would reject the whole job). The trace file is not parsed upstream.
       const features = context.controlFeatures ?? new Set<string>();
       const sceneSourceEvidence = gatedSceneSourceEvidence(features, lowering.source, timelineSha256);
+      if (nonFinite.length > 0) {
+        // Never silent: the frames are delivered (they print black where the
+        // HDR image was not finite), and the run says which ones.
+        const total = nonFinite.reduce((sum, frame) => sum + frame.pixels, 0);
+        warnings.push({ code: 'non_finite_pixels', message: `${total} non-finite (NaN/inf) pixels before tone mapping in ${nonFinite.length} camera frame(s), first at tick ${nonFinite[0]!.tick} ${nonFinite[0]!.sensorId}` });
+        console.error(JSON.stringify({ event: 'native.non_finite_pixels', jobId: context.jobId, total, frames: nonFinite.slice(0, 10) }));
+      }
       const nativeManifestRelative = 'manifest/native-render.json';
       const nativeManifestPath = path.join(context.workspace, nativeManifestRelative);
       await writeJson(nativeManifestPath, NativeRenderManifestSchema.parse({
@@ -1226,6 +1249,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         service: { protocol: session.protocol, binary },
         frames: frameIdentities,
         ...(features.has(CONTROL_FEATURE_NATIVE_RENDER_CONFIG) && exposures.length > 0 ? { exposure: exposures } : {}),
+        ...(features.has(CONTROL_FEATURE_NATIVE_FRAME_INTEGRITY) && exposures.length > 0 ? { frameIntegrity: nativeFrameIntegrity(nonFinite) } : {}),
         ...(parity && features.has(CONTROL_FEATURE_NATIVE_PARITY) ? { parity: {
           schema: parity.schema, pass: parity.pass, comparedPoses: parity.comparedPoses,
           maxPositionErrorM: parity.maxPositionErrorM, maxHeadingErrorDeg: parity.maxHeadingErrorDeg,

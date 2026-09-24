@@ -25,8 +25,13 @@
 //! tick `t` is the same whichever ticks were rendered before it. Histogram
 //! counts are integer atomics, so the metering does not depend on invocation
 //! order. The metered EV100 is read back with every capture that asks for
-//! `<sensor>:exposure` (four f32: final EV100, adjustment in stops, metered
-//! mean log2 luminance, total metering weight).
+//! `<sensor>:exposure` ([`EXPOSURE_READBACK_BYTES`]: eight f32, final EV100,
+//! adjustment in stops, metered mean log2 luminance, total metering weight,
+//! the frame's non-finite pixel count, three reserved).
+//!
+//! Non-finite pixels (NaN or infinite in any channel of the HDR frame) are
+//! counted, not metered: a shading bug that writes NaN would otherwise print
+//! as black pixels nobody sees. Captures report the count per camera.
 use bevy::asset::embedded_asset;
 use bevy::camera::Exposure;
 use bevy::core_pipeline::schedule::{Core3d, Core3dSystems};
@@ -178,6 +183,9 @@ impl ExtractComponent for CameraModel {
     }
 }
 
+/// Bytes of a camera's `<sensor>:exposure` readback (eight f32).
+pub const EXPOSURE_READBACK_BYTES: u64 = 32;
+
 /// Per-view GPU state: the histogram and the metering result (also the
 /// source of the `<sensor>:exposure` readback).
 #[derive(Component)]
@@ -267,8 +275,8 @@ fn init_pipelines(
             (
                 uniform_buffer::<GpuCameraParams>(true),
                 texture_2d(TextureSampleType::Float { filterable: false }),
-                storage_buffer::<[u32; 128]>(false),
-                storage_buffer::<[f32; 4]>(false),
+                storage_buffer::<[u32; 129]>(false),
+                storage_buffer::<[f32; 8]>(false),
             ),
         ),
     );
@@ -279,7 +287,7 @@ fn init_pipelines(
             (
                 uniform_buffer::<GpuCameraParams>(true),
                 texture_2d(TextureSampleType::Float { filterable: false }),
-                storage_buffer_read_only::<[f32; 4]>(false),
+                storage_buffer_read_only::<[f32; 8]>(false),
             ),
         ),
     );
@@ -357,12 +365,12 @@ fn prepare_buffers(
         commands.entity(entity).insert(CameraModelBuffers {
             histogram: buffer(
                 "camera_model_histogram",
-                128 * 4,
+                129 * 4,
                 BufferUsages::STORAGE | BufferUsages::COPY_DST,
             ),
             result: buffer(
                 "camera_model_result",
-                16,
+                EXPOSURE_READBACK_BYTES,
                 BufferUsages::STORAGE | BufferUsages::COPY_SRC,
             ),
         });
