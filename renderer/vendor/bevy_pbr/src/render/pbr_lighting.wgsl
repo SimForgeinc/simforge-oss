@@ -299,7 +299,14 @@ fn G_Smith(NdotV: f32, NdotL: f32, roughness: f32) -> f32 {
 //
 // https://google.github.io/filament/Filament.md.html#materialsystem/clearcoatmodel
 fn V_Kelemen(LdotH: f32) -> f32 {
-    return 0.25 / (LdotH * LdotH);
+    // SIMFORGE PATCH (non-finite clearcoat): with the light almost exactly
+    // behind the surface as seen from the camera (L ~ -V, a low sun ahead of
+    // the camera), LdotH -> 0 and this was infinite; the clearcoat term then
+    // multiplied it by NdotL = 0 and printed NaN pixels on car paint
+    // silhouettes (San Ramon P2, dawn, `frameIntegrity`). Filament bounds the
+    // same term (saturateMediump); LdotH below 0.01 only occurs within about
+    // 1 degree of L = -V, where NdotL is ~0 and the term does not light.
+    return 0.25 / max(LdotH * LdotH, 1e-4);
 }
 
 // Fresnel function
