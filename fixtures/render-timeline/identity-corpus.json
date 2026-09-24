@@ -8,8 +8,8 @@
       },
       "id": "01-construction-chicane-reversing-truck",
       "poseDigest": "21b5e27454bed3df4b1eea7b8c60a73b36882ff3d54a5ddd30208963f93e2200",
-      "timelineKey": "95dde7b242a426b9e90c244a881e4cf0477e7801d91f98a76aa4a3b7e358c3d1",
-      "timelineSha256": "e9360f2ec98b580b3e10a27d835f0af2111eb83f49fb8ee7b417a9e5ce0a0fbb",
+      "timelineKey": "6f59f96191cdb724d5e41b7d58bdf3cdaf2c250c47103f35515807bb2c1cacc8",
+      "timelineSha256": "afaad4465fcf1029abef1951df8edc5e655fe03a1f37959ea156ce530905e1da",
       "trace": "examples/edge-cases/01-construction-chicane-reversing-truck/scenario.trace.json.gz"
     },
     {
@@ -22,8 +22,8 @@
       },
       "id": "02-police-roadside-stop",
       "poseDigest": "2fec3d35db880c9800cce42bfcef56220021678e3560562b47cded5db9b6f122",
-      "timelineKey": "e473094022c3f003024d75eabf59b0758b0b1ccb36ee77ce74c6057f23ae39a2",
-      "timelineSha256": "8e4eec8a131e8a9f4cafb5925a5484cba2a08ac038d3b9955fa7d7f85c047c75",
+      "timelineKey": "21cf6767b8df0fe1ef5d9a85b0c87131eda5b9515a23fa559d56b41ebf3ab1ca",
+      "timelineSha256": "426365fd5be8ede476967952e497814bfa5a86fde5ee5dd4e83d917cf5bda03d",
       "trace": "examples/edge-cases/02-police-roadside-stop/scenario.trace.json.gz"
     },
     {
@@ -34,8 +34,8 @@
       },
       "id": "03-red-light-ambulance-preemption",
       "poseDigest": "8910727c518581eb85f2c986b6bffc863c26830001982e73ca356f86b5bb33cb",
-      "timelineKey": "bcda97e58cac2d436d49ce3e3fff352b38b5014aba1b7e5348cabbdd8ccf6c0a",
-      "timelineSha256": "2cdd0ec612efc520d957ccb04c7380ee4b8b779bc32455e9199b7744cb3bb990",
+      "timelineKey": "109b1a19b3d43378b9c30fb9314f6a2748bde515e9db14a2c4f8438e6d5310a2",
+      "timelineSha256": "7daf836f0bd8b7f80a37844c22c1612d870a7e735c56f5524fa8443743500bb8",
       "trace": "examples/edge-cases/03-red-light-ambulance-preemption/scenario.trace.json.gz"
     },
     {
@@ -48,8 +48,8 @@
       },
       "id": "04-child-emerging-behind-bus",
       "poseDigest": "131d2f70373d5e6666880301ab82aa16d8e8ed70f51db122d178b1e9a6b25303",
-      "timelineKey": "f2bd05bf2f6f099cbdae82bde4fddf96a23511dda5ddfe44747021eebfba59e5",
-      "timelineSha256": "d2837e6dbdaf8d1447e2c6893a1a96d4c97d584ee4f968a8d41ac155a5162db6",
+      "timelineKey": "8e2becb8f2a0189105ea2c66a249bf01fa9a2d0a76f7c0a515bf2328a7ced23d",
+      "timelineSha256": "ee97a03bb4fa002cdff85f323bd7acbf2e792823b1c058b130de842598cd5526",
       "trace": "examples/edge-cases/04-child-emerging-behind-bus/scenario.trace.json.gz"
     },
     {
@@ -60,8 +60,8 @@
       },
       "id": "05-cyclist-occlusion-conflict",
       "poseDigest": "6851d5aa6c746e850bebd6b914a53c960ba48605fc046a259ab47d6a3c848000",
-      "timelineKey": "839b2fe429a454b99748015b801987d6da86c257c5ae6752fa1753f039955cfb",
-      "timelineSha256": "3ccb18d314c4e701db8ffca2a9fafc71d94f14f5de4a81c73d84fc26d4bc9a10",
+      "timelineKey": "80c7cc14b5a7625b5a3e9f56f5f71e32556dec3f0742a9de33273d40ac1a4a26",
+      "timelineSha256": "322fac47ea75758af0baee87eb34943722a2b8c69fe4672594304e2a5b23e2a3",
       "trace": "examples/edge-cases/05-cyclist-occlusion-conflict/scenario.trace.json.gz"
     },
     {
@@ -74,8 +74,8 @@
       },
       "id": "06-wrong-way-vehicle-blind-approach",
       "poseDigest": "03e0186710b3a426ce87ce60af3a03b34c8cebcc5e760d85957ed680bb127939",
-      "timelineKey": "dcd551797648fb1b47caf45c9fa9952415af7ef7bac7ebe4696b9fc8b64deddc",
-      "timelineSha256": "4d4a18ea4bf22c5822900fe4332abb8ae770166c6a55c3ab1deeb353e1e289c7",
+      "timelineKey": "2a169f01f28cc211c5f4653b857f09a6c64ec8bb7e4fde5b5296e20cb26dbd22",
+      "timelineSha256": "89a8569cc9f62af7b8e109960104c5d61a25309c97cee34de9b3a006869fed2d",
       "trace": "examples/edge-cases/06-wrong-way-vehicle-blind-approach/scenario.trace.json.gz"
     },
     {
@@ -86,8 +86,8 @@
       },
       "id": "07-protected-left-red-runner",
       "poseDigest": "3c897e793a94ec2f56db679444ad403468d36023032e25498207c99892eeec1a",
-      "timelineKey": "209516aa3f321bd7f3f5fbdf24fd15e71d6e5e56aa85ec93407a9c3068bcbef6",
-      "timelineSha256": "4d5487bd003fa3fc79b07eb75f83e33bd6ce31be6f0737a8f1f513b44c7941b5",
+      "timelineKey": "e061e90119d08b3d0a70e67ba8d7438b865eceb995e637499c0fef6c79c4de08",
+      "timelineSha256": "b1c33ea8b5b4bff4c113f0517f93d1018407af21f1f1d6a677161a6bb1ef9427",
       "trace": "examples/edge-cases/07-protected-left-red-runner/scenario.trace.json.gz"
     },
     {
@@ -100,8 +100,8 @@
       },
       "id": "08-zipper-merge-lane-closure",
       "poseDigest": "d49b4797c7bcf9679c65d0f82a162f80307ae78ad82ddfa16891a8d8fecb5c59",
-      "timelineKey": "378d0e151c823c58bd1ed400e1d393c7b4b7cf5941c619d95e0fbc76a12c0137",
-      "timelineSha256": "c6ef66bf68f372195b3e1b25feacdc097cc631956ecc2df114d3b28dedae605c",
+      "timelineKey": "5dd8268ab9f190e66d1505b1d7287f5285c3a773ccbdab3af95322373b59a084",
+      "timelineSha256": "ce531756ec1d78ba3d38be7858a49a65598904648934362143ad60ec258818d5",
       "trace": "examples/edge-cases/08-zipper-merge-lane-closure/scenario.trace.json.gz"
     },
     {
@@ -112,8 +112,8 @@
       },
       "id": "09-stalled-vehicle-beyond-sight",
       "poseDigest": "d5047cfd5090f5397747b585a1e23b02f292cebb82d1ef6984bb36ce38fcf73d",
-      "timelineKey": "86e9a9e438ba8bc2fa092bb0755fa2188a383eafbc2a8a584c299487b91c1f3c",
-      "timelineSha256": "78b66ef698203066aa346dee86f101f821155c9d041d81c5cadb6ac8135de0f2",
+      "timelineKey": "fafca4c366bd82842c5a66cba32d43a578d25f5f03af524c2f8fc1afe4b2873f",
+      "timelineSha256": "82d178e6eb623f83b91a9369ef309a6c01cae69407497ee5ac276a3a1b9a31d1",
       "trace": "examples/edge-cases/09-stalled-vehicle-beyond-sight/scenario.trace.json.gz"
     },
     {
@@ -126,8 +126,8 @@
       },
       "id": "10-officer-flashing-red-junction",
       "poseDigest": "f0b0ca3f92acb0e7fa8ba5827d136c965daa9e5de11b801c5d5547afb08f87a4",
-      "timelineKey": "676962647d0e0f6f25cbe7a365930d47b4628ce3fb5d140144a089ad63b527ba",
-      "timelineSha256": "0559261102bccf9f24efbdab0ba339769b29a27a7f58d50b6fd2382a1d06fb98",
+      "timelineKey": "0ecddb6c8b4c4b7756c24237809c15318d3a5404fe7c20483f22eafe893ade83",
+      "timelineSha256": "7130960185cd06eaa2abdbc109e0cf8fe1e33982d3fbe2a9ac6687973c6c6341",
       "trace": "examples/edge-cases/10-officer-flashing-red-junction/scenario.trace.json.gz"
     },
     {
@@ -138,8 +138,8 @@
       },
       "id": "11-double-threat-crosswalk",
       "poseDigest": "dc5fea5a0285153bed34f760fb3e72a8472ec7e631d3c11a316ac169f8c03784",
-      "timelineKey": "89b8a010f997fda4f479d7e2e2ffd892f7cad925c683c20f06ae2c24253e9880",
-      "timelineSha256": "80c225e07a224a85b082dbca49c1050e7c926e4023b61a0940e8f91a4ca29535",
+      "timelineKey": "e2ca8ab6f8b28512a521d3307021000e536b70ba2ee25ac7ab6b6123f6d7ac52",
+      "timelineSha256": "4130a44633985eef182d99982c69107ff9bfa7f5d2aa027b333c7efb21587fba",
       "trace": "examples/edge-cases/11-double-threat-crosswalk/scenario.trace.json.gz"
     },
     {
@@ -152,12 +152,12 @@
       },
       "id": "12-fire-engine-gridlock-escape",
       "poseDigest": "de648b798a2e3d2688279fcb9f10cf35cb2d233fa967bb166dfdbf2f28968d9b",
-      "timelineKey": "4bba5260c3dd3c794e839cf8b0627b55972c1bc1b6968c40952c2dfb6f75da6f",
-      "timelineSha256": "2df733d4bc302c05faea18148e36f17d3c0530c0e2a2026b19d4ed27046c0a92",
+      "timelineKey": "fce882fc4d79b3d584ea62fd3f4f866ec934a34f6ae07349fba6b2072dd7aa44",
+      "timelineSha256": "8fb883e94a8663a08ca7e454d4617a0cecf6c81fc7094b42ad66c1da039215ae",
       "trace": "examples/edge-cases/12-fire-engine-gridlock-escape/scenario.trace.json.gz"
     }
   ],
   "probe": "For each case: build the timeline from `trace` on `height`; for every probe time (each tick t[i], (t[i]+t[i+1])/2, and t[i]+0.3*(t[i+1]-t[i])) and every actor in id order, append the 20-float pose array as little-endian f64 bits (NaN canonicalised to 0x7ff8000000000000); poseDigest = sha256 of those bytes.",
-  "samplerVersion": "simforge.timeline-sampler/3",
+  "samplerVersion": "simforge.timeline-sampler/2",
   "schema": "simforge.render-timeline-identity-corpus/v1"
 }

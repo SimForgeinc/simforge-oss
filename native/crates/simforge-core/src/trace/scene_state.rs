@@ -226,21 +226,6 @@ mod actor_class_tests {
     }
 }
 
-/// The SimActor tag that carries an authored body paint
-/// (`studio:body-color:#rrggbb`), stamped by the compiler's studio
-/// refinements from a role's `studio.presentation.bodyColor`.
-pub const STUDIO_BODY_COLOR_TAG_PREFIX: &str = "studio:body-color:";
-
-/// Authored body colour of an actor: its `studio:body-color:` tag, the one
-/// the compiler writes and browser playback reads. (The bindings once read
-/// a `color:` tag nothing ever wrote, so no authored paint reached a
-/// render.)
-pub fn body_color_of(tags: &[String]) -> Option<String> {
-    tags.iter()
-        .find_map(|t| t.strip_prefix(STUDIO_BODY_COLOR_TAG_PREFIX))
-        .map(str::to_owned)
-}
-
 /// Catalog binding: a `catalog:<id>` tag wins; otherwise a deterministic
 /// class default keeps browser and native consistent.
 pub fn catalog_id_for(kind: ActorKind, tags: &[String]) -> String {
@@ -481,7 +466,11 @@ pub fn emit_scene_state(trace: &SimTrace) -> SceneState {
                 catalog_id: catalog_id_for(meta.kind, &meta.tags),
                 actor_class: actor_class_of(meta.kind),
                 dims: Some(meta.dims),
-                color: body_color_of(&meta.tags),
+                color: meta
+                    .tags
+                    .iter()
+                    .find_map(|t| t.strip_prefix("color:"))
+                    .map(str::to_owned),
             }
         })
         .collect();

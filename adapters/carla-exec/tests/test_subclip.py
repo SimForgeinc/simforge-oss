@@ -371,7 +371,7 @@ def test_a_timeline_the_binding_cannot_read_is_a_coded_refusal_not_a_crash(monke
 
     def unreadable(_body):
         raise ValueError("timeline JSON: unknown variant `van`")
-    _fake_binding(monkeypatch, "simforge.timeline-sampler/3", unreadable)
+    _fake_binding(monkeypatch, "simforge.timeline-sampler/2", unreadable)
     with pytest.raises(CarlaRenderError) as refused:
         load_bound_timeline(b"{}", _plan(1.0))
     assert code_of(refused) == "carla_render_timeline_unreadable"

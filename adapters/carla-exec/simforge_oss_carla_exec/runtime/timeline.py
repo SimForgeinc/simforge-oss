@@ -33,10 +33,8 @@ from .policy import CarlaRenderError
 #: 0.11.0) keeps /1's sampling rules and changes only how the timeline is
 #: derived (heights from ground contact, road attitude on the actor
 #: transform, body attitude and wheel spin on separate channels CARLA does
-#: not read), so the poses CARLA applies mean the same thing. /3 changes only
-#: the actor `color` binding (the `studio:body-color:` tag); poses, lights and
-#: signals are derived and sampled exactly as under /2.
-SAMPLER_VERSION = "simforge.timeline-sampler/3"
+#: not read), so the poses CARLA applies mean the same thing.
+SAMPLER_VERSION = "simforge.timeline-sampler/2"
 
 #: WS-B timeline light channel -> OpenSCENARIO vehicleLightType appearance key.
 TIMELINE_LIGHT_TYPES: Mapping[str, str] = {
