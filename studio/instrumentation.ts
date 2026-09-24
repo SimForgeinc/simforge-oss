@@ -9,7 +9,15 @@
  * SQL projection truthful whether or not a worker ever comes back.
  */
 export async function register(): Promise<void> {
-  if (process.env.NEXT_RUNTIME === "nodejs" && process.env.NEXT_PHASE !== "phase-production-build") {
+  // Only a long-lived local host runs this timer. On a serverless host (Vercel)
+  // a function instance has no lifetime of its own: the interval fires between
+  // or inside unrelated invocations, outside any request, where the platform's
+  // per-request credentials (x-vercel-oidc-token) do not exist. There it failed
+  // every 30 s ("lease.sweep_failed") and was the only thing logged by a render
+  // detail request that took ~160 s on dev. Hosted deployments reap CPU leases
+  // from their own reconcile cron and worker claims instead.
+  const serverless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  if (process.env.NEXT_RUNTIME === "nodejs" && process.env.NEXT_PHASE !== "phase-production-build" && !serverless) {
     // Keep the import inside the positive guard: Next's development edge
     // compiler does not prune imports after an early return.
     const { expireCpuAttempts } = await import("./app/lib/scenario/jobs/cpu-control-store");
