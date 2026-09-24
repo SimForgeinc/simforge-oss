@@ -47,6 +47,12 @@ pub const RENDER_TIMELINE_VERSION: &str = "simforge.render-timeline.v1";
 /// channel is derived (heights, attitude, lights) or sampled bumps it, which
 /// changes every timeline key.
 pub const SAMPLER_VERSION: &str = "simforge.timeline-sampler/2";
+/// Sampler versions a renderer may render: the one this build derives, and
+/// the next one, whose sampling rules are identical (/3 changes only the
+/// actor `color` binding). Workers accept the next version one release
+/// before the platform starts deriving it: dev promotion accepts a build on
+/// the new web while the GPU fleet still runs the previous worker image.
+pub const ACCEPTED_SAMPLER_VERSIONS: &[&str] = &[SAMPLER_VERSION, "simforge.timeline-sampler/3"];
 /// Schema tag of the key preimage.
 pub const TIMELINE_KEY_SCHEMA: &str = "simforge.render-timeline-key/v1";
 /// The one fixed step. Traces at any other dt are rejected.
@@ -120,7 +126,7 @@ pub enum TimelineError {
     GroundedTraceNeedsGround(String),
     #[error("timeline version {0:?} is not {RENDER_TIMELINE_VERSION}")]
     UnsupportedVersion(String),
-    #[error("timeline sampler {found:?} is not {SAMPLER_VERSION}")]
+    #[error("timeline sampler {found:?} is not one of {ACCEPTED_SAMPLER_VERSIONS:?}")]
     UnsupportedSampler { found: String },
     #[error("timeline is malformed: {0}")]
     Malformed(String),
@@ -546,7 +552,7 @@ impl RenderTimeline {
     }
 
     pub fn validate(&self) -> Result<(), TimelineError> {
-        if self.identity.sampler_version != SAMPLER_VERSION {
+        if !ACCEPTED_SAMPLER_VERSIONS.contains(&self.identity.sampler_version.as_str()) {
             return Err(TimelineError::UnsupportedSampler {
                 found: self.identity.sampler_version.clone(),
             });

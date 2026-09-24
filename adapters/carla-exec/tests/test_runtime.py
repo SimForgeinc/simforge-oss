@@ -4021,6 +4021,7 @@ def test_a_shipped_render_timeline_drives_trace_replay_through_the_shared_sample
         times = [0.0, 0.02, 0.04]
         actor_ids = ["ego"]
         sha256 = key = trace_sha256 = "c" * 64
+        sampler_version = "simforge.timeline-sampler/2"
         xodr_sha256 = None
 
         @staticmethod

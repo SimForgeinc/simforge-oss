@@ -389,7 +389,9 @@ class BoundTimeline:
         return {
             "schema": "simforge.carla-timeline-evidence/v1",
             "source": self.source,
-            "samplerVersion": SAMPLER_VERSION,
+            # The timeline's own sampler: a worker renders the next
+            # version's timelines one release before it derives them.
+            "samplerVersion": self.timeline.sampler_version,
             "timelineSha256": self.timeline.sha256,
             "timelineKey": self.timeline.key,
             "traceSha256": self.timeline.trace_sha256,

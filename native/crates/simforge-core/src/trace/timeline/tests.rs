@@ -462,3 +462,24 @@ fn header_origin_wins_over_the_tag_rule() {
         ActorOrigin::Authored
     );
 }
+
+/// A worker renders the next sampler version's timelines one release
+/// before the platform derives them (identical sampling rules), and never
+/// an unknown one.
+#[test]
+fn renders_the_next_sampler_version_and_refuses_unknown_ones() {
+    let mut tl = build(EXAMPLES[0]);
+    for (version, readable) in [
+        ("simforge.timeline-sampler/3", true),
+        ("simforge.timeline-sampler/1", false),
+        ("simforge.timeline-sampler/4", false),
+    ] {
+        tl.identity.sampler_version = version.to_owned();
+        let bytes = tl.to_canonical_json().unwrap();
+        assert_eq!(
+            RenderTimeline::from_json_slice(bytes.as_bytes()).is_ok(),
+            readable,
+            "{version}"
+        );
+    }
+}

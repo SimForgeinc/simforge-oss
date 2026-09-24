@@ -399,6 +399,12 @@ records `sceneSource: "openscenario-legacy"`, and adds the warning
 
 - The document version is `simforge.render-timeline.v1`. Unknown versions and
   unknown `samplerVersion`s are rejected. There is no silent fallback.
+- A renderer also reads the **next** `samplerVersion` when its sampling rules
+  are unchanged (`ACCEPTED_SAMPLER_VERSIONS`; today /2 and /3, where /3 only
+  binds `color`). Dev promotion accepts a build on the new web before it
+  updates the GPU fleet, so workers must read a sampler version one release
+  before the platform derives it. A sampler bump therefore lands in two
+  builds: first the readers, then the derivation.
 - **Additive, optional fields.** Consumers must tolerate unknown fields. A
   new optional channel does not bump the version. A change in how a channel
   is **derived or sampled** bumps `samplerVersion`.

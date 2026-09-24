@@ -103,6 +103,11 @@ impl PyTimeline {
     fn key(&self) -> String {
         self.inner.identity.timeline_key.clone()
     }
+    /// The sampler version this timeline was derived under.
+    #[getter]
+    fn sampler_version(&self) -> String {
+        self.inner.identity.sampler_version.clone()
+    }
     #[getter]
     fn trace_sha256(&self) -> String {
         self.inner.identity.trace_sha256.clone()
