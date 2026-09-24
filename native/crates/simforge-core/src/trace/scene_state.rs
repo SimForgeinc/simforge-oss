@@ -190,12 +190,30 @@ mod actor_class_tests {
     /// render service's taxonomy accepts.
     #[test]
     fn every_kind_maps_to_a_service_class() {
-        const SERVICE: [&str; 8] = ["car", "van", "truck", "bus", "motorcycle", "cyclist", "pedestrian", "prop"];
+        const SERVICE: [&str; 8] = [
+            "car",
+            "van",
+            "truck",
+            "bus",
+            "motorcycle",
+            "cyclist",
+            "pedestrian",
+            "prop",
+        ];
         let expected = [
-            ("vehicle", "car"), ("car", "car"), ("van", "van"), ("truck", "truck"), ("bus", "bus"),
-            ("motorcycle", "motorcycle"), ("bicycle", "cyclist"), ("scooter", "cyclist"),
-            ("pedestrian", "pedestrian"), ("sidewalk_robot", "prop"), ("drone", "prop"),
-            ("animal", "prop"), ("static_object", "prop"),
+            ("vehicle", "car"),
+            ("car", "car"),
+            ("van", "van"),
+            ("truck", "truck"),
+            ("bus", "bus"),
+            ("motorcycle", "motorcycle"),
+            ("bicycle", "cyclist"),
+            ("scooter", "cyclist"),
+            ("pedestrian", "pedestrian"),
+            ("sidewalk_robot", "prop"),
+            ("drone", "prop"),
+            ("animal", "prop"),
+            ("static_object", "prop"),
         ];
         for (kind, class) in expected {
             let kind = ActorKind::parse(kind).expect("engine kind");
@@ -206,6 +224,21 @@ mod actor_class_tests {
         // An unknown class never deserializes into a document.
         assert!(serde_json::from_str::<ActorClass>("\"bicycle\"").is_err());
     }
+}
+
+/// The SimActor tag that carries an authored body paint
+/// (`studio:body-color:#rrggbb`), stamped by the compiler's studio
+/// refinements from a role's `studio.presentation.bodyColor`.
+pub const STUDIO_BODY_COLOR_TAG_PREFIX: &str = "studio:body-color:";
+
+/// Authored body colour of an actor: its `studio:body-color:` tag, the one
+/// the compiler writes and browser playback reads. (The bindings once read
+/// a `color:` tag nothing ever wrote, so no authored paint reached a
+/// render.)
+pub fn body_color_of(tags: &[String]) -> Option<String> {
+    tags.iter()
+        .find_map(|t| t.strip_prefix(STUDIO_BODY_COLOR_TAG_PREFIX))
+        .map(str::to_owned)
 }
 
 /// Catalog binding: a `catalog:<id>` tag wins; otherwise a deterministic
@@ -448,11 +481,7 @@ pub fn emit_scene_state(trace: &SimTrace) -> SceneState {
                 catalog_id: catalog_id_for(meta.kind, &meta.tags),
                 actor_class: actor_class_of(meta.kind),
                 dims: Some(meta.dims),
-                color: meta
-                    .tags
-                    .iter()
-                    .find_map(|t| t.strip_prefix("color:"))
-                    .map(str::to_owned),
+                color: body_color_of(&meta.tags),
             }
         })
         .collect();

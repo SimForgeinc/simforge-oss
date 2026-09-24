@@ -462,3 +462,27 @@ fn header_origin_wins_over_the_tag_rule() {
         ActorOrigin::Authored
     );
 }
+
+/// The authored paint travels as the compiler's `studio:body-color:` tag;
+/// the timeline and the scene-state projection bind it to `color`, which
+/// renderers apply to the model's paint slot.
+#[test]
+fn studio_body_color_tag_binds_actor_color() {
+    let mut trace = example(EXAMPLES[0]);
+    trace
+        .header
+        .actor_metadata
+        .get_mut("focus-vehicle")
+        .unwrap()
+        .tags
+        .push("studio:body-color:#8c2f2f".into());
+    let tl = build_render_timeline(&trace, &HeightField::flat(0.0), None).unwrap();
+    assert_eq!(
+        tl.actor("focus-vehicle").unwrap().color.as_deref(),
+        Some("#8c2f2f")
+    );
+    assert_eq!(tl.actor("worker").unwrap().color, None);
+    let doc = sampler::scene_state_document(&tl, &[0.0], false).unwrap();
+    let desc = doc.actors.iter().find(|a| a.id == "focus-vehicle").unwrap();
+    assert_eq!(desc.color.as_deref(), Some("#8c2f2f"));
+}

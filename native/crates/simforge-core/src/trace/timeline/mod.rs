@@ -33,7 +33,7 @@ use crate::physics::MotionDirection;
 use crate::types::{ActorKind, ControlIndication, Dims, SetValue, TimeOfDay};
 
 use super::scene_state::{
-    actor_class_of, catalog_id_for, weather_from, ActorClass, RenderProfile, Weather,
+    actor_class_of, body_color_of, catalog_id_for, weather_from, ActorClass, RenderProfile, Weather,
 };
 pub use super::{actor_origin, ActorOrigin};
 use super::{ContactFrame, SimEvent, SimTrace, TraceError};
@@ -44,9 +44,11 @@ pub use sampler::{pose, LightStates, SampleError, TimelinePose};
 /// The only document version renderers accept.
 pub const RENDER_TIMELINE_VERSION: &str = "simforge.render-timeline.v1";
 /// Version of the derivation *and* sampling rules. Any change to how a
-/// channel is derived (heights, attitude, lights) or sampled bumps it, which
-/// changes every timeline key.
-pub const SAMPLER_VERSION: &str = "simforge.timeline-sampler/2";
+/// channel is derived (heights, attitude, lights, bindings) or sampled bumps
+/// it, which changes every timeline key. /3 binds `color` from the
+/// compiler's `studio:body-color:` tag (under /2 it read a `color:` tag
+/// nothing wrote, so every /2 timeline has `color` absent).
+pub const SAMPLER_VERSION: &str = "simforge.timeline-sampler/3";
 /// Schema tag of the key preimage.
 pub const TIMELINE_KEY_SCHEMA: &str = "simforge.render-timeline-key/v1";
 /// The one fixed step. Traces at any other dt are rejected.
@@ -1224,11 +1226,7 @@ pub fn build_render_timeline(
             catalog_authored: meta.tags.iter().any(|t| t.starts_with("catalog:")),
             actor_class: actor_class_of(kind),
             dims,
-            color: meta
-                .tags
-                .iter()
-                .find_map(|t| t.strip_prefix("color:"))
-                .map(str::to_owned),
+            color: body_color_of(&meta.tags),
             is_static: meta.is_static,
             origin: meta
                 .origin

@@ -4041,7 +4041,7 @@ def test_a_shipped_render_timeline_drives_trace_replay_through_the_shared_sample
         return {"schema": "simforge.render-parity/v1", "pass": True, "maxPositionErrorM": 0.0, "perActor": {}}
 
     fake = type(sys)("simforge_oss_timeline")
-    fake.Timeline, fake.SAMPLER_VERSION = Timeline, "simforge.timeline-sampler/2"
+    fake.Timeline, fake.SAMPLER_VERSION = Timeline, "simforge.timeline-sampler/3"
     fake.compare_observed = compare_observed
     monkeypatch.setitem(sys.modules, "simforge_oss_timeline", fake)
     lease = parse_lease(lease_value(outputs=["trace", "manifest"]))

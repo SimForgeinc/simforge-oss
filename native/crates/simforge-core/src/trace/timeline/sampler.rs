@@ -6,7 +6,7 @@
 //! same `t` give bit-identical poses everywhere. Only IEEE-exact arithmetic
 //! and the core's portable trig (`crate::math`) are used.
 //!
-//! Rules (`simforge.timeline-sampler/2`; the sampling rules are unchanged
+//! Rules (`simforge.timeline-sampler/3`; the sampling rules are unchanged
 //! from /1, the derivation rules changed: see `render-timeline.md`):
 //! - `t` is clip-relative seconds on `[0, clipEndS]` (±1e-9, clamped).
 //! - Tick `i` is the last tick with `t[i] <= t`; `f = (t - t[i]) / (t[i+1] - t[i])`.
