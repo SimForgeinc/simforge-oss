@@ -519,14 +519,21 @@ export function nativeEvidenceFailure(
     return 'native_artifact_evidence_incomplete';
   }
   const reservedVideos = new Map(videos.map((video) => [videoKey(video), video]));
+  // With per-job texture residency the device holds the planned levels, not
+  // the whole map's chains: the capacity check is on the residency estimate
+  // (texture-residency.md). `textureProfile.estimatedBytes` stays the full-chain
+  // figure, which a large map exceeds by design.
+  const residentEstimate = manifest.textureResidency?.estimatedBytes;
+  const deviceEstimate = (document: NativeRenderManifest | NativeRunDiagnostics): number =>
+    residentEstimate ?? document.textureProfile!.estimatedBytes;
   const lineageMismatch = (document: NativeRenderManifest | NativeRunDiagnostics): boolean =>
     document.intentSha256 !== expectations.intentSha256
     || document.executionPackageControlSha256 !== expectations.executionPackageControlSha256
     || document.sourceXoscSha256 !== expectations.sourceXoscSha256
     || document.actorAssetsSha256 !== expectations.actorAssetsSha256
     || (expectations.renderTextures !== undefined && document.textureProfile?.renderTextures !== expectations.renderTextures)
-    || (expectations.nativeVramBudgetBytes !== undefined && (document.textureProfile?.budgetBytes !== expectations.nativeVramBudgetBytes || document.textureProfile.estimatedBytes > expectations.nativeVramBudgetBytes))
-    || (expectations.nativeVramCapacityBytes !== undefined && (document.textureProfile?.capacityBytes !== (expectations.nativeVramBudgetBytes ?? expectations.nativeVramCapacityBytes) || document.textureProfile.estimatedBytes > document.textureProfile.capacityBytes))
+    || (expectations.nativeVramBudgetBytes !== undefined && (document.textureProfile?.budgetBytes !== expectations.nativeVramBudgetBytes || deviceEstimate(document) > expectations.nativeVramBudgetBytes))
+    || (expectations.nativeVramCapacityBytes !== undefined && (document.textureProfile?.capacityBytes !== (expectations.nativeVramBudgetBytes ?? expectations.nativeVramCapacityBytes) || deviceEstimate(document) > document.textureProfile.capacityBytes))
     || document.frameCount !== expectations.frameCount;
   // A declared timeline is the render contract: the run must say it rendered
   // from exactly that timeline and that its observed poses passed parity.

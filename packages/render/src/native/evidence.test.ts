@@ -200,6 +200,38 @@ function timelineRunEvidence(): { manifest: NativeRenderManifest; diagnostics: N
   };
 }
 
+describe('per-job texture residency and the capacity check', () => {
+  // San Ramon P1 at full textures on a 10 GiB card: the whole map's chains
+  // (11.2 GB) exceed it, the planned levels (3.3 GB) do not.
+  const GIB = 1024 ** 3;
+  const run = (residency: boolean) => {
+    const { manifest, diagnostics } = timelineRunEvidence();
+    const textureProfile = {
+      renderTextures: 'uastc-full' as const, memberCount: 5_832, textureBytes: 9_960_000_000, geometryBytes: 200_000_000,
+      estimatedBytes: 11_195_612_536, budgetBytes: 11_195_612_536, capacityBytes: 10 * GIB, capacitySource: 'assumed' as const, cacheKey: HEX('3'),
+    };
+    const textureResidency = residency ? {
+      densityManifestSha256: HEX('4'), densityBuildKey: HEX('5'), planSha256: HEX('6'), levelsDropped: [1, 0, 0, 0, 0, 0, 0, 5],
+      fullTextureBytes: 9_960_000_000, residentTextureBytes: 2_300_000_000, estimatedBytes: 3_300_000_000,
+    } : null;
+    return {
+      manifest: NativeRenderManifestSchema.parse({ ...manifest, textureProfile, textureResidency }),
+      diagnostics: NativeRunDiagnosticsSchema.parse({ ...diagnostics, textureProfile }),
+      expectations: { ...nativeRunExpectations(intent, lease), renderTextures: 'uastc-full' as const, nativeVramCapacityBytes: 10 * GIB },
+    };
+  };
+
+  it('checks a residency run against the levels it uploaded', () => {
+    const { manifest, diagnostics, expectations } = run(true);
+    expect(nativeEvidenceFailure(reservations, manifest, diagnostics, expectations)).toBeNull();
+  });
+
+  it('still refuses a full-chain run whose estimate exceeds the capacity', () => {
+    const { manifest, diagnostics, expectations } = run(false);
+    expect(nativeEvidenceFailure(reservations, manifest, diagnostics, expectations)).toBe('native_diagnostics_evidence_mismatch');
+  });
+});
+
 describe('the control plane parses a newer worker\'s evidence', () => {
   it('accepts an rc.73 render-timeline run end to end through the host parsers', () => {
     const { manifest, diagnostics } = timelineRunEvidence();
