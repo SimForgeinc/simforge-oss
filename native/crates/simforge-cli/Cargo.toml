@@ -1,0 +1,35 @@
+[package]
+name = "simforge-cli"
+description = "The SimForge command line: package, maps, assets, timeline, render, simulate, env serve, doctor."
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+rust-version = "1.85"
+# A member of the renderer workspace, not of native/: `simforge render` and
+# `simforge env serve` link the renderer as a library, and only the renderer
+# workspace root carries the vendored-Bevy [patch.crates-io] table and the
+# lockfile those builds are pinned by. native/Cargo.toml excludes this
+# directory. The SDK split moves everything into one workspace (track S).
+workspace = "../../../renderer"
+
+[[bin]]
+name = "simforge"
+path = "src/main.rs"
+
+[lib]
+name = "simforge_cli"
+path = "src/lib.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive", "env", "wrap_help"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Adapter enumeration for `doctor`: the same wgpu the renderer is built on,
+# so the adapter list is the one a render would choose from.
+wgpu = { version = "29.0.4", default-features = false, features = ["std", "vulkan", "metal", "dx12"] }
+futures-lite = "2"
+ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
+fs4 = { version = "1", default-features = false }
+
+[dev-dependencies]
+tempfile = "3"

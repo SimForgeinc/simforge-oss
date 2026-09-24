@@ -123,14 +123,21 @@ function planJs() {
 }
 
 function planCargo(ws) {
-  if (changed !== null && !changed.some((f) => f.startsWith(`${ws.dir}/`))) return { skip: `no change under ${ws.dir}/` };
+  // A configured workspace nested under this one's directory (the CLI crate,
+  // which lives under native/ but builds in the renderer workspace) owns its
+  // own files: they neither select this workspace nor mark it `all`.
+  const nested = layout.cargo.filter((other) => other !== ws && other.dir.startsWith(`${ws.dir}/`)).map((other) => `${other.dir}/`);
+  const mine = changed === null ? null : changed.filter((f) => !nested.some((dir) => f.startsWith(dir)));
+  if (mine !== null && !mine.some((f) => f.startsWith(`${ws.dir}/`))) return { skip: `no change under ${ws.dir}/` };
   let crates;
   try {
-    crates = workspaceCrates(root, ws.dir);
+    // Only the crates located under this entry's directory: a workspace may
+    // have a member elsewhere that another entry verifies.
+    crates = workspaceCrates(root, ws.dir).filter((c) => c.dir === ws.dir || c.dir.startsWith(`${ws.dir}/`));
   } catch (error) {
     return { error: `cargo metadata failed: ${error.message.split("\n")[0]}` };
   }
-  const affected = changed === null ? { all: true, crates: crates.map((c) => c.name) } : affectedCrates(crates, ws.dir, changed);
+  const affected = mine === null ? { all: true, crates: crates.map((c) => c.name) } : affectedCrates(crates, ws.dir, mine);
   const selected = affected.crates.filter((c) => !(ws.exclude ?? []).includes(c));
   if (!selected.length) return { skip: "changes are outside every crate" };
   return { crates: selected, scope: affected.all ? `all ${selected.length} crates` : selected.join(",") };

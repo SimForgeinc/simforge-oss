@@ -47,7 +47,8 @@ export default {
     global: ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.base.json", "turbo.json", "patches/**"],
     // Files outside any workspace package that still feed one.
     triggers: [
-      { when: ["native/crates/**", "native/Cargo.toml", "native/Cargo.lock"], packages: ["@simforge-oss/native-runtime"] },
+      // simforge-cli sits under native/crates but is not part of the addon or WASM builds.
+      { when: ["native/crates/**", "!native/crates/simforge-cli/**", "native/Cargo.toml", "native/Cargo.lock"], packages: ["@simforge-oss/native-runtime"] },
       { when: ["fixtures/render-timeline/**", "fixtures/physics/**"], packages: ["@simforge-oss/native-runtime"] },
     ],
   },
@@ -128,6 +129,10 @@ export default {
     // Bevy renderer: type-check only in the inner loop (its CPU conformance
     // tests run in the render-cpu check); full tests run under --full.
     { name: "renderer", dir: "renderer", mode: "check", fullMode: "check" },
+    // The `simforge` CLI: a renderer-workspace member that lives under native/
+    // (its manifest's `package.workspace`); fmt + nextest over just this crate.
+    // Its doctor tests enumerate adapters on lavapipe only.
+    { name: "cli", dir: "native/crates/simforge-cli", mode: "test" },
   ],
 
   // Golden-trace verify: only when engine inputs changed. The physics

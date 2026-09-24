@@ -3,7 +3,8 @@ resolver = "2"
 members = ["crates/*"]
 # Standalone PyO3 wheel crate with its own workspace and lockfile (built by
 # maturin from adapters/timeline); kept out of this workspace's lock.
-exclude = ["crates/simforge-timeline-python"]
+# simforge-cli is a member of the renderer workspace (it links the renderer).
+exclude = ["crates/simforge-timeline-python", "crates/simforge-cli"]
 
 [workspace.package]
 version = "0.1.0"
