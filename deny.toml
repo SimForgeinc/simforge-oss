@@ -1,0 +1,78 @@
+# cargo-deny policy for the SimForge SDK (run: `cargo deny check`).
+#
+# Gates every PR (supply-chain.yml) and every release (the release PR runs it,
+# and the release agent refuses to tag with a red check). The binary we ship is
+# Apache-2.0; nothing copyleft is linked into it. ffmpeg/x264 (GPL) are never
+# linked: `simforge render` runs a system ffmpeg as a separate process, and
+# `simforge doctor` checks for it.
+
+[graph]
+# The shipped targets (dist-workspace.toml). Dependencies used only on other
+# targets do not count against the policy.
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+  "aarch64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+]
+all-features = false
+no-default-features = false
+
+[output]
+feature-depth = 1
+
+[advisories]
+# RustSec advisories: vulnerabilities and unsound crates fail the check;
+# unmaintained crates fail only when they are direct dependencies of ours.
+unmaintained = "workspace"
+yanked = "deny"
+# Every entry needs an issue link and a date to revisit.
+ignore = []
+
+[licenses]
+# Permissive only (PLAN.md §4.3). Adding a licence here needs the user's OK.
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "MIT",
+  "MIT-0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "0BSD",
+  "BSL-1.0",
+  "NCSA",
+  "CC0-1.0",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "CDLA-Permissive-2.0",
+]
+confidence-threshold = 0.93
+# Per-crate exceptions: each one names the crate, the licence and why it is
+# acceptable in a binary distribution.
+exceptions = []
+
+# Workspace crates without a published licence field (path-only crates) are
+# ours: Apache-2.0 by the repository LICENSE.
+[licenses.private]
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+highlight = "all"
+deny = [
+  # A portable Linux binary must not link the system OpenSSL (its soname
+  # differs across distributions). Use rustls.
+  { crate = "openssl-sys", use-instead = "rustls" },
+  { crate = "openssl", use-instead = "rustls" },
+  { crate = "native-tls", use-instead = "rustls" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

@@ -1,0 +1,25 @@
+SimForge SDK
+Copyright 2026 Michael Vu
+
+This product is licensed under the Apache License, Version 2.0 (LICENSE).
+
+This product includes modified copies of the Bevy crates bevy_camera,
+bevy_gltf, bevy_mesh, bevy_pbr and bevy_render 0.19.1 (renderer/vendor/),
+Copyright (c) Bevy Contributors, licensed under MIT OR Apache-2.0 (their
+LICENSE-MIT and LICENSE-APACHE are kept beside them). The changes are listed in
+each crate's src/lib.rs header and in the renderer/vendor/*.patch files.
+
+The simforge binary statically links third-party Rust crates. Their names,
+versions and licence texts are in THIRD_PARTY_NOTICES.md, which is generated
+from the shipped dependency graph and distributed with every release archive
+and container image.
+
+The binary does not contain or link ffmpeg, x264 or any other GPL component.
+`simforge render` runs a system ffmpeg as a separate program when present.
+
+3D models are not part of this product's source or binaries. They are
+downloaded on request (`simforge assets pull`) together with their
+ATTRIBUTION.json. The CARLA vehicle and pedestrian models are (c) CARLA
+Simulator contributors and the Computer Vision Center (CVC), Universitat
+Autonoma de Barcelona, licensed under CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/), converted for SimForge.

@@ -1,0 +1,46 @@
+name: release-sbom
+# dist global-artifacts job: CycloneDX SBOMs for the CLI binary and the gym's
+# native extension. Uploaded as `artifacts-sbom`, so dist's host step attaches
+# them to the release (and release-sign.yml signs them).
+on:
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    runs-on: simforge-build
+    container: ghcr.io/simforgeinc/simforge-release-build:2026-09-24
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ fromJson(inputs.plan).announcement_tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Generate CycloneDX SBOMs
+        shell: bash
+        run: |
+          set -euo pipefail
+          source scripts/release/layout.sh
+          version="${VERSION#v}"
+          mkdir -p sbom
+          cargo cyclonedx --manifest-path "$SIMFORGE_CLI_MANIFEST" --format json --spec-version 1.5 \
+            --target all --override-filename simforge.cdx
+          mv "$(dirname "$SIMFORGE_CLI_MANIFEST")/simforge.cdx.json" "sbom/simforge-${version}.cdx.json"
+          native_manifest="$(python3 -c 'import sys,tomllib,pathlib;d=pathlib.Path(sys.argv[1]);print(d/tomllib.loads((d/"pyproject.toml").read_text())["tool"]["maturin"]["manifest-path"])' "$SIMFORGE_GYM_DIR")"
+          cargo cyclonedx --manifest-path "$native_manifest" --format json --spec-version 1.5 \
+            --target all --override-filename gym.cdx
+          mv "$(dirname "$native_manifest")/gym.cdx.json" "sbom/simforge-oss-gym-${version}.cdx.json"
+          ls -la sbom
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: artifacts-sbom
+          path: sbom/*.cdx.json
+          if-no-files-found: error

@@ -89,3 +89,6 @@ studio/public/scenario-editor/driver-behaviors/
 # devflow (pnpm verify / agent:env) and turbo run state
 .devflow/
 .turbo/
+
+# mdBook output (docs/book.toml build-dir)
+docs/book/

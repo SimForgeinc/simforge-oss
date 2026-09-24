@@ -1,0 +1,105 @@
+# cargo-dist configuration for the `simforge` binary.
+#
+# `dist generate` owns .github/workflows/release.yml: never hand-edit it. Change
+# this file, then run `dist generate` (the release job's plan step fails with
+# "out of date" otherwise). Everything dist does not do natively (keyless
+# signing, wheels, the container, the smoke, the stable promotion) lives in the
+# reusable workflows named below, which dist calls at the right phase.
+#
+# Release flow (docs/src/maintainers/releasing.md, .claude/agents/release.md):
+#   release PR approved -> release agent creates a DRAFT prerelease with the
+#   notes -> pushes tag vX.Y.Z -> this pipeline builds, signs, attests and
+#   uploads, then undrafts it (still a prerelease) -> release-smoke.yml ->
+#   promote.yml flips it to stable/latest, pushes :latest, PyPI, Homebrew.
+
+[workspace]
+members = ["cargo:."]
+
+[dist]
+cargo-dist-version = "0.33.0"
+ci = "github"
+# Only the CLI is distributed. The renderer's own `simforge-render` binary and
+# every other workspace crate stay out of the release.
+packages = ["simforge"]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+  "aarch64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+]
+installers = ["shell", "powershell", "homebrew"]
+install-path = "CARGO_HOME"
+install-updater = false
+# The formula is generated as a release asset; promote.yml commits it to the
+# tap when a release goes stable. dist's own "homebrew" publish job is off
+# because it would publish at tag time, before the smoke and the 48 h window.
+tap = "SimForgeinc/homebrew-tap"
+formula = "simforge"
+include = ["NOTICE", "THIRD_PARTY_NOTICES.md"]
+checksum = "sha256"
+# Supply chain: SLSA build provenance per archive (GitHub attestations, made
+# while each target builds) and the dependency tree embedded in the binary
+# (cargo-auditable). The CycloneDX SBOM comes from ./release-sbom instead of
+# dist's `cargo-cyclonedx = true`: dist 0.33's generated upload step reads
+# `steps.cargo-cyclonedx.output.paths` (sic) and so uploads no SBOM.
+github-attestations = true
+cargo-auditable = true
+# The release agent creates the draft prerelease (title, notes) before pushing
+# the tag; dist uploads into it and undrafts it. The prerelease flag stays set
+# until promote.yml clears it.
+create-release = false
+# Self-hosted Linux runner on a public repo: never run release jobs for PRs
+# (fork code would execute on path-pc). supply-chain.yml covers PR checks.
+pr-run-mode = "skip"
+# Custom jobs see prereleases too; each one decides what a prerelease gets
+# (no :latest, no PyPI, no Homebrew until promote.yml).
+publish-prereleases = true
+plan-jobs = ["./release-preflight"]
+local-artifacts-jobs = ["./release-wheels"]
+global-artifacts-jobs = ["./release-sbom"]
+# Signing runs after `host` has uploaded every asset, so it covers the global
+# ones (installers, checksums, formula, SBOM, wheels) too.
+publish-jobs = ["./release-sign", "./release-container"]
+post-announce-jobs = ["./release-smoke"]
+github-build-setup = "../release-build-setup.yml"
+
+[dist.github-custom-job-permissions]
+"release-preflight" = { contents = "read" }
+"release-wheels" = { contents = "read", id-token = "write", attestations = "write" }
+"release-sbom" = { contents = "read" }
+"release-sign" = { contents = "write", id-token = "write", attestations = "write" }
+"release-container" = { contents = "read", packages = "write", id-token = "write", attestations = "write" }
+"release-smoke" = { contents = "write" }
+
+# Linux builds, plan/host/announce run on path-pc's local runner; only macOS
+# and Windows use the public repo's free GitHub-hosted runners. Linux builds
+# run inside the release build image (glibc 2.28 floor, pinned Rust 1.98.0,
+# zig + cargo-zigbuild for aarch64); docker/release-build.Dockerfile,
+# published by release-build-image.yml.
+[dist.github-custom-runners]
+global = "simforge-build"
+
+[dist.github-custom-runners.x86_64-unknown-linux-gnu]
+runner = "simforge-build"
+container = { image = "ghcr.io/simforgeinc/simforge-release-build:2026-09-24", host = "x86_64-unknown-linux-gnu" }
+
+[dist.github-custom-runners.aarch64-unknown-linux-gnu]
+runner = "simforge-build"
+container = { image = "ghcr.io/simforgeinc/simforge-release-build:2026-09-24", host = "x86_64-unknown-linux-gnu" }
+
+[dist.github-custom-runners.aarch64-apple-darwin]
+runner = "macos-14"
+
+[dist.github-custom-runners.x86_64-pc-windows-msvc]
+runner = "windows-2022"
+
+[dist.min-glibc-version]
+"*" = "2.28"
+
+# Actions in the generated release.yml, pinned to commits (the tags they
+# resolved to on 2026-09-24).
+[dist.github-action-commits]
+"actions/checkout" = "3d3c42e5aac5ba805825da76410c181273ba90b1"          # v7.0.1
+"actions/upload-artifact" = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"   # v7.0.1
+"actions/download-artifact" = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" # v8.0.1
+"actions/attest" = "1e69f48acb82d1966a394da916b4c1698aa569d6"            # v4.2.2
