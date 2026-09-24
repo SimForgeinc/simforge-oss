@@ -4,7 +4,7 @@ import { ALPAMAYO_RENDER_WIDTH, ALPAMAYO_RENDER_HEIGHT } from "@simforge-oss/sce
 import { useStudioHost } from "../../../host";
 import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
 import { isCloudHost } from "@simforge-oss/studio-host";
-import type { ScenarioMotionSource, ScenarioRendererEngine, StudioHostCapabilities } from "@simforge-oss/studio-host";
+import type { ScenarioMotionSource, ScenarioRenderPreset, ScenarioRendererEngine, StudioHostCapabilities } from "@simforge-oss/studio-host";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
@@ -241,6 +241,12 @@ function delay(ms: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 }
 
+/** The native renderer's two presets, as the settings step offers them. */
+const RENDER_PRESET_OPTIONS: ReadonlyArray<{ id: ScenarioRenderPreset; label: string; hint: string }> = [
+  { id: "training", label: "Training (fast)", hint: "Every effect at its cheapest level: for dataset volume." },
+  { id: "showcase", label: "Showcase (quality)", hint: "Delivery quality, the default." },
+];
+
 function StepHeading({ title, hint, aside }: { title: string; hint?: string; aside?: ReactNode }) {
   return (
     <div {...stylex.props(styles.flexBetweenStart)}>
@@ -297,6 +303,8 @@ export function RenderConfigPanel({
   const studioHost = useStudioHost();
   const [backend, setBackend] = useState<RenderBackend>("native");
   const [renderProfile, setRenderProfile] = useState<"render" | "ml">("render");
+  // The native renderer's two presets; showcase is what a render without a choice gets.
+  const [renderPreset, setRenderPreset] = useState<ScenarioRenderPreset>("showcase");
   const [nativeBudgetGiB, setNativeBudgetGiB] = useState("");
   const hostCapabilitiesState = useStudioHostCapabilities(studioHost);
   const hostCapabilities = hostCapabilitiesState.capabilities;
@@ -643,6 +651,7 @@ export function RenderConfigPanel({
       engine: backend,
       ...(backend === "native" ? {
         renderProfile,
+        render: { preset: renderPreset },
         ...(nativeBudgetGiB === "" ? {} : { nativeVramBudgetBytes: Math.floor(Number(nativeBudgetGiB) * 1024 ** 3) }),
       } : {}),
       revisionId,
@@ -1080,6 +1089,25 @@ export function RenderConfigPanel({
             <div {...stylex.props(styles.gridGap5)}>
               {backend === "native" ? (
                 <section>
+                  <StepHeading title="Render preset" hint="Recorded on the job. Training keeps every effect at lower quality levels for speed; Showcase is delivery quality." />
+                  <div aria-label="Render preset" {...stylex.props(styles.gridGap2)} role="radiogroup" data-testid="render-preset">
+                    {RENDER_PRESET_OPTIONS.map((option) => (
+                      <RenderOptionCard
+                        disabled={stage != null}
+                        hint={option.hint}
+                        key={option.id}
+                        label={option.label}
+                        onClick={() => setRenderPreset(option.id)}
+                        selected={renderPreset === option.id}
+                        selection="single"
+                        testId={`render-preset-${option.id}`}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+              {backend === "native" ? (
+                <section>
                   <StepHeading title="Texture profile" hint="Pinned into the job and its evidence. Capacity failures never lower texture quality." />
                   <label {...stylex.props(styles.flexColGap1)}>
                     <span {...stylex.props([typography.eyebrow, styles.capsMicroMuted])}>Native texture profile</span>
@@ -1179,6 +1207,7 @@ export function RenderConfigPanel({
             />
             <dl {...stylex.props(styles.bordered)}>
               <ReviewRow label="Engine" value={`${engineOption.label} · ${localExecution ? "this machine" : "connected service"}`} />
+              {backend === "native" ? <ReviewRow label="Preset" value={RENDER_PRESET_OPTIONS.find((option) => option.id === renderPreset)!.label} /> : null}
               {backend === "native" ? <ReviewRow label="Textures" value={renderProfile === "render" ? "Render · uastc-full" : "ML Training · bc7-512"} /> : null}
               {backend === "native" ? <ReviewRow label="Capacity" value={nativeBudgetGiB === "" ? "Auto · assumed 16 GiB device" : `${nativeBudgetGiB} GiB explicit ceiling`} /> : null}
               <ReviewRow

@@ -21,7 +21,7 @@ import {
   type NativeRunDiagnostics,
 } from "@simforge-oss/render/native";
 import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
-import { CONTROL_FEATURES_V1, WORKER_CONTROL_FEATURES_V1 } from "@simforge-oss/render";
+import { CONTROL_FEATURES_V1, WORKER_CONTROL_FEATURES_V1, WORKER_INTENT_FEATURES_LABEL, workerCanParseIntent } from "@simforge-oss/render";
 import { RENDER_INTENT_V1_SCHEMA, RenderSpecV3Schema, captureScheduleFps, fixedStepFrameCount, hashRenderIntent, parseRenderIntent as parseRenderIntentDocument } from "@simforge-oss/scenario";
 import {
   carlaRuntimeEvidencePolicyFailure,
@@ -234,6 +234,8 @@ export type Candidate = {
   resource_request: unknown;
   map_version_id?: string | null;
   render_textures?: string | null;
+  /** The intent's `render` (native preset and overrides); null when it carries none. */
+  render_request?: unknown;
 };
 
 export type WorkerRow = {
@@ -253,6 +255,8 @@ export type WorkerRow = {
   cache_demand?: string | unknown[] | null;
   /** `v1` when the worker understands `controlFeatures` on a lease. */
   control_features?: string | null;
+  /** The intent fields the worker parses and honors (`labels.intentFeatures`, comma-separated). */
+  intent_features?: string | null;
 };
 
 function parseObject(value: string | Record<string, unknown>) {
@@ -268,6 +272,11 @@ function parseRenderIntent(value: unknown): ScenarioRenderIntent {
 export { RENDER_INTENT_TEXT_SLICE_CHARS, readRenderIntent, readRenderIntentText } from "./render-intent-closure";
 
 export function workerCanRun(worker: WorkerRow, candidate: Candidate) {
+  // An intent field newer than this worker's intent parser (an rc.75 worker
+  // and `render`): never lease it there; the job waits for a worker that
+  // announced it (`labels.intentFeatures`), so it renders exactly as asked.
+  const render = candidate.render_request ?? undefined;
+  if (!workerCanParseIntent(worker.intent_features, { render })) return false;
   const capability = ScenarioRendererCapabilitySchema.safeParse(parseObject(worker.capabilities));
   const specValue = typeof candidate.render_spec === "string"
     ? JSON.parse(candidate.render_spec) as unknown
@@ -456,7 +465,8 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
   const candidates = await queryRows<Candidate>(
     `SELECT id, renderer_engine, render_intent->'renderSpec' AS render_spec, intent_sha256, resource_request,
             render_intent->'scenarioRevision'->'map'->>'revisionId' AS map_version_id,
-            render_intent->>'renderTextures' AS render_textures
+            render_intent->>'renderTextures' AS render_textures,
+            render_intent->'render' AS render_request
        FROM simforge.render_jobs
       WHERE job_state = 'queued' AND cancel_requested_at IS NULL
         AND request_contract_version = :contract
@@ -473,7 +483,8 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
                 capabilities::text AS capabilities,
                 metadata->'labels'->>'inputUrls' AS input_urls,
                 metadata->'cacheStatus'->'demand' AS cache_demand,
-                metadata->'labels'->>'controlFeatures' AS control_features
+                metadata->'labels'->>'controlFeatures' AS control_features,
+                metadata->'labels'->>'${WORKER_INTENT_FEATURES_LABEL}' AS intent_features
            FROM simforge.worker_nodes
           WHERE registration_id = :registration_id AND id = :worker_node_id AND environment = :environment
             AND registration_state = 'active'

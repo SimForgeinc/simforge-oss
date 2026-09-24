@@ -252,6 +252,7 @@ export function RenderProgressView({
               <Fact label="Runtime" value={attempt?.runtimeVersion ?? (attempt ? "local process" : "—")} />
               <Fact label="Controls" value={shortDigest(detail.executionPackageControlSha256)} />
               <Fact label="Engine" value={detail.rendererEngine ?? "—"} />
+              {detail.render ? <Fact label="Preset" value={renderPresetFact(detail.render)} /> : null}
               <Fact label="Intent" value={detail.intentSha256 ? shortDigest(detail.intentSha256) : "—"} />
               <Fact
                 label="Base image"
@@ -317,4 +318,11 @@ function Fact({ label, value }: { label: string; value: string }) {
       <dd {...stylex.props([textLayout.truncate, styles.monoInkTruncate])}>{value}</dd>
     </div>
   );
+}
+
+/** The native preset a job recorded, with its overrides; a job from before presets were recorded says so. */
+function renderPresetFact(render: NonNullable<ScenarioRenderJobDetailDto["render"]>): string {
+  const overrides = Object.keys(render.set).length;
+  const preset = render.preset === null ? "Not recorded" : render.preset === "training" ? "Training" : "Showcase";
+  return overrides > 0 ? `${preset} · ${overrides} override${overrides === 1 ? "" : "s"}` : preset;
 }

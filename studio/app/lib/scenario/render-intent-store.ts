@@ -8,6 +8,7 @@ import { canonicalJsonSha256, scenarioId, sha256 } from "./core";
 import { boundMapDerivatives, derivativeMembers, MAP_DERIVATIVE_DESCRIPTOR_SQL, MAP_DERIVATIVE_MEMBERS_JOIN_SQL, mapDerivativeExtraMembers, type MapDerivativeMemberRow } from "./map-derivatives";
 import type { ScenarioRenderJobDto } from "./contracts";
 import { nativeMapMemberAsset, storedRenderIntent, type NativeClosureAsset } from "./render-intent-closure";
+import { resolveRenderRequest } from "./render-preset";
 import type { ScenarioMotionSource, ScenarioTimelineContactOrigin } from "@simforge-oss/studio-host";
 import {
   ScenarioRenderIntentSchema,
@@ -350,6 +351,7 @@ function buildIntent(
   }
   if (input.engine === "carla") assertCarlaRenderClip(input.renderSpec, clipSeconds);
   const intentId = scenarioId("usri");
+  const renderRequest = resolveRenderRequest(input.engine, input.render);
   return ScenarioRenderIntentSchema.parse({
     schema: RENDER_INTENT_V1_SCHEMA,
     intentId,
@@ -392,6 +394,8 @@ function buildIntent(
     ],
     seed: renderSeed(content, lineage.scenario_sha256),
     ...(input.motionSource ? { motionSource: input.motionSource } : {}),
+    // Pinned only when it differs from the default (see `ResolvedRenderRequest.intent`).
+    ...(renderRequest?.intent ? { render: renderRequest.intent } : {}),
   });
 }
 
@@ -438,17 +442,19 @@ export async function createRenderIntentJob(
   motionSource: ScenarioMotionSource | null = null,
 ): Promise<ScenarioRenderJobDto | null> {
   const renderSpec = input.renderSpec;
+  const renderRequest = resolveRenderRequest(input.engine, input.render);
   const resources = deriveRenderIntentResources(renderSpec);
   enforceRtx5080Admission(resources);
   const inserted = await withTransaction(async (tx) => {
     await tx.queryOne(`SELECT pg_advisory_xact_lock(hashtext(:workspace_id)) AS locked`, {
       workspace_id: context.workspaceId,
     });
-    const existing = await tx.queryOne<InsertedJob & { intent_sha256: string; renderer_engine: string; render_spec_sha256: string; render_textures: string | null; native_vram_budget: string | null }>(
+    const existing = await tx.queryOne<InsertedJob & { intent_sha256: string; renderer_engine: string; render_spec_sha256: string; render_textures: string | null; native_vram_budget: string | null; render_request: unknown }>(
       `SELECT id, revision_id, execution_package_id, job_mode, job_state, progress,
               sim_key, trace_sha256, timeline_sha256, motion_source,
               intent_sha256, renderer_engine, render_spec_sha256,
               render_intent->>'renderTextures' AS render_textures,
+              render_intent->'render' AS render_request,
               render_intent->>'nativeVramBudgetBytes' AS native_vram_budget,
               created_at::text AS created_at, updated_at::text AS updated_at
          FROM simforge.render_jobs
@@ -464,6 +470,7 @@ export async function createRenderIntentJob(
         || (input.engine === "native" && (existing.native_vram_budget === null ? undefined : Number(existing.native_vram_budget)) !== input.nativeVramBudgetBytes)
         || existing.render_spec_sha256 !== canonicalJsonSha256(renderSpec)
         || (existing.motion_source ?? null) !== motionSource
+        || canonicalJsonSha256(jsonValue(existing.render_request)) !== canonicalJsonSha256(renderRequest?.intent ?? null)
         || (existing.sim_key ?? null) !== (simulation?.simKey ?? null)) {
         throw new Error("uniscenario_render_intent_idempotency_conflict");
       }
@@ -632,13 +639,13 @@ export async function createRenderIntentJob(
          render_spec, render_spec_sha256, render_intent, intent_sha256, renderer_engine,
          parity_thresholds, resource_request, request_contract_version,
          job_mode, billing_mode, estimated_cost_cents, priority, idempotency_key, requested_by_user_id,
-         sim_key, trace_sha256, timeline_sha256, motion_source, timeline_contact_origin
+         sim_key, trace_sha256, timeline_sha256, motion_source, timeline_contact_origin, render_preset
        ) VALUES (
          :id, :workspace_id, :revision_id, :execution_package_id, :control_sha256,
          CAST(:render_spec AS jsonb), :render_spec_sha256, CAST(:render_intent AS jsonb), :intent_sha256, :renderer_engine,
          CAST(:parity_thresholds AS jsonb), CAST(:resource_request AS jsonb), :request_contract_version,
          :job_mode, 'free', 0, :priority, :idempotency_key, :user_id,
-         :sim_key, :trace_sha256, :timeline_sha256, :motion_source, :timeline_contact_origin
+         :sim_key, :trace_sha256, :timeline_sha256, :motion_source, :timeline_contact_origin, :render_preset
        )
        RETURNING id, revision_id, execution_package_id, job_mode, job_state, progress,
                  sim_key, trace_sha256, timeline_sha256, motion_source, timeline_contact_origin,
@@ -668,6 +675,8 @@ export async function createRenderIntentJob(
         timeline_sha256: simulation?.timelineSha256 ?? null,
         motion_source: motionSource,
         timeline_contact_origin: simulation?.timelineContactOrigin ?? null,
+        // The preset this job resolved to (native only): its record, whether or not the intent pins it.
+        render_preset: renderRequest?.preset ?? null,
       },
     );
     return rows[0] ?? null;
@@ -704,4 +713,10 @@ export async function createRenderIntentJob(
     createdAt: inserted.created_at,
     updatedAt: inserted.updated_at,
   };
+}
+
+/** A jsonb column as the driver returns it (text or parsed), or null. */
+function jsonValue(value: unknown): unknown {
+  if (value === null || value === undefined) return null;
+  return typeof value === "string" ? JSON.parse(value) as unknown : value;
 }

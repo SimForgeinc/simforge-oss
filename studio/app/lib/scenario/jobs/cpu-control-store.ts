@@ -562,6 +562,7 @@ async function claimValidationOrPostprocess(input: {
   leaseSeconds: number;
   families: readonly ScenarioCpuJobFamily[];
   engines: readonly LocalRenderEngine[];
+  intentFeatures?: ReadonlySet<string>;
 }) {
   await expireCpuAttempts();
   const legs: string[] = [];
@@ -596,7 +597,7 @@ async function claimValidationOrPostprocess(input: {
     );
   }
   if (input.families.includes("openscenario_render") && localNativeRenderOffered(input.engines)) {
-    legs.push(localNativeRenderCandidateLeg());
+    legs.push(localNativeRenderCandidateLeg(input.intentFeatures ?? new Set()));
   }
   if (input.families.includes("artifact_postprocess")) {
     // Every leg carries its own aliases: any leg can be first (or alone) depending on the
@@ -871,6 +872,8 @@ export async function claimCpuJob(input: {
   leaseSeconds: number;
   families?: readonly ScenarioCpuJobFamily[];
   engines?: readonly LocalRenderEngine[];
+  /** The intent fields the worker announced (`x-simforge-intent-features`); none from an older worker. */
+  intentFeatures?: ReadonlySet<string>;
 }) {
   const families = input.families ?? ["openscenario_compile", "openscenario_validate", "artifact_postprocess"];
   const engines = input.engines ?? ["browser"];

@@ -73,6 +73,25 @@ export default {
       when: ["studio/app/lib/cloud/**", "studio/app/api/simforge/cloud/**", "studio/app/lib/host/cloud.tsx"],
       steps: [{ cwd: "studio", run: ["pnpm", "run", "test:cloud-vault"] }],
     },
+    {
+      // The render-job API's native preset/overrides (422 on an unknown key or
+      // invalid value) and the lease screen that keeps them off older workers.
+      name: "studio-render-preset",
+      when: [
+        "studio/app/lib/scenario/render-preset.ts",
+        "studio/app/lib/scenario/render-wire-contracts.ts",
+        "studio/app/lib/scenario/render-worker-control-store.ts",
+        "studio/app/lib/scenario/__tests__/render-preset.test.ts",
+        "packages/render/src/worker-control.ts",
+        "packages/render/src/native/render-config-keys.ts",
+      ],
+      steps: [
+        // The lease store imports the engine, whose WASM binding is a build artifact
+        // (from the shared turbo cache when another tree or CI already built it).
+        { turbo: "build:artifacts", packages: ["@simforge-oss/native-runtime"] },
+        { cwd: "studio", run: ["pnpm", "run", "test:render-preset"] },
+      ],
+    },
     { name: "release-scripts", when: ["scripts/release/**"], run: ["node", "--test", "scripts/release/*.test.mjs"] },
     { name: "integration-scripts", when: ["scripts/integration/**"], run: ["node", "--test", "scripts/integration/*.test.mjs"] },
     { name: "devflow", when: ["scripts/devflow/**", "devflow.config.mjs", "turbo.json"], run: ["node", "--test", "scripts/devflow/*.test.mjs"] },

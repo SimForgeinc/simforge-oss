@@ -55,3 +55,5 @@ export {
 export type {
   LocalActorAssets, LocalActorAssetsSource, LocalExecutable, LocalExecutableSource, LocalNativeRenderProbe,
 } from './local-runtime.js';
+export { RENDER_CONFIG_KEYS, renderConfigIssues } from './render-config-keys.js';
+export type { RenderConfigIssue, RenderConfigKeySpec } from './render-config-keys.js';

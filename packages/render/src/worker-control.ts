@@ -118,6 +118,45 @@ export const WORKER_PREWARM_FEATURES_LABEL = 'prewarmFeatures' as const;
 export const CONTROL_FEATURE_PREWARM_DERIVATIVES = 'prewarm.derivatives' as const;
 export const WORKER_PREWARM_FEATURES = [CONTROL_FEATURE_PREWARM_DERIVATIVES] as const;
 /**
+ * Intent fields newer than a worker's baseline intent parser, announced the
+ * same way: the worker lists the fields it parses and honors in
+ * `labels.intentFeatures` (comma-separated), and the control plane leases an
+ * intent that carries one of them only to a worker that listed it. A worker
+ * that predates a field parses intents strictly and would fail the job on the
+ * unknown key, so it is never offered such an intent; the job waits for a
+ * worker that can render it as asked.
+ *
+ * `intent.render-request` = `RenderIntentV1.render` (the native preset,
+ * `RenderConfig` overrides, geometry LOD mode). Only an engine that applies it
+ * (native) announces it.
+ */
+export const WORKER_INTENT_FEATURES_LABEL = 'intentFeatures' as const;
+export const CONTROL_FEATURE_INTENT_RENDER_REQUEST = 'intent.render-request' as const;
+export const WORKER_INTENT_FEATURES = [CONTROL_FEATURE_INTENT_RENDER_REQUEST] as const;
+/**
+ * The same announcement for a worker on the CPU job lane (the Studio worker
+ * that claims native renders through `/internal/cpu-jobs/claim`): a request
+ * header, because that claim body is a strict schema an older host would
+ * refuse a new field in, while it ignores a header it does not know.
+ */
+export const WORKER_INTENT_FEATURES_HEADER = 'x-simforge-intent-features' as const;
+
+/** The intent features a worker announced (`labels.intentFeatures`); none when it sent no label. */
+export function workerIntentFeatures(label: string | null | undefined): ReadonlySet<string> {
+  return new Set((label ?? '').split(',').map((feature) => feature.trim()).filter(Boolean));
+}
+
+/** The intent features a worker must have announced to be leased this intent. */
+export function intentRequiredFeatures(intent: { readonly render?: unknown }): string[] {
+  return intent.render === undefined ? [] : [CONTROL_FEATURE_INTENT_RENDER_REQUEST];
+}
+
+/** Whether a worker whose `labels.intentFeatures` is `label` may be leased this intent. */
+export function workerCanParseIntent(label: string | null | undefined, intent: { readonly render?: unknown }): boolean {
+  const announced = workerIntentFeatures(label);
+  return intentRequiredFeatures(intent).every((feature) => announced.has(feature));
+}
+/**
  * The worker output keys each CONTROL_FEATURES_V1 feature unlocks, as
  * `document:key.path` with documents from `WORKER_OUTPUT_DOCUMENTS`
  * (contract/worker-output-contract.ts). The frozen contract snapshot and the

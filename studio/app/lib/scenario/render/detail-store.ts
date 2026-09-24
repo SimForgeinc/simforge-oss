@@ -38,6 +38,10 @@ type DetailRow = {
   progress_detail: string | Record<string, unknown> | null;
   renderer_engine: string | null;
   intent_sha256: string | null;
+  /** The native preset resolved at submission; null for other engines and older jobs. */
+  render_preset: string | null;
+  /** The intent's `render` (preset and overrides); null when it carries none (the default). */
+  render_request: string | Record<string, unknown> | null;
   priority: number;
   attempt_count: number;
   max_attempts: number;
@@ -317,7 +321,8 @@ export async function getRenderJobDetail(
             j.estimated_cost_cents, j.render_spec_sha256, j.hidden_at, j.hidden_by_user_id,
             j.parent_render_job_id, j.source_artifact_id, j.model_family, j.model_config_sha256,
             j.created_at, j.updated_at, j.started_at, j.completed_at, j.cancel_requested_at,
-            j.motion_source, j.timeline_contact_origin, j.sim_key, j.trace_sha256, s.engine_sem_ver AS sim_engine_sem_ver
+            j.motion_source, j.timeline_contact_origin, j.sim_key, j.trace_sha256, s.engine_sem_ver AS sim_engine_sem_ver,
+            j.render_preset, j.render_intent->'render' AS render_request
        FROM simforge.render_jobs j
        LEFT JOIN simforge.sim_results s ON s.workspace_id = j.workspace_id AND s.sim_key = j.sim_key
        JOIN simforge.execution_packages ep
@@ -405,6 +410,7 @@ export async function getRenderJobDetail(
       ? ScenarioRendererEngineSchema.parse(job.renderer_engine)
       : null,
     intentSha256: job.intent_sha256,
+    render: job.renderer_engine === "native" ? renderRequestOf(job) : null,
     priority: Number(job.priority),
     attemptCount: Number(job.attempt_count),
     maxAttempts: Number(job.max_attempts),
@@ -439,4 +445,18 @@ export async function getRenderJobDetail(
     events,
     artifacts,
   };
+}
+
+/**
+ * The native render configuration a job asked for: the preset recorded at
+ * submission and the intent's `RenderConfig` overrides. `preset` is null on
+ * a job submitted before it was recorded (the UI says so; it is never guessed).
+ */
+function renderRequestOf(job: DetailRow): NonNullable<ScenarioRenderJobDetailDto["render"]> {
+  const request = job.render_request === null ? null : parseJsonObject(job.render_request);
+  const preset = job.render_preset === "training" || job.render_preset === "showcase" ? job.render_preset : null;
+  const set = request?.set && typeof request.set === "object" && !Array.isArray(request.set)
+    ? request.set as Record<string, unknown>
+    : {};
+  return { preset, set };
 }

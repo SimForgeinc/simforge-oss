@@ -27,7 +27,7 @@ import {
   type NativeRunDiagnostics,
 } from "@simforge-oss/render/native";
 import { RENDER_INTENT_V1_SCHEMA, hashRenderIntent, parseRenderIntent } from "@simforge-oss/scenario";
-import { CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_SCENE_SOURCE } from "@simforge-oss/render";
+import { CONTROL_FEATURE_INTENT_RENDER_REQUEST, CONTROL_FEATURE_NATIVE_PARITY, CONTROL_FEATURE_NATIVE_SCENE_SOURCE } from "@simforge-oss/render";
 import { RENDER_TIMELINE_INPUT_ID } from "@simforge-oss/render/timeline";
 import { nativeEvidencePolicyFailure, renderSubstitutionsVerdict } from "@simforge-oss/studio-shared";
 import { simforgeEnv } from "@/lib/simforge-env";
@@ -109,7 +109,14 @@ export function localNativeRenderOffered(engines: readonly string[]): boolean {
   return engines.includes("native") && resolveActorAssets().state === "available";
 }
 
-export function localNativeRenderCandidateLeg(): string {
+/**
+ * Queued native renders a CPU-lane worker may claim. An intent that carries
+ * `render` (preset, overrides) is offered only to a worker that announced
+ * `intent.render-request`: an older worker's strict intent parser would fail
+ * the job on it, so the job waits for one that renders it as asked.
+ */
+export function localNativeRenderCandidateLeg(intentFeatures: ReadonlySet<string>): string {
+  const renderRequest = intentFeatures.has(CONTROL_FEATURE_INTENT_RENDER_REQUEST) ? "" : "\n          AND job.render_intent->'render' IS NULL";
   return `SELECT 'openscenario_render'::text AS job_family, job.id AS job_id,
               job.workspace_id, job.revision_id, job.priority::int, job.created_at::text,
               job.job_mode::text AS job_mode
@@ -117,7 +124,7 @@ export function localNativeRenderCandidateLeg(): string {
         WHERE job.job_state = 'queued' AND job.cancel_requested_at IS NULL
           AND job.attempt_count < job.max_attempts
           AND ${LOCAL_NATIVE_RENDER_JOB_FILTER}
-          AND job.request_contract_version = '${RENDER_INTENT_V1_SCHEMA}'`;
+          AND job.request_contract_version = '${RENDER_INTENT_V1_SCHEMA}'${renderRequest}`;
 }
 
 export async function claimLocalNativeRenderSource(tx: JobTransaction, jobId: string): Promise<LocalNativeRenderSource | null> {

@@ -31,6 +31,7 @@ import {
   CONTROL_FEATURE_OUTPUTS,
   CONTROL_FEATURES_V1,
   WORKER_PREWARM_FEATURES,
+  WORKER_INTENT_FEATURES,
   InputUrlsRequestSchema,
   JobClaimRequestSchema,
   JobCompleteRequestSchema,
@@ -268,8 +269,9 @@ export function buildWorkerOutputContractSnapshot(
 export function controlFeatureConstants(namespace: Readonly<Record<string, unknown>>): Record<string, string> {
   return Object.fromEntries(Object.entries(namespace)
     .filter(([name, value]) => /^CONTROL_FEATURE_[A-Z0-9_]+$/.test(name) && typeof value === 'string')
-    // Prewarm features run the other way (control plane -> worker fields a worker
-    // opts into via labels.prewarmFeatures); they gate no worker output.
-    .filter(([, value]) => !(WORKER_PREWARM_FEATURES as readonly string[]).includes(value as string))
+    // Prewarm and intent features run the other way (control plane -> worker
+    // fields a worker opts into via labels.prewarmFeatures / labels.intentFeatures);
+    // they gate no worker output.
+    .filter(([, value]) => !([...WORKER_PREWARM_FEATURES, ...WORKER_INTENT_FEATURES] as readonly string[]).includes(value as string))
     .map(([name, value]) => [name, value as string]));
 }

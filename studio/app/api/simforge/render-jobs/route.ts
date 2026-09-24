@@ -3,6 +3,7 @@ import { SubmitScenarioRenderIntentSchema } from "@/app/lib/scenario/render-wire
 import { listRenderJobs } from "@/app/lib/scenario/control-plane-store";
 import { createRenderIntentJob } from "@/app/lib/scenario/render-intent-store";
 import { RenderIntentTooLargeError } from "@/app/lib/scenario/render-intent-closure";
+import { RenderRequestInvalidError, resolveRenderRequest } from "@/app/lib/scenario/render-preset";
 import { resolveRevisionReplay, RevisionReplayError, SimulationFailedError } from "@/app/lib/scenario/sim-result-store";
 import { SimulationClosureUnavailableError } from "@/app/lib/scenario/sim-closure.server";
 import {
@@ -31,6 +32,15 @@ export async function POST(request: Request) {
       { error: "invalid_render_job", details: parsed.error.flatten() },
       { status: 400 },
     );
+  }
+  // The native preset and overrides are checked against the renderer's
+  // RenderConfig key list before anything is read or created: an unknown key
+  // or an invalid value is refused with every issue, never corrected.
+  try {
+    resolveRenderRequest(parsed.data.engine, parsed.data.render);
+  } catch (error) {
+    if (error instanceof RenderRequestInvalidError) return renderRequestInvalid(error);
+    throw error;
   }
   const access = await requireScenarioMutableRevisionContext(
     auth.context,
@@ -99,6 +109,7 @@ export async function POST(request: Request) {
         { status: 422 },
       );
     }
+    if (error instanceof RenderRequestInvalidError) return renderRequestInvalid(error);
     if (error instanceof RenderIntentTooLargeError) {
       return NextResponse.json({ error: error.message, detail: error.detail }, { status: 422 });
     }
@@ -133,4 +144,11 @@ export async function POST(request: Request) {
   return created
     ? NextResponse.json(created, { status: 201 })
     : NextResponse.json({ error: "revision_or_execution_package_not_found" }, { status: 404 });
+}
+
+function renderRequestInvalid(error: RenderRequestInvalidError) {
+  return NextResponse.json(
+    { error: "render_config_invalid", message: error.message, issues: error.issues },
+    { status: 422 },
+  );
 }

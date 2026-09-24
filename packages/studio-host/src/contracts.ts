@@ -916,8 +916,16 @@ export type ScenarioRenderIntentSubmission = {
   motionSource?: ScenarioMotionSource;
   /** With `motionSource: "resimulated"`: which of the revision's results to render. */
   simKey?: string;
+  /**
+   * Native only: the render preset (absent is `showcase`) and dotted
+   * `RenderConfig` overrides. An unknown key or invalid value is a 422.
+   */
+  render?: { preset?: ScenarioRenderPreset; set?: Record<string, unknown> };
   [key: string]: unknown;
 };
+
+/** The native renderer's two presets: `training` (fast) and `showcase` (quality). */
+export type ScenarioRenderPreset = "training" | "showcase";
 
 // ── Render gallery, detail, artifacts, postprocess ──────────────────────────
 
@@ -1105,6 +1113,12 @@ export type ScenarioRenderJobDetailDto = {
   progressRecords?: ScenarioRenderProgressDto[];
   rendererEngine: ScenarioRendererEngine | null;
   intentSha256: string | null;
+  /**
+   * Native jobs: the preset recorded at submission (null on a job submitted
+   * before it was recorded) and the `RenderConfig` overrides it asked for.
+   * Null for other engines.
+   */
+  render?: { preset: ScenarioRenderPreset | null; set: Record<string, unknown> } | null;
   priority: number;
   attemptCount: number;
   maxAttempts: number;

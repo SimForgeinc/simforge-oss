@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { WORKER_INTENT_FEATURES, WORKER_INTENT_FEATURES_HEADER } from "@simforge-oss/render";
 import { createReadStream, createWriteStream, openAsBlob } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { basename, dirname, join, resolve, sep } from "node:path";
@@ -370,6 +371,8 @@ export class CpuJobsClient {
       headers: {
         authorization: `Bearer ${this.token}`,
         "content-type": "application/json",
+        // This worker renders native intents with `render` (preset, overrides) as asked.
+        [WORKER_INTENT_FEATURES_HEADER]: WORKER_INTENT_FEATURES.join(","),
       },
       body: JSON.stringify(payload),
       signal: AbortSignal.any([signal, AbortSignal.timeout(this.requestTimeoutMs)]),

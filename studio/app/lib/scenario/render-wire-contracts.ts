@@ -1,4 +1,4 @@
-import { RENDER_INTENT_MAX_ASSETS, RENDER_INTENT_V1_SCHEMA, RENDER_MOTION_SOURCES, RENDER_SUBSTITUTION_KINDS, RenderSpecV3Schema, type RenderSpecV3 } from "@simforge-oss/scenario";
+import { RENDER_INTENT_MAX_ASSETS, RENDER_INTENT_V1_SCHEMA, RENDER_MOTION_SOURCES, RENDER_PRESETS, RENDER_SUBSTITUTION_KINDS, RenderSpecV3Schema, type RenderSpecV3 } from "@simforge-oss/scenario";
 import { z } from "zod";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -54,6 +54,22 @@ export const ScenarioRenderIntentSchema = z.strictObject({
   allowSubstitutions: z.array(z.enum(RENDER_SUBSTITUTION_KINDS)).min(1).max(RENDER_SUBSTITUTION_KINDS.length).optional(),
   /** `RenderIntentV1.motionSource`: `original-xosc` is the explicit legacy replay. */
   motionSource: z.enum(RENDER_MOTION_SOURCES).optional(),
+  /**
+   * `RenderIntentV1.render`: the native preset and `RenderConfig` overrides.
+   * Absent is `showcase` with no overrides. Leased only to a worker that
+   * announces `intent.render-request` (`workerCanParseIntent`).
+   */
+  render: z.strictObject({
+    preset: z.enum(RENDER_PRESETS).optional(),
+    // `RenderRequestSchema.set` values (@simforge-oss/scenario render-intent.ts).
+    set: z.record(z.string(), z.union([
+      z.string().max(64),
+      z.number().finite(),
+      z.boolean(),
+      z.record(z.string(), z.union([z.string().max(64), z.number().finite()])),
+    ])).optional(),
+    geometryLod: z.enum(["auto", "off"]).optional(),
+  }).optional(),
 }).superRefine((intent, context) => {
   const hostBySourceId = new Map(intent.sensorHosts.map((host) => [host.sourceId, host]));
   if (hostBySourceId.size !== intent.sensorHosts.length) {
@@ -112,6 +128,13 @@ export const SubmitScenarioRenderIntentSchema = z.strictObject({
   motionSource: z.enum(RENDER_MOTION_SOURCES).optional(),
   /** With `motionSource: "resimulated"`: which of the revision's results to render. */
   simKey: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  /**
+   * Native render configuration: `preset` (`training` | `showcase`; absent is
+   * `showcase`) and `set`, dotted `RenderConfig` overrides. Its content is
+   * checked against the renderer's key list by `resolveRenderRequest`, which
+   * the route answers with 422 and every issue, never by correcting a value.
+   */
+  render: z.record(z.string(), z.unknown()).optional(),
 }).superRefine((input, context) => {
   if ((input.motionSource === "resimulated") !== (input.simKey !== undefined)) {
     context.addIssue({ code: "custom", path: ["simKey"], message: "simKey is required with, and only with, motionSource \"resimulated\"." });

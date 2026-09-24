@@ -25,6 +25,8 @@ import {
   WORKER_CONTROL_FEATURES_LABEL,
   WORKER_PREWARM_FEATURES,
   WORKER_PREWARM_FEATURES_LABEL,
+  WORKER_INTENT_FEATURES,
+  WORKER_INTENT_FEATURES_LABEL,
   WORKER_CONTROL_FEATURES_V1,
   WORKER_INPUT_URLS_BATCH_V1,
   WORKER_INPUT_URLS_LABEL,
@@ -733,6 +735,8 @@ export async function runRenderWorker(
     // Prewarm manifests may then carry `derivativesSha256` (Prewarmer keys its member cache by it).
     [WORKER_PREWARM_FEATURES_LABEL]: WORKER_PREWARM_FEATURES.join(','),
     ...(transport.inputUrls ? { [WORKER_INPUT_URLS_LABEL]: WORKER_INPUT_URLS_BATCH_V1 } : {}),
+    // Intents may then carry `render` (preset and overrides); only the native engine applies it.
+    ...(engine.capabilities.backend === 'native' ? { [WORKER_INTENT_FEATURES_LABEL]: WORKER_INTENT_FEATURES.join(',') } : {}),
   };
   const registration = await withBoundedRetry('worker registration', config.retries, operationSignal, () => transport.register({
     schema: RENDER_WORKER_CONTROL_V2_SCHEMA,

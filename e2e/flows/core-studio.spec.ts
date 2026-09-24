@@ -687,4 +687,89 @@ test.describe("core studio flow", () => {
 
     await writeEvidence(testInfo, "core-studio-browser-render", evidence);
   });
+
+  test("native render preset: Showcase by default, Training reaches the job", async ({ e2e, studio }, testInfo) => {
+    test.setTimeout(SETUP_TIMEOUT_MS + EDITOR_READY_TIMEOUT_MS + 300_000);
+    await requirePrerequisites(testInfo, [PREREQUISITES.realMaps, PREREQUISITES.nativeRunner]);
+
+    const { page } = studio;
+    const datasetName = `E2E Preset ${e2e.id}`;
+    const evidence: Record<string, unknown> = { runId: e2e.id, mode: studio.mode };
+
+    await test.step("set up, author one recording vehicle", async () => {
+      evidence.setup = await completeFirstRunSetup(e2e, studio);
+      await studio.goto("/dashboard/scenario");
+      await createDataset(page, datasetName);
+      await createScenario(page, datasetName);
+      await placeFromCatalog(page, "vehicles", 1);
+      const laneTestId = await actorLanes(page).first().getAttribute("data-testid");
+      const actorId = laneTestId?.replace("timeline-actor-lane-", "") ?? "";
+      expect(actorId).not.toBe("");
+      await page.getByTestId(`timeline-actor-identity-${actorId}`).click();
+      await expect(page.getByTestId("scenario-actor-details-panel")).toBeVisible({ timeout: 60_000 });
+      await page.getByRole("button", { name: "Add dash camera" }).click();
+      await expect(page.getByRole("switch", { name: /enabled$/ }).first()).toBeVisible({ timeout: 60_000 });
+    });
+
+    let submitted: { render?: { preset?: string } } | null = null;
+    await test.step("the native settings step offers the two presets, Showcase selected", async () => {
+      await page.getByRole("button", { name: "Exit editor" }).click();
+      await expect(page.getByTestId("scenario-document-index")).toBeVisible({ timeout: 120_000 });
+      await page.getByRole("button", { name: /^Render / }).first().click();
+      await expect(page.getByTestId("scenario-dataset-render-pane")).toBeVisible({ timeout: 120_000 });
+      await page.getByTestId("new-render-button").click();
+      await expect(page.getByTestId("render-config-panel")).toBeVisible({ timeout: 120_000 });
+      const nativeEngine = page.getByTestId("render-backend-native");
+      await expect(nativeEngine).toBeEnabled({ timeout: 120_000 });
+      await nativeEngine.click();
+      await page.getByTestId("render-wizard-next").click();
+      // Native's cameras step starts with every authored camera on RGB.
+      await expect(page.locator('[data-testid^="render-sensor-"]').first()).toBeVisible({ timeout: 120_000 });
+
+      const preset = page.getByTestId("render-preset");
+      const next = page.getByTestId("render-wizard-next");
+      for (let step = 0; step < 6 && !(await preset.isVisible()); step += 1) {
+        await expect(next).toBeEnabled({ timeout: 120_000 });
+        await next.click();
+      }
+      await expect(preset.getByRole("radio")).toHaveCount(2);
+      await expect(page.getByTestId("render-preset-showcase")).toHaveAttribute("aria-checked", "true");
+      await expect(page.getByTestId("render-preset-showcase")).toContainText("Showcase (quality)");
+      await expect(page.getByTestId("render-preset-training")).toHaveAttribute("aria-checked", "false");
+      await page.getByTestId("render-preset-training").click();
+      await expect(page.getByTestId("render-preset-training")).toHaveAttribute("aria-checked", "true");
+      await expect(page.getByTestId("render-preset-showcase")).toHaveAttribute("aria-checked", "false");
+    });
+
+    await test.step("the review names the preset and the submission carries it", async () => {
+      const next = page.getByTestId("render-wizard-next");
+      const run = page.getByTestId("render-run-button");
+      for (let step = 0; step < 6 && !(await run.isVisible()); step += 1) {
+        await expect(next).toBeEnabled({ timeout: 120_000 });
+        await next.click();
+      }
+      await expect(page.getByText("Training (fast)")).toBeVisible();
+      const request = page.waitForRequest((candidate) =>
+        candidate.method() === "POST" && new URL(candidate.url()).pathname === "/api/simforge/render-jobs");
+      await expect(run).toBeEnabled({ timeout: 120_000 });
+      await run.click();
+      submitted = (await request).postDataJSON() as typeof submitted;
+      expect(submitted?.render).toEqual({ preset: "training" });
+    });
+
+    await test.step("the job records Training and the details show it", async () => {
+      await expect(page.getByTestId("render-progress-facts")).toContainText("Training", { timeout: 120_000 });
+      const list = await studio.api<{ renderJobs: readonly RenderJobSummary[] }>("/api/simforge/render-jobs");
+      const job = list.renderJobs[0];
+      expect(job).toBeTruthy();
+      const detail = await studio.api<RenderJobDetail & { render?: { preset: string | null } | null }>(
+        `/api/simforge/render-jobs/${job!.id}/detail`,
+      );
+      expect(detail.render?.preset).toBe("training");
+      evidence.jobId = job!.id;
+      evidence.render = detail.render;
+    });
+
+    await writeEvidence(testInfo, "core-studio-native-render-preset", evidence);
+  });
 });

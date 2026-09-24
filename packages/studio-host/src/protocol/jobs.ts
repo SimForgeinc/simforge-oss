@@ -235,6 +235,10 @@ export const ScenarioRenderJobDetailSchema = object<ScenarioRenderJobDetailDto>(
   progressRecords: optional(array(ScenarioRenderProgressSchema)),
   rendererEngine: nullable(oneOf(SCENARIO_RENDERER_ENGINES)),
   intentSha256: nullable(string()),
+  render: optional(nullable(object({
+    preset: nullable(oneOf(["training", "showcase"] as const)),
+    set: record(passthrough<unknown>()),
+  }))),
   priority: number(),
   attemptCount: number(),
   maxAttempts: number(),
