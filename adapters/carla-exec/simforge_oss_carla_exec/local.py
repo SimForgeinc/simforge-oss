@@ -17,8 +17,6 @@ from typing import Any, Callable, Mapping, Sequence
 
 from .capabilities import native_sensor_capabilities
 from .runtime.backend import (
-    CARLA_IMAGE_AMD64_MANIFEST_DIGEST,
-    CARLA_IMAGE_INDEX_DIGEST,
     KIA_CARNIVAL_BLUEPRINT_ID,
     PRONTO_CHASE_CAMERA_SENSOR_ID,
     CarlaBackend,
@@ -26,6 +24,7 @@ from .runtime.backend import (
     cooked_map_name_for_xodr,
 )
 from .runtime.compiler import compile_xosc14
+from .runtime.image import runtime_image
 from .runtime.contract import (
     ASSET_CATALOG_SCHEMA,
     EMPTY_AMBIENT_CONFIG_SHA256,
@@ -75,11 +74,7 @@ def _probe(host: str, port: int) -> dict[str, object]:
             "serverVersion": str(backend.client.get_server_version()),
             "maxSimultaneousSensors": MAX_SENSOR_COUNT,
             "nativeSensors": native_sensor_capabilities(),
-            "runtimeImage": {
-                "repository": "ghcr.io/simforgeinc/carla-rfs-munich-belmont",
-                "indexDigest": CARLA_IMAGE_INDEX_DIGEST,
-                "linuxAmd64ManifestDigest": CARLA_IMAGE_AMD64_MANIFEST_DIGEST,
-            },
+            "runtimeImage": runtime_image().probe_evidence(),
         }
     finally:
         backend.cleanup()
@@ -1128,7 +1123,7 @@ def _preflight_intent(args: argparse.Namespace) -> dict[str, object]:
             **rpc,
             "map": map_evidence,
             "vehicle": blueprint,
-            "imageDigest": CARLA_IMAGE_AMD64_MANIFEST_DIGEST,
+            "imageDigest": runtime_image().manifest_digest,
         },
     }
 
@@ -1386,6 +1381,14 @@ def main() -> None:
                             "authored ego, which in a collision scenario is often a "
                             "bystander rather than a participant")
     args = parser.parse_args()
+    try:
+        # The runtime image identity is configuration, resolved once here: a
+        # managed worker without its pin (or with a malformed one) is refused
+        # before CARLA is contacted, with the same machine-coded failure line.
+        runtime_image()
+    except ContractError as exc:
+        print(json.dumps(render_failure_record(exc), sort_keys=True))
+        raise SystemExit(3) from exc
     if args.command == "run-local":
         from .run_local import run_local_command
         result = run_local_command(args)

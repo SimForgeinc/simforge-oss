@@ -336,6 +336,7 @@ def test_bound_timeline_maps_the_shared_sampler_binding_onto_plan_frames():
         dt, clip_end_s, warmup_s, times = 0.02, 0.02, 5.0, [0.0, 0.02]
         actor_ids = ["a"]
         sha256 = key = trace_sha256 = "b" * 64
+        sampler_version = "simforge.timeline-sampler/3"
         xodr_sha256 = None
 
         def props(self): return [{"id": "cone", "catalogId": "c", "x": 3.0, "y": 4.0, "z": 0.5, "headingRad": 0.0}]

@@ -18,6 +18,7 @@ from typing import Any, Callable, Iterable, Mapping, Protocol
 from .. import actor_bindings as _actor_bindings
 from .. import world_manifest as _world_manifest
 from .compiler import LIFECYCLE_ABSENT, ActorBinding, PlanFrame
+from .image import runtime_image, runtime_image_evidence
 from .policy import (
     LIDAR_DETERMINISTIC_ATTRIBUTES,
     CarlaRenderError,
@@ -152,8 +153,6 @@ NATIVE_SENSOR_BLUEPRINTS: Mapping[str, str] = {
     "radar": "sensor.other.radar",
 }
 
-CARLA_IMAGE_INDEX_DIGEST = "sha256:f17c639e5f86fd7458fe1d02d3be1d481deeaa714f3cac30e465187d04ec90e5"
-CARLA_IMAGE_AMD64_MANIFEST_DIGEST = "sha256:baed0d038437c55efe0abe52a762d352aeb21acdeeff5b11a15f6bd8a648de64"
 KIA_CARNIVAL_CATALOG_ID = "vehicle.kia.carnival"
 KIA_CARNIVAL_BLUEPRINT_ID = "vehicle.kia.carnival"
 KIA_CARNIVAL_CLASS_PATH = (
@@ -3529,18 +3528,9 @@ class CarlaBackend:
         client_version = getattr(self.client, "get_client_version", lambda: "unavailable")()
         server_version = getattr(self.client, "get_server_version", lambda: "unavailable")()
         check()
-        managed = os.environ.get("SIMFORGE_MANAGED_EXECUTION") == "1"
-        configured_manifest_sha256 = os.environ.get("SIMFORGE_CARLA_IMAGE_MANIFEST_SHA256")
-        configured_blueprint = os.environ.get("SIMFORGE_CARLA_BLUEPRINT_ID")
-        configured_class = os.environ.get("SIMFORGE_CARLA_BLUEPRINT_CLASS")
-        image_exact = (
-            configured_manifest_sha256
-            == CARLA_IMAGE_AMD64_MANIFEST_DIGEST.removeprefix("sha256:")
-        )
-        if managed and not image_exact:
-            raise RuntimeError(
-                "managed CARLA execution is not running the pinned runtime image manifest"
-            )
+        # Raises when managed execution is not on its pinned manifest; records a
+        # user-provided server as such (no image is ever assumed).
+        runtime_image_record = runtime_image_evidence(runtime_image())
         return {
             "schema": "simforge.carla-runtime-evidence/v1",
             "available": True,
@@ -3561,16 +3551,7 @@ class CarlaBackend:
             "poseGates": getattr(self, "pose_gate", None).report() if getattr(self, "pose_gate", None) is not None else None,
             "carlaClientVersion": str(client_version),
             "carlaServerVersion": str(server_version),
-            "runtimeImage": {
-                "repository": "ghcr.io/simforgeinc/carla-rfs-munich-belmont",
-                "indexSha256": CARLA_IMAGE_INDEX_DIGEST.removeprefix("sha256:"),
-                "linuxAmd64ManifestSha256": CARLA_IMAGE_AMD64_MANIFEST_DIGEST.removeprefix("sha256:"),
-                "configuredManifestSha256": configured_manifest_sha256,
-                "configuredBlueprintId": configured_blueprint,
-                "configuredClassPath": configured_class,
-                "managed": managed,
-                "exact": image_exact,
-            },
+            "runtimeImage": runtime_image_record,
             "actorAssets": {
                 actor_id: dict(values)
                 for actor_id, values in sorted(self.actor_asset_evidence.items())

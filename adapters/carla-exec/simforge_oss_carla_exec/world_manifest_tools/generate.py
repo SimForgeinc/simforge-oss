@@ -374,7 +374,10 @@ def generate(inputs: Path, decisions: dict[str, dict], legacy: list[dict] | None
         "tolerance": {"positionM": xodr_identity.GEOMETRY_TOLERANCE,
                       "headingDeg": round(xodr_identity.HEADING_TOLERANCE * 180 / 3.141592653589793, 6)},
         "source": {"root": root_label(nas["root"])},
-        "cookedImage": {k: cooked[k] for k in ("image", "imageId", "repoDigests", "engineBinarySha256", "version")},
+        # The cooked engine by content (image id, engine binary digest, CARLA/UE
+        # revisions), never by registry reference: the manifest is published and
+        # the image the worlds were cooked in is a deployment detail.
+        "cookedImage": {k: cooked[k] for k in ("imageId", "engineBinarySha256", "version")},
         "maps": entries,
         "worlds": worlds,
         "legacySources": [_normalise_legacy(dict(item)) for item in (legacy if legacy is not None else [])],  # fallback-ok: a first generation has no legacy sources

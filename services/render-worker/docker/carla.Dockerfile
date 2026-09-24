@@ -59,6 +59,9 @@ RUN python3 -m pip install --no-cache-dir /home/carla/PythonAPI/carla/dist/carla
 # the control plane only approves a CARLA node whose version is this commit.
 # SIMFORGE_CARLA_VERSION/SIMFORGE_ENGINE_VERSION are the pinned base image's
 # runtime (0.10.0 on UE5.5): the render attests them, and never invents them.
+# SIMFORGE_CARLA_RUNTIME_IMAGE(+_INDEX_DIGEST) is the runtime base pin the
+# adapter records in runtimeEvidence.runtimeImage (the adapter itself names no
+# image: users bring their own CARLA); it must equal the FROM of the runtime stage.
 # No setting here may change render output (no generated-XODR worlds, no
 # approximate map binding, no z offsets, no signal remaps): the adapter
 # refuses those (carla_forbidden_worker_config).
@@ -70,6 +73,8 @@ ENV NODE_ENV=production \
     SIMFORGE_CARLA_BLUEPRINT_ID=vehicle.kia.carnival \
     SIMFORGE_CARLA_BLUEPRINT_CLASS=/Game/Carla/Blueprints/Vehicles/KiaCarnival2025/BP_KiaCarnival2025.BP_KiaCarnival2025_C \
     SIMFORGE_CARLA_IMAGE_MANIFEST_SHA256=baed0d038437c55efe0abe52a762d352aeb21acdeeff5b11a15f6bd8a648de64 \
+    SIMFORGE_CARLA_RUNTIME_IMAGE=ghcr.io/simforgeinc/carla-rfs-munich-belmont@sha256:baed0d038437c55efe0abe52a762d352aeb21acdeeff5b11a15f6bd8a648de64 \
+    SIMFORGE_CARLA_RUNTIME_IMAGE_INDEX_DIGEST=sha256:f17c639e5f86fd7458fe1d02d3be1d481deeaa714f3cac30e465187d04ec90e5 \
     SIMFORGE_CARLA_VERSION=0.10.0 \
     SIMFORGE_ENGINE_VERSION=UE5.5 \
     SIMFORGE_CACHE_DIR=/cache \

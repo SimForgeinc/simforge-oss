@@ -88,7 +88,12 @@ RUN python3 -m pip install --no-cache-dir --no-deps --force-reinstall /tmp/wheel
 worlds = {b.world: b for b in m.bindings().values()}; \
 bad = [w for w in sys.argv[1:] if w not in worlds or hashlib.sha256(open(f'/home/carla/CarlaUnreal/Content/Carla/Maps/OpenDrive/{w}.xodr','rb').read()).hexdigest() != worlds[w].runtime_xodr_sha256]; \
 sys.exit(f'worlds not bound by the manifest or cooked XODR mismatch: {bad}' if bad else 0)" $CARLA_WORLDS
-ENV SIMFORGE_SOURCE_REVISION=$SOURCE_REVISION
+# The approved worker image may predate the adapter reading its runtime image
+# pin from the environment, so the pin is (re)declared with the adapter it
+# layers: the same CARLA base carla.Dockerfile builds on.
+ENV SIMFORGE_SOURCE_REVISION=$SOURCE_REVISION \
+    SIMFORGE_CARLA_RUNTIME_IMAGE=ghcr.io/simforgeinc/carla-rfs-munich-belmont@sha256:baed0d038437c55efe0abe52a762d352aeb21acdeeff5b11a15f6bd8a648de64 \
+    SIMFORGE_CARLA_RUNTIME_IMAGE_INDEX_DIGEST=sha256:f17c639e5f86fd7458fe1d02d3be1d481deeaa714f3cac30e465187d04ec90e5
 LABEL org.opencontainers.image.version="$IMAGE_VERSION" \
       org.opencontainers.image.revision="$SOURCE_REVISION" \
       io.simforge.carla.worlds.added="$CARLA_WORLDS" \

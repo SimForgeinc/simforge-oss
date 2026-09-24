@@ -4,9 +4,9 @@
   python -m simforge_oss_carla_exec.world_manifest_tools collect-nas \\
       --ssh <nas-host> --sudo --root <exports>/GLB_Map_Export --inputs build/wm
   python -m simforge_oss_carla_exec.world_manifest_tools collect-cooked \\
-      --ssh rtx3080-02 --container sf-engine-cook \\
-      --image ghcr.io/simforgeinc/carla-rr-maps:0.10.0-prod-graphics --inputs build/wm
-  # SimForge side (SimCloud): scripts/carla-world-manifest/export-map-registry.sh dev > build/wm/simforge-dev.json
+      --ssh <gpu-host> --container <running-cook-container> \\
+      --image <your-cooked-carla-image> --inputs build/wm
+  # the map registry export (the hosted platform writes it) -> build/wm/simforge-<env>.json
 
   # 2. manifest (deterministic; commit the result)
   python -m simforge_oss_carla_exec.world_manifest_tools generate --inputs build/wm

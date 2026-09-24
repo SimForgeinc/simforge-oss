@@ -101,10 +101,8 @@ to request `h264_nvenc` for the per-camera streaming encoders (default
 camera and never persist to disk; PLY/CSV frames remain the canonical output
 for lidar and radar measurement data.
 
-Managed execution currently derives from
-`ghcr.io/simforgeinc/carla-rfs-munich-belmont@sha256:baed0d038437c55efe0abe52a762d352aeb21acdeeff5b11a15f6bd8a648de64`
-(OCI index `sha256:f17c639e5f86fd7458fe1d02d3be1d481deeaa714f3cac30e465187d04ec90e5`).
-Sensors attach to the authored host actor after its catalog binding is resolved.
+The CARLA image a render ran on is configuration, never assumed by the adapter
+(see "Bring your own CARLA 0.10" below). Sensors attach to the authored host actor after its catalog binding is resolved.
 An actor renders its catalog body when the binding is the authored body
 (`fidelity` `exact` or `native-blueprint`) and, once the world is loaded, the
 runtime is observed to place it. Otherwise (a generated body, a
@@ -114,6 +112,90 @@ a road user takes the dimensionally nearest placeable body of its own
 `actorClass` (never across classes) and the substitution is recorded. Parent
 readback verifies the resolved actor identity without imposing a
 model-specific host.
+
+## Bring your own CARLA 0.10
+
+The adapter ships no CARLA server and names no CARLA image. You install and run
+CARLA yourself; the adapter only connects to it.
+
+1. **Install CARLA 0.10.0** (the Unreal Engine 5.5 build) from the CARLA
+   project's release packages, or build it from source, or use a container you
+   maintain. Other CARLA versions are not supported: the replay, sensor and
+   world-binding behaviour documented here is measured on 0.10.0.
+2. **Install the matching Python client** from that same build (its
+   `PythonAPI/carla/dist/carla-0.10.0-*.whl`) into the environment that runs
+   `simforge-oss-carla-exec`. The client/server pair is part of execution
+   provenance, so the package does not depend on a `carla` release from PyPI.
+3. **Start the server**, headless for rendering:
+
+   ```sh
+   ./CarlaUnreal.sh -RenderOffScreen -carla-rpc-port=2000
+   ```
+
+4. **Point the adapter at it** with the global `--host`/`--port` options
+   (default `127.0.0.1:2000`), then check it:
+
+   ```sh
+   simforge-oss-carla-exec --host 127.0.0.1 --port 2000 probe        # read-only
+   simforge-oss-carla-exec --host 127.0.0.1 --port 2000 probe-ticks  # tick barrier
+   ```
+
+To run the adapter in a container on top of your CARLA image, build this
+package's `Dockerfile` with the required `CARLA_BASE_IMAGE` build argument
+(there is no default base; the file lists what the base must contain).
+
+### Runtime image identity: user-provided, pinned, managed
+
+Every render records the image it ran on in `runtimeEvidence.runtimeImage`,
+and `probe` reports it as `runtimeImage`. The identity comes only from the
+environment, read once when the process starts:
+
+| Variable | Value |
+|---|---|
+| `SIMFORGE_CARLA_RUNTIME_IMAGE` | `<repository>@sha256:<64 hex>`: the pinned image and its linux/amd64 manifest digest |
+| `SIMFORGE_CARLA_RUNTIME_IMAGE_INDEX_DIGEST` | optional `sha256:<64 hex>`: the OCI index digest of that image |
+| `SIMFORGE_CARLA_IMAGE_MANIFEST_SHA256` | optional `<64 hex>`: the manifest the running image attests it is (baked into the image) |
+| `SIMFORGE_MANAGED_EXECUTION` | `1` for hosted (managed) execution |
+
+- **User-provided (nothing set).** This is the normal bring-your-own case. The
+  record says so: `repository`, `indexSha256` and `linuxAmd64ManifestSha256`
+  are `null`, `exact` is `false` and `provenance` is `"user-provided"`. Renders
+  run normally; the evidence simply does not claim an image nobody named.
+- **Pinned.** The record carries the configured repository and digests.
+  `exact` is `true` only when `SIMFORGE_CARLA_IMAGE_MANIFEST_SHA256` equals the
+  pinned manifest digest.
+- **Managed (`SIMFORGE_MANAGED_EXECUTION=1`).** The pin is mandatory. Without
+  it every command refuses to start, before CARLA is contacted, with
+  `carla_runtime_image_unconfigured` (the `simforge.carla-render-failure/v1`
+  line, exit 3). A render whose attested manifest is not the pin fails.
+
+Half a pin (an index digest or an attested manifest without
+`SIMFORGE_CARLA_RUNTIME_IMAGE`) also fails `carla_runtime_image_unconfigured`,
+and a malformed value fails `carla_runtime_image_malformed`: a misconfigured
+deployment is never reported as a user-provided server.
+
+### Worlds and maps on your CARLA
+
+A render is bound to a CARLA world by the XODR digest of its package, never by
+name (see "Height and map binding"). On your own server:
+
+- The world must be **cooked into your CARLA build** (for example a RoadRunner
+  export imported and packaged with CARLA's map tools), with its OpenDRIVE at
+  `CarlaUnreal/Content/Carla/Maps/OpenDrive/<World>.xodr`. There is no world
+  generated from a bare OpenDRIVE file.
+- Tell the adapter which cooked world serves which source XODR with
+  `SIMFORGE_CARLA_COOKED_MAPS_JSON` (`{"<World>": "<sha256 of the source XODR>"}`).
+  The loaded world's `to_opendrive()` must be byte-identical to that XODR, or be
+  an approved re-serialization listed in `SIMFORGE_CARLA_APPROVED_COOKED_XODR_JSON`.
+  A map without a cooked world fails `carla_map_not_cooked`.
+- The checked-in world manifest (below) binds the worlds cooked for the hosted
+  platform. Those worlds are not distributed with this package; on a server
+  that does not ship them the render fails instead of loading another world.
+- The bundled sensor rigs (`run-local`, `preflight-intent`) mount on
+  `vehicle.kia.carnival`, which a stock CARLA 0.10.0 build does not ship. On
+  such a server the preflight fails and a render fails
+  `carla_blueprint_unavailable` unless the intent allows the recorded
+  `carla-actor-body` substitution.
 
 ## Execution modes
 
@@ -217,15 +299,17 @@ must state `weather` and `timeOfDay`; `night_lit` and an authored
 
 Which source map renders in which cooked world is not typed by hand. It lives in
 `simforge_oss_carla_exec/assets/carla-world-manifest.json`, GENERATED from three
-read-only inputs: the RoadRunner source exports (one GLB + XODR folder per map on
-the NAS), the cooked engine image, and the SimForge map registry per environment.
+read-only inputs: the RoadRunner source exports (one GLB + XODR folder per map),
+the cooked engine image, and the SimForge map registry per environment (exported
+by the hosted platform). The manifest records the cooked engine by content (image
+id, engine binary digest and CARLA/UE revisions), not by registry reference.
 
 ```bash
-python -m simforge_oss_carla_exec.world_manifest_tools collect-nas --ssh <nas-host> --sudo \
+python -m simforge_oss_carla_exec.world_manifest_tools collect-nas --ssh <exports-host> --sudo \
   --root <exports>/GLB_Map_Export --inputs build/wm
-python -m simforge_oss_carla_exec.world_manifest_tools collect-cooked --ssh rtx3080-02 \
-  --container sf-engine-cook --image ghcr.io/simforgeinc/carla-rr-maps:0.10.0-prod-graphics --inputs build/wm
-# SimCloud: scripts/carla-world-manifest/carla-world-bindings.mjs export --env dev > build/wm/simforge-dev.json
+python -m simforge_oss_carla_exec.world_manifest_tools collect-cooked --ssh <gpu-host> \
+  --container <running-cook-container> --image <your-cooked-carla-image> --inputs build/wm
+# the map registry export from the hosted platform -> build/wm/simforge-<env>.json
 python -m simforge_oss_carla_exec.world_manifest_tools generate --inputs build/wm   # --check in CI
 python -m simforge_oss_carla_exec.world_manifest_tools derive --format summary|env|json
 ```
@@ -253,8 +337,8 @@ runtime digest and signal maps once `decisions.json` accepts its exact decision
 item, which states the measured elevation change. Anything else is a new network.
 
 `assets/carla-actor-bindings.json` (`world_manifest_tools actor-bindings`) is the
-renderer's catalog-id -> CARLA blueprint table, generated from SimCloud's
-carla-object-catalog.json and the renderer-parity carla-substitutions.json. A
+renderer's catalog-id -> CARLA blueprint table, generated from the hosted
+platform's carla-object-catalog.json and the renderer-parity carla-substitutions.json. A
 catalog entry without its own CARLA binding resolves through it; an entry with no
 binding fails by name (carla_blueprint_unavailable) unless the intent allows the
 recorded carla-actor-body substitution. Its sha256 is in every manifest.

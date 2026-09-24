@@ -54,11 +54,6 @@ VEHICLE_ASSET = {
     "carlaBlueprintId": "vehicle.kia.carnival",
     "carlaClassPath": "/Game/Carla/Blueprints/Vehicles/KiaCarnival2025/BP_KiaCarnival2025.BP_KiaCarnival2025_C",
     "make": "Kia", "model": "Carnival", "baseType": "van",
-    "sourceImage": {
-        "repository": "ghcr.io/simforgeinc/carla-rfs-munich-belmont",
-        "indexSha256": "f17c639e5f86fd7458fe1d02d3be1d481deeaa714f3cac30e465187d04ec90e5",
-        "linuxAmd64ManifestSha256": "baed0d038437c55efe0abe52a762d352aeb21acdeeff5b11a15f6bd8a648de64",
-    },
 }
 CHASE_CAMERA_SENSOR_ID = "chase-cam-trailing"
 POD_PLATE_HEIGHT_M = 1.78

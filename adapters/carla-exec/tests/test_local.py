@@ -9,6 +9,7 @@ import pytest
 
 from simforge_oss_carla_exec import local
 from simforge_oss_carla_exec.runtime.contract import OFFICIAL_XSD_SHA256
+from simforge_oss_carla_exec.runtime.image import RuntimeImage
 
 
 def test_default_schema_is_bundled_and_digest_pinned() -> None:
@@ -295,6 +296,8 @@ def test_probe_is_read_only_and_always_cleans_up(monkeypatch: pytest.MonkeyPatch
             calls.append("cleanup")
 
     monkeypatch.setattr(local, "CarlaBackend", Backend)
+    # A user-provided server: no image is claimed.
+    monkeypatch.setattr(local, "runtime_image", lambda: RuntimeImage(None, None, None, False))
     assert local._probe("carla.test", 2000) == {
         "schema": "simforge.carla-probe/v2",
         "clientVersion": "0.10.0-client",
@@ -302,12 +305,22 @@ def test_probe_is_read_only_and_always_cleans_up(monkeypatch: pytest.MonkeyPatch
         "maxSimultaneousSensors": 64,
         "nativeSensors": local.native_sensor_capabilities(),
         "runtimeImage": {
-            "repository": "ghcr.io/simforgeinc/carla-rfs-munich-belmont",
-            "indexDigest": local.CARLA_IMAGE_INDEX_DIGEST,
-            "linuxAmd64ManifestDigest": local.CARLA_IMAGE_AMD64_MANIFEST_DIGEST,
+            "repository": None,
+            "indexDigest": None,
+            "linuxAmd64ManifestDigest": None,
+            "managed": False,
+            "provenance": "user-provided",
         },
     }
     assert calls == [("carla.test", 2000), "world", "server-version", "cleanup"]
+    # A pinned deployment reports exactly its configured identity.
+    pinned = RuntimeImage("registry.example/carla", "1" * 64, "2" * 64, True)
+    monkeypatch.setattr(local, "runtime_image", lambda: pinned)
+    assert local._probe("carla.test", 2000)["runtimeImage"] == {
+        "repository": "registry.example/carla",
+        "indexDigest": "sha256:" + "1" * 64,
+        "linuxAmd64ManifestDigest": "sha256:" + "2" * 64,
+    }
 
 
 def test_probe_cleans_up_when_server_version_probe_fails(monkeypatch: pytest.MonkeyPatch) -> None:

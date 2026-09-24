@@ -1,11 +1,7 @@
 {
  "cookedImage": {
   "engineBinarySha256": "06644e3ab2307a0e77012d6c114b55ce1015d4d7a31c9444814c0f0d00887112",
-  "image": "ghcr.io/simforgeinc/carla-rr-maps:0.10.0-prod-graphics",
   "imageId": "sha256:a2d11ebd7bca598e1d7117a23c221e3f8f79b44131041a6a56bdd3e4b80a64af",
-  "repoDigests": [
-   "ghcr.io/simforgeinc/carla-rr-maps@sha256:a2d11ebd7bca598e1d7117a23c221e3f8f79b44131041a6a56bdd3e4b80a64af"
-  ],
   "version": {
    "Carla git hash": "ada75f920642e18cace0a9f85ecf9d4077ddb531",
    "Content git hash": "518f45bd010c0dea7239b55eed27d01ba132934e",
