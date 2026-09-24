@@ -25,7 +25,7 @@ import { LEGACY_XOSC_MOTION_SOURCE, parseRenderIntent, type RenderIntentV1, type
 
 import { lowerTimelineToNative, type NativeTimelineLowering } from './timeline-lowering.js';
 import { signalHeadGuids } from './signal-heads.js';
-import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
+import { applyRenderLowBeams, lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
 import { RENDER_TIMELINE_INPUT_ID, checkTimelineContact, compareObserved, openRenderTimeline, type ContactGateReport, type ParityReport } from '../timeline/index.js';
 import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
 import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCsv } from './sensor-video.js';
@@ -835,6 +835,16 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       // The map's street luminaires light the night (luminaires.ts). A night
       // render of a map without the derivative says so.
       const night = look.lighting.sun_elev_deg <= NATIVE_LUMINAIRES_ON_ELEVATION_DEG;
+      // Vehicle low beams follow the render's own sky. The timeline derives
+      // `lowBeam` from the simulation's time of day, but a render may light
+      // the same motion at night (authoredEnvironment); drivers switch their
+      // lamps on at the same sun elevation the street lights come on.
+      if (night) {
+        const lit = applyRenderLowBeams(lowering.states);
+        if (lit.length > 0) {
+          warnings.push({ code: 'native_low_beams_from_render_environment', message: `the render's sun is ${look.lighting.sun_elev_deg.toFixed(1)} deg below the horizon, so the low beams of ${lit.length} vehicle(s) the timeline had dark are on: ${lit.slice(0, 12).join(', ')}${lit.length > 12 ? ` and ${lit.length - 12} more` : ''}` });
+        }
+      }
       if (night && !luminaires) {
         warnings.push({ code: 'night_luminaires_absent', message: `the sun is ${look.lighting.sun_elev_deg.toFixed(1)} deg below the horizon but the map closure carries no ${NATIVE_LUMINAIRES_MANIFEST}: street lights stay dark (a map version published before its luminaires derivative)` });
         console.error(JSON.stringify({ event: 'native.night_luminaires_absent', jobId: context.jobId }));

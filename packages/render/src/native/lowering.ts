@@ -313,3 +313,25 @@ export function lowerOpenScenarioToNative(
     plan, states, frameTimes, appearances, sha256,
   };
 }
+
+/** Scene classes that carry low beams. */
+const LOW_BEAM_CLASSES = new Set(['car', 'van', 'truck', 'bus', 'motorcycle']);
+
+/**
+ * Turn on the low beams of every present vehicle whose frame carries lamp
+ * state with them off: the render's sky is dark even though the simulated
+ * time of day was not. Mutates `states`; returns the affected actor ids,
+ * sorted, for the run's evidence.
+ */
+export function applyRenderLowBeams(states: readonly NativeSceneState[]): string[] {
+  const lit = new Set<string>();
+  for (const state of states) {
+    for (const actor of state.actors as NativeActorState[]) {
+      if (actor.kind === 'despawn' || !actor.lights || actor.lights.lowBeam) continue;
+      if (!LOW_BEAM_CLASSES.has(actor.actorClass)) continue;
+      (actor as { lights: NativeActorLights }).lights = { ...actor.lights, lowBeam: true };
+      lit.add(actor.id);
+    }
+  }
+  return [...lit].sort();
+}
