@@ -7,7 +7,6 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { MoreHorizontal, X } from "lucide-react";
 import { AppSwitcherOverlay } from "./AppSwitcherOverlay";
 import { MapDownloadIndicator } from "@simforge-oss/studio-ui/map-downloads";
-import { useMapDownloadsFirstRun } from "@/app/lib/map-downloads-first-run";
 import SimForgeLogo from "./landing/SimForgeLogo";
 import { useTopBarSlotContext } from "@simforge-oss/studio-ui/components/TopBarSlot";
 import { mergeStyleProps } from "@simforge-oss/studio-ui/components/stylex";
@@ -24,26 +23,18 @@ export function AppTopBar() {
   const [wide, setWide] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const slotCtx = useTopBarSlotContext();
-  const { activeItem, capabilities } = useDashboardNav(pathname);
+  const { activeItem } = useDashboardNav(pathname);
   // The switcher page already is the switcher: the overlay never stacks a
-  // second one on it, whether a first sign-in or the trigger asks.
+  // second one on it, and it closes if navigation lands there.
   const onSwitcherRoute = isAppSwitcherRoute(pathname);
-  // A first sign-in that lands anywhere but the switcher page still starts on
-  // Map Downloads: the switcher opens over the page, once. The panel records
-  // it as seen when it shows the view, so arriving on the switcher page before
-  // that leaves the first run to the page.
-  const firstSignIn = useMapDownloadsFirstRun(capabilities);
-  const [welcome, setWelcome] = useState(false);
   useEffect(() => {
-    if (onSwitcherRoute) {
-      setSwitcherOpen(false);
-      setWelcome(false);
-      return;
-    }
-    if (!firstSignIn.pending) return;
-    setWelcome(true);
-    setSwitcherOpen(true);
-  }, [firstSignIn.pending, onSwitcherRoute]);
+    if (onSwitcherRoute) setSwitcherOpen(false);
+  }, [onSwitcherRoute]);
+  // The overlay opens only when asked (the trigger). A first sign-in's Map
+  // Downloads view belongs to the switcher page, where a sign-in lands; it
+  // never opens over a working page (the editor, a map, a render), and a
+  // person who deep-links past the switcher page is offered it the first time
+  // they reach that page (`useMapDownloadsFirstRun` in AppSwitcherPanel).
   const overlayOpen = switcherOpen && !onSwitcherRoute;
   const routePageTitle = pathname.startsWith("/dashboard/scenario") ? "Dataset" : activeItem?.label ?? null;
   const header = hasMounted ? slotCtx?.header : null;
@@ -95,11 +86,9 @@ export function AppTopBar() {
     </header>
     <AppSwitcherOverlay
       open={overlayOpen}
-      onOpenChange={(open) => { setSwitcherOpen(open); if (!open) setWelcome(false); }}
+      onOpenChange={setSwitcherOpen}
       pathname={pathname}
       triggerRef={switcherTriggerRef}
-      initialView={welcome ? "map-downloads" : null}
-      firstRun={welcome}
     />
   </>;
 }

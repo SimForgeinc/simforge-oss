@@ -28,7 +28,7 @@ export function AppSwitcherOverlay({
   onOpenChange: (open: boolean) => void;
   pathname: string;
   triggerRef: RefObject<HTMLButtonElement | null>;
-  /** Open on an inline view instead of the app tabs (a first sign-in opens Map Downloads). */
+  /** Open on an inline view instead of the app tabs. */
   initialView?: SwitcherInlineView | null;
   firstRun?: boolean;
 }) {
