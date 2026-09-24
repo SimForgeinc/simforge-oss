@@ -20,7 +20,7 @@ def timeline() -> st.Timeline:
 
 def test_versions_and_identity(timeline: st.Timeline) -> None:
     assert st.RENDER_TIMELINE_VERSION == "simforge.render-timeline.v1"
-    assert st.SAMPLER_VERSION == "simforge.timeline-sampler/2"
+    assert st.SAMPLER_VERSION == "simforge.timeline-sampler/3"
     assert st.TIMELINE_DT_S == 0.02
     assert timeline.dt == 0.02
     assert timeline.trace_sha256 == st.trace_sha256(EXAMPLE.read_bytes())

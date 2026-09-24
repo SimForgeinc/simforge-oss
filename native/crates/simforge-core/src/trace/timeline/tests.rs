@@ -467,9 +467,10 @@ fn header_origin_wins_over_the_tag_rule() {
 /// before the platform derives them (identical sampling rules), and never
 /// an unknown one.
 #[test]
-fn renders_the_next_sampler_version_and_refuses_unknown_ones() {
+fn renders_adjacent_sampler_versions_and_refuses_unknown_ones() {
     let mut tl = build(EXAMPLES[0]);
     for (version, readable) in [
+        ("simforge.timeline-sampler/2", true),
         ("simforge.timeline-sampler/3", true),
         ("simforge.timeline-sampler/1", false),
         ("simforge.timeline-sampler/4", false),
@@ -482,4 +483,28 @@ fn renders_the_next_sampler_version_and_refuses_unknown_ones() {
             "{version}"
         );
     }
+}
+
+/// The authored paint travels as the compiler's `studio:body-color:` tag;
+/// the timeline and the scene-state projection bind it to `color`, which
+/// renderers apply to the model's paint slot.
+#[test]
+fn studio_body_color_tag_binds_actor_color() {
+    let mut trace = example(EXAMPLES[0]);
+    trace
+        .header
+        .actor_metadata
+        .get_mut("focus-vehicle")
+        .unwrap()
+        .tags
+        .push("studio:body-color:#8c2f2f".into());
+    let tl = build_render_timeline(&trace, &HeightField::flat(0.0), None).unwrap();
+    assert_eq!(
+        tl.actor("focus-vehicle").unwrap().color.as_deref(),
+        Some("#8c2f2f")
+    );
+    assert_eq!(tl.actor("worker").unwrap().color, None);
+    let doc = sampler::scene_state_document(&tl, &[0.0], false).unwrap();
+    let desc = doc.actors.iter().find(|a| a.id == "focus-vehicle").unwrap();
+    assert_eq!(desc.color.as_deref(), Some("#8c2f2f"));
 }

@@ -53,9 +53,12 @@ timelineKey = sha256(canonicalJson({
 - `heightFieldDigest` is `heightSource.digest` (section 4).
 - `catalogDigest` is the actor-catalog closure digest the caller pins. It is
   `null` when the caller pins none.
-- `samplerVersion` is currently `"simforge.timeline-sampler/2"`. It covers
-  both the derivation rules (heights, attitude, lights) and the sampling
-  rules. Changing either one bumps it, which changes every key.
+- `samplerVersion` is currently `"simforge.timeline-sampler/3"`. It covers
+  both the derivation rules (heights, attitude, lights, the actor bindings)
+  and the sampling rules. Changing either one bumps it, which changes every
+  key. /3 differs from /2 only in the `color` binding: it is read from the
+  compiler's `studio:body-color:#rrggbb` tag. /2 read a `color:` tag that
+  nothing wrote, so no /2 timeline carries an authored body colour.
 
 **Content digest.** `timelineSha256 = sha256(canonicalJson(timeline))`.
 The stored and shipped bytes are exactly `canonicalJson(timeline)`
@@ -97,7 +100,7 @@ Each renderer converts at its own boundary:
 
 ## 4. Height source: one source, evaluated once
 
-Sampler `simforge.timeline-sampler/2`. Ground height is owned by the engine
+Sampler `simforge.timeline-sampler/3` (heights as introduced by /2). Ground height is owned by the engine
 (docs/engineering/ground-height.md): from ENGINE_SEM_VER 0.11.0 every body is
 grounded each tick on the map's ground derivative (`derived/ground`, the
 rendered road/terrain mesh), and trace v5 carries the contact.
@@ -178,10 +181,12 @@ its manifest as `capture.policy`:
 ```
 
 `catalogId`, `actorClass`, `dims` and `color` are bound exactly as
-scene-state.v1 `ActorDesc` binds them. `emit_scene_state` and the timeline
+scene-state.v1 `ActorDesc` binds them. `color` is the actor's
+`studio:body-color:#rrggbb` tag (the paint a Studio role authors), absent
+when the role authors none. `emit_scene_state` and the timeline
 share `catalog_id_for` / `actor_class_of`.
 
-### Channel derivations (samplerVersion `simforge.timeline-sampler/2`)
+### Channel derivations (samplerVersion `simforge.timeline-sampler/3`)
 
 The first four channels are copied from trace v4:
 
@@ -399,12 +404,13 @@ records `sceneSource: "openscenario-legacy"`, and adds the warning
 
 - The document version is `simforge.render-timeline.v1`. Unknown versions and
   unknown `samplerVersion`s are rejected. There is no silent fallback.
-- A renderer also reads the **next** `samplerVersion` when its sampling rules
+- A renderer also reads an adjacent `samplerVersion` whose sampling rules
   are unchanged (`ACCEPTED_SAMPLER_VERSIONS`; today /2 and /3, where /3 only
   binds `color`). Dev promotion accepts a build on the new web before it
   updates the GPU fleet, so workers must read a sampler version one release
   before the platform derives it. A sampler bump therefore lands in two
-  builds: first the readers, then the derivation.
+  builds: first the readers, then the derivation (which keeps the previous
+  version readable).
 - **Additive, optional fields.** Consumers must tolerate unknown fields. A
   new optional channel does not bump the version. A change in how a channel
   is **derived or sampled** bumps `samplerVersion`.

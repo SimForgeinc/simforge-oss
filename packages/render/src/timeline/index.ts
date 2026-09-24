@@ -17,7 +17,7 @@ import { gunzipSync } from 'node:zlib';
 import { loadNative, type NativeWasm } from '@simforge-oss/native-runtime/browser';
 
 export const RENDER_TIMELINE_VERSION = 'simforge.render-timeline.v1';
-export const TIMELINE_SAMPLER_VERSION = 'simforge.timeline-sampler/2';
+export const TIMELINE_SAMPLER_VERSION = 'simforge.timeline-sampler/3';
 /** Render-job input id carrying the timeline's canonical JSON bytes. */
 export const RENDER_TIMELINE_INPUT_ID = 'render.timeline';
 /** Width of one sampled pose in `poseArray` / `posesArray`. */
