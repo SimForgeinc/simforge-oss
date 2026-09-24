@@ -31,6 +31,12 @@ export interface RenderExecutionContext {
    */
   readonly gpuMemory?: { readonly totalBytes: number; readonly freeBytes: number };
   /**
+   * Why the worker could not measure the device (`gpuMemory` absent): no
+   * NVIDIA tooling in the container, a failing `nvidia-smi`, ... Engines
+   * report an unmeasured device instead of silently using an assumed capacity.
+   */
+  readonly gpuMemoryUnavailable?: string;
+  /**
    * Output fields the control plane accepts beyond the baseline contract
    * (`CONTROL_FEATURES_V1`). Engines must omit any newer output field that is
    * not listed: an older control plane parses outputs strictly and would

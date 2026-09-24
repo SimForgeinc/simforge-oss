@@ -47,21 +47,30 @@ describe('native retained engine adapter', () => {
 describe('native VRAM capacity', () => {
   const staged = { capacityBytes: 10 * 2 ** 30, capacitySource: 'assumed' as const, estimatedBytes: 6 * 2 ** 30 };
   it('checks against the measured device when it is smaller than the intent assumption', () => {
-    expect(nativeVramCapacity(16 * 2 ** 30, 10 * 2 ** 30)).toEqual({ capacityBytes: 10 * 2 ** 30, detected: true, intentCapacity: 16 * 2 ** 30 });
-    expect(nativeVramCapacity(8 * 2 ** 30, 10 * 2 ** 30)).toEqual({ capacityBytes: 8 * 2 ** 30, detected: false, intentCapacity: 8 * 2 ** 30 });
-    expect(nativeVramCapacity(16 * 2 ** 30, undefined)).toEqual({ capacityBytes: 16 * 2 ** 30, detected: false, intentCapacity: 16 * 2 ** 30 });
+    expect(nativeVramCapacity(16 * 2 ** 30, 10 * 2 ** 30)).toEqual({ capacityBytes: 10 * 2 ** 30, detected: true, intentCapacity: 16 * 2 ** 30, measuredBytes: 10 * 2 ** 30 });
+    expect(nativeVramCapacity(8 * 2 ** 30, 10 * 2 ** 30)).toEqual({ capacityBytes: 8 * 2 ** 30, detected: false, intentCapacity: 8 * 2 ** 30, measuredBytes: 10 * 2 ** 30 });
+    expect(nativeVramCapacity(16 * 2 ** 30, undefined)).toEqual({ capacityBytes: 16 * 2 ** 30, detected: false, intentCapacity: 16 * 2 ** 30, measuredBytes: undefined });
   });
 
-  it('reports a detected capacity only to a plane that accepts it', () => {
+  it('reports the measured device to a plane that accepts it, whenever it was measured', () => {
+    const features = new Set(['native-evidence.vram-detected']);
     const vram = nativeVramCapacity(16 * 2 ** 30, 10 * 2 ** 30);
-    expect(nativeTextureEvidence(staged, vram, false, new Set(['native-evidence.vram-detected'])))
+    expect(nativeTextureEvidence(staged, vram, false, features))
       .toMatchObject({ capacityBytes: 16 * 2 ** 30, capacitySource: 'assumed', detectedCapacityBytes: 10 * 2 ** 30 });
     // An older plane parses the enum strictly: it sees the baseline evidence.
     expect(nativeTextureEvidence(staged, vram, false, new Set()))
       .toMatchObject({ capacityBytes: 16 * 2 ** 30, capacitySource: 'assumed' });
-    expect(nativeTextureEvidence({ ...staged, capacitySource: 'explicit' as const }, vram, true, new Set(['native-evidence.vram-detected'])))
-      .not.toHaveProperty('detectedCapacityBytes');
     expect(nativeTextureEvidence(staged, vram, false, new Set())).not.toHaveProperty('detectedCapacityBytes');
+    // A 10 GiB fleet on a 10 GiB card (box 3's dev worker): the intent's
+    // capacity is the check, and the measured device is still reported.
+    const same = nativeVramCapacity(10 * 2 ** 30, 10 * 2 ** 30);
+    expect(nativeTextureEvidence(staged, same, false, features))
+      .toMatchObject({ capacityBytes: 10 * 2 ** 30, capacitySource: 'assumed', detectedCapacityBytes: 10 * 2 ** 30 });
+    // An explicit budget stays the check; the measured device is reported beside it.
+    expect(nativeTextureEvidence({ ...staged, capacityBytes: 6 * 2 ** 30, capacitySource: 'explicit' as const }, nativeVramCapacity(6 * 2 ** 30, 10 * 2 ** 30), true, features))
+      .toMatchObject({ capacityBytes: 6 * 2 ** 30, capacitySource: 'explicit', detectedCapacityBytes: 10 * 2 ** 30 });
+    // Nothing measured: absent (and the run warns gpu_memory_unmeasured).
+    expect(nativeTextureEvidence(staged, nativeVramCapacity(16 * 2 ** 30, undefined), false, features)).not.toHaveProperty('detectedCapacityBytes');
   });
 });
 

@@ -34,7 +34,7 @@ import { collectNativeMapMembers, isNativeMapMemberInputId } from '@simforge-oss
 import type { RenderWorkerConfig } from './config.js';
 import { BlobStore } from './blob-store.js';
 import { acquireGpuJobLock, clearStaleGpuLock, gpuLockStatus, type GpuJobLock } from './gpu-lock.js';
-import { probeGpuMemory, type GpuMemory } from './gpu-memory.js';
+import { probeGpuMemory, probeGpuMemoryDetailed, type GpuMemory } from './gpu-memory.js';
 import type { WorkerHealth } from './health.js';
 import { withBoundedRetry } from './retry.js';
 import { Prewarmer } from './prewarm.js';
@@ -479,6 +479,7 @@ async function executeClaim(
     const containerIdentity = configuredContainerIdentity(config);
     if (containerIdentity) await chownWorkspace(workspace, containerIdentity);
     let gpuMemory: GpuMemory | null = null;
+    let gpuMemoryUnavailable: string | undefined;
     if (engine.capabilities.requiresGpu) {
       gpuLock = await acquireGpuJobLock(config.gpuLockPath, job.jobId, {
         signal: state.controller.signal,
@@ -487,8 +488,15 @@ async function executeClaim(
         onWait: (_owner, wait) => console.error(JSON.stringify({ event: 'gpu.lock_wait', ...wait })),
       });
       // Measured while holding the lock: co-tenant renders are excluded, their idle residency is not.
-      gpuMemory = await probeGpuMemory();
-      if (gpuMemory) console.error(JSON.stringify({ event: 'gpu.memory', jobId: job.jobId, ...gpuMemory }));
+      const probe = await probeGpuMemoryDetailed();
+      if ('memory' in probe) {
+        gpuMemory = probe.memory;
+        console.error(JSON.stringify({ event: 'gpu.memory', jobId: job.jobId, ...gpuMemory }));
+      } else {
+        // Never silent: the engine reports that the device was not measured.
+        gpuMemoryUnavailable = probe.unavailable;
+        console.error(JSON.stringify({ event: 'gpu.memory_unavailable', jobId: job.jobId, reason: probe.unavailable }));
+      }
     }
     const manifest = RenderArtifactManifestSchema.parse(await engine.execute({
       jobId: job.jobId,
@@ -502,6 +510,7 @@ async function executeClaim(
       signal: state.controller.signal,
       reportProgress: forward,
       ...(gpuMemory ? { gpuMemory } : {}),
+      ...(gpuMemoryUnavailable ? { gpuMemoryUnavailable } : {}),
       controlFeatures: new Set(job.controlFeatures ?? []),
     }));
     if (manifest.intentSha256 !== job.intentSha256) throw new Error('engine manifest intentSha256 does not match claimed intent');

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 
-import { probeGpuMemory } from './gpu-memory.js';
+import { probeGpuMemory, probeGpuMemoryDetailed } from './gpu-memory.js';
 
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))); });
@@ -25,4 +25,14 @@ it('returns null without usable NVIDIA tooling', async () => {
   expect(await probeGpuMemory({ binary: '/nonexistent/nvidia-smi' })).toBeNull();
   expect(await probeGpuMemory({ binary: await fakeSmi('[N/A], [N/A]\n') })).toBeNull();
   expect(await probeGpuMemory({ binary: await fakeSmi('', 9) })).toBeNull();
+});
+
+it('says why nothing was measured', async () => {
+  const missing = await probeGpuMemoryDetailed({ binary: '/nonexistent/nvidia-smi' });
+  expect('unavailable' in missing && missing.unavailable).toMatch(/not found .*NVIDIA_DRIVER_CAPABILITIES needs utility/);
+  const failing = await probeGpuMemoryDetailed({ binary: await fakeSmi('', 9) });
+  expect('unavailable' in failing && failing.unavailable).toMatch(/failed/);
+  const na = await probeGpuMemoryDetailed({ binary: await fakeSmi('[N/A], [N/A]\n') });
+  expect('unavailable' in na && na.unavailable).toMatch(/no usable memory/);
+  expect(await probeGpuMemoryDetailed({ binary: await fakeSmi('16303, 8000\n') })).toEqual({ memory: { totalBytes: 16303 * 1024 ** 2, freeBytes: 8000 * 1024 ** 2 } });
 });

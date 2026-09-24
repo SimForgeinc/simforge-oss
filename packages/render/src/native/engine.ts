@@ -135,31 +135,35 @@ export interface NativeRenderEngineOptions {
  * lowered to the job's measured device when the worker reported one.
  */
 export function nativeVramCapacity(intentCapacity: number | undefined, detectedTotal: number | undefined): {
-  capacityBytes: number | undefined; detected: boolean; intentCapacity: number | undefined;
+  capacityBytes: number | undefined; detected: boolean; intentCapacity: number | undefined; measuredBytes: number | undefined;
 } {
   if (detectedTotal === undefined || !Number.isSafeInteger(detectedTotal) || detectedTotal <= 0) {
-    return { capacityBytes: intentCapacity, detected: false, intentCapacity };
+    return { capacityBytes: intentCapacity, detected: false, intentCapacity, measuredBytes: undefined };
   }
-  if (intentCapacity !== undefined && intentCapacity <= detectedTotal) return { capacityBytes: intentCapacity, detected: false, intentCapacity };
-  return { capacityBytes: detectedTotal, detected: true, intentCapacity };
+  if (intentCapacity !== undefined && intentCapacity <= detectedTotal) return { capacityBytes: intentCapacity, detected: false, intentCapacity, measuredBytes: detectedTotal };
+  return { capacityBytes: detectedTotal, detected: true, intentCapacity, measuredBytes: detectedTotal };
 }
 
 /**
  * The staged profile as evidence. `capacityBytes`/`capacitySource` keep their
- * baseline meaning (the intent's capacity, `assumed` or `explicit`); when the
- * check ran against the job's measured device, a plane that lists
- * native-evidence.vram-detected also gets `detectedCapacityBytes`, the
- * capacity the texture profile was checked against.
+ * baseline meaning (the intent's capacity, `assumed` or `explicit`). A plane
+ * that lists native-evidence.vram-detected also gets `detectedCapacityBytes`:
+ * the job's measured device whenever the worker measured it (the check ran
+ * against the smaller of the two). It is absent only when nothing was
+ * measured, which the run also reports (`gpu_memory_unmeasured`).
  */
 export function nativeTextureEvidence<T extends { capacityBytes: number; capacitySource: 'assumed' | 'explicit' }>(
   staged: T,
-  vram: { detected: boolean; intentCapacity: number | undefined },
+  vram: { detected: boolean; intentCapacity: number | undefined; measuredBytes?: number | undefined },
   explicitBudget: boolean,
   features: ReadonlySet<string>,
 ): T & { detectedCapacityBytes?: number } {
-  if (explicitBudget || !vram.detected) return staged;
-  const baseline = vram.intentCapacity === undefined ? staged : { ...staged, capacityBytes: vram.intentCapacity, capacitySource: 'assumed' as const };
-  return features.has(CONTROL_FEATURE_NATIVE_VRAM_DETECTED) ? { ...baseline, detectedCapacityBytes: staged.capacityBytes } : baseline;
+  const baseline = !explicitBudget && vram.detected && vram.intentCapacity !== undefined
+    ? { ...staged, capacityBytes: vram.intentCapacity, capacitySource: 'assumed' as const }
+    : staged;
+  return features.has(CONTROL_FEATURE_NATIVE_VRAM_DETECTED) && vram.measuredBytes !== undefined
+    ? { ...baseline, detectedCapacityBytes: vram.measuredBytes }
+    : baseline;
 }
 
 /** The preset a render without one uses: platform renders are delivery video. */
@@ -558,6 +562,14 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
       // device this job holds is measured by the worker. Check against the
       // smaller of the two.
       const vram = nativeVramCapacity(intent.nativeVramCapacityBytes, context.gpuMemory?.totalBytes);
+      if (!context.gpuMemory) {
+        // No silent default: admission ran on the intent's capacity, and the
+        // run says the device itself was never measured, and why.
+        const why = context.gpuMemoryUnavailable ?? 'the worker reported no device memory';
+        const assumed = intent.nativeVramBudgetBytes ?? intent.nativeVramCapacityBytes;
+        warnings.push({ code: 'gpu_memory_unmeasured', message: `device memory was not measured (${why}); admission used the intent's ${intent.nativeVramBudgetBytes !== undefined ? 'explicit budget' : 'assumed fleet capacity'}${assumed !== undefined ? ` of ${(assumed / 1024 ** 3).toFixed(1)} GiB` : ''}` });
+        console.error(JSON.stringify({ event: 'native.gpu_memory_unmeasured', jobId: context.jobId, reason: why }));
+      }
       const renderRequest = nativeRenderRequest(intent, options);
       const closureSource = {
         sha256: (uri: string) => closure.members.get(uri)?.sha256,
