@@ -149,6 +149,8 @@ Canopy sky occlusion is a vendored `bevy_pbr` patch. For a shaded fragment it lo
 
 ### Dash-cam calibration defaults (both presets)
 
+These values are the `automotive` camera profile, the default. `camera.profile: consumer-dashcam` swaps in a consumer dash-cam calibration (camera-profiles.md).
+
 These are fitted against NVIDIA PhysicalAI-AV front-wide footage (393 frames) by the dash-cam calibration work:
 - metering `average`, `compensationEv` −1.1, `trim` 0.15
 - `whiteStops` 5.5, `midGrey` 0.12

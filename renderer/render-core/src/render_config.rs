@@ -330,10 +330,97 @@ pub struct WdrConfig {
     pub mid_grey: f32,
 }
 
+/// Which real camera the dash-cam camera model imitates. A profile is a
+/// preset-like bundle over existing keys ([`CameraProfile::KEYS`]): setting
+/// `camera.profile` applies the bundle first, and explicit overrides of
+/// those keys still win. It changes no geometry or lighting.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CameraProfile {
+    /// The presets' calibration: an automotive front camera (NVIDIA
+    /// PhysicalAI-AV front-wide footage, docs/engineering/native-render-gpu-profile.md).
+    Automotive,
+    /// A Waylens-class consumer dash cam: fitted to KartaView contributors'
+    /// photos of the SimForge maps (docs/engineering/camera-profiles.md).
+    ConsumerDashcam,
+}
+
+impl CameraProfile {
+    pub const ALL: [CameraProfile; 2] = [CameraProfile::Automotive, CameraProfile::ConsumerDashcam];
+    /// The keys a profile sets.
+    pub const KEYS: [&'static str; 8] = [
+        "camera.exposure.compensationEv",
+        "camera.exposure.metering",
+        "camera.exposure.trim",
+        "camera.wdr.whiteStops",
+        "camera.wdr.midGrey",
+        "grading.contrast",
+        "grading.postSaturation",
+        "lens.vignette",
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CameraProfile::Automotive => "automotive",
+            CameraProfile::ConsumerDashcam => "consumer-dashcam",
+        }
+    }
+
+    pub fn parse(name: &str) -> Result<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|profile| profile.as_str() == name)
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "[native_render_config_invalid] camera.profile {name:?} (automotive | consumer-dashcam)"
+                )
+            })
+    }
+
+    /// Set the profile and its keys on `config`.
+    pub fn apply(self, config: &mut RenderConfig) {
+        config.camera.profile = self;
+        match self {
+            // The presets' own values.
+            CameraProfile::Automotive => {
+                let preset = RenderConfig::preset(config.preset);
+                config.camera.exposure.compensation_ev = preset.camera.exposure.compensation_ev;
+                config.camera.exposure.metering = preset.camera.exposure.metering;
+                config.camera.exposure.trim = preset.camera.exposure.trim;
+                config.camera.wdr = preset.camera.wdr;
+                config.grading.contrast = preset.grading.contrast;
+                config.grading.post_saturation = preset.grading.post_saturation;
+                config.lens.vignette = preset.lens.vignette;
+            }
+            // Calibrated against Waylens-class consumer dash cams (KartaView
+            // contributors): fitted on 23 KartaView photos of the SimForge
+            // maps, held out from the CEO comparison; on its 8 scored
+            // locations (never searched) the combined distance is 1.92
+            // offline / 1.83 in-engine, against 2.19 / 2.11 for automotive
+            // (docs/engineering/camera-profiles.md).
+            CameraProfile::ConsumerDashcam => {
+                config.camera.exposure.compensation_ev = -1.3;
+                config.camera.exposure.metering = MeteringMode::Dashcam;
+                config.camera.exposure.trim = 0.11;
+                config.camera.wdr = WdrConfig {
+                    white_stops: 6.4,
+                    mid_grey: 0.232,
+                };
+                config.grading.contrast = 1.38;
+                config.grading.post_saturation = 0.46;
+                config.lens.vignette = 0.8;
+            }
+        }
+    }
+}
+
 /// The dash-cam camera model; used when `grading.toneMap` is `dashcam-wdr`.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CameraConfig {
+    /// Which real camera the model's keys were set for (provenance, like
+    /// `preset`: overrides of the profile's keys do not change it).
+    pub profile: CameraProfile,
     pub exposure: ExposureConfig,
     pub sensor: SensorConfig,
     pub wdr: WdrConfig,
@@ -441,6 +528,7 @@ impl RenderConfig {
                 contrast: 1.0,
             },
             camera: CameraConfig {
+                profile: CameraProfile::Automotive,
                 exposure: ExposureConfig {
                     mode: ExposureMode::Auto,
                     // Dash-cam calibration: whole-frame metering 1.1 EV under
@@ -800,12 +888,26 @@ impl RenderRequest {
             Some(name) => Preset::parse(name)?,
             None => Preset::Showcase,
         };
-        let mut value = serde_json::to_value(RenderConfig::preset(preset))?;
+        let mut base = RenderConfig::preset(preset);
+        // The camera profile's bundle goes under every explicit override,
+        // whatever the key order.
+        if let Some(profile) = self.set.get("camera.profile") {
+            let name = profile.as_str().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "[native_render_config_invalid] camera.profile {profile} is not a string"
+                )
+            })?;
+            CameraProfile::parse(name)?.apply(&mut base);
+        }
+        let mut value = serde_json::to_value(base)?;
         for (key, new) in &self.set {
             if key == "preset" {
                 bail!(
                     "[native_render_config_invalid] set the preset with `preset`, not `set.preset`"
                 );
+            }
+            if key == "camera.profile" {
+                continue;
             }
             let mut slot = &mut value;
             for part in key.split('.') {
@@ -897,6 +999,61 @@ mod tests {
         }
         .resolve()
         .is_err());
+    }
+
+    #[test]
+    fn camera_profiles_are_bundles_under_explicit_overrides() {
+        for preset in Preset::ALL {
+            let default = RenderConfig::preset(preset);
+            assert_eq!(default.camera.profile, CameraProfile::Automotive);
+            let resolve = |sets: &[&str]| {
+                let mut request = RenderRequest {
+                    preset: Some(preset.as_str().into()),
+                    ..Default::default()
+                };
+                for set in sets {
+                    request.push_set(set).unwrap();
+                }
+                request.resolve()
+            };
+            // Automotive is the preset itself.
+            assert_eq!(resolve(&["camera.profile=automotive"]).unwrap(), default);
+            // Consumer dash cam changes only its keys.
+            let consumer = resolve(&["camera.profile=consumer-dashcam"]).unwrap();
+            assert_eq!(consumer.camera.profile, CameraProfile::ConsumerDashcam);
+            let keys = |config: &RenderConfig| {
+                config
+                    .keys()
+                    .unwrap()
+                    .into_iter()
+                    .collect::<BTreeMap<_, _>>()
+            };
+            let (a, b) = (keys(&default), keys(&consumer));
+            for (key, value) in &a {
+                if key != "camera.profile" && !CameraProfile::KEYS.contains(&key.as_str()) {
+                    assert_eq!(Some(value), b.get(key), "{key} is not a profile key");
+                }
+            }
+            // An explicit key wins over the profile, whatever its order.
+            for sets in [
+                ["camera.profile=consumer-dashcam", "lens.vignette=0.05"],
+                ["lens.vignette=0.05", "camera.profile=consumer-dashcam"],
+            ] {
+                let config = resolve(&sets).unwrap();
+                assert_eq!(config.lens.vignette, 0.05);
+                assert_eq!(config.camera.profile, CameraProfile::ConsumerDashcam);
+                assert_eq!(
+                    config.grading.post_saturation,
+                    consumer.grading.post_saturation
+                );
+            }
+            for bad in ["camera.profile=phone", "camera.profile=3"] {
+                assert!(resolve(&[bad])
+                    .unwrap_err()
+                    .to_string()
+                    .contains("native_render_config_invalid"));
+            }
+        }
     }
 
     #[test]
