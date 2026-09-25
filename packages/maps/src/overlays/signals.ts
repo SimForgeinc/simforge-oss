@@ -74,13 +74,6 @@ export const SIGNAL_CATEGORY_COLORS: Record<SignalCategory, number> = {
 
 /** Options for {@link buildSignalOverlay}. */
 export interface SignalOverlayOptions extends HeightOptions {
-  /**
-   * Fallback ground Y when there is no sampler and the feature has none.
-   *
-   * @deprecated Use {@link HeightOptions.defaultHeight}; this is the same knob
-   *   under the old name and is still honoured.
-   */
-  groundHeight?: number;
   /** Pole colour. Default `0x9aa5b1`. */
   poleColor?: number;
   /** Uniform scale on head markers. Default `1`. */
@@ -335,12 +328,7 @@ export function buildSignalOverlay(
     includeOutOfBounds = false,
     filter,
   } = options;
-  const resolveHeight = createHeightResolver({
-    ...options,
-    ...(options.defaultHeight === undefined && options.groundHeight !== undefined
-      ? { defaultHeight: options.groundHeight }
-      : {}),
-  });
+  const resolveHeight = createHeightResolver(options);
 
   const colors: Record<SignalCategory, number> = { ...SIGNAL_CATEGORY_COLORS, ...categoryColors };
 

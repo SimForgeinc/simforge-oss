@@ -35,9 +35,6 @@ export type OurVerdict =
 /** How esmini relates to the same oracle. Evidence only, never the reference. */
 export type EsminiVerdict = 'agrees' | 'disagrees' | 'unsupported' | 'not-run';
 
-/** Back-compat alias used by the report. */
-export type ExpectedVerdict = OurVerdict;
-
 export interface CaseTolerance {
   /** Planar position error, metres (max over the clip). */
   readonly positionM: number;

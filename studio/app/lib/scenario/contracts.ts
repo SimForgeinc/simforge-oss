@@ -284,16 +284,13 @@ export const CreateScenarioDatasetItemSchema = z.object({
 
 /**
  * A revision commit carries only the draft version being frozen. The traffic
- * evidence and ambient provenance come from the authoritative simulation; the
- * `ambient`/`materializedTraffic` fields older clients still send are accepted
- * and ignored.
+ * evidence and ambient provenance come from the authoritative simulation, so
+ * any other key a client sends is stripped.
  */
 export const CreateScenarioRevisionSchema = z.object({
   expectedVersion: z.number().int().positive(),
   idempotencyKey: z.string().trim().min(1).max(200).optional(),
-  ambient: z.unknown().optional(),
-  materializedTraffic: z.unknown().optional(),
-}).transform(({ expectedVersion, idempotencyKey }) => ({ expectedVersion, idempotencyKey }));
+});
 
 export const CreateValidationRunSchema = z.object({
   revisionId: z.string().trim().min(1),

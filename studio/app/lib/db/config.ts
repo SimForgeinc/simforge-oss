@@ -9,24 +9,3 @@ export const LOCAL_DATABASE_DIR = join(LOCAL_CLOUD_ROOT, "db");
 export const LOCAL_DATABASE_LOCK = join(LOCAL_CLOUD_ROOT, "db.lock");
 export const LOCAL_ARTIFACTS_DIR = join(LOCAL_CLOUD_ROOT, "artifacts");
 export { LOCAL_ARTIFACT_BUCKET };
-
-export type DataApiConfig = {
-  region: string;
-  clusterArn: string;
-  secretArn: string;
-  database: string;
-};
-
-/** Retained for copied callers that inspect the legacy Data API config shape. */
-export function getDataApiConfig(): DataApiConfig {
-  return {
-    region: "local",
-    clusterArn: process.env.DATABASE_URL?.trim() ?? `file://${LOCAL_DATABASE_DIR}`,
-    secretArn: "local",
-    database: "simcloud",
-  };
-}
-
-export function isDataApiConfigured(): boolean {
-  return true;
-}

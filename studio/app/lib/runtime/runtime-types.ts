@@ -3,31 +3,6 @@ import type {
 } from "@simforge-oss/scenario/contracts";
 import type { HistoricalGalleryPreview as ScenarioRuntimeGalleryPreview } from "@/app/lib/scenario/render/gallery-preview-compat";
 
-/** Health-check response from the CARLA backend. */
-export type CarlaBackendHealth = {
-  ok: boolean;
-  status?: string;
-  total_slots?: number;
-  busy_slots?: number;
-  queued_jobs?: number;
-  queue_accepting?: boolean;
-  capacity_available?: boolean;
-  carla_connected: boolean;
-  metadata_connected?: boolean;
-  metadata_slot_index?: number | null;
-  running: boolean;
-  langchain_available: boolean;
-  langsmith_available: boolean;
-  langsmith_tracing: boolean;
-};
-
-/** Editor-facing capability flags derived from the runtime provider surface. */
-export type RuntimeCapabilities = {
-  pause_resume: boolean;
-  cosmos_stream: boolean;
-  bootstrap_cache: boolean;
-};
-
 /** Metadata for a single CARLA map. */
 export type CarlaMapInfo = {
   name: string;
@@ -47,18 +22,6 @@ export type CarlaSessionStatus = {
   warnings: string[];
 };
 
-/** Aggregated runtime status returned by the dashboard proxy route. */
-export type CarlaRuntimeStatusResponse = {
-  reachable: boolean;
-  baseUrl: string;
-  health?: CarlaBackendHealth;
-  maps?: CarlaSessionStatus;
-  capabilities: RuntimeCapabilities;
-  /** Number of simulation jobs created today for this workspace on this runtime provider. */
-  jobs_today?: number;
-  error?: string;
-};
-
 /** Metadata for a single actor blueprint from the CARLA library. */
 export type ActorBlueprintMetadata = {
   id: string;
@@ -73,15 +36,6 @@ export type ActorBlueprintLibrary = {
   vehicles: string[];
   walkers: string[];
   metadata?: Record<string, ActorBlueprintMetadata>;
-};
-
-/** @deprecated Kept for backward compat with old diagnostics. Roads are now auto-derived from actor placements. */
-export type SelectedRoadPayload = {
-  id: string;
-  name: string;
-  length: number;
-  tags: string[];
-  section_labels: string[];
 };
 
 /** Runtime lane-section summary returned by the CARLA runtime provider. */
@@ -417,27 +371,6 @@ export type RecordingInfo = {
   created_at: string;
 };
 
-/** Alias for RecordingInfo used in scenario simulation contexts. */
-export type ScenarioSimulationRecording = RecordingInfo;
-
-/** Diagnostic details for a completed or failed simulation run. */
-export type ScenarioSimulationDiagnostics = {
-  run_id: string;
-  map_name: string;
-  created_at: string;
-  selected_roads: SelectedRoadPayload[];
-  actors: Array<Record<string, unknown>>;
-  recording_path?: string | null;
-  scenario_log_path?: string | null;
-  debug_log_path?: string | null;
-  worker_error?: string | null;
-  saved_frame_count: number;
-  sensor_timeout_count: number;
-  last_sensor_frame?: number | null;
-  skipped_actors: Array<Record<string, unknown>>;
-  log_excerpt: string;
-};
-
 /** Possible lifecycle states of an runtime provider job as exposed to the web app. */
 export type RuntimeJobState =
   | "queued"
@@ -446,8 +379,6 @@ export type RuntimeJobState =
   | "succeeded"
   | "failed"
   | "cancelled";
-/** Alias for RuntimeJobState used in simulation UI contexts. */
-export type ScenarioSimulationState = RuntimeJobState;
 
 /** Supported simulation-family job types. */
 export type RuntimeJobType = "simulate" | "preview" | "render";
@@ -528,17 +459,6 @@ export type RuntimeJobRecord = {
       metadata?: Record<string, unknown> | null;
     }>;
   };
-};
-
-/** Alias for RuntimeJobRecord used in scenario simulation contexts. */
-export type ScenarioSimulationRecord = RuntimeJobRecord;
-
-/** Response returned when a new simulation job is enqueued. */
-export type ScenarioSimulationStartResponse = {
-  status: string;
-  job_id: string;
-  state: RuntimeJobState;
-  queue_position: number;
 };
 
 /** Real-time streaming message with actor positions during a simulation tick. */
@@ -635,30 +555,4 @@ export type ScenarioSimulationStreamMessage = {
       lane_id?: number | null;
     }>;
   }>;
-};
-
-/** Chat message in the scene-assistant conversation history. */
-export type SceneAssistantMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
-
-/** Trace of a tool invocation made by the scene assistant. */
-export type SceneAssistantToolTrace = {
-  name: string;
-  input: Record<string, unknown>;
-  result: Record<string, unknown>;
-};
-
-/** Structured response from the scene assistant including actors and tool traces. */
-export type SceneAssistantResponse = {
-  model: string;
-  reply: string;
-  map_name: string;
-  normalized_map_name: string;
-  actors: Array<Record<string, unknown>>;
-  selected_roads: SelectedRoadPayload[];
-  selected_actor_id?: string | null;
-  tool_trace: SceneAssistantToolTrace[];
-  raw_response?: Record<string, unknown>;
 };

@@ -44,8 +44,6 @@ import * as stylex from "@stylexjs/stylex";
 export const colors = stylex.defineVars({
   // Theme-following semantic surfaces.
   bg: "hsl(var(--background))",
-  /** @deprecated Identical to `card`. */
-  bgElevated: "hsl(var(--card))",
   card: "hsl(var(--card))",
   popover: "hsl(var(--popover))",
   muted: "hsl(var(--muted))",
@@ -77,12 +75,8 @@ export const colors = stylex.defineVars({
 
   // Theme ink: body copy that follows the theme.
   text: "hsl(var(--foreground))",
-  /** @deprecated Identical to `mutedForeground`. */
-  textMuted: "hsl(var(--muted-foreground))",
   /** @deprecated Between two ink steps; use `inkMuted` or `inkSecondary`. */
   textSubtle: "rgba(255, 255, 255, 0.5)",
-  /** @deprecated Use `inkFaint`. */
-  textFaint: "rgba(255, 255, 255, 0.35)",
 
   /**
    * The ink ladder: white at five fixed alphas. Studio's chrome is always
@@ -132,8 +126,6 @@ export const colors = stylex.defineVars({
   /** @deprecated Use `fillSubtle`. */
   glass: "rgba(255, 255, 255, 0.04)",
   glassRaised: "rgba(255, 255, 255, 0.07)",
-  /** @deprecated Use `fillStronger`. */
-  glassHover: "rgba(255, 255, 255, 0.15)",
   /** @deprecated Use `fillStrong`. */
   chip: "rgba(255, 255, 255, 0.1)",
   /** @deprecated Use `fillStronger`. */
@@ -146,10 +138,6 @@ export const colors = stylex.defineVars({
   scrimLight: "rgba(0, 0, 0, 0.25)",
   scrim: "rgba(0, 0, 0, 0.45)",
   scrimHeavy: "rgba(0, 0, 0, 0.75)",
-  /** @deprecated Use `scrim`. */
-  overlayScrim: "rgba(0, 0, 0, 0.45)",
-  /** @deprecated Use `scrimLight`. */
-  overlayMat: "rgba(0, 0, 0, 0.25)",
 
   // Brand accent. Fixed, not themed: it is the one saturated colour in the
   // product and it identifies the product. Signal, not decoration: the
@@ -229,8 +217,6 @@ export const text = stylex.defineVars({
   lineBase: "1.5rem",
   lineLg: "1.75rem",
   lineXl: "2rem",
-  /** @deprecated Identical to `lineXs`. */
-  lineMeta: "1rem",
   /** Unitless ratios for prose, which scale with whatever size they meet. */
   lineTight: "1.25",
   lineSnug: "1.375",
@@ -291,8 +277,6 @@ export const space = stylex.defineVars({
   s10: "2.5rem",
   s12: "3rem",
 
-  /** @deprecated Write `0`. */
-  none: "0",
   /** @deprecated Use `s0_5`. */
   xxs: "0.125rem",
   /** @deprecated Use `s1`. */
@@ -307,8 +291,6 @@ export const space = stylex.defineVars({
   xl: "1rem",
   /** @deprecated Use `s6`. */
   xxl: "1.5rem",
-  /** @deprecated Use `s8`. */
-  xxxl: "2rem",
 
   datasetStripWidth: "3.5rem",
   railWidth: "13.75rem",
@@ -350,14 +332,6 @@ export const layout = stylex.defineConsts({
  */
 export const radii = stylex.defineVars({
   none: "0",
-  /** @deprecated Every step but `full` is 0; delete the declaration instead. */
-  sm: "0",
-  /** @deprecated Every step but `full` is 0; delete the declaration instead. */
-  md: "0",
-  /** @deprecated Every step but `full` is 0; delete the declaration instead. */
-  lg: "0",
-  /** @deprecated Every step but `full` is 0; delete the declaration instead. */
-  xl: "0",
   full: "9999px",
 });
 
@@ -462,10 +436,6 @@ export const shadows = stylex.defineVars({
   ringInset: "inset 0 0 0 2px #E8E044",
   /** @deprecated Use `ring`: it is the accent ring. */
   ringAccent: "0 0 0 2px #E8E044",
-  /** @deprecated Use `ringInset`. */
-  ringAccentInset: "inset 0 0 0 2px #E8E044",
-  /** @deprecated Use `ring`. */
-  ringOffset: "0 0 0 2px #E8E044",
   elevationSm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
   elevationLg: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
   elevationXl: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",

@@ -633,9 +633,6 @@ export function extractXodrRoadStats(xodr: string): XodrRoadStats {
 // Per-junction info for candidate location matching
 // ---------------------------------------------------------------------------
 
-/** Alias for the shared type — same shape used by the candidate location extractor. */
-export type { XodrJunctionMatchInfo as XodrJunctionInfo } from "@simforge-oss/studio-shared";
-
 /**
  * Extract per-junction data from an XODR file.
  *

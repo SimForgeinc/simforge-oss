@@ -605,9 +605,6 @@ export function routesFromTemplate(
   }).sort((a, b) => a.actorId.localeCompare(b.actorId));
 }
 
-/** Backwards-compatible name for callers outside the editor shell. */
-export const routesForAuthoringPreview = authoringRoutes;
-
 function pushSegment(target: number[], a: RoutePoint, b: RoutePoint, y: number): void {
   target.push(a.x, y, a.z, b.x, y, b.z);
 }

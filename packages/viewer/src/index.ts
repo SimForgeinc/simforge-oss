@@ -24,8 +24,6 @@ export {
   crossedCameraDragThreshold,
   DEFAULT_CAMERA_CONTROL_PREFERENCES,
   dampedEyeOrbitStep,
-  invertedOrbitDrag,
-  invertedPanDrag,
 } from './camera-drag';
 export type { CameraControlPreferences, CameraDragButton, EyeOrbitDelta } from './camera-drag';
 export { FrameStats } from './frame-stats';

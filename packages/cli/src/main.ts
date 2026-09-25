@@ -167,7 +167,7 @@ function usage(pretty: boolean): number {
   } else {
     process.stdout.write(
       [
-        'simforge — SimForge agent CLI (`scen` remains an alias)',
+        'simforge — SimForge agent CLI (`sf` is an alias)',
         '',
         ...COMMANDS.map((c) => `  simforge ${c.name.padEnd(20)}${c.summary}`),
         '',

@@ -84,11 +84,6 @@
       "count": 4
     }
   },
-  "studio/app/components/ScenarioStatusBadge.stylex.ts": {
-    "studio/banned-syntax": {
-      "count": 1
-    }
-  },
   "studio/app/components/host-status-cards.stylex.ts": {
     "studio/banned-syntax": {
       "count": 2

@@ -100,12 +100,6 @@ export function cameraKeyboardMagnitude(baseMagnitude: number, sensitivityPercen
   return baseMagnitude * cameraSensitivityMultiplier(sensitivityPercent);
 }
 
-
-/** @deprecated Use cameraLookDrag with explicit preferences. */
-export const invertedOrbitDrag = cameraLookDrag;
-/** @deprecated Use cameraPanDrag with explicit preferences. */
-export const invertedPanDrag = cameraPanDrag;
-
 /**
  * Rotate view direction about the camera eye. The eye position is never
  * written, while target distance remains stable for zoom and pan semantics.

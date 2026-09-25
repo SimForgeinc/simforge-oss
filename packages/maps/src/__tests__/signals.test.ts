@@ -375,11 +375,4 @@ describe('buildSignalOverlay', () => {
       buildSignalOverlay(signals, { heightSampler: sampler, onMissingHeight: 'throw' }),
     ).toThrow(MissingHeightError);
   });
-
-  it('still accepts the deprecated groundHeight alias', async () => {
-    const signals = await load();
-    const group = buildSignalOverlay(signals, { groundHeight: 7 });
-    const light = signals.find((s) => s.category === 'traffic_light')!;
-    expect(signalPlacement(group, light.id)!.groundY).toBe(7);
-  });
 });

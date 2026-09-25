@@ -2,9 +2,8 @@
  * The legacy `EditorWorkspaceStatus` publish shape, ported for v2.
  *
  * ~30 v1 panels publish through this signature. Keeping it means every one of
- * those ports is a data-layer rewire rather than also a status-API rewrite. The
- * only thing it drops is `priority`, which stopped deciding anything the moment
- * statuses started stacking instead of competing for one slot.
+ * those ports is a data-layer rewire rather than also a status-API rewrite.
+ * Statuses stack (severity, then recency) instead of competing for one slot.
  */
 export {
   clampStatusProgress,
@@ -22,11 +21,6 @@ export type ScenarioWorkspaceStatus = {
   label: string;
   detail?: string | null;
   progress?: number | null;
-  /**
-   * @deprecated Ignored. Kept so ported publishers still typecheck; ordering is
-   * severity-then-recency across a stack, not a single slot.
-   */
-  priority?: number;
   actionLabel?: string | null;
   action?: (() => void) | null;
   /**

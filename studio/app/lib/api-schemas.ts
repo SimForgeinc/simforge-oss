@@ -8,72 +8,13 @@ import {
   MapAssetSchema,
   CandidateLocationSchema,
 } from "@simforge-oss/studio-shared";
-import {
-  ScenarioSchema,
-} from "@simforge-oss/scenario/contracts";
 
 // ---- Path params ----
-export const ScenarioIdParams = z.object({ scenarioId: z.string().describe("Scenario identifier") });
 export const MapAssetIdParams = z.object({ mapAssetId: z.string().describe("Map asset identifier") });
 
 // ---- Query params ----
 export const MediaQueryParams = z.object({
   key: z.string().describe("S3 object key, e.g. runs/{runId}/file.mp4 or maps/{id}/file.mp4"),
-});
-
-// ---- Scenarios list ----
-export const ScenariosListResponse = z.array(ScenarioSchema);
-/** @deprecated Use ScenariosListResponse */
-export const RunsListResponse = ScenariosListResponse;
-
-export const PostprocessGenerateBodySchema = z.object({
-  artifact_ids: z.array(z.string().min(1)).min(1).max(16),
-  prompt: z.string().optional(),
-  service: z.string().optional(),
-  trajectory_output: z.record(z.unknown()).optional(),
-  dataset_snapshot_id: z.string().optional(),
-  datasetSnapshotId: z.string().optional(),
-});
-export type PostprocessGenerateBody = z.infer<typeof PostprocessGenerateBodySchema>;
-
-export const PostprocessGenerateResponseSchema = z.object({
-  jobs: z.array(z.object({
-    id: z.string(),
-    status: z.string(),
-    source_artifact_id: z.string().nullable().optional(),
-    source_artifact_ids: z.array(z.string()).optional(),
-    source_artifact_label: z.string().nullable().optional(),
-    dataset_snapshot_id: z.string().nullable().optional(),
-  })),
-});
-
-// ---- Simulations: persist-s3 ----
-export const PersistRunBody = z.object({ run: ScenarioSchema });
-export const PersistRunResponse = z.object({
-  ok: z.literal(true),
-  count: z.number(),
-  message: z.string(),
-});
-
-// ---- Simulations: update-s3 ----
-export const UpdateRunBody = z.object({ run: ScenarioSchema });
-export const UpdateRunResponse = z.object({
-  ok: z.literal(true),
-  count: z.number(),
-  message: z.string(),
-});
-
-// ---- Simulations: delete run ----
-export const DeleteRunResponse = z.object({
-  ok: z.literal(true),
-  prefix: z.string(),
-  deletedObjects: z.number(),
-  message: z.string(),
-});
-
-// ---- Simulations: upload-artifact ----
-export const UploadArtifactResponse = z.object({
-  uri: z.string().describe("s3:// URI of the artifact"),
 });
 
 // ---- Map assets ----
@@ -166,39 +107,6 @@ export const Upload3dUrlsResponse = z.object({
     contentType: z.string(),
   })),
 });
-
-// ---- Map assets: enrich (enqueue 3rd-party-enrichment job) ----
-export const EnrichMapAssetBody = z.object({
-  providerRelease: z.string().default("2026-06-17.0").describe("Overture release tag"),
-});
-export const EnrichMapAssetResponse = z.object({
-  job_id: z.string().describe("ID of the enqueued enrichment job"),
-  job_type: z.literal("third_party_enrichment"),
-  status: z.enum(["pending", "running", "succeeded", "failed", "timeout"]),
-  reused: z.boolean().describe("True when an already-pending job was returned instead of a new one."),
-});
-
-// ---- Map assets: enrichment status (polling) ----
-export const EnrichmentStatusResponse = z.object({
-  jobs: z.array(z.object({
-    id: z.string(),
-    job_type: z.literal("third_party_enrichment"),
-    status: z.enum(["pending", "running", "succeeded", "failed", "timeout"]),
-    started_at: z.string().nullable(),
-    completed_at: z.string().nullable(),
-    error_message: z.string().nullable(),
-    result_json: z.record(z.unknown()).nullable(),
-  })),
-  enrichment: z.record(z.unknown()).nullable().describe("Latest persisted snapshot, if any."),
-});
-
-// ---- Map assets: enrichment (retrieve snapshot) ----
-// The route returns the snapshot object directly (not wrapped), matching how
-// the existing client code + use-map-asset-detail-data hook consume it. The
-// schema must follow the wire shape so generated OpenAPI clients stay valid.
-export const GetEnrichmentResponse = z.record(z.unknown()).describe(
-  "MapAssetEnrichmentSnapshot — returned directly, not wrapped under `snapshot`.",
-);
 
 // ---- Map assets: search ----
 export const MapSearchRequestBody = z.object({
@@ -311,55 +219,4 @@ export const CandidateLocationsResponse = z.object({
 export const CandidateLocationsDeleteResponse = z.object({
   ok: z.literal(true),
   mapAssetId: z.string(),
-});
-export const CrossMapCandidateLocationsResponse = z.object({
-  tag: z.string(),
-  results: z.array(z.object({
-    map_asset_id: z.string(),
-    map_name: z.string().optional(),
-    locations: z.array(CandidateLocationSchema),
-  })),
-  total: z.number(),
-});
-
-// ---- Scenario runtime ----
-export const ScenarioRuntimeRenderJobIdParams = z.object({
-  jobId: z.string().min(1),
-});
-export const ScenarioRuntimeSimulationJobIdParams = z.object({
-  jobId: z.string().min(1),
-});
-export const ScenarioRuntimeArtifactIdParams = z.object({
-  artifactId: z.string().min(1),
-});
-export const ScenarioRuntimeRenderJobListQuery = z.object({
-  scenarioId: z.string().optional(),
-  editorDocumentId: z.string().optional(),
-  datasetId: z.string().optional(),
-  status: z.string().optional(),
-  limit: z.number().optional(),
-});
-export const ScenarioRuntimeArtifactListQuery = z.object({
-  jobId: z.string().optional(),
-  scenarioId: z.string().optional(),
-  editorDocumentId: z.string().optional(),
-  datasetSnapshotId: z.string().optional(),
-  artifactType: z.string().optional(),
-  modality: z.string().optional(),
-  sensorId: z.string().optional(),
-  status: z.string().optional(),
-  limit: z.number().optional(),
-});
-export const ScenarioRuntimeArtifactMetadataQuery = z.object({
-  source: z.enum(["object"]).optional(),
-});
-export const ScenarioRuntimeCancelRenderJobBody = z.object({
-  reason: z.string().trim().optional(),
-});
-export const ScenarioRuntimeCancelSimulationJobBody = z.object({
-  reason: z.string().trim().optional(),
-});
-export const ScenarioRuntimeDeleteRenderJobResponse = z.object({
-  deleted: z.literal(true),
-  id: z.string().min(1),
 });
