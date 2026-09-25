@@ -1,0 +1,26 @@
+{
+  "schema": "simforge.sky-attribution/v1",
+  "assets": {
+    "starmap_2020_8k.skytex": {
+      "title": "Deep Star Maps 2020",
+      "license": "LicenseRef-Public-Domain",
+      "license_url": "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+      "attribution": "NASA/Goddard Space Flight Center Scientific Visualization Studio. Gaia DR2: ESA/Gaia/DPAC.",
+      "source": "https://svs.gsfc.nasa.gov/4851/ (https://svs.gsfc.nasa.gov/vis/a000000/a004800/a004851/starmap_2020_8k.exr)",
+      "modifications": [
+        "converted by renderer/tools/prepare_sky_assets.py from starmap_2020_8k.exr to a 8192x4096 Rgba16Float SKYTEX01 plate"
+      ],
+      "note": "Gaia DR2 data are open and free to use provided credit is given to ESA/Gaia/DPAC."
+    },
+    "moon_lroc_4k.skytex": {
+      "title": "CGI Moon Kit - LROC colour albedo",
+      "license": "LicenseRef-Public-Domain",
+      "license_url": "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+      "attribution": "NASA's Scientific Visualization Studio (CGI Moon Kit; LROC WAC colour, LOLA topography).",
+      "source": "https://svs.gsfc.nasa.gov/4720/ (https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_poles_4k.tif)",
+      "modifications": [
+        "converted by renderer/tools/prepare_sky_assets.py from lroc_color_poles_4k.tif to a 4096x2048 Rgba8UnormSrgb SKYTEX01 plate"
+      ]
+    }
+  }
+}

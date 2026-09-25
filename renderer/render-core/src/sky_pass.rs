@@ -262,7 +262,10 @@ pub struct SkyAssetProvenance {
 /// 3. the installed runtime this executable belongs to, recognised by the
 ///    standard layout `<root>/bin/<exe>` beside `bin/runtime-manifest.json`,
 ///    which puts the plates at `<root>/share/sky`;
-/// 4. the crate's `assets/sky` (source checkout, no installed runtime).
+/// 4. the pinned sky closure (`simforge_assets::PINNED_SKY_CLOSURE`) when
+///    `simforge assets pull` has materialized it in the asset cache (fetched
+///    by digest; the SDK install path, which has no runtime root);
+/// 5. the crate's `assets/sky` (source checkout, no installed runtime).
 ///
 /// The directory must hold `SOURCES.json`, whose `product_sha256` /
 /// `product_bytes` are checked against the plates, so a stale or truncated
@@ -288,6 +291,7 @@ enum SkySelection {
     SkyAssetsEnv,
     RuntimeRootEnv,
     InstalledRuntime,
+    AssetCache,
     SourceCheckout,
 }
 
@@ -297,6 +301,7 @@ impl SkySelection {
             Self::SkyAssetsEnv => "SIMFORGE_SKY_ASSETS",
             Self::RuntimeRootEnv => "SIMFORGE_NATIVE_RUNTIME_ROOT/share/sky",
             Self::InstalledRuntime => "installed runtime share/sky beside the executable",
+            Self::AssetCache => "the pinned sky closure in the asset cache (simforge assets pull)",
             Self::SourceCheckout => "source checkout assets/sky",
         }
     }
@@ -318,11 +323,22 @@ fn installed_runtime_root(executable: &std::path::Path) -> Option<std::path::Pat
     bin.parent().map(std::path::Path::to_path_buf)
 }
 
-/// Pure selection over the three inputs; see [`SkyAssetPaths`] for the order.
+/// The pinned sky closure (`simforge_assets::PINNED_SKY_CLOSURE`: the plates
+/// and the SOURCES.json that pins them) if `simforge assets pull` has
+/// materialized it in the asset cache. Offline: this never fetches.
+fn cached_sky_closure() -> Option<std::path::PathBuf> {
+    let store = simforge_assets::Store::from_env(None);
+    let id = simforge_assets::Identity::from(simforge_assets::PINNED_SKY_CLOSURE);
+    // fallback-ok: an unreadable cache is "not materialized"; the next candidate is verified or fails loudly
+    store.materialized(&id).ok().flatten().map(|m| m.directory)
+}
+
+/// Pure selection over the inputs; see [`SkyAssetPaths`] for the order.
 fn select_dir(
     sky_assets: Option<std::path::PathBuf>,
     runtime_root: Option<std::path::PathBuf>,
     executable: Option<&std::path::Path>,
+    asset_cache: Option<std::path::PathBuf>,
 ) -> (std::path::PathBuf, SkySelection) {
     if let Some(dir) = sky_assets {
         return (dir, SkySelection::SkyAssetsEnv);
@@ -332,6 +348,9 @@ fn select_dir(
     }
     if let Some(root) = executable.and_then(installed_runtime_root) {
         return (root.join("share/sky"), SkySelection::InstalledRuntime);
+    }
+    if let Some(dir) = asset_cache {
+        return (dir, SkySelection::AssetCache);
     }
     (
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/sky"),
@@ -346,6 +365,7 @@ impl SkyAssetPaths {
             env_path("SIMFORGE_SKY_ASSETS"),
             env_path("SIMFORGE_NATIVE_RUNTIME_ROOT"),
             executable.as_deref(),
+            cached_sky_closure(),
         );
         Self::verify(dir, selection)
     }
@@ -356,8 +376,9 @@ impl SkyAssetPaths {
         let sources_path = dir.join("SOURCES.json");
         if !sources_path.is_file() {
             anyhow::bail!(
-                "sky assets not found: no SOURCES.json in {} (selected via {}; set SIMFORGE_SKY_ASSETS or install the \
-                 native runtime; plates are built by renderer/tools/prepare_sky_assets.py)",
+                "sky assets not found: no SOURCES.json in {} (selected via {}; run `simforge assets pull` to fetch the \
+                 pinned sky closure by digest, set SIMFORGE_SKY_ASSETS, or install the native runtime; plates are built \
+                 by renderer/tools/prepare_sky_assets.py)",
                 dir.display(),
                 selection.describe()
             );
@@ -863,7 +884,7 @@ mod tests {
     fn installed_binary_discovers_its_own_share_sky() {
         let root = scratch("installed");
         let exe = installed_layout(&root);
-        let (dir, selection) = select_dir(None, None, Some(exe.as_path()));
+        let (dir, selection) = select_dir(None, None, Some(exe.as_path()), None);
         assert_eq!(selection, SkySelection::InstalledRuntime);
         assert_eq!(dir, root.join("share/sky"));
     }
@@ -872,7 +893,7 @@ mod tests {
     fn binary_without_manifest_beside_it_is_a_source_checkout() {
         let root = scratch("target-dir");
         let exe = root.join("release/simforge-render");
-        let (dir, selection) = select_dir(None, None, Some(exe.as_path()));
+        let (dir, selection) = select_dir(None, None, Some(exe.as_path()), None);
         assert_eq!(selection, SkySelection::SourceCheckout);
         assert_eq!(
             dir,
@@ -884,17 +905,46 @@ mod tests {
     fn explicit_overrides_outrank_installed_discovery() {
         let root = scratch("precedence");
         let exe = installed_layout(&root);
-        let (dir, selection) =
-            select_dir(None, Some(PathBuf::from("/opt/rt")), Some(exe.as_path()));
+        let (dir, selection) = select_dir(
+            None,
+            Some(PathBuf::from("/opt/rt")),
+            Some(exe.as_path()),
+            None,
+        );
         assert_eq!(selection, SkySelection::RuntimeRootEnv);
         assert_eq!(dir, Path::new("/opt/rt/share/sky"));
         let (dir, selection) = select_dir(
             Some(PathBuf::from("/plates")),
             Some(PathBuf::from("/opt/rt")),
             Some(exe.as_path()),
+            Some(PathBuf::from("/cache/trees/sky")),
         );
         assert_eq!(selection, SkySelection::SkyAssetsEnv);
         assert_eq!(dir, Path::new("/plates"));
+    }
+
+    #[test]
+    fn a_pulled_sky_closure_serves_a_binary_with_no_runtime_root() {
+        let root = scratch("sdk-install");
+        let exe = root.join("bin/simforge");
+        let cache = PathBuf::from("/cache/trees/sky");
+        let (dir, selection) = select_dir(None, None, Some(exe.as_path()), Some(cache.clone()));
+        assert_eq!(selection, SkySelection::AssetCache);
+        assert_eq!(dir, cache);
+        // An installed runtime still outranks the cache.
+        let installed = installed_layout(&scratch("installed-and-cache"));
+        let (_, selection) = select_dir(None, None, Some(installed.as_path()), Some(cache));
+        assert_eq!(selection, SkySelection::InstalledRuntime);
+    }
+
+    #[test]
+    #[ignore = "network: fetches the pinned sky closure (~300 MB) by digest into the asset cache"]
+    fn the_pinned_sky_closure_verifies_as_a_plate_directory() {
+        let store = simforge_assets::Store::from_env(None);
+        let id = simforge_assets::Identity::from(simforge_assets::PINNED_SKY_CLOSURE);
+        let tree = store.materialize(&id, &mut |_| {}).unwrap().directory;
+        assert_eq!(cached_sky_closure(), Some(tree.clone()));
+        SkyAssetPaths::verify(tree, SkySelection::AssetCache).unwrap();
     }
 
     #[test]

@@ -14,7 +14,13 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 sha2 = { workspace = true }
-ureq = { version = "3", default-features = false, features = ["rustls"] }
+ureq = { version = "3", default-features = false, features = ["rustls"], optional = true }
+
+[features]
+# The HTTP client. Offline consumers (the renderer resolving what
+# `simforge assets pull` materialized) build without it.
+default = ["http"]
+http = ["dep:ureq"]
 
 [dev-dependencies]
 tempfile = "3"
