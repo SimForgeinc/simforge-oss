@@ -32,7 +32,7 @@ try:
 except ImportError as error:  # pragma: no cover - extras guard
     raise ImportError(
         "resident Bevy sensors need the simforge_render provider: `pip install simforge-oss-gym[bevy]` "
-        "(libsimforge_render comes with the native runtime bundle; SIMFORGE_RENDER_LIB overrides its location)"
+        "(the simforge-oss-render wheel ships libsimforge_render beside the package; SIMFORGE_RENDER_LIB names another build)"
     ) from error
 
 SceneStateProvider = Callable[[], Sequence[Mapping[str, Any]]]

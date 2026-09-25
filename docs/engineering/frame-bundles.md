@@ -139,10 +139,11 @@ Zero-copy views pin the mmap: drop views before `reader.close()`.
 `verify=True` raises `TornBundleError` on any digest/liveness failure.
 
 The package depends on `msgpack` (wire codec) and `numpy`. The in-process
-`EmbeddedRenderer` resolves `libsimforge_render.so` from `library=`, then
-`$SIMFORGE_RENDER_LIB`, then `$SIMFORGE_NATIVE_RUNTIME_ROOT/lib/` (default
-`${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime`), then the loader
-path; it never probes a source tree.
+`EmbeddedRenderer` resolves `libsimforge_render` (`.so`/`.dylib`/`.dll`) from
+`library=`, then beside the `simforge_render` package (where the platform wheel
+ships it), then `$SIMFORGE_RENDER_LIB`; nothing else. A named path that does not
+exist is an error, and finding nothing raises `EmbeddedRendererError` naming both
+places; it never searches the loader path or probes a source tree.
 
 The renderer's star/Moon plates (`starmap_2020_8k.skytex`,
 `moon_lroc_4k.skytex`, gitignored derivatives built by
