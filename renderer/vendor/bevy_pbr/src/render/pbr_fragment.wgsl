@@ -102,7 +102,8 @@ fn pbr_input_from_standard_material(
     pbr_input.material.deferred_lighting_pass_id = deferred_lighting_pass_id;
 
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
-    let NdotV = max(dot(pbr_input.N, pbr_input.V), 0.0001);
+    // SimForge patch: clamped to 1 as in pbr_functions (N.V can exceed 1 by an ulp).
+    let NdotV = clamp(dot(pbr_input.N, pbr_input.V), 0.0001, 1.0);
 
     // Fill in the sample bias so we can sample from textures.
     var bias: SampleBias;
