@@ -1,0 +1,16 @@
+{
+ "argv": [
+  "locations",
+  "find",
+  "--map",
+  "richmond-field-station",
+  "--affordances",
+  "vehicleSpawn,pedestrianSpawn",
+  "--limit",
+  "30"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "1222ae567d683cc3c5c77f98eae83600b833b2e7ee0a628b70fd55c953a2f3c1"
+}

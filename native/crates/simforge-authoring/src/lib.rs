@@ -11,6 +11,8 @@
 
 pub mod instance;
 pub mod json;
+pub mod jsfmt;
+pub mod locations;
 pub mod maps;
 pub mod paths;
 pub mod sites;

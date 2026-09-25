@@ -1,0 +1,15 @@
+{
+ "argv": [
+  "locations",
+  "resolve",
+  "left turn at the intersection",
+  "--map",
+  "richmond-field-station",
+  "--limit",
+  "3"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "c33866c74e014d9cdba263c2384765f354af34f87bb062cbb1838f756d723493"
+}
