@@ -1,0 +1,32 @@
+{
+ "argv": [
+  "export",
+  "{OUT}/v/instance.json",
+  "--format",
+  "xosc-1.4",
+  "--out",
+  "{OUT}/x/out.xosc-1.4"
+ ],
+ "exit": 0,
+ "files": {
+  "v/instance.json": "092fe654af8fed5ad7940f2dbc3e867f4fb99c91c1a54a28253440d9f70c3b8b",
+  "v/trace.json.gz": "affb0187cf2def9b59fc26cb7ebcfc351a87d47c7eb133566fcf575d956facbf",
+  "v/variation.json": "7e290fcd391690398947336bd44c0fc83483647f0b58ad711c3177c97a5e3574",
+  "x/out.xosc-1.4": "9d9263dee461a888a8e2f646a3a2dbf7a3d9e0c670de56812cf25a7cbc87b5b8"
+ },
+ "pre": [
+  [
+   "variation",
+   "fork",
+   "examples/ltap-opposing.template.json",
+   "--map",
+   "richmond-field-station",
+   "--site",
+   "3dd7bb59d80de7ee",
+   "--out",
+   "{OUT}/v"
+  ]
+ ],
+ "stderr": null,
+ "stdoutSha256": "9825d351449353b45a4204d2a198bc1aefbe1e36a342cefc74b9fc2450282be6"
+}

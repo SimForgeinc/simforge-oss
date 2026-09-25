@@ -1,0 +1,25 @@
+{
+ "argv": [
+  "export",
+  "examples/edge-cases/01-construction-chicane-reversing-truck/scenario.instance.json",
+  "--format",
+  "xosc-2.0",
+  "--out",
+  "{OUT}/x/out"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "bad_value",
+  "detail": {
+   "known": [
+    "xosc-1.4",
+    "xosc-1.3-esmini",
+    "osc-2.2"
+   ]
+  },
+  "path": "--format",
+  "reason": "--format must be xosc-1.4 | xosc-1.3-esmini | osc-2.2"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}
