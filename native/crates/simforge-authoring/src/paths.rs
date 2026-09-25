@@ -24,9 +24,58 @@ pub fn resolve(path: &Path) -> PathBuf {
     out
 }
 
+/// `path.join(...parts)` (POSIX): joined with `/` and normalised lexically
+/// (`.` dropped, `..` applied, repeated separators collapsed), relative stays
+/// relative. The string a TS command printed for a path it built.
+pub fn join(parts: &[&str]) -> String {
+    let joined = parts
+        .iter()
+        .filter(|p| !p.is_empty())
+        .copied()
+        .collect::<Vec<_>>()
+        .join("/");
+    normalize(&joined)
+}
+
+/// `path.normalize` (POSIX) without the trailing-separator rule.
+pub fn normalize(path: &str) -> String {
+    if path.is_empty() {
+        return ".".to_owned();
+    }
+    let absolute = path.starts_with('/');
+    let mut out: Vec<&str> = Vec::new();
+    for segment in path.split('/') {
+        match segment {
+            "" | "." => {}
+            ".." => {
+                if matches!(out.last(), Some(last) if *last != "..") {
+                    out.pop();
+                } else if !absolute {
+                    out.push("..");
+                }
+            }
+            other => out.push(other),
+        }
+    }
+    let body = out.join("/");
+    match (absolute, body.is_empty()) {
+        (true, _) => format!("/{body}"),
+        (false, true) => ".".to_owned(),
+        (false, false) => body,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn joins_like_node() {
+        assert_eq!(join(&["./out/", "m", "s", "draw-000.result.json"]), "out/m/s/draw-000.result.json");
+        assert_eq!(join(&["/a//b", "../c"]), "/a/c");
+        assert_eq!(join(&["..", "x"]), "../x");
+        assert_eq!(join(&["out", ".."]), ".");
+    }
 
     #[test]
     fn normalises_like_node() {

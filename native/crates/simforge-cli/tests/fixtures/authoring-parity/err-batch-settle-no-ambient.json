@@ -1,0 +1,24 @@
+{
+ "argv": [
+  "batch",
+  "examples/ltap-opposing.template.json",
+  "--map",
+  "richmond-field-station",
+  "--max-sites",
+  "1",
+  "--concurrency",
+  "1",
+  "--ambient-settle",
+  "3",
+  "--out",
+  "{OUT}/b"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "missing_argument",
+  "path": "--ambient-settle",
+  "reason": "--ambient-settle requires --ambient <off|light|moderate|city|heavy>"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}
