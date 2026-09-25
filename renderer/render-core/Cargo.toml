@@ -72,6 +72,10 @@ wgpu = { version = "29.0.4", default-features = false }
 ash = { version = "0.38", default-features = false, optional = true }
 libc = { version = "0.2", optional = true }
 
+# Sky plates: the pinned sky closure materialized by `simforge assets pull`
+# (offline lookup only, so no HTTP client; src/sky_pass.rs).
+simforge-assets = { path = "../../native/crates/simforge-assets", default-features = false }
+
 [features]
 default = ["pcss"]
 # The windowed platform layer (winit + x11/wayland, gilrs, clipboard, audio)
@@ -96,4 +100,4 @@ gpu-interop = ["bevy/raw_vulkan_init", "wgpu/vulkan", "dep:ash", "dep:libc"]
 gltf = { version = "1.4", default-features = false, features = ["utils", "names"] }
 # The CARLA model packs the tests render are content-addressed closures
 # fetched by digest (src/test_packs.rs); their bytes are not in git.
-simforge-assets = { path = "../../native/crates/simforge-assets" }
+simforge-assets = { path = "../../native/crates/simforge-assets", features = ["http"] }

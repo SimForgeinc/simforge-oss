@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 use simforge_assets::{
-    Closure, Error, Identity, Lock, Store, PINNED_ACTOR_CLOSURE, TREE_COMPLETE_MARKER,
+    Closure, Error, Identity, Lock, Store, PINNED_ACTOR_CLOSURE, PINNED_SKY_CLOSURE,
+    TREE_COMPLETE_MARKER,
 };
 
 fn sha(bytes: &[u8]) -> String {
@@ -164,6 +165,7 @@ fn the_repository_lock_parses_and_agrees_with_the_compiled_pin() {
         lock.get("actors").unwrap(),
         Identity::from(PINNED_ACTOR_CLOSURE)
     );
+    assert_eq!(lock.get("sky").unwrap(), Identity::from(PINNED_SKY_CLOSURE));
     for (name, pinned) in &lock.closures {
         let Some(document) = &pinned.document else {
             continue;

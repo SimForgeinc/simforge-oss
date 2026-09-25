@@ -54,6 +54,14 @@ pub const PINNED_ACTOR_CLOSURE: Pin = Pin {
     bytes: 80788,
 };
 
+/// The renderer's sky plates (NASA SVS star map and moon, public domain with
+/// credit) with the SOURCES.json that pins them. Mirrors `closures.sky` in
+/// catalog/closures.lock.json.
+pub const PINNED_SKY_CLOSURE: Pin = Pin {
+    sha256: "ab249b8edb14254a212097f9b6793d050348155575c6b9b83368ab680d3b525b",
+    bytes: 1133,
+};
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// The origin does not serve the asset, or the network failed.
@@ -582,10 +590,7 @@ impl Store {
         let mut reader: Box<dyn Read> = if let Some(path) = url.strip_prefix("file://") {
             Box::new(fs::File::open(path).map_err(|e| unavailable(e.to_string()))?)
         } else {
-            let response = ureq::get(url)
-                .call()
-                .map_err(|e| unavailable(e.to_string()))?;
-            Box::new(response.into_body().into_reader())
+            http_reader(url).map_err(unavailable)?
         };
         let mut file = fs::File::create(temporary)
             .map_err(io_err(format!("create {}", temporary.display())))?;
@@ -772,6 +777,19 @@ impl Store {
         }
         Ok(Materialized { directory, closure })
     }
+}
+
+#[cfg(feature = "http")]
+fn http_reader(url: &str) -> std::result::Result<Box<dyn Read>, String> {
+    let response = ureq::get(url).call().map_err(|e| e.to_string())?;
+    Ok(Box::new(response.into_body().into_reader()))
+}
+
+/// Built without the `http` feature (an offline consumer such as the
+/// renderer, which only reads what `simforge assets pull` materialized).
+#[cfg(not(feature = "http"))]
+fn http_reader(_url: &str) -> std::result::Result<Box<dyn Read>, String> {
+    Err("this build of simforge-assets has no HTTP client (feature `http`); fetch with `simforge assets pull`".into())
 }
 
 fn remove_readonly(path: &Path) {

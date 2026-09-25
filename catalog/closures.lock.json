@@ -15,6 +15,13 @@
       "members": 41,
       "memberBytes": 678658917
     },
+    "sky": {
+      "sha256": "ab249b8edb14254a212097f9b6793d050348155575c6b9b83368ab680d3b525b",
+      "bytes": 1133,
+      "document": "sky/closure.json",
+      "members": 4,
+      "description": "The renderer sky plates (NASA SVS star map and moon, public domain with credit) with the SOURCES.json that pins them (scripts/actor-assets/sky-closure.mjs)."
+    },
     "vehicles-carla": {
       "sha256": "c9fc02bba3c5c52af52d10a6d2496b90da1749bdf7ef7ed449d243ec74b2dadf",
       "bytes": 24661,
