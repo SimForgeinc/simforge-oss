@@ -28,18 +28,18 @@ function deploymentEnvironment(): (typeof ENV_SUFFIXES)[number] | null {
 
 export function getRuntimeMapArtifactBucket(): string {
   const bucket = process.env.MAP_RUNTIME_BUNDLE_BUCKET?.trim() || S3_BUCKET;
-  if (process.env.MAP_BUNDLE_ENV_ENFORCE?.trim() === "1") {
-    const environment = deploymentEnvironment();
-    if (environment) {
-      const mismatch = ENV_SUFFIXES.find(
-        (suffix) => suffix !== environment && bucket.endsWith(`-${suffix}`),
+  // A deployment never reads another environment's bundle bucket: a -dev,
+  // -staging or -prod suffix that contradicts the deployment fails closed.
+  const environment = deploymentEnvironment();
+  if (environment) {
+    const mismatch = ENV_SUFFIXES.find(
+      (suffix) => suffix !== environment && bucket.endsWith(`-${suffix}`),
+    );
+    if (mismatch) {
+      throw new Error(
+        `Runtime map artifact bucket "${bucket}" belongs to "${mismatch}" but this deployment is "${environment}". `
+        + "Refusing cross-environment artifact access.",
       );
-      if (mismatch) {
-        throw new Error(
-          `Runtime map artifact bucket "${bucket}" belongs to "${mismatch}" but this deployment is "${environment}". `
-          + "Refusing cross-environment artifact access (MAP_BUNDLE_ENV_ENFORCE=1).",
-        );
-      }
     }
   }
   return bucket;
