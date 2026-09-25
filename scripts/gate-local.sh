@@ -57,7 +57,10 @@ if test "${1:-}" = --step; then
       ( cd "$ws" && cargo fmt --check ) >"$out/fmt.txt" 2>&1
       ( cd "$ws" && cargo clippy --all-targets --message-format=short -- --cap-lints warn ) >"$out/clippy.txt" 2>&1 || { tail -40 "$out/clippy.txt"; exit 1; }
       ratchet "$ws" "$out/fmt.txt" "$out/clippy.txt" || exit 1
-      cd "$ws" && exec cargo nextest run --no-fail-fast --no-tests=pass ;;
+      # The PyO3 extension crate links libpython only as a test binary; its
+      # behaviour is covered by the gym's pytest (built by maturin, abi3).
+      excl=(); test "$ws" = native && excl=(--workspace --exclude simforge-bindings-python)
+      cd "$ws" && exec cargo nextest run --no-fail-fast --no-tests=pass "${excl[@]}" ;;
     python)
       rc=0
       for d in "$@"; do
