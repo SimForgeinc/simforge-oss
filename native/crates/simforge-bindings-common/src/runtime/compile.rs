@@ -952,6 +952,7 @@ pub fn rehearse_situation_json(
 
 /// Bounded deterministic solve; `on_evaluation` receives each evaluated
 /// `{program, rehearsal}` JSON and may abort by returning an error.
+#[allow(clippy::type_complexity)]
 pub fn solve_situation_json(
     document_json: &str,
     map: &MapAsset,
