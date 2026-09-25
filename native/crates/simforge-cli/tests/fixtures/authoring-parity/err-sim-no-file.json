@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "simulate"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "missing_argument",
+  "path": "<WORKSPACE|INSTANCE>",
+  "reason": "missing required argument <WORKSPACE|INSTANCE>"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}
