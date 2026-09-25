@@ -145,75 +145,16 @@ impl From<String> for JsValue {
     }
 }
 
-/// ECMAScript `Number::toString(10)` for a finite double.
-///
-/// The shortest digit count comes from Rust's shortest round-trip
-/// formatter; the digits themselves are then re-derived by correctly
-/// rounding the exact value to that many digits, ties to even. That is the
-/// ECMAScript rule ("closest to the value; of two, the even one"). Rust's
-/// shortest formatter alone breaks such ties upward:
-/// `-0.69904327392578125` prints `…813` there and `…812` in JavaScript.
-/// (`simforge_core::hash::js_number_to_string` shares the Rust behaviour.)
+/// ECMAScript `Number::toString(10)`: `simforge_core::hash::js_number_to_string`
+/// (shortest round-trip digits, exact ties to even) plus the non-finite names.
 pub fn js_number_to_string(v: f64) -> String {
-    use std::fmt::Write as _;
-    if v == 0.0 {
-        return "0".to_owned();
-    }
     if v.is_nan() {
         return "NaN".to_owned();
     }
     if v.is_infinite() {
         return if v > 0.0 { "Infinity" } else { "-Infinity" }.to_owned();
     }
-    let shortest = format!("{:e}", v.abs());
-    let significant = shortest
-        .split('e')
-        .next()
-        .expect("mantissa")
-        .bytes()
-        .filter(u8::is_ascii_digit)
-        .count();
-    let sci = format!("{:.*e}", significant - 1, v.abs());
-    let (mant, exp) = sci
-        .split_once('e')
-        .expect("LowerExp always emits an exponent");
-    let e: i32 = exp.parse().expect("LowerExp exponent is an integer");
-    let digits: Vec<u8> = mant.bytes().filter(|b| *b != b'.').collect();
-    let digits = {
-        // Trailing zeros are not significant (`1e21` with k = 1).
-        let end = digits.iter().rposition(|d| *d != b'0').map_or(1, |i| i + 1);
-        digits[..end].to_vec()
-    };
-    let k = digits.len() as i32;
-    let n = e + 1;
-    let mut out = String::with_capacity(digits.len() + 8);
-    if v < 0.0 {
-        out.push('-');
-    }
-    let push = |out: &mut String, range: std::ops::Range<usize>| {
-        out.extend(digits[range].iter().map(|d| char::from(*d)))
-    };
-    if k <= n && n <= 21 {
-        push(&mut out, 0..digits.len());
-        out.extend(std::iter::repeat_n('0', (n - k) as usize));
-    } else if 0 < n && n <= 21 {
-        push(&mut out, 0..n as usize);
-        out.push('.');
-        push(&mut out, n as usize..digits.len());
-    } else if -6 < n && n <= 0 {
-        out.push_str("0.");
-        out.extend(std::iter::repeat_n('0', (-n) as usize));
-        push(&mut out, 0..digits.len());
-    } else {
-        out.push(char::from(digits[0]));
-        if k > 1 {
-            out.push('.');
-            push(&mut out, 1..digits.len());
-        }
-        let exp10 = n - 1;
-        let _ = write!(out, "e{}{}", if exp10 < 0 { '-' } else { '+' }, exp10.abs());
-    }
-    out
+    simforge_core::hash::js_number_to_string(v)
 }
 
 /// `JSON.stringify` of a string (ECMAScript QuoteJSONString).

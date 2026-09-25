@@ -105,8 +105,11 @@ pub type Result<T, E = CoreError> = std::result::Result<T, E>;
 /// roof) overlaps it, in collision detection, the contact solver and ego line
 /// of sight, so a vehicle passes under a signal mast arm or a bridge and still
 /// strikes the pole (docs/engineering/ground-height.md). v1 colliders keep
-/// full height and their traces are unchanged.
-pub const ENGINE_SEM_VER: &str = "0.12.0";
+/// full height and their traces are unchanged; 0.12.1 prints canonical-JSON
+/// numbers exactly as ECMAScript `Number::toString` (exact decimal ties to
+/// even): only digests over float32-derived values move, notably the map
+/// closure digest of maps whose static colliders carry such ties.
+pub const ENGINE_SEM_VER: &str = "0.12.1";
 
 /// Former name of [`ENGINE_SEM_VER`]; always the same value. Prefer the new
 /// name in new code.
