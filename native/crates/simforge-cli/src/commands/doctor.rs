@@ -22,7 +22,7 @@ pub struct DoctorArgs {
     /// Do not probe the registry (the check is reported as skipped, never as ok).
     #[arg(long)]
     pub offline: bool,
-    /// Registry to probe. Default: SIMFORGE_MAPS_REGISTRY, SIMFORGE_MAPS_PUBLIC_URL, then the public registry.
+    /// Registry to probe. Default: SIMFORGE_MAPS_REGISTRY, SIMFORGE_MAPS_PUBLIC_URL, then the logged-in account's registry (`simforge login`), then the public registry.
     #[arg(long, value_name = "URL")]
     pub registry: Option<String>,
     /// Network timeout for the registry probe.
