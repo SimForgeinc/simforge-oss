@@ -31,7 +31,7 @@ fi
 # Every recorded scene is verified; a scene still marked `recording: unrecorded`
 # is listed by name (it gates once its owner records it on lavapipe), never passed.
 # Scenes are independent (each writes artifacts/golden-harness/verify/<id>), so
-# they render GOLDEN_JOBS at a time (default 3), each with an even share of the
+# they render up to GOLDEN_JOBS at a time (default 2, memory-bounded below), each with an even share of the
 # cores for lavapipe (LP_NUM_THREADS), logs printed in scene order. Frame times
 # under contention are informational only (the frame-time check is not gated).
 unrecorded=(); ids=()
@@ -40,7 +40,12 @@ for scene in qualification/golden-harness/scenes/*.json; do
   if test "$(jq -r '.recording // "recorded"' "$scene")" = unrecorded; then unrecorded+=("$id"); continue; fi
   ids+=("$id")
 done
-jobs_n="${GOLDEN_JOBS:-3}"; cores="$(nproc)"
+# Memory-bounded: a lavapipe golden render peaks at 5-8 GB, and the gate host is
+# shared (dev workers, browsers, agents). At most GOLDEN_JOBS (default 2), and
+# never more than MemAvailable / GOLDEN_MEM_GB (default 8) at start.
+avail_gb=$(( $(awk '/^MemAvailable:/ {print $2}' /proc/meminfo) / 1048576 ))
+by_mem=$(( avail_gb / ${GOLDEN_MEM_GB:-8} )); test "$by_mem" -ge 1 || by_mem=1
+jobs_n="${GOLDEN_JOBS:-2}"; test "$jobs_n" -le "$by_mem" || jobs_n="$by_mem"; cores="$(nproc)"
 threads="${LP_NUM_THREADS:-$(( cores / jobs_n > 1 ? cores / jobs_n : 1 ))}"
 logs="$(mktemp -d)"
 for id in "${ids[@]}"; do
@@ -48,7 +53,7 @@ for id in "${ids[@]}"; do
   ( set +e; LP_NUM_THREADS="$threads" node qualification/golden-harness/golden.mjs verify "$id" >"$logs/$id.log" 2>&1; echo $? >"$logs/$id.rc" ) &
 done
 wait
-echo "(${#ids[@]} scenes, $jobs_n at a time, LP_NUM_THREADS=$threads)"
+echo "(${#ids[@]} scenes, $jobs_n at a time, LP_NUM_THREADS=$threads, ${avail_gb} GB available at start)"
 rc=0
 for id in "${ids[@]}"; do
   status="$(cat "$logs/$id.rc" 2>/dev/null || echo 1)"
