@@ -240,7 +240,7 @@ contract string where it has one (for example `simforge.sim-resolution/v1`).
 | `simulation.authoredTraceSha256` | sha256 | Differs from `traceSha256` only for SUMO documents. |
 | `simulation.resolvedInputDigest`, `resolutionSha256` | sha256 | As stored in `sim_results`. |
 | `simulation.trafficProvider`, `trafficStepKey`, `trafficSha256`, `sumo` | | `sumo` is `{networkSha256, runtimeVersion, wasmSha256}` or null. |
-| `simulation.groundDigest` | sha256 \| null | Trace v5 ground-contact source digest. Required when `traceFormat ≥ 5`, null before. |
+| `simulation.groundDigest` | sha256 \| null | Trace v5 ground-contact source digest (`header.groundDigest`, the sha256 of the ground mesh). Null before trace format 5. From format 5: required, and equal to the mesh's sha256, when `map/closure.json` lists `derived/ground/ground-mesh.bin`; null when it does not (section 8.1, rule 10). |
 | `simulation.producerKind` | enum | `inline`, `runner`, `cli`, `editor`. The raw `producer` string is **not** exported, because it contains host names. |
 | `timelines[]` | array ≥ 1 | Every packaged timeline's identity (`render-timeline.md` section 2). The first entry is the one the source's renders used. |
 | `executionPackage` | object \| null | Contract and xosc digest when `export/scenario.xosc` is present. |
@@ -273,7 +273,8 @@ or absent: `null` where the table does not allow it is refused, not dropped.
 Cross-field rules the reader enforces (the JSON Schema cannot express them):
 `documentSchema = simforge.scenario.v<scenarioVersion>`;
 `traceSchema = simforge.trace/v<traceFormat>`; `simulation.groundDigest`
-and `map.groundDigest` are equal, set from trace format 5 and null before;
+and `map.groundDigest` are equal, null before trace format 5, and from
+format 5 governed by the map closure (section 8.1, rule 10);
 `members[]` is sorted by path, names every required role, and each
 member's `sha256` equals its typed field (`document.json` =
 `scenario.contentSha256`, trace = `traceGzipSha256`, resolution =
@@ -562,7 +563,22 @@ These rules close open question 1 and the container half of open question 2.
 9. **Limits by form.** The container-size limit is chosen by the form the
    container has (thin: 64 MiB, full: 4 GiB); the writer refuses to produce
    a container the default reader would refuse.
-
+10. **Ground (trace format 5 on).** The engine records `header.groundDigest`
+    only when the map has a ground surface, so a trace v5 on a map without
+    one has none. The rule follows the map closure, not the trace format:
+    when `map/closure.json` lists `derived/ground/ground-mesh.bin`, a trace
+    of format 5 or later must carry `groundDigest` equal to that member's
+    sha256; when it does not list one, `groundDigest` must be null.
+    `simulation.groundDigest` must also equal the trace header's
+    (`trace_ground`). Violations are `package_identity_mismatch`, rule
+    `ground_digest`. (Resolved 2026-09-25 for Export for CLI; before, format
+    5 always required the digest.)
+11. **Withheld and licensed actor models.** An actor closure may carry a
+    per-member `licenses` table (every key a member, every record naming a
+    `license`) and its `catalog-models.json` a `withheld` table. A full
+    package whose `catalogIds` bind a withheld id is refused by name
+    (`package_closure_invalid`, `actor_model_withheld`); it is never treated
+    as procedural.
 **Default: thin.** It is small enough to attach to an issue or an email, and
 it is complete as a record: every digest needed to prove what played is
 inside it. It also plays on this installation for as long as R1–R8 hold,

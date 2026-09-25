@@ -1,11 +1,11 @@
 {
   "sceneId": "package-smoke-richmond",
   "mapId": "richmond-field-station",
-  "description": "Release smoke: the thin scenario package fixtures/scenario-package/smoke/richmond-public.scenario.zip, whose map and actor closures resolve from the public registry (Richmond Field Station release 11; actor closure 218209f5), rendered through `simforge-render job`. Its render timeline (sampler /3, one ambulance decelerating from 7 m/s) is sampled at 24 fps over 0..1 s by `simforge render scene-state` into the committed scene-state; the corpus is the release's native asset set (master.gltf 2303ba35..., served by digest from the public origin). Chase camera 9 m behind and 3 m above the ambulance. Ticks 0..23 render; tick 12 is hashed. `recording: unrecorded` until the first lavapipe record (SPLIT/R records it with the v0.2.0-rc.0 renderer); while unrecorded, verify fails with exit 10, never passes.",
+  "description": "Release smoke: the thin scenario package fixtures/scenario-package/smoke/richmond-public.scenario.zip, whose map and actor closures resolve from the public registry (Richmond Field Station release 11; actor closure 793ec86c), rendered through `simforge-render job`. Its render timeline (sampler /3, one ambulance decelerating from 7 m/s) is sampled at 24 fps over 0..1 s by `simforge render scene-state` into the committed scene-state; the corpus is the release's native asset set (master.gltf 2303ba35..., served by digest from the public origin). Chase camera 9 m behind and 3 m above the ambulance. Ticks 0..23 render; tick 12 is hashed. `recording: unrecorded` until the first lavapipe record (SPLIT/R records it with the v0.2.0-rc.0 renderer); while unrecorded, verify fails with exit 10, never passes.",
   "recording": "unrecorded",
   "package": {
     "path": "fixtures/scenario-package/smoke/richmond-public.scenario.zip",
-    "packageId": "f4f0e045cc192c66b0c06b4872c909be242be1fdfc27c7cdadc0fe518732726e",
+    "packageId": "1e2b5146613adf4fc22c2f0b23b7913c9afd152021226a20b629988136c93159",
     "timelineSha256": "6d9504bb2cf270ca4a8b03e07c83514040988e5eb6ba64a1fbe8ade5f0e165b5",
     "timelineKey": "43788e095970edc494c097760eb280f55ba644b6e17965128412edf7380d4845"
   },
@@ -28,8 +28,8 @@
         "preset": "training"
       },
       "warmupFrames": 20,
-      "vehicleModels": "{repo}/catalog/vehicles-carla",
-      "pedestrianModels": "{repo}/catalog/pedestrians-carla"
+      "vehicleModels": "{pack:vehicles-carla}",
+      "pedestrianModels": "{pack:pedestrians-carla}"
     },
     "rig": {
       "cameras": [

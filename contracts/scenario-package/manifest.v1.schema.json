@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://simforge.ai/contracts/scenario-package/manifest.v1.schema.json",
   "title": "simforge.scenario-package/v1 manifest",
-  "description": "manifest.json of a SimForge scenario package (docs/engineering/scenario-package.md). The file holds exactly canonicalJson(manifest) (simforge.canonical-json/v1) and its sha256 is the package id. This schema is the shape; the reader (the simforge-package crate) also enforces the cross-field rules this schema cannot express: documentSchema names scenarioVersion, traceSchema names traceFormat, groundDigest is set exactly from trace format 5, members[] is sorted by path and names every required role, member digests equal their typed digest fields, timelines[] and the timeline/ members name the same timelines, and render is set exactly when render/pin.json is a member.",
+  "description": "manifest.json of a SimForge scenario package (docs/engineering/scenario-package.md). The file holds exactly canonicalJson(manifest) (simforge.canonical-json/v1) and its sha256 is the package id. This schema is the shape; the reader (the simforge-package crate) also enforces the cross-field rules this schema cannot express: documentSchema names scenarioVersion, traceSchema names traceFormat, groundDigest is null before trace format 5, and from format 5 it is present exactly when the trace ran on a ground surface: required and equal to the sha256 of map/closure.json's derived/ground/ground-mesh.bin when the closure lists one, null when it does not (spec section 8.1, rule 10), members[] is sorted by path and names every required role, member digests equal their typed digest fields, timelines[] and the timeline/ members name the same timelines, and render is set exactly when render/pin.json is a member.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -268,7 +268,8 @@
             {
               "$ref": "#/$defs/sha256"
             }
-          ]
+          ],
+          "description": "sha256 of the ground mesh the trace was simulated on (trace header groundDigest). Null before trace format 5; from format 5 required exactly when map/closure.json lists derived/ground/ground-mesh.bin, and then equal to its sha256."
         },
         "producerKind": {
           "enum": [
@@ -418,7 +419,8 @@
             {
               "$ref": "#/$defs/sha256"
             }
-          ]
+          ],
+          "description": "Equal to simulation.groundDigest."
         },
         "closure": {
           "type": "object",

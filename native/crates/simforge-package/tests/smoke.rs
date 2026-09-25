@@ -4,7 +4,7 @@
 //! `map/closure.json` is the published Richmond Field Station browser asset
 //! set (registry version 11, closure `f08173b8…`), every member of which is
 //! served by digest from the public blob origin, and its actor closure is the
-//! pinned public `218209f5…`. The motion is a real archived trace
+//! pinned public `793ec86c… (attributed: per-member licences)`. The motion is a real archived trace
 //! (`rc72-engine070-richmond-commit`: one ambulance, 20 s) with a timeline
 //! derived under the current sampler from the public OpenDRIVE and topology.
 //! The document and resolution record are fixture placeholders: the smoke
@@ -34,7 +34,7 @@ const DOCUMENT_ID: &str = "rc73-doc-child-reveal";
 const PUBLIC_BROWSER_CLOSURE: &str =
     "f08173b844b41b34e12e44fabafaaface1672174fb6be0352def8330b8bb5d03";
 const PUBLIC_ACTOR_CLOSURE: &str =
-    "218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f";
+    "793ec86ceda7734f1f5f7c0b260a396c11c970a471ab4418987e4d531f33daa4";
 const PUBLIC_MAP_VERSION: &str = "usmap_caa8ecb111be3a4ab63513d773e7e62f";
 const GOLDEN_SCENE: &str = "package-smoke-richmond";
 

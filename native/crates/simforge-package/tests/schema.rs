@@ -246,11 +246,17 @@ fn fixture_json(file: &str, member: &str) -> Option<Value> {
 fn valid_fixtures_conform() {
     let manifest_schema = load("manifest.v1.schema.json");
     let receipt_schema = load("receipt.v1.schema.json");
-    for file in [
-        "valid/thin.scenario.zip",
-        "valid/full.scenario.zip",
-        "valid/thin-minimal.scenario.zip",
-    ] {
+    let expectations: Value =
+        serde_json::from_slice(&read("scenario-package/expectations.json")).unwrap();
+    let valid: Vec<String> = expectations["fixtures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|f| f["valid"] == true)
+        .map(|f| f["file"].as_str().unwrap().to_owned())
+        .collect();
+    assert!(valid.len() >= 5);
+    for file in valid.iter().map(String::as_str) {
         let m = fixture_json(file, "manifest.json").unwrap();
         check(&manifest_schema, &m).unwrap_or_else(|e| panic!("{file}: {e}"));
         if let Some(r) = fixture_json(file, "receipt.json") {

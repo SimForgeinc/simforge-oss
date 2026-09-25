@@ -7,8 +7,9 @@ read by the `simforge-package` crate, the Node binding test and the CLI.
 |---|---|
 | `expectations.json` | Every fixture below `valid/` and `invalid/` and its expected outcome when read as `readerCli`: valid files verify to `packageId` and `form`; invalid ones are refused with `code` and `rule`. |
 | `valid/` | `thin` and `full` of one revision (same `packageId`), and `thin-minimal` (no receipt, no xosc). |
-| `invalid/` | One hostile package per refusal rule: the ZIP subset (zip-slip, symlink, duplicate, overlap, header mismatch, bomb, ZIP64 lie, prefix/trailing data, comment, ...), the manifest (not canonical, closed schema, digests, version skew per dimension), content cross-checks, and the blob/form rules of section 8.1. |
+| `invalid/` | One hostile package per refusal rule: the ZIP subset (zip-slip, symlink, duplicate, overlap, header mismatch, bomb, ZIP64 lie, prefix/trailing data, comment, ...), the manifest (not canonical, closed schema, digests, version skew per dimension), content cross-checks, the blob/form rules of section 8.1, and the ground rule (rule 10: `ground-required`, `ground-unlisted`, `ground-mismatch`, `trace-ground`; valid `thin-v5-ground` / `thin-v5-no-ground`). |
 | `smoke/` | The release smoke package (below). |
+| `sources/` | Committed trace v5 inputs (`v5-ground`, `v5-no-ground`: golden input `rfs-stop-and-go` simulated on the committed Richmond closure with and without its ground surface) and their timelines, so engine changes do not churn the fixtures. Regenerate with `cargo test -p simforge-package --test fixtures -- --ignored`. |
 
 The contract's JSON Schemas are `contracts/scenario-package/*.schema.json`.
 
@@ -40,7 +41,7 @@ encoders are held to it); the fixtures test checks the two agree.
 the public registry: `map/closure.json` is the published Richmond Field
 Station browser asset set (release 11, `f08173b8…`; every member is served by
 digest from `https://da3tufozhdsvl.cloudfront.net/blobs/sha256/<aa>/<sha256>`),
-and the actor closure is the public `218209f5…`. `mapClosureDigest` and
+and the actor closure is the public `793ec86c… (attributed: per-member licences)`. `mapClosureDigest` and
 `pinClosureSha256` are computed from the published simulation members. The
 motion is the archived `rc72-engine070-richmond-commit` trace (one
 ambulance); its timeline is derived under the current sampler from the

@@ -32,6 +32,9 @@ pub const SIMULATION_MEMBERS_EXACT: [&str; 6] = [
     "derived/locations.json.gz",
     "derived/ground/ground-mesh.bin",
 ];
+/// The ground surface a trace v5 is simulated on (`header.groundDigest` = its sha256).
+pub const GROUND_MEMBER: &str = "derived/ground/ground-mesh.bin";
+
 pub const SIMULATION_MEMBER_PREFIXES: [&str; 1] = ["3d/variants/static-colliders"];
 
 pub fn is_simulation_member(path: &str) -> bool {
@@ -82,6 +85,10 @@ pub struct ActorClosureMember {
 pub struct ActorClosure {
     pub schema: String,
     pub members: BTreeMap<String, ActorClosureMember>,
+    /// Per-member licence records (`{license, attribution?, source?}`), keyed
+    /// by member path; closures from `793ec86c…` on carry them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub licenses: Option<BTreeMap<String, Value>>,
 }
 
 /// `validateRelativePath` of `closure.ts`: relative, `/`-separated, no empty,
@@ -184,6 +191,18 @@ impl ActorClosure {
                 ));
             }
         }
+        for (path, record) in closure.licenses.iter().flatten() {
+            let named = record
+                .get("license")
+                .and_then(Value::as_str)
+                .is_some_and(|l| !l.is_empty());
+            if !closure.members.contains_key(path) || !named {
+                return Err(PackageError::closure(
+                    "actor_closure_schema",
+                    format!("actors/closure.json licenses[{path:?}] names no member or no licence"),
+                ));
+            }
+        }
         if !closure.members.contains_key(ACTOR_CATALOG_PATH) {
             return Err(PackageError::closure(
                 "actor_closure_schema",
@@ -198,8 +217,9 @@ impl ActorClosure {
     /// `{<catalogId>: {model: {glbPath}, animations?: {<motion>: {glbPath}}}}`,
     /// optionally under a `models`/`entries`/`vehicles` wrapper). Always
     /// includes `catalog-models.json` itself. An id the table does not list
-    /// is procedural and reaches nothing; a path that is not a closure member
-    /// is an error.
+    /// is procedural and reaches nothing; an id under the table's `withheld`
+    /// key is an error (`actor_model_withheld`), as is a path that is not a
+    /// closure member.
     pub fn reachable(
         &self,
         catalog_models: &[u8],
@@ -230,7 +250,16 @@ impl ActorClosure {
             out.insert(path.clone());
             Ok(())
         };
+        // Models the closure lists as `withheld` (no redistribution licence;
+        // hosted-only) are refused by name, never treated as procedural.
+        let withheld = root.get("withheld").and_then(Value::as_object);
         for id in catalog_ids {
+            if withheld.is_some_and(|w| w.contains_key(id)) {
+                return Err(PackageError::closure(
+                    "actor_model_withheld",
+                    format!("{ACTOR_CATALOG_PATH}: {id} is withheld from this closure (native_actor_model_withheld); a package that binds it cannot be full"),
+                ));
+            }
             let Some(entry) = table.get(id) else { continue };
             let Value::Object(entry) = entry else {
                 return Err(bad(format!("entry {id} is not an object")));
@@ -278,4 +307,56 @@ pub fn blob_index(map: &MapClosure, actors: &ActorClosure) -> Result<BTreeMap<St
         }
     }
     Ok(index)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn withheld_models_are_refused_by_name() {
+        let sha = "a".repeat(64);
+        let closure = ActorClosure::parse(
+            format!(
+                r#"{{"schema":"simforge.actor-assets-closure/v1","members":{{"catalog-models.json":{{"bytes":1,"sha256":"{sha}"}},"models/car/model.glb":{{"bytes":1,"sha256":"{sha}"}}}}}}"#
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+        let catalog = br#"{"vehicle.car":{"model":{"glbPath":"models/car/model.glb"}},"withheld":{"animal.cat":{"reason":"licence unconfirmed"}}}"#;
+        let ok = closure
+            .reachable(catalog, &["vehicle.car".to_owned()])
+            .unwrap();
+        assert!(ok.contains("models/car/model.glb"));
+        let err = closure
+            .reachable(
+                catalog,
+                &["animal.cat".to_owned(), "vehicle.car".to_owned()],
+            )
+            .unwrap_err();
+        assert_eq!(err.rule, "actor_model_withheld");
+        assert!(err.message.contains("animal.cat"));
+    }
+
+    #[test]
+    fn licence_tables_are_accepted_and_checked() {
+        let sha = "a".repeat(64);
+        let doc = |licenses: &str| {
+            format!(
+                r#"{{"schema":"simforge.actor-assets-closure/v1","members":{{"catalog-models.json":{{"bytes":1,"sha256":"{sha}"}}}},"licenses":{licenses}}}"#
+            )
+        };
+        let ok = ActorClosure::parse(
+            doc(r#"{"catalog-models.json":{"license":"Apache-2.0","attribution":"SimForge, Inc."}}"#).as_bytes(),
+        )
+        .unwrap();
+        assert!(ok.licenses.is_some());
+        for bad in [
+            r#"{"models/x.glb":{"license":"CC-BY-4.0"}}"#,
+            r#"{"catalog-models.json":{"attribution":"no licence"}}"#,
+        ] {
+            let err = ActorClosure::parse(doc(bad).as_bytes()).unwrap_err();
+            assert_eq!(err.rule, "actor_closure_schema");
+        }
+    }
 }

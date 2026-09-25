@@ -130,6 +130,25 @@ impl Parts {
     }
 }
 
+/// A container of a case's members with its (manifest-valid) manifest,
+/// skipping the content checks the builder would run.
+fn unchecked(case: &Case) -> Vec<u8> {
+    let built = case.build();
+    let mut b = simforge_package::PackageBuilder::new(built.draft).unwrap();
+    for (p, bytes) in &built.members {
+        b.member(p, bytes.clone()).unwrap();
+    }
+    let m = b.manifest().unwrap();
+    let members: Vec<(String, Vec<u8>)> = simforge_package::container_order(&m)
+        .into_iter()
+        .map(|p| {
+            let bytes = built.members[&p].clone();
+            (p, bytes)
+        })
+        .collect();
+    assemble(&m.to_canonical_bytes().unwrap(), None, &members, &[])
+}
+
 fn timeline_key(identity: &Value) -> String {
     sha(&canonical_bytes(&json!({
         "schema": "simforge.render-timeline-key/v1",
@@ -172,6 +191,18 @@ fn generate() -> Vec<Fixture> {
             bytes: minimal,
             expect: Expect::Valid(Form::Thin),
             note: "no receipt, no xosc: only required members",
+        },
+        Fixture {
+            file: "valid/thin-v5-ground.scenario.zip".into(),
+            bytes: Case::v5("ground", true).builder(false).to_bytes().unwrap().1,
+            expect: Expect::Valid(Form::Thin),
+            note: "trace v5 on a map with a ground surface: groundDigest is the ground mesh sha256",
+        },
+        Fixture {
+            file: "valid/thin-v5-no-ground.scenario.zip".into(),
+            bytes: Case::v5("no-ground", false).builder(false).to_bytes().unwrap().1,
+            expect: Expect::Valid(Form::Thin),
+            note: "trace v5 on a map without a ground surface: groundDigest null",
         },
     ];
     let mut bad =
@@ -730,6 +761,48 @@ fn generate() -> Vec<Fixture> {
         "the actor closure has no catalog-models.json",
     );
 
+    // Ground (spec section 8.1, rule 10), on trace v5 sources.
+    bad(
+        "ground-required",
+        unchecked(&Case::v5("no-ground", true)),
+        I,
+        "ground_digest",
+        "the map has a ground surface; the trace v5 was simulated without it (groundDigest null)",
+    );
+    bad(
+        "ground-unlisted",
+        unchecked(&Case::v5("ground", false)),
+        I,
+        "ground_digest",
+        "groundDigest names a ground mesh the map closure does not list",
+    );
+    bad(
+        "ground-mismatch",
+        {
+            let mut c = Case::v5("ground", true);
+            let mesh = c
+                .map_files
+                .get_mut(simforge_package::closure::GROUND_MEMBER)
+                .unwrap();
+            mesh[0] ^= 1;
+            unchecked(&c)
+        },
+        I,
+        "ground_digest",
+        "the closure's ground mesh is not the one the trace ran on",
+    );
+    bad(
+        "trace-ground",
+        {
+            let mut c = Case::v5("ground", false);
+            c.ground_digest = None;
+            unchecked(&c)
+        },
+        I,
+        "trace_ground",
+        "simulation.groundDigest null for a trace that ran on a ground surface",
+    );
+
     // Blob and form rules.
     let actors = synthetic_actors();
     let blob = |bytes: &[u8]| (blob_path(&sha(bytes)), bytes.to_vec());
@@ -910,4 +983,57 @@ fn the_shared_canonical_json_vector_is_the_thin_manifest() {
         thin.manifest_bytes.as_slice()
     );
     assert_eq!(v["sha256"].as_str().unwrap(), thin.package_id);
+}
+
+/// Simulate the two committed trace v5 sources (golden input `rfs-stop-and-go`
+/// on the committed Richmond closure, with and without its ground surface)
+/// and derive their timelines. Committed, so engine changes do not churn the
+/// package fixtures: `cargo test -p simforge-package --test fixtures -- --ignored`.
+#[test]
+#[ignore = "regenerates fixtures/scenario-package/sources (trace v5 inputs)"]
+fn generate_v5_sources() {
+    use simforge_core::engine::{GroundContext, RunOptions, Simulation};
+    use simforge_core::map::{LaneGraph, TopologyIndex};
+    use simforge_core::trace::timeline::{build_render_timeline, HeightField};
+    use std::sync::Arc;
+    let map = "golden-traces/maps/richmond-field-station";
+    let topology_bytes = gunzip(&read(&format!("{map}/topology-index.json.gz")));
+    let topology = TopologyIndex::decode(&topology_bytes).unwrap();
+    let graph = Arc::new(LaneGraph::new(topology.clone()));
+    let xodr = gunzip(&read(&format!("{map}/map.xodr.gz")));
+    let mesh = read(&format!("{map}/derived/ground/ground-mesh.bin"));
+    let ground = Arc::new(GroundContext::from_bytes(&mesh, Some((&xodr, &topology))).unwrap());
+    assert_eq!(
+        ground.digest(),
+        sha(&mesh),
+        "groundDigest is the mesh sha256"
+    );
+    let input = simforge_core::parse_scenario_input_bytes(&read(
+        "golden-traces/inputs/rfs-stop-and-go.input.json",
+    ))
+    .unwrap();
+    let out = dir().join("sources");
+    std::fs::create_dir_all(&out).unwrap();
+    for (name, with_ground) in [("ground", true), ("no-ground", false)] {
+        let mut options = RunOptions::new(Arc::clone(&graph));
+        options.ground = with_ground.then(|| Arc::clone(&ground));
+        let trace = Simulation::new(input.clone().normalized(), options)
+            .unwrap()
+            .run()
+            .unwrap()
+            .trace;
+        let height = if with_ground {
+            HeightField::ground(Arc::clone(&ground))
+        } else {
+            HeightField::from_xodr(&xodr, &topology_bytes).unwrap()
+        };
+        let timeline = build_render_timeline(&trace, &height, None).unwrap();
+        let json = serde_json::to_vec(&trace).unwrap();
+        std::fs::write(out.join(format!("v5-{name}.trace.json.gz")), gzip(&json)).unwrap();
+        std::fs::write(
+            out.join(format!("v5-{name}.timeline.json")),
+            timeline.to_canonical_json().unwrap(),
+        )
+        .unwrap();
+    }
 }

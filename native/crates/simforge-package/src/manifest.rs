@@ -510,19 +510,16 @@ impl Manifest {
                 64,
             )?;
         }
+        // From trace format 5 the digest is present exactly when the
+        // simulation ran on a ground surface; whether the map has one is
+        // checked against map/closure.json (check.rs, rule ground_digest).
         match (&sim.ground_digest, sim.trace_format >= 5) {
             (Some(d), true) => digest("simulation.groundDigest", d)?,
-            (None, false) => {}
+            (None, _) => {}
             (Some(_), false) => {
                 return bad(
                     "ground_digest",
                     "simulation.groundDigest must be null before trace format 5".to_owned(),
-                )
-            }
-            (None, true) => {
-                return bad(
-                    "ground_digest",
-                    "simulation.groundDigest is required from trace format 5".to_owned(),
                 )
             }
         }

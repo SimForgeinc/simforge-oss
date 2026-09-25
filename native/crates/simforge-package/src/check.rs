@@ -26,7 +26,9 @@ use simforge_core::hash::{canonical_json_of, content_hash_of};
 use simforge_core::trace::timeline::{RenderTimeline, SAMPLER_VERSION, TIMELINE_KEY_SCHEMA};
 use simforge_core::trace::SimTrace;
 
-use crate::closure::{blob_index, ActorClosure, MapClosure, MapMemberRole, ACTOR_CATALOG_PATH};
+use crate::closure::{
+    blob_index, ActorClosure, MapClosure, MapMemberRole, ACTOR_CATALOG_PATH, GROUND_MEMBER,
+};
 use crate::error::{ErrorCode, PackageError, Result};
 use crate::manifest::{parse_canonical, BlobCount, Manifest, RESOLUTION_SCHEMA};
 use crate::names::blob_path;
@@ -183,6 +185,16 @@ pub(crate) fn check_contents(input: &ContentInput<'_>) -> Result<ContentReport> 
             format!(
                 "the trace inputHash {} is not simulation.resolvedInputDigest {}",
                 trace.header.input_hash, sim.resolved_input_digest
+            ),
+        ));
+    }
+    if trace.header.ground_digest != sim.ground_digest {
+        return Err(mismatch(
+            "trace_ground",
+            path,
+            format!(
+                "the trace ran on ground {:?}, simulation.groundDigest is {:?}",
+                trace.header.ground_digest, sim.ground_digest
             ),
         ));
     }
@@ -352,6 +364,36 @@ pub(crate) fn check_contents(input: &ContentInput<'_>) -> Result<ContentReport> 
                 "map/closure.json's map.xodr is not map.xodrSha256".to_owned(),
             ))
         }
+    }
+    // Ground (section 8.1, rule 10): required and equal when the map has a
+    // ground surface (trace format 5 on); null when it has none.
+    match (map.member(GROUND_MEMBER), &sim.ground_digest) {
+        (Some(g), Some(d)) if &g.sha256 == d => {}
+        (Some(g), Some(d)) => {
+            return Err(mismatch(
+                "ground_digest",
+                path,
+                format!("simulation.groundDigest {d} is not the map's {GROUND_MEMBER} ({})", g.sha256),
+            ))
+        }
+        (Some(g), None) if sim.trace_format >= 5 => {
+            return Err(mismatch(
+                "ground_digest",
+                path,
+                format!(
+                    "the map has a ground surface ({GROUND_MEMBER} {}) but the trace (format {}) was not simulated on it (groundDigest null)",
+                    g.sha256, sim.trace_format
+                ),
+            ))
+        }
+        (None, Some(d)) => {
+            return Err(mismatch(
+                "ground_digest",
+                path,
+                format!("simulation.groundDigest {d} names a ground surface map/closure.json does not list"),
+            ))
+        }
+        _ => {}
     }
     let pin = map.pin_closure_sha256();
     if pin != m.map.pin_closure_sha256 {

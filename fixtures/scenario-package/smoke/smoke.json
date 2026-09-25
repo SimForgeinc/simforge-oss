@@ -3,8 +3,8 @@
     "catalogIds": [
       "vehicle.ambulance"
     ],
-    "closureDigest": "218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f",
-    "closureUrl": "https://da3tufozhdsvl.cloudfront.net/actor-assets/closures/218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f.json"
+    "closureDigest": "793ec86ceda7734f1f5f7c0b260a396c11c970a471ab4418987e4d531f33daa4",
+    "closureUrl": "https://da3tufozhdsvl.cloudfront.net/actor-assets/closures/793ec86ceda7734f1f5f7c0b260a396c11c970a471ab4418987e4d531f33daa4.json"
   },
   "form": "thin",
   "map": {
@@ -16,7 +16,7 @@
     "registryVersion": 11
   },
   "package": "richmond-public.scenario.zip",
-  "packageId": "f4f0e045cc192c66b0c06b4872c909be242be1fdfc27c7cdadc0fe518732726e",
+  "packageId": "1e2b5146613adf4fc22c2f0b23b7913c9afd152021226a20b629988136c93159",
   "placeholders": [
     "document.json (archive-corpus rc73-doc-child-reveal, not this trace's scenario)",
     "simulation/resolution.json.gz",

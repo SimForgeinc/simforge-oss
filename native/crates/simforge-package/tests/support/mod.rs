@@ -14,7 +14,7 @@ use flate2::Compression;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use simforge_core::hash::canonical_json;
-use simforge_package::closure::is_simulation_member;
+use simforge_package::closure::{is_simulation_member, GROUND_MEMBER};
 use simforge_package::zip::{Method, ZipWriter};
 use simforge_package::{PackageBuilder, ReceiptInput, Role};
 
@@ -225,6 +225,8 @@ pub struct Case {
     pub xosc: Option<Vec<u8>>,
     pub actors_closure: Vec<u8>,
     pub actor_blobs: BTreeMap<String, Vec<u8>>,
+    /// `header.groundDigest` of a trace v5 simulated on the map's ground surface.
+    pub ground_digest: Option<String>,
 }
 
 pub struct Built {
@@ -274,7 +276,37 @@ impl Case {
             xosc: None,
             actors_closure: actors.closure,
             actor_blobs: actors.blobs,
+            ground_digest: None,
         }
+    }
+
+    /// A trace v5 (`fixtures/scenario-package/sources/v5-<name>.*`, simulated
+    /// from the golden input `rfs-stop-and-go` on the committed Richmond
+    /// closure, with or without its ground surface) on a map closure that
+    /// lists the ground mesh when `map_has_ground`.
+    pub fn v5(name: &str, map_has_ground: bool) -> Case {
+        let src = |f: &str| read(&format!("scenario-package/sources/v5-{name}.{f}"));
+        let trace_gz = src("trace.json.gz");
+        let trace: Value = serde_json::from_slice(&gunzip(&trace_gz)).unwrap();
+        let header = &trace["header"];
+        let parsed = simforge_core::trace::SimTrace::from_json_slice(&gunzip(&trace_gz)).unwrap();
+        let mut case = Case::fixture();
+        let rich = richmond_files();
+        if map_has_ground {
+            case.map_files
+                .insert(GROUND_MEMBER.to_owned(), rich[GROUND_MEMBER].clone());
+        }
+        case.title = format!("Fixture: trace v5 {name}");
+        case.trace_sha256 = parsed.digest().unwrap();
+        case.trace_format = header["traceVersion"].as_u64().unwrap() as u32;
+        case.input_hash = header["inputHash"].as_str().unwrap().to_owned();
+        case.engine_sem_ver = header["engineVersion"].as_str().unwrap().to_owned();
+        case.release = "0.1.0-rc.76".to_owned();
+        case.ground_digest = header["groundDigest"].as_str().map(str::to_owned);
+        case.trace_gz = trace_gz;
+        case.timeline = src("timeline.json");
+        case.xosc = None;
+        case
     }
 
     /// The committed fixture scenario: `rc73-engine090-richmond-small` with a
@@ -388,7 +420,7 @@ impl Case {
                 "trafficStepKey": null,
                 "trafficSha256": null,
                 "sumo": null,
-                "groundDigest": null,
+                "groundDigest": self.ground_digest,
                 "producerKind": "runner",
                 "simulatedAt": "2026-08-09T00:00:00Z"
             },
@@ -414,7 +446,7 @@ impl Case {
                 "pinClosureSha256": pin_closure(&self.map_files),
                 "browserClosureSha256": sha(&map_closure_bytes),
                 "heightSourceDigest": id["heightFieldDigest"],
-                "groundDigest": null,
+                "groundDigest": self.ground_digest,
                 "closure": {
                     "memberCount": self.map_files.len(),
                     "bytes": self.map_files.values().map(Vec::len).sum::<usize>()

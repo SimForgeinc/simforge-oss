@@ -23,6 +23,20 @@
       "valid": true
     },
     {
+      "file": "valid/thin-v5-ground.scenario.zip",
+      "form": "thin",
+      "note": "trace v5 on a map with a ground surface: groundDigest is the ground mesh sha256",
+      "packageId": "b22a98a0d50c9f523553401d246b31bf9b38064a8c45174d26ce1b4614046422",
+      "valid": true
+    },
+    {
+      "file": "valid/thin-v5-no-ground.scenario.zip",
+      "form": "thin",
+      "note": "trace v5 on a map without a ground surface: groundDigest null",
+      "packageId": "c6ba16e09b373fd84394fc0276d4e3b2affdc72cb1b3fc4a8bd90b784f1b7ff0",
+      "valid": true
+    },
+    {
       "code": "package_container_invalid",
       "file": "invalid/not-a-zip.scenario.zip",
       "note": "no end-of-central-directory record",
@@ -391,6 +405,34 @@
       "file": "invalid/actor-closure-no-catalog.scenario.zip",
       "note": "the actor closure has no catalog-models.json",
       "rule": "actor_closure_schema",
+      "valid": false
+    },
+    {
+      "code": "package_identity_mismatch",
+      "file": "invalid/ground-required.scenario.zip",
+      "note": "the map has a ground surface; the trace v5 was simulated without it (groundDigest null)",
+      "rule": "ground_digest",
+      "valid": false
+    },
+    {
+      "code": "package_identity_mismatch",
+      "file": "invalid/ground-unlisted.scenario.zip",
+      "note": "groundDigest names a ground mesh the map closure does not list",
+      "rule": "ground_digest",
+      "valid": false
+    },
+    {
+      "code": "package_identity_mismatch",
+      "file": "invalid/ground-mismatch.scenario.zip",
+      "note": "the closure's ground mesh is not the one the trace ran on",
+      "rule": "ground_digest",
+      "valid": false
+    },
+    {
+      "code": "package_identity_mismatch",
+      "file": "invalid/trace-ground.scenario.zip",
+      "note": "simulation.groundDigest null for a trace that ran on a ground surface",
+      "rule": "trace_ground",
       "valid": false
     },
     {
