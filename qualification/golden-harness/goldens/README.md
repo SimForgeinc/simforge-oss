@@ -63,7 +63,7 @@ riders and `simforge render parity` reads the timelines. The job writes
 ## Re-record
 
 ```sh
-cargo build --release -p simforge-render --manifest-path renderer/Cargo.toml
+cargo build --release -p simforge-render
 SIMFORGE_CORPUS_RICHMOND=<richmond corpus root> SIMFORGE_CORPUS_YALE=<yale corpus root> \
 SCEN_SENSOR_CORPUS_WSB1=<WSB1 decoded yale corpus> SCEN_SENSOR_CORPUS=<spike corpus> \
   node qualification/golden-harness/golden.mjs plan all

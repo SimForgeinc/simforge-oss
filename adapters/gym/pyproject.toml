@@ -38,6 +38,8 @@ requires = ["maturin>=1.7,<2.0"]
 build-backend = "maturin"
 
 [tool.maturin]
+# Fat-LTO release profile of the SDK workspace (Cargo.toml [profile.wheel]).
+profile = "wheel"
 # The extension crate lives in the native workspace; maturin builds it into
 # `simforge_oss_gym/_native.abi3.so` and ships the pure-Python package next
 # to it. There is no pure-Python fallback: an install without the extension is

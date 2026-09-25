@@ -24,7 +24,7 @@
  *
  * Scene overrides for red-path demos: --set job.scene.lighting.sun_elev_deg=20
  * Renderer binary: --bin <path>, else GOLDEN_RENDER_BIN, else
- * renderer/target/release/simforge-render.
+ * target/release/simforge-render.
  *
  * Exit codes: 0 ok · 2 pass-hash drift · 3 frame-time budget exceeded ·
  * 4 nondeterministic on record (two runs differ) · 5 no golden for this GPU ·
@@ -351,9 +351,9 @@ function checkParity(outDir, scene) {
   if (!scene.parity) return undefined;
   // The Rust sampler's parity grader (simforge-core example `render-parity`;
   // ci-local.sh builds it). Stopgap until the `simforge` CLI drives the goldens.
-  const built = path.join(repoRoot, 'native/target/release/examples/render-parity');
+  const built = path.join(repoRoot, 'target/release/examples/render-parity');
   const cmd = (process.env.GOLDEN_PARITY_CMD ?? (fs.existsSync(built) ? built
-    : `cargo run --quiet --release --manifest-path ${path.join(repoRoot, 'native/Cargo.toml')} -p simforge-core --example render-parity --`)).split(' ');
+    : `cargo run --quiet --release --manifest-path ${path.join(repoRoot, 'Cargo.toml')} -p simforge-core --example render-parity --`)).split(' ');
   const observed = path.join(outDir, scene.parity.observed ?? 'observed-frames.jsonl');
   if (!fs.existsSync(observed)) {
     throw new GateFailure(1, `parity: the job wrote no ${path.basename(observed)} (job \`observe\` must write the observed actor transforms of every tick)`);
@@ -414,7 +414,7 @@ function cargoVersions() {
   // wgpu + bevy versions from the built crate's Cargo.lock.
   let lock = '';
   for (const cand of [
-    path.join(repoRoot, 'renderer/Cargo.lock'),
+    path.join(repoRoot, 'Cargo.lock'),
   ]) {
     if (fs.existsSync(cand)) { lock = fs.readFileSync(cand, 'utf8'); break; }
   }
@@ -432,10 +432,10 @@ function resolveBinary(args) {
   const candidates = [
     args.bin,
     process.env.GOLDEN_RENDER_BIN,
-    path.join(repoRoot, 'renderer/target/release/simforge-render'),
+    path.join(repoRoot, 'target/release/simforge-render'),
   ].filter(Boolean);
   const bin = candidates.find((p) => fs.existsSync(p));
-  if (!bin) fail(1, `no renderer binary found (tried: ${candidates.join(', ')}) — build it first (cargo build --release -p simforge-render --manifest-path renderer/Cargo.toml)`);
+  if (!bin) fail(1, `no renderer binary found (tried: ${candidates.join(', ')}) — build it first (cargo build --release -p simforge-render)`);
   return bin;
 }
 
@@ -704,8 +704,8 @@ function cmdPlan(args) {
   const sceneIds = all
     ? fs.readdirSync(SCENES_DIR).filter((f) => f.endsWith('.json')).map((f) => f.replace(/\.json$/, ''))
     : [args._[1]];
-  const binPath = [args.bin, process.env.GOLDEN_RENDER_BIN, path.join(repoRoot, 'renderer/target/release/simforge-render')]
-    .filter(Boolean).find((p) => fs.existsSync(p)) ?? path.join(repoRoot, 'renderer/target/release/simforge-render');
+  const binPath = [args.bin, process.env.GOLDEN_RENDER_BIN, path.join(repoRoot, 'target/release/simforge-render')]
+    .filter(Boolean).find((p) => fs.existsSync(p)) ?? path.join(repoRoot, 'target/release/simforge-render');
   let missingCorpus = 0;
   for (const id of sceneIds) {
     const scene = applyOverrides(loadScene(id), args.overrides);

@@ -15,8 +15,8 @@ services/*
 scripts/*
 !scripts/bevy-campaign-parity.py
 !native/
-!native/Cargo.toml
-!native/Cargo.lock
+!Cargo.toml
+!Cargo.lock
 !native/crates/
 !native/crates/**
 !renderer/
@@ -35,8 +35,7 @@ adapters/*
 # Host build outputs and checkout-local derivatives never enter the image
 # context: every native artifact is rebuilt from source inside the build, and
 # the sky plates arrive through the explicit `sky` build context.
-native/target
-renderer/target
+target
 renderer/out
 renderer/test-data
 renderer/assets-src

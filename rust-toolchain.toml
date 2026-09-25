@@ -6,7 +6,7 @@
 # compiler upgrade should not move a trace, but "should not" is what the
 # golden-trace corpus and the native-vs-WASM identity test are for: upgrade this
 # pin in its own change, with those two suites green (docs/engineering/engine-semver.md).
-# `rust-version` in native/Cargo.toml stays the minimum supported version.
+# `rust-version` in Cargo.toml stays the minimum supported version.
 [toolchain]
 channel = "1.98.0"
 components = ["rustfmt", "clippy"]

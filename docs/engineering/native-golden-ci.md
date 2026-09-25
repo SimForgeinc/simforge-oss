@@ -37,7 +37,7 @@ Differences are at most 1 LSB in a handful of pixels. They survive with every sc
 | `.github/workflows/native-golden.yml` | self-hosted runner workflow (lavapipe; the recorded CPU model) |
 
 Renderer binary resolution order: `--bin` flag → `scene.binary` →
-`renderer/target/release/simforge-render` (the one renderer binary,
+`target/release/simforge-render` (the one renderer binary,
 `cargo build --release -p simforge-render`). Every scene is turned into a
 `simforge.render-job/v2` job file (scene spec, optional `sceneState`, one
 camera per `cameras`, `ticks`, `passes`) and rendered with
@@ -83,7 +83,7 @@ compatible. Additions:
   "profile": "sensor",                    // render profile; only sensor is goldenable today
   "rendererPath": {
     "engine": "native-bevy",              // was chrome/three.js in WSB4 manifests
-    "file": "renderer/target/release/simforge-render",
+    "file": "target/release/simforge-render",
     "sha256": "…",                        // binary pin
     "invocation": { "args": ["…"] },
     "versions": { "bevy": "0.19.1", "wgpu": "29.0.4", "rustc": "…", "backend": "vulkan" }
@@ -186,7 +186,7 @@ Invalidation triggers — any of these means the golden must be re-recorded:
 Re-record procedure:
 
 ```sh
-cargo build --release -p simforge-render --manifest-path renderer/Cargo.toml
+cargo build --release -p simforge-render
 SIMFORGE_SENSOR_CORPUS=<corpus-root> node qualification/golden-harness/golden.mjs record yale-frame0
 node qualification/golden-harness/golden.mjs verify all
 ```

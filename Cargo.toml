@@ -1,0 +1,74 @@
+# The SimForge SDK: one Cargo workspace. The engine (native/crates), the renderer
+# (renderer/*, with vendored Bevy patches), the `simforge` CLI and the PyO3 wheel
+# crates share one lockfile, so a dependency has one version everywhere.
+[workspace]
+resolver = "2"
+members = [
+    "native/crates/*",
+    "renderer/render-core",
+    "renderer/sensors",
+    "renderer/service",
+    "renderer/ffi",
+    "renderer/viewport",
+]
+exclude = [
+    "renderer/vendor/bevy_camera",
+    "renderer/vendor/bevy_gltf",
+    "renderer/vendor/bevy_mesh",
+    "renderer/vendor/bevy_pbr",
+    "renderer/vendor/bevy_render",
+    "catalog/vehicles-carla/tools/bevy-smoke",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Apache-2.0"
+
+# Shared dependency table. Crates opt in with `workspace = true`; crate-local
+# dependencies (clap, libc, napi, pyo3, ...) stay in the owning manifest.
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+thiserror = "2"
+sha2 = "0.10"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+rmp-serde = "1"
+
+# Vendored Bevy 0.19.1 crates, each carrying a patch intended for upstream;
+# renderer/vendor/*.patch and the headers in vendor/*/src/lib.rs list the
+# deviations (native KHR_texture_basisu and UV channels 2/3 in bevy_gltf,
+# bevy_mesh and bevy_pbr; the per-view environment probe, canopy sky occlusion
+# and multi-view atmosphere in bevy_pbr; deterministic draw order and parallel
+# encoder finishing in bevy_render; the directional-cascade LOD lookup).
+# Every other Bevy crate stays pinned to crates.io 0.19.1.
+[patch.crates-io]
+bevy_camera = { path = "renderer/vendor/bevy_camera" }
+bevy_gltf = { path = "renderer/vendor/bevy_gltf" }
+bevy_mesh = { path = "renderer/vendor/bevy_mesh" }
+bevy_pbr = { path = "renderer/vendor/bevy_pbr" }
+bevy_render = { path = "renderer/vendor/bevy_render" }
+
+[profile.dev]
+opt-level = 1
+debug = false
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+codegen-units = 1
+
+# The Python wheels (maturin `profile = "wheel"`): fat LTO, as the engine's
+# release builds used before the workspaces merged.
+[profile.wheel]
+inherits = "release"
+lto = "fat"
+
+# Optimised build with line tables for Nsight Systems / perf sampling and a
+# faster link than `release` (codegen-units=1). Not a shipping profile.
+[profile.profiling]
+inherits = "release"
+codegen-units = 16
+debug = "line-tables-only"

@@ -31,7 +31,7 @@ The test regenerates everything in memory and fails when a committed byte
 differs, so the writer stays deterministic. After an intended change:
 
 ```sh
-SIMFORGE_UPDATE_PACKAGE_FIXTURES=1 cargo test --manifest-path native/Cargo.toml -p simforge-package --test fixtures
+SIMFORGE_UPDATE_PACKAGE_FIXTURES=1 cargo test -p simforge-package --test fixtures
 ```
 
 `fixtures/canonical-json/vectors.json` carries the thin fixture's manifest
@@ -70,5 +70,5 @@ canonical), its members `map/map.xodr` and `map/topology-index.json.gz`,
 `coordinate-system-sha256.txt` in a directory, then
 
 ```sh
-SIMFORGE_SMOKE_INPUTS=<dir> cargo test --manifest-path native/Cargo.toml -p simforge-package --test smoke -- --ignored
+SIMFORGE_SMOKE_INPUTS=<dir> cargo test -p simforge-package --test smoke -- --ignored
 ```
