@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/corridor/merge-gap-collapse.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "e23f59b86521b7445db1431eab3cd1a0bc94f6df70eeecf5ba7c55574a7e4a9b"
+}

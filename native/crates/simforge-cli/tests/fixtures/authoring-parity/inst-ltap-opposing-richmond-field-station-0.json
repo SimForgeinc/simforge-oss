@@ -1,0 +1,18 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/ltap-opposing.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "3dd7bb59d80de7ee",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 0,
+ "files": {
+  "instance.json": "092fe654af8fed5ad7940f2dbc3e867f4fb99c91c1a54a28253440d9f70c3b8b"
+ },
+ "stderr": null,
+ "stdoutSha256": "2c35e78eeae0474c8a6cc96bf067d3896b9aa6efca5db20aa8aa57fd28bb8a9a"
+}

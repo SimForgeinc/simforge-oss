@@ -1,0 +1,18 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/obstacle/disabled-vehicle.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "1eaad1b78f78f504",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 0,
+ "files": {
+  "instance.json": "266a5bb957063c617a61a1fc1db3db6fbe8f5ebdd335d631674dfd8ff6897d85"
+ },
+ "stderr": null,
+ "stdoutSha256": "de6568aab739f39c1fa1cc6a424d6324f2baf86f896321d6448b9b236afaf807"
+}

@@ -1,0 +1,18 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/cpnco-parked-row.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "02549fc1d1df425a",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 0,
+ "files": {
+  "instance.json": "69355063b702f79685052dc4fbeecc641d7255bf9118cb659c3279b1ccde3051"
+ },
+ "stderr": null,
+ "stdoutSha256": "7a60debab85df6812c42e4483f631c5d7a247445d53a2ae7b3ae7ff536095ae6"
+}

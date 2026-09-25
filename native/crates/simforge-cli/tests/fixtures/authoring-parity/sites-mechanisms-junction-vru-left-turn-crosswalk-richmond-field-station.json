@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/junction-vru/left-turn-crosswalk.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "7edf02d7dbee3d492f5e28a3a3deef459b30d66471b8ebaf145dbc2b237304fb"
+}

@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/remaining/lane-drop-late-merge.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "493f157adbcabe0ddaccc98e09bf54624960af297e19a69db8104dbfd8476f16"
+}

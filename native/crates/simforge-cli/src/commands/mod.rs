@@ -7,12 +7,15 @@ use serde_json::json;
 use crate::contract::{CliError, CmdResult, Ctx};
 
 pub mod assets;
+mod authoring_support;
 pub mod doctor;
 pub mod env;
+pub mod instantiate;
 pub mod maps;
 pub mod package;
 pub mod render;
 pub mod simulate;
+pub mod sites;
 pub mod skills;
 pub mod timeline;
 
@@ -66,6 +69,11 @@ pub enum Command {
     /// The agent skills bundled with this binary.
     #[command(subcommand)]
     Skills(skills::SkillsCommand),
+    /// Concrete sites for a template's anchor on installed maps.
+    #[command(subcommand)]
+    Sites(sites::SitesCommand),
+    /// Template x site x draw -> one concrete scenario instance.
+    Instantiate(instantiate::InstantiateArgs),
 }
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
@@ -79,6 +87,8 @@ pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
         Command::Env(cmd) => env::run(cmd, ctx),
         Command::Package(cmd) => package::run(cmd, ctx),
         Command::Skills(cmd) => skills::run(cmd, ctx),
+        Command::Sites(cmd) => sites::run(cmd, ctx),
+        Command::Instantiate(args) => instantiate::run(args, ctx),
     }
 }
 

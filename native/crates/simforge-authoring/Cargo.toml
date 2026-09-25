@@ -1,0 +1,24 @@
+[package]
+name = "simforge-authoring"
+description = "SimForge scenario authoring: site matching, instantiation, variations, batches, the scenario catalog and the location query, over installed maps. The logic behind the `simforge` CLI's authoring commands."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "simforge_authoring"
+
+[dependencies]
+simforge-core = { path = "../simforge-core" }
+simforge-compiler = { path = "../simforge-compiler" }
+simforge-bindings-common = { path = "../simforge-bindings-common" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+flate2 = { workspace = true }
+# Schema failures name the field that failed (`roles.0.pose.s`), not a line/column.
+serde_path_to_error = "0.1"
+
+[dev-dependencies]
+tempfile = "3"

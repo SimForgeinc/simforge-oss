@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/edge-cases/10-officer-flashing-red-junction/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "cde6a9276557185f1306e5e7dad60cbb7b14239642a31a2f46e9254002357ff3"
+}

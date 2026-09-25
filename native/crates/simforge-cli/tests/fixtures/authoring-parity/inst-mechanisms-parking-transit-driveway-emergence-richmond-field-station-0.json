@@ -1,0 +1,18 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/parking-transit/driveway-emergence.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "0179b2ae79016c6c",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 2,
+ "files": {
+  "instance.json": "dde8d5854ea2c41b53a480e51407e871a8e7851f83bd3fa7296863f724b42fcc"
+ },
+ "stderr": null,
+ "stdoutSha256": "3c25c1eab0db40b10296c8e6949ad4f3ac1adbcf1d6c1f69a2659aa947b1d6a6"
+}

@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/parking-transit/vehicle-pulls-out.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "06bb85c5d7dcfcd3",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "role_unbound",
+  "detail": {
+   "notes": [
+    "this map index carries no parking-zone layer"
+   ],
+   "status": "failed"
+  },
+  "path": "roles.departing-vehicle",
+  "reason": "required role \"departing-vehicle\" did not bind at this site"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

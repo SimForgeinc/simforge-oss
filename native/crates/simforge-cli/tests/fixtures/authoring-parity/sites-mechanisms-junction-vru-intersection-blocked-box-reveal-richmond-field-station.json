@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/junction-vru/intersection-blocked-box-reveal.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "85590c67f531d77850a30029ae4f5975e7316b8136b8fcff7459b28cbdc123ec"
+}

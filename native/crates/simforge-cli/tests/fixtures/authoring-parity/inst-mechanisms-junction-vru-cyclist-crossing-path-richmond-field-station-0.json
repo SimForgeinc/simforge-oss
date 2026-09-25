@@ -1,0 +1,18 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/junction-vru/cyclist-crossing-path.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "14eadcb8129b313b",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 0,
+ "files": {
+  "instance.json": "854b9c774b49fdcacead42f340e0a7d8c3d35acf716a27db1cbdfaf8f4f2b9f8"
+ },
+ "stderr": null,
+ "stdoutSha256": "42e4c710999308ca552e2d98ae59d131ce0d214cb847a3b5e871beae5156cf8d"
+}

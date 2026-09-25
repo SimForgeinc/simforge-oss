@@ -1,0 +1,18 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/corridor/lead-hard-brake.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "0f851b8eaf029864",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 0,
+ "files": {
+  "instance.json": "0aad489fd78cf5c9cfb9dfc0695f0901e67b6fab41adfa36bb092ac073e1d15a"
+ },
+ "stderr": null,
+ "stdoutSha256": "b12348d9ea2948375b231505ae8300e40842520e76973ee597f11998cf5f9040"
+}

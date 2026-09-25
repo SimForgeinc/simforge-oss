@@ -1,0 +1,18 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/remaining/cyclist-right-hook.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "026cb2c878ac7f50",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 0,
+ "files": {
+  "instance.json": "479cca1941252aa8aa1f788a3a3f65cc527f960d3e6ee3d4fb0f457f1ac83e1d"
+ },
+ "stderr": null,
+ "stdoutSha256": "2034c1b09d89a5d268e95c83e027592a3597774ca109ac8b81441e6a96cebae0"
+}

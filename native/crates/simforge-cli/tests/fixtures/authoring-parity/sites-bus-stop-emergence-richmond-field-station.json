@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/bus-stop-emergence.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "761e463b78fecde981e8b31a1187de8daf7ef7d086106eaa3249fca2de98c3a6"
+}
