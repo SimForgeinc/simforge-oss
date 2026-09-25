@@ -72,6 +72,13 @@ impl Js {
         }
     }
 
+    /// `delete object[key]`.
+    pub fn remove(&mut self, key: &str) {
+        if let Js::Object(entries) = self {
+            entries.retain(|(k, _)| k != key);
+        }
+    }
+
     /// A copy without `keys` (object rest `{a, b, ...rest}`).
     pub fn without(&self, keys: &[&str]) -> Js {
         match self {

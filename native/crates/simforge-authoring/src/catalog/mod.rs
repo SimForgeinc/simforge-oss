@@ -11,6 +11,7 @@
 //! verify under both. Values are built as [`js::Js`] objects in literal key
 //! order, and files are read back with the order-preserving parser.
 
+pub mod batch;
 pub mod closure;
 pub mod js;
 pub mod taxonomy;
