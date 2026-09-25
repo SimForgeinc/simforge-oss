@@ -15,11 +15,11 @@
  ],
  "exit": 0,
  "files": {
-  "b/batch-summary.json": "4a62ba31b118296c1ac745fdcca704ec6e6750c32e2dd6bee838c4d9c830e22a",
-  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.instance.json": "4c7afc2d2f4c7f9d3814763e011cf9632047a702079012b8b50af5ad441c52c0",
-  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.result.json": "c2a3da4841c2dd26dc22925bdd21bba455ac2e2c2e78fbd70a7ee3f965ff37e7",
-  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.trace.json.gz": "3bd775d09279621cc6d183b1ea6752b6bab0e7baf914d32668b5f2b46bde64a1"
+  "b/batch-summary.json": "a07d409aac73c073266064ae950c45db004ad5de790018bb016992d22367302c",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.instance.json": "24004c9721ca5b9e576afc2316c79bca5c7c17a77553231d51f04d653c114351",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.result.json": "f019b579de3e6bfdb1b96153534f21c268b128884fecaf919702400dc4df54e9",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.trace.json.gz": "4c56a26f7b09addcb88b7049bd0804bca095f626d4e81bf7f7882c458b451df5"
  },
  "stderr": null,
- "stdoutSha256": "dcc29d13899d24cbc0f1194fc97fd93287f5ad49403ad13b01c54cab6581bd48"
+ "stdoutSha256": "fc90049f57c8d97e9e07bb7e55592e67f5b0114aba111be42a39caa3807b1852"
 }

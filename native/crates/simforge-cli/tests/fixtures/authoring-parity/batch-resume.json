@@ -15,13 +15,13 @@
  ],
  "exit": 0,
  "files": {
-  "b/batch-summary.json": "ab681d737887c22ee0c87c8eb14e0f97227173215eb191158efcae5824630edb",
-  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.instance.json": "4c7afc2d2f4c7f9d3814763e011cf9632047a702079012b8b50af5ad441c52c0",
-  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.result.json": "c2a3da4841c2dd26dc22925bdd21bba455ac2e2c2e78fbd70a7ee3f965ff37e7",
-  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.trace.json.gz": "3bd775d09279621cc6d183b1ea6752b6bab0e7baf914d32668b5f2b46bde64a1",
-  "b/richmond-field-station/3dd7bb59d80de7ee/draw-001.instance.json": "4039f02fea238950f8c1d027d90291cd108b290f2b262708ca1515f0a1b3947e",
-  "b/richmond-field-station/3dd7bb59d80de7ee/draw-001.result.json": "b0061fecbe7a8cd100d764925fa7f7234332808020ab1d27f5179263c29fac0d",
-  "b/richmond-field-station/3dd7bb59d80de7ee/draw-001.trace.json.gz": "72a756e3f9b35b3b41c23d2f0bca4aec2bebfd7179c119efcc4ec6a5894ef274"
+  "b/batch-summary.json": "8409cc6610016a7e49e3e9d39c9e928139e6c1a388cfaa2ce3b7a53e08e27d0c",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.instance.json": "24004c9721ca5b9e576afc2316c79bca5c7c17a77553231d51f04d653c114351",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.result.json": "f019b579de3e6bfdb1b96153534f21c268b128884fecaf919702400dc4df54e9",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.trace.json.gz": "4c56a26f7b09addcb88b7049bd0804bca095f626d4e81bf7f7882c458b451df5",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-001.instance.json": "e93c71f6cccd21de55350fcec3f8a83d85e3db4cc69e5e48e15ef3b351eb4f28",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-001.result.json": "9845eb652a4d4464833dd68d9f4349a40cfc3a9d86965b5572b554a473db0619",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-001.trace.json.gz": "d8ec1b6ffec828f94251f614a0b3f3a7bcc74a7bf8b7e027b62e2f0ce867da74"
  },
  "pre": [
   [
@@ -40,5 +40,5 @@
   ]
  ],
  "stderr": null,
- "stdoutSha256": "9d39e58d1cdab69e1e2b069ff83583fc6a5afedce2901e9e383ffa5e9759e53d"
+ "stdoutSha256": "08297363ff9e79a5316ab13978bf2fc042c35ae69dcc7902982ff7d1a74ca562"
 }
