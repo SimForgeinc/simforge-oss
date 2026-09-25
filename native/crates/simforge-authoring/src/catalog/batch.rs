@@ -747,6 +747,15 @@ fn last_attempt<'a>(record: &'a [Js], f: impl Fn(&Js) -> bool) -> Option<&'a Js>
     record.iter().rev().find(|a| f(a))
 }
 
+/// Catalog-slot provenance as the resume checks compare it: canonical JSON
+/// (keys sorted). The trace header carries the provenance back through the
+/// engine, which re-orders its keys; a key-order-sensitive comparison (the
+/// original TypeScript rule) never matched a promoted trace, so every
+/// accepted slot re-ran on resume.
+fn provenance_key(value: Option<&Js>) -> Option<String> {
+    value.and_then(|v| simforge_core::hash::canonical_json(&v.to_value()).ok())
+}
+
 /// `validSimulatedResume`: the promoted evidence still closes the ledger's
 /// accepted attempt (hashes, provenance, eligibility, trace digest).
 fn valid_simulated_resume(record: &Js, slot: &Js, evidence_root: &str, policy: CollisionPolicy) -> bool {
@@ -766,11 +775,11 @@ fn valid_simulated_resume(record: &Js, slot: &Js, evidence_root: &str, policy: C
         let instance = read_js(&paths.instance)?;
         let result = read_js(&paths.result)?;
         let trace = read_trace(&paths.trace)?;
-        let expected = artifact_provenance(slot, &to_js_string(last.get("seed")), &to_js_string(last.get("siteId"))).stringify();
+        let expected = provenance_key(Some(&artifact_provenance(slot, &to_js_string(last.get("seed")), &to_js_string(last.get("siteId")))))?;
         let header = Js::from_value(&serde_json::to_value(&trace.header).ok()?);
         let evidence_ok = evidence_ok(&paths.instance, &trace)?;
         let collisions = trace.metrics.collisions.len();
-        let stringify = |v: Option<&Js>| v.map(Js::stringify);
+        let stringify = provenance_key;
         let seed = to_js_string(last.get("seed"));
         Some(
             evidence_ok
@@ -821,7 +830,7 @@ fn valid_rejected_resume(record: &Js, slot: &Js, evidence_root: &str, policy: Co
     (|| -> Option<bool> {
         let instance = read_js(&paths.instance)?;
         let result = read_js(&paths.result)?;
-        let expected = artifact_provenance(slot, &to_js_string(last.get("seed")), &to_js_string(last.get("siteId"))).stringify();
+        let expected = provenance_key(Some(&artifact_provenance(slot, &to_js_string(last.get("seed")), &to_js_string(last.get("siteId")))))?;
         let instance_hash = file_sha(&paths.instance)?;
         let has_trace = Path::new(&paths.trace).exists();
         let trace_hash = if has_trace { file_sha(&paths.trace) } else { None };
@@ -830,12 +839,12 @@ fn valid_rejected_resume(record: &Js, slot: &Js, evidence_root: &str, policy: Co
             let header = Js::from_value(&serde_json::to_value(&trace.header).ok()?);
             truthy(last.get("simulated"))
                 && !matches!(last.get("traceDigest"), None | Some(Js::Null))
-                && header.get("catalogSlot").map(Js::stringify).as_deref() == Some(expected.as_str())
+                && provenance_key(header.get("catalogSlot")).as_deref() == Some(expected.as_str())
                 && trace.digest().ok().is_some_and(|d| is_str(last.get("traceDigest"), &d))
         } else {
             !truthy(last.get("simulated")) && matches!(last.get("traceDigest"), Some(Js::Null))
         };
-        let stringify = |v: Option<&Js>| v.map(Js::stringify);
+        let stringify = provenance_key;
         let eligibility = result.get("eligibility");
         let hash_matches = |key: &str, hash: Option<&String>| match hash {
             Some(h) => is_str(sget(&result, &["artifactHashes", key]), h),
@@ -1178,5 +1187,17 @@ mod tests {
     fn attempt_seeds() {
         assert_eq!(catalog_attempt_seed("abc", 0), "abc");
         assert_eq!(catalog_attempt_seed("abc", 2), sha256("abc\0replacement\x002"));
+    }
+
+    #[test]
+    fn provenance_compares_independent_of_key_order() {
+        // The trace header hands `catalogSlot` back with sorted keys.
+        let written = Js::parse(r#"{"identity":"x","seed":"s","variant":{"id":"v","title":"t"},"mapId":"m"}"#).unwrap();
+        let from_trace = Js::parse(r#"{"identity":"x","mapId":"m","seed":"s","variant":{"title":"t","id":"v"}}"#).unwrap();
+        assert_ne!(written.stringify(), from_trace.stringify());
+        assert_eq!(provenance_key(Some(&written)), provenance_key(Some(&from_trace)));
+        let other = Js::parse(r#"{"identity":"y","mapId":"m","seed":"s","variant":{"title":"t","id":"v"}}"#).unwrap();
+        assert_ne!(provenance_key(Some(&written)), provenance_key(Some(&other)));
+        assert_eq!(provenance_key(None), None);
     }
 }
