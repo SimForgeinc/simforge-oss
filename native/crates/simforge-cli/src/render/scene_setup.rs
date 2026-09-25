@@ -396,15 +396,34 @@ pub fn map_drift(ws: &Workspace, closure: &MapClosure) -> Result<Option<Value>, 
             format!("map/closure.json is not JSON: {e}"),
         )
     })?;
-    let members = doc["members"].as_array().ok_or_else(|| {
-        CliError::findings("workspace_invalid", "map/closure.json has no members list")
-    })?;
+    // `map-closure.v1` (the registry canonical closure, sdk#38): `members` is
+    // `{<path>: {sha256, bytes}}`; the older browser asset set listed
+    // `[{relativePath, sha256, ...}]`.
+    let listed: Vec<(String, String)> = match &doc["members"] {
+        Value::Object(map) => map
+            .iter()
+            .filter_map(|(p, m)| m["sha256"].as_str().map(|s| (p.clone(), s.to_owned())))
+            .collect(),
+        Value::Array(list) => list
+            .iter()
+            .filter_map(|m| {
+                Some((
+                    m["relativePath"].as_str()?.to_owned(),
+                    m["sha256"].as_str()?.to_owned(),
+                ))
+            })
+            .collect(),
+        _ => {
+            return Err(CliError::findings(
+                "workspace_invalid",
+                "map/closure.json has no members",
+            ))
+        }
+    };
     let mut shared = 0u64;
     let mut differing = Vec::new();
-    for m in members {
-        let (Some(rel), Some(sha)) = (m["relativePath"].as_str(), m["sha256"].as_str()) else {
-            continue;
-        };
+    for (rel, sha) in &listed {
+        let (rel, sha) = (rel.as_str(), sha.as_str());
         if let Some(installed) = closure.sha256(rel) {
             shared += 1;
             if installed != sha {
@@ -421,12 +440,39 @@ pub fn map_drift(ws: &Workspace, closure: &MapClosure) -> Result<Option<Value>, 
 
 /// The renderer's sky plates, verified before any staging or GPU work: a
 /// render without them fails in the renderer after minutes of setup.
-pub fn sky_assets() -> Result<render_core::sky_pass::SkyAssetPaths, CliError> {
-    render_core::sky_pass::SkyAssetPaths::resolve().map_err(|e| {
-        CliError::new("sky_assets_missing", format!("{e:#}")).with_detail(json!({
+///
+/// With no explicit location (SIMFORGE_SKY_ASSETS, SIMFORGE_NATIVE_RUNTIME_ROOT)
+/// and nothing usable found, the pinned sky closure is fetched by digest from
+/// the public asset store (as `simforge assets pull --only sky` does) and the
+/// fetch is returned for the result; an explicit location that does not
+/// verify fails as it is.
+pub fn sky_assets() -> Result<(render_core::sky_pass::SkyAssetPaths, Option<Value>), CliError> {
+    let missing = |e: String| {
+        CliError::new("sky_assets_missing", e).with_detail(json!({
             "hint": "run `simforge assets pull --only sky` (the pinned sky closure, by digest), or set SIMFORGE_SKY_ASSETS to a directory holding SOURCES.json and the two .skytex plates; `simforge doctor` checks it",
         }))
-    })
+    };
+    match render_core::sky_pass::SkyAssetPaths::resolve() {
+        Ok(paths) => Ok((paths, None)),
+        Err(e) => {
+            let explicit = ["SIMFORGE_SKY_ASSETS", "SIMFORGE_NATIVE_RUNTIME_ROOT"]
+                .iter()
+                .any(|k| std::env::var_os(k).is_some_and(|v| !v.is_empty()));
+            if explicit {
+                return Err(missing(format!("{e:#}")));
+            }
+            let fetched = crate::commands::assets::pull(crate::commands::assets::PullArgs {
+                only: Some(crate::commands::assets::Only::Sky),
+                closure: None,
+                base_url: None,
+                root: None,
+                timeout: 60,
+            })?;
+            let paths = render_core::sky_pass::SkyAssetPaths::resolve()
+                .map_err(|e| missing(format!("{e:#}")))?;
+            Ok((paths, Some(fetched.value)))
+        }
+    }
 }
 
 /// [`map_drift`] with its verdict: a member the workspace's map and the

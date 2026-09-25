@@ -27,7 +27,6 @@ use simforge_package::{Inspection, PackageError, PackageReader, Verification, Ve
 
 use crate::commands::assets;
 use crate::contract::{CliError, CmdResult, Ctx, Outcome};
-use crate::installed_maps;
 use crate::paths;
 use crate::registry::{self, PullOptions, Registry};
 
@@ -162,99 +161,265 @@ fn verify(package: &Path) -> CmdResult {
     Ok(Outcome::ok(out))
 }
 
-/// The package's map closure listing (`map/closure.json`, a
-/// `uniscenario.browser-asset-set/v1`): relative path to (sha256, bytes).
-fn package_map_members(
+/// A registry closure document in the package (`map/closure.json`, the
+/// release's canonical closure; `map/web-closure.json`, its web closure):
+/// member path to (sha256, bytes).
+fn closure_members(
     ws: &Path,
-) -> Result<std::collections::BTreeMap<String, (String, u64)>, CliError> {
-    let path = ws.join("map").join("closure.json");
+    member: &str,
+) -> Result<Option<std::collections::BTreeMap<String, (String, u64)>>, CliError> {
+    let path = ws.join(member);
+    if !path.is_file() {
+        return Ok(None);
+    }
     let bytes = std::fs::read(&path).map_err(|e| {
         CliError::findings(
             "package_member_invalid",
-            format!("cannot read map/closure.json: {e}"),
+            format!("cannot read {member}: {e}"),
         )
     })?;
     let doc: Value = serde_json::from_slice(&bytes).map_err(|e| {
         CliError::findings(
             "package_member_invalid",
-            format!("map/closure.json is not JSON: {e}"),
+            format!("{member} is not JSON: {e}"),
         )
     })?;
-    let mut out = std::collections::BTreeMap::new();
-    for m in doc["members"].as_array().into_iter().flatten() {
-        if let (Some(p), Some(sha), Some(n)) = (
-            m["relativePath"].as_str(),
-            m["sha256"].as_str(),
-            m["byteLength"].as_u64(),
-        ) {
-            out.insert(p.to_owned(), (sha.to_owned(), n));
-        }
-    }
-    Ok(out)
+    let members = doc["members"].as_object().ok_or_else(|| {
+        CliError::findings(
+            "package_member_invalid",
+            format!("{member} is not a registry closure (map-closure.v1 members)"),
+        )
+    })?;
+    Ok(Some(
+        members
+            .iter()
+            .filter_map(|(p, m)| {
+                Some((
+                    p.clone(),
+                    (m["sha256"].as_str()?.to_owned(), m["bytes"].as_u64()?),
+                ))
+            })
+            .collect(),
+    ))
 }
 
-/// Shared paths whose digests differ between the package's map closure and
-/// `other` (path to sha256).
-fn drift(
-    package: &std::collections::BTreeMap<String, (String, u64)>,
-    other: &std::collections::BTreeMap<String, String>,
-) -> (usize, Vec<Value>) {
-    let mut shared = 0;
-    let mut differing = Vec::new();
-    for (path, (sha, _)) in package {
-        if let Some(theirs) = other.get(path) {
-            shared += 1;
-            if theirs != sha {
-                differing.push(json!({ "path": path, "package": sha, "release": theirs }));
-            }
-        }
-    }
-    (shared, differing)
+fn blob_embedded(ws: &Path, sha: &str, bytes: u64) -> bool {
+    sha.len() == 64
+        && std::fs::metadata(ws.join("blobs/sha256").join(&sha[..2]).join(sha))
+            .map(|f| f.len() == bytes)
+            .unwrap_or(false)
 }
 
-/// The native install of the package's map, when one matches by content.
-fn installed_native(
-    maps_root: &Path,
-    xodr: &str,
-    members: &std::collections::BTreeMap<String, (String, u64)>,
-) -> Option<installed_maps::InstalledMap> {
-    installed_maps::list(maps_root)
+/// The part of the package's web closure a full package embeds (the members
+/// the CLI reads: static colliders, simulation members, turn verdicts), as a
+/// web closure document with its digest. A full package installs this as its
+/// release's web profile.
+fn embedded_web_subset(ws: &Path) -> Option<(Value, String)> {
+    let bytes = std::fs::read(ws.join("map/web-closure.json")).ok()?;
+    let mut doc: Value = serde_json::from_slice(&bytes).ok()?;
+    let members = doc["members"].as_object()?.clone();
+    let kept: serde_json::Map<String, Value> = members
         .into_iter()
-        .filter(|m| m.profile == ".corpus" && m.xodr_sha256 == xodr)
-        .find(|m| {
-            let receipt: Value = std::fs::read(m.dir.join(".map-release.json"))
-                .ok()
-                .and_then(|b| serde_json::from_slice(&b).ok())
-                .unwrap_or(Value::Null);
-            let theirs: std::collections::BTreeMap<String, String> = receipt["members"]
-                .as_object()
-                .map(|o| {
-                    o.iter()
-                        .filter_map(|(k, v)| Some((k.clone(), v["sha256"].as_str()?.to_owned())))
-                        .collect()
-                })
-                .unwrap_or_default();
-            drift(members, &theirs).1.is_empty()
+        .filter(|(p, m)| {
+            simforge_package::closure::is_cli_web_member(p)
+                && blob_embedded(
+                    ws,
+                    m["sha256"].as_str().unwrap_or(""),
+                    m["bytes"].as_u64().unwrap_or(u64::MAX),
+                )
         })
+        .collect();
+    doc["members"] = Value::Object(kept);
+    let digest = registry::sha256_hex(registry::canonical_json(&doc).as_bytes());
+    Some((doc, digest))
 }
 
-/// Resolve the package's map: installed, pulled from the registry by digest,
+fn receipt(dir: &Path) -> Value {
+    std::fs::read(dir.join(".map-release.json"))
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok())
+        .unwrap_or(Value::Null)
+}
+
+/// The installed release whose canonical (and, when the package names one,
+/// web) closure digests are the package's: every profile `maps pull` writes.
+fn installed_release(maps_root: &Path, canonical: &str, web: &[String]) -> Option<Value> {
+    let entries = std::fs::read_dir(maps_root.join(".corpus")).ok()?;
+    for entry in entries.flatten() {
+        let native = entry.path();
+        let r = receipt(&native);
+        if r["canonicalDigest"].as_str() != Some(canonical) {
+            continue;
+        }
+        let name = entry.file_name();
+        let semantic = maps_root.join("dev-assets").join(&name);
+        if receipt(&semantic)["canonicalDigest"].as_str() != Some(canonical) {
+            continue;
+        }
+        let web_dir = maps_root.join("map-bundles").join(&name);
+        let installed_web = receipt(&web_dir);
+        if !web.is_empty()
+            && !web
+                .iter()
+                .any(|w| installed_web["webDigest"].as_str() == Some(w.as_str()))
+        {
+            continue;
+        }
+        return Some(json!({
+            "native": native,
+            "semantic": semantic,
+            "web": (!web.is_empty()).then_some(web_dir),
+            "release": format!("{}@{}", r["name"].as_str().unwrap_or(""), r["version"].as_str().unwrap_or("")),
+            "releaseDigest": r["releaseDigest"],
+        }));
+    }
+    None
+}
+
+/// Install a full package's embedded map closures through the registry path
+/// (the same verification, profiles and receipts as `maps pull`): a file://
+/// registry is laid out beside the workspace with the package's own closure
+/// documents and its `blobs/`, as one release of the map.
+fn install_embedded(
+    ws: &Path,
+    manifest: &simforge_package::Manifest,
+    maps_root: &Path,
+) -> Result<Value, CliError> {
+    use crate::registry::{canonical_json, sha256_hex};
+    let name = manifest.map.source_map_id.clone();
+    let reg = ws.join(".simforge-import-registry");
+    let _ = std::fs::remove_dir_all(&reg);
+    let write = |rel: &str, bytes: &[u8]| -> Result<(), CliError> {
+        let path = reg.join(rel);
+        std::fs::create_dir_all(path.parent().expect("has a parent"))
+            .and_then(|_| std::fs::write(&path, bytes))
+            .map_err(|e| CliError::new("write_failed", format!("{}: {e}", path.display())))
+    };
+    // The registry path takes `v<N>`: a version derived from the closure
+    // digest, relabelled `package-<digest>` in the receipts once installed.
+    let label = format!("package-{}", &manifest.map.canonical_closure_sha256[..12]);
+    let version = format!(
+        "v{}",
+        u64::from_str_radix(&manifest.map.canonical_closure_sha256[..12], 16).unwrap_or(0) + 1
+    );
+    let base = format!("maps/{name}/{version}");
+    let canonical_bytes = std::fs::read(ws.join("map/closure.json"))
+        .map_err(|e| CliError::new("write_failed", e.to_string()))?;
+    write(&format!("{base}/closure.json"), &canonical_bytes)?;
+    let canonical: Value = serde_json::from_slice(&canonical_bytes)
+        .map_err(|e| CliError::findings("package_member_invalid", e.to_string()))?;
+    let mut release = json!({
+        "schema": "simforge.map-release.v1",
+        "name": name,
+        "version": version,
+        "visibility": if name == "richmond-field-station" { "public" } else { "private" },
+        "createdAt": "1970-01-01T00:00:00Z",
+        "canonical": { "key": format!("{base}/closure.json"), "digest": sha256_hex(canonical_json(&canonical).as_bytes()) },
+    });
+    if let Some((web, digest)) = embedded_web_subset(ws) {
+        write(
+            &format!("{base}/derived/web-package.json"),
+            canonical_json(&web).as_bytes(),
+        )?;
+        release["web"] =
+            json!({ "key": format!("{base}/derived/web-package.json"), "digest": digest });
+    }
+    write(
+        &format!("{base}/release.json"),
+        canonical_json(&release).as_bytes(),
+    )?;
+    let record = json!([{
+        "version": version,
+        "closureDigest": release["canonical"]["digest"],
+        "releaseDigest": sha256_hex(canonical_json(&release).as_bytes()),
+        "createdAt": "1970-01-01T00:00:00Z",
+    }]);
+    write(
+        &format!("maps/{name}/versions.json"),
+        record.to_string().as_bytes(),
+    )?;
+    write(
+        "index.json",
+        json!({ &name: { "latest": version, "versions": [version], "summary": { "label": name } } })
+            .to_string()
+            .as_bytes(),
+    )?;
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(ws.join("blobs"), reg.join("blobs"))
+        .map_err(|e| CliError::new("write_failed", e.to_string()))?;
+    let registry = Registry::new(&format!("file://{}", reg.display()), None)?;
+    let result = registry::pull(
+        &registry,
+        &format!("{name}@{version}"),
+        &PullOptions {
+            cache_root: maps_root.to_path_buf(),
+            archive: false,
+            concurrency: 8,
+        },
+    );
+    let _ = std::fs::remove_dir_all(&reg);
+    let mut summary = result?;
+    for dir in ["dev-assets", ".corpus", "map-bundles"] {
+        let path = maps_root.join(dir).join(&name).join(".map-release.json");
+        let Ok(bytes) = std::fs::read(&path) else {
+            continue;
+        };
+        let Ok(mut r) = serde_json::from_slice::<Value>(&bytes) else {
+            continue;
+        };
+        r["version"] = json!(label);
+        r["source"] = json!("package");
+        std::fs::write(&path, format!("{}\n", registry::canonical_json(&r)))
+            .map_err(|e| CliError::new("write_failed", format!("{}: {e}", path.display())))?;
+    }
+    summary["version"] = json!(label);
+    summary["source"] = json!("package");
+    Ok(summary)
+}
+
+/// Resolve the package's map: installed, installed from the package's own
+/// blobs (full form), pulled from a registry release named by digest,
 /// skipped (offline), or unavailable (the returned detail lists why).
 fn resolve_map(
     ws: &Path,
     manifest: &simforge_package::Manifest,
     args: &ImportArgs,
 ) -> Result<Result<Value, Value>, CliError> {
-    let xodr = manifest.map.xodr_sha256.clone();
-    let map_id = manifest.map.source_map_id.clone();
-    let members = package_map_members(ws)?;
+    let map = &manifest.map;
+    let canonical = map.canonical_closure_sha256.clone();
+    let web = map.web_closure_sha256.clone();
+    let members = closure_members(ws, "map/closure.json")?.ok_or_else(|| {
+        CliError::findings(
+            "package_member_invalid",
+            "the package has no map/closure.json",
+        )
+    })?;
+    let web_members = closure_members(ws, "map/web-closure.json")?.unwrap_or_default();
+    // An install satisfies the package when its web profile is the release's
+    // web closure or the part of it a full package embeds.
+    let web_accepted: Vec<String> = web
+        .iter()
+        .cloned()
+        .chain(embedded_web_subset(ws).map(|(_, d)| d))
+        .collect();
     let maps = paths::maps_root(args.cache_root.as_deref())?;
-    let base = json!({ "xodrSha256": xodr, "mapId": map_id, "mapsRoot": maps.value });
-    if let Some(m) = installed_native(&maps.value, &xodr, &members) {
+    let base = json!({
+        "mapId": map.source_map_id, "xodrSha256": map.xodr_sha256, "mapsRoot": maps.value,
+        "canonicalClosureSha256": canonical, "webClosureSha256": web,
+        "registryReleaseDigest": map.registry_release_digest,
+    });
+    if let Some(found) = installed_release(&maps.value, &canonical, &web_accepted) {
         let mut out = base;
         out["state"] = json!("installed");
-        out["native"] = json!(m.dir);
-        out["release"] = json!(m.release);
+        out["installed"] = found;
+        return Ok(Ok(out));
+    }
+    // A full package carries every member: install from its own blobs.
+    if members.values().all(|(sha, n)| blob_embedded(ws, sha, *n)) {
+        let summary = install_embedded(ws, manifest, &maps.value)?;
+        let mut out = base;
+        out["state"] = json!("installed-from-package");
+        out["pull"] = summary;
         return Ok(Ok(out));
     }
     if args.offline {
@@ -268,62 +433,18 @@ fn resolve_map(
         .ok()
         .filter(|t| !t.trim().is_empty());
     let reg = Registry::new(&url.value, token)?;
-    let index = reg.index()?;
-    // The map's own name first, then every other published map: content decides.
-    let mut names: Vec<String> = index
-        .as_object()
-        .map(|o| o.keys().cloned().collect())
-        .unwrap_or_default();
-    names.sort_by_key(|n| n != &map_id);
-    let mut candidates = Vec::new();
-    for name in names {
-        let mut versions: Vec<String> = index[&name]["versions"]
-            .as_array()
-            .map(|v| {
-                v.iter()
-                    .filter_map(|x| x.as_str().map(str::to_owned))
-                    .collect()
-            })
-            .unwrap_or_default();
-        versions.sort_by_key(|v| {
-            std::cmp::Reverse(v.trim_start_matches('v').parse::<u64>().unwrap_or(0))
-        });
-        for version in versions {
-            let reference = format!("{name}@{version}");
-            let resolved = match registry::resolve(&reg, &reference) {
-                Ok(r) => r,
-                Err(e) if e.exit == crate::contract::Exit::Findings => {
-                    candidates.push(json!({ "release": reference, "unusable": e.reason }));
-                    continue;
-                }
-                Err(e) => return Err(e),
-            };
-            if resolved
-                .closure
-                .members
-                .get("map.xodr")
-                .map(|m| m.sha256.as_str())
-                != Some(xodr.as_str())
-            {
-                continue;
-            }
-            let theirs = resolved
-                .closure
-                .members
-                .iter()
-                .map(|(p, m)| (p.clone(), m.sha256.clone()))
-                .collect();
-            let (shared, differing) = drift(&members, &theirs);
-            if !differing.is_empty() || !resolved.closure.master {
-                candidates.push(json!({
-                    "release": reference,
-                    "shared": shared,
-                    "differingCount": differing.len(),
-                    "differing": differing.into_iter().take(10).collect::<Vec<_>>(),
-                    "master": resolved.closure.master,
-                }));
-                continue;
-            }
+    if let Some(reference) = reg.find_release(
+        map.registry_release_digest.as_deref(),
+        &canonical,
+        &map.source_map_id,
+    )? {
+        let resolved = registry::resolve(&reg, &reference)?;
+        let web_ok = match (&web, &resolved.release.web) {
+            (Some(w), Some(r)) => &r.digest == w,
+            (None, _) => true,
+            (Some(_), None) => false,
+        };
+        if resolved.record_closure_digest == canonical && web_ok {
             let summary = registry::pull(
                 &reg,
                 &reference,
@@ -337,15 +458,17 @@ fn resolve_map(
             out["state"] = json!("pulled");
             out["release"] = json!(reference);
             out["registry"] = json!(reg.url);
-            out["sharedMembers"] = json!(shared);
             out["pull"] = summary;
             return Ok(Ok(out));
         }
     }
-    // Nothing public carries this map: say what is missing, by digest.
+    // No registry this CLI can read has the release: say what is missing, by digest.
     let blob_root = maps.value.join(".blobs");
     let missing: Vec<(&String, &(String, u64))> = members
         .iter()
+        .chain(web_members.iter().filter(|(p, _)| {
+            simforge_package::closure::is_cli_web_member(p) && !members.contains_key(*p)
+        }))
         .filter(|(_, (sha, n))| {
             std::fs::metadata(blob_root.join("sha256").join(&sha[..2]).join(sha))
                 .map(|m| m.len() != *n)
@@ -355,7 +478,6 @@ fn resolve_map(
     let mut out = base;
     out["state"] = json!("unavailable");
     out["registry"] = json!(reg.url);
-    out["candidates"] = json!(candidates);
     out["missing"] = json!({
         "count": missing.len(),
         "bytes": missing.iter().map(|(_, (_, n))| n).sum::<u64>(),
@@ -407,6 +529,7 @@ fn resolve_actors(
         return Ok(Ok(out));
     }
     match assets::pull(assets::PullArgs {
+        only: Some(assets::Only::Actors),
         closure: Some(digest.clone()),
         base_url: args.assets_base_url.clone(),
         root: args.assets_root.clone(),
@@ -501,6 +624,30 @@ fn import_into(args: &ImportArgs, staging: &Path) -> Result<Value, CliError> {
     } else {
         resolve_actors(manifest, args)?
     };
+    // The sky plates every render lights with (a pinned public closure):
+    // fetched now so the render that follows needs no network for them. Not
+    // fetching them does not fail the import; the render fetches them or
+    // fails loudly, and the result says which.
+    let sky = if map.is_err() || actors.is_err() {
+        json!({ "state": "not-attempted" })
+    } else if let Ok(paths) = render_core::sky_pass::SkyAssetPaths::resolve() {
+        json!({ "state": "installed", "dir": paths.dir })
+    } else if args.offline {
+        json!({ "state": "skipped", "reason": "--offline" })
+    } else {
+        match assets::pull(assets::PullArgs {
+            only: Some(assets::Only::Sky),
+            closure: None,
+            base_url: None,
+            root: None,
+            timeout: 60,
+        }) {
+            Ok(outcome) => json!({ "state": "pulled", "pull": outcome.value["sky"] }),
+            Err(e) => {
+                json!({ "state": "unavailable", "error": { "code": e.code, "reason": e.reason } })
+            }
+        }
+    };
     let form = serde_json::to_value(verification.form()).unwrap_or(Value::Null);
     if map.is_err() || actors.is_err() {
         let mut missing = Vec::new();
@@ -510,21 +657,10 @@ fn import_into(args: &ImportArgs, staging: &Path) -> Result<Value, CliError> {
         if let Err(a) = &actors {
             missing.push(json!({ "closure": "actors", "detail": a }));
         }
-        let drifted = map
-            .as_ref()
-            .err()
-            .and_then(|m| m["candidates"].as_array())
-            .map(|c| {
-                c.iter()
-                    .any(|c| c["differingCount"].as_u64().unwrap_or(0) > 0)
-            })
-            .unwrap_or(false);
-        let hint = if drifted {
-            "the registry has releases of this map with the same OpenDRIVE, but they differ from the package's map (it was made on a release that is not published there); publish that release, point --registry at a registry that has it, or re-export the full package"
-        } else if form == "full" {
-            "the package's map closure is the browser asset set, which carries no native master (master.gltf, geometry.bin) for this map, and no public registry release matches it; a native render of it needs its map release published to a registry this CLI can read (--registry)"
+        let hint = if form == "full" {
+            "the full package does not embed every member it lists (a partial or damaged export): re-export the full package"
         } else {
-            "these members are not available from the public stores (a private map or closure): re-export the full package from the hosted app (Export for CLI, full), or pass --registry / --assets-base-url for a store that has them"
+            "the map release or actor closure is not available from the stores this CLI can read (a private map): re-export the full package from the hosted app (Export for CLI, full), or pass the package's access URL as --registry and --assets-base-url"
         };
         return Err(CliError::findings(
             "package_closure_unavailable",
@@ -541,9 +677,9 @@ fn import_into(args: &ImportArgs, staging: &Path) -> Result<Value, CliError> {
     let mut next = Vec::new();
     if map["state"] == "skipped" {
         next.push(format!(
-            "`simforge maps pull {}@<version>` for the map whose OpenDRIVE is {} (or import without --offline)",
+            "`simforge maps pull {}@<version>` for the release whose canonical closure is {} (or import without --offline)",
             map["mapId"].as_str().unwrap_or(""),
-            map["xodrSha256"].as_str().unwrap_or("")
+            map["canonicalClosureSha256"].as_str().unwrap_or("")
         ));
     }
     if actors["state"] == "skipped" {
@@ -554,7 +690,11 @@ fn import_into(args: &ImportArgs, staging: &Path) -> Result<Value, CliError> {
     }
     let mut out = verification_json(&verification);
     out["package"] = json!(paths::absolutize(&args.package));
-    out["resolved"] = json!({ "offline": args.offline, "map": map, "actorClosure": actors });
+    if sky["state"] == "skipped" || sky["state"] == "unavailable" {
+        next.push("`simforge assets pull --only sky` (or import without --offline)".to_owned());
+    }
+    out["resolved"] =
+        json!({ "offline": args.offline, "map": map, "actorClosure": actors, "sky": sky });
     out["next"] = json!(next);
     Ok(out)
 }
