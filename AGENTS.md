@@ -49,5 +49,14 @@ qualification/golden-harness/ci-local.sh verify   # needs mesa-vulkan-drivers + 
 ## Landing
 
 Open a PR against `main` and add the `ready` label once `scripts/gate-local.sh`
-passes. The merge service runs the gate from `main` on the exact merge commit
-and fast-forwards `main`; nobody pushes `main` by hand.
+passes. The merge service scans the change for private markers, runs the gate
+from `main` on the exact merge commit, inside a sandbox (`GATE_SANDBOX=required`:
+no credentials, allowlisted network, lavapipe instead of a GPU), and
+fast-forwards `main`; nobody pushes `main` by hand. PR comments from the merge
+service are public: they carry step results, never host paths or logs with
+private content.
+
+After a landing, the hosted platform picks the new commit up through a pin-bump
+PR of its own (`sdk: bump to <sha>`), gated against every private consumer of
+the SDK. A change that breaks that bump is fixed here or adapted there; the SDK
+itself never depends on private code (`scripts/check-boundary.sh`).
