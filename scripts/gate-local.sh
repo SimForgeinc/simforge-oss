@@ -112,6 +112,12 @@ if test "${GATE_SANDBOX:-off}" = required; then tools="git jq docker"; else tool
 for tool in $tools; do command -v "$tool" >/dev/null || die "missing tool: $tool"; done
 test "${GATE_SANDBOX:-off}" = required || cargo nextest --version >/dev/null 2>&1 || die "missing tool: cargo-nextest"
 
+# A contributor's run (not GATE_ROLE=merger) runs at low CPU/IO priority, so the
+# merge service's gate always wins.
+if test "${GATE_ROLE:-}" != merger; then
+  renice -n 10 -p $$ >/dev/null 2>&1 || true
+  ionice -c 3 -p $$ >/dev/null 2>&1 || true
+fi
 exec 9>"$GATE_HOME/gate.lock"
 if ! flock -n 9; then
   echo "gate: another gate holds $GATE_HOME/gate.lock; waiting (up to ${LOCK_WAIT_S}s)"
@@ -136,22 +142,43 @@ test -s "$key_file" || (umask 077 && head -c 32 /dev/urandom | od -An -tx1 | tr 
 # The goldens skip ledger: lines the merge service appended after a sandboxed PASS,
 # each HMAC'd with this machine's gate key. Only lines that verify reach the step,
 # as "<key> <sha>" (the step never sees the ledger or the key).
+# A contributor's run also READS the merge service's ledger when GATE_MERGER_HOME
+# names that gate home (its goldens-pass.jsonl, verified with its .gate-key); it
+# never writes it.
 ledger="$GATE_HOME/goldens-pass.jsonl"; ledger_view="$run_dir/goldens-ledger.txt"; : >"$ledger_view"
-if test "${GOLDENS_FULL:-0}" != 1 && test -s "$ledger"; then
-  gkey="$(cat "$key_file")"
+verified_lines() { # ledger key_file -> "<key> <sha>" for the lines whose HMAC verifies
+  local gkey line body want; gkey="$(cat "$2")"
   while IFS= read -r line; do
     body="$(jq -c 'del(.hmac)' <<<"$line" 2>/dev/null)" || continue
     want="$(jq -r '.hmac // empty' <<<"$line")"
     test -n "$want" && test "$(printf '%s' "$body" | openssl dgst -sha256 -hmac "$gkey" -r | cut -d' ' -f1)" = "$want" || continue
     jq -r 'select(.key|test("^[0-9a-f]{64}$")) | "\(.key) \(.sha)"' <<<"$body"
-  done <"$ledger" >"$ledger_view"
+  done <"$1"
+}
+merger_home="${GATE_MERGER_HOME:-}"
+test "${GATE_ROLE:-}" != merger || merger_home=""
+test -z "$merger_home" || test "$(cd "$merger_home" 2>/dev/null && pwd)" != "$(cd "$GATE_HOME" && pwd)" || merger_home=""
+if test "${GOLDENS_FULL:-0}" != 1; then
+  { test -s "$ledger" && verified_lines "$ledger" "$key_file"
+    test -n "$merger_home" && test -r "$merger_home/goldens-pass.jsonl" && test -r "$merger_home/.gate-key" && verified_lines "$merger_home/goldens-pass.jsonl" "$merger_home/.gate-key"
+  } >"$ledger_view"
 fi
 steps_json="[]"; failing=""
 record_step() { steps_json="$(jq -c --arg n "$1" --arg s "$2" --argjson t "$3" --arg l "$4" --arg d "$5" '. + [{name:$n,status:$s,seconds:$t,log:$l,detail:$d}]' <<<"$steps_json")"; printf '  %-4s  %-22s %5ss  %s\n' "$(tr a-z A-Z <<<"$2")" "$1" "$3" "$5"; }
 SANDBOX="${GATE_SANDBOX:-off}"
 container=""
-cleanup() { test -n "$container" && docker rm -f "$container" >/dev/null 2>&1; return 0; }
+cleanup() { # the sandbox, and on the host any step still running (each is its own process group)
+  test -n "$container" && docker rm -f "$container" >/dev/null 2>&1
+  local n pg
+  for n in "${bg_names[@]}"; do
+    test -z "${bg_status[$n]:-}" || continue
+    pg="$(pgrep -P "${bg_pid[$n]}" 2>/dev/null | head -1)"
+    test -n "$pg" && kill -TERM -- "-$pg" 2>/dev/null
+  done
+  return 0; }
+bg_names=(); declare -A bg_detail bg_pid bg_t0 bg_status bg_end
 trap cleanup EXIT
+trap "exit 143" TERM INT HUP
 if test "$SANDBOX" = required; then
   defs_src="${GATE_SANDBOX_DEFS:?GATE_SANDBOX=required needs GATE_SANDBOX_DEFS (Dockerfile, proxy.Dockerfile, squid.conf, allowlist)}"
   docker info >/dev/null 2>&1 || die "GATE_SANDBOX=required but docker is not usable"
@@ -184,7 +211,7 @@ if test "$SANDBOX" = required; then
   proxy=http://gate-proxy:8888; sproxy=https://gate-proxy:8443
   container="gate-$run_id"
   docker run -d --name "$container" --network gate-internal \
-    --cpus "${SANDBOX_CPUS:-12}" --memory "${SANDBOX_MEMORY:-40g}" --pids-limit 8192 --security-opt no-new-privileges "${mounts[@]}" \
+    --cpus "${SANDBOX_CPUS:-12}" --cpu-shares "$(test "${GATE_ROLE:-}" = merger && echo 1024 || echo 128)" --memory "${SANDBOX_MEMORY:-40g}" --pids-limit 8192 --security-opt no-new-privileges "${mounts[@]}" \
     -e HTTP_PROXY="$proxy" -e http_proxy="$proxy" -e HTTPS_PROXY="$proxy" -e https_proxy="$sproxy" \
     -e NO_PROXY="localhost,127.0.0.1,gate-proxy" -e no_proxy="localhost,127.0.0.1,gate-proxy" \
     -e NODE_EXTRA_CA_CERTS=/gate/proxy.crt -e SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt -e NODE_USE_ENV_PROXY=1 \
@@ -225,7 +252,6 @@ skip_step() { record_step "$1" skip 0 "" "$2"; }
 # Concurrent steps: start_step launches one in the background; wait_steps records
 # them in launch order. The first failure cancels the rest (the sandbox container
 # is removed; on the host each step is its own process group).
-bg_names=(); declare -A bg_detail bg_pid bg_t0 bg_status bg_end
 start_step() { # name detail -- step args...
   local name="$1" detail="$2"; shift 3
   bg_names+=("$name"); bg_detail[$name]="$detail"; bg_t0[$name]=$(date +%s)
@@ -260,12 +286,6 @@ ok=true
 run_step boundary "cargo metadata + uv + no TS" -- boundary || ok=false
 engine='^(Cargo\.(toml|lock)|native/crates/simforge-(core|compiler|session|bindings-common|bindings-python|timeline-python|package)/|fixtures/|examples/|contracts/|rust-toolchain\.toml)'
 if $ok; then
-  # goldens first: it is the longest, and its scheduler sizes itself around the others.
-  if test "${GOLDENS_FULL:-0}" = 1; then
-    start_step goldens "lavapipe, verify all (GOLDENS_FULL: no skips)" -- goldens
-  elif touched '^(Cargo\.(toml|lock)|renderer/|native/crates/simforge-core/|qualification/golden-harness/|catalog/|rust-toolchain\.toml)'; then
-    start_step goldens "lavapipe, verify all" -- goldens
-  else skip_step goldens "renderer/engine not affected"; fi
   if touched '^(Cargo\.(toml|lock)|native/|renderer/|fixtures/|examples/|contracts/|catalog/|skills/|rust-toolchain\.toml)'; then
     start_step rust "fmt+clippy ratchet, nextest (workspace)" -- rust
   else skip_step rust "no Rust input changed"; fi
@@ -276,6 +296,30 @@ if $ok; then
   done
   if test ${#py[@]} -gt 0; then start_step python "${py[*]}" -- python "${py[@]}"
   else skip_step python "no Python package affected"; fi
+  # goldens last to start (it may wait for the merge service), longest to run; its
+  # scheduler sizes itself around the rust and python steps already running.
+  # A contributor's goldens never render beside the merge service's gate (two
+  # lavapipe suites need ~60 GB and double every render): with GATE_MERGER_HOME,
+  # wait until the merge service's gate lock is free, and render one contributor
+  # suite at a time (its goldens-prehandoff.lock, held until the gate ends).
+  wait_for_merger() {
+    test -n "$merger_home" && test -e "$merger_home/gate.lock" || return 0
+    exec 8>>"$merger_home/goldens-prehandoff.lock"
+    flock -w "$LOCK_WAIT_S" 8 || die "timed out waiting for another contributor's goldens"
+    local waited=0
+    until flock -n "$merger_home/gate.lock" true; do
+      test "$waited" -eq 0 && echo "gate: the merge service's gate is running; goldens wait for it"
+      sleep 15; waited=$((waited + 15))
+      test "$waited" -lt "$LOCK_WAIT_S" || die "timed out waiting for the merge service's gate"
+    done
+  }
+  if test "${GOLDENS_FULL:-0}" = 1; then
+    wait_for_merger
+    start_step goldens "lavapipe, verify all (GOLDENS_FULL: no skips)" -- goldens
+  elif touched '^(Cargo\.(toml|lock)|renderer/|native/crates/simforge-core/|qualification/golden-harness/|catalog/|rust-toolchain\.toml)'; then
+    wait_for_merger
+    start_step goldens "lavapipe, verify all" -- goldens
+  else skip_step goldens "renderer/engine not affected"; fi
   wait_steps || ok=false
 fi
 
