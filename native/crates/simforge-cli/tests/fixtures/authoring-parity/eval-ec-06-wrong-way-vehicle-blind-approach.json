@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "examples/edge-cases/06-wrong-way-vehicle-blind-approach/scenario.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "d72cbb980fcdeb7310d32482a01a5422e95cd836b166c8355c594942170217a6"
+}

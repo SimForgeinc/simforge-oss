@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "fixtures/archive-corpus/traces/rc12-v4pre-workzone-18.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "fb341426c7faeec52a3f93fd717a1ad8ef197394d7cf626554d1779e68d6cfcf"
+}

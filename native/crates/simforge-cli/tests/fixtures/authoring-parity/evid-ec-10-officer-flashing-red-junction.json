@@ -1,0 +1,12 @@
+{
+ "argv": [
+  "evidence",
+  "verify",
+  "examples/edge-cases/10-officer-flashing-red-junction/scenario.instance.json",
+  "examples/edge-cases/10-officer-flashing-red-junction/scenario.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "ccbacddf8598497989f93a344196c466f330d3300913f674dd2eba1366995692"
+}

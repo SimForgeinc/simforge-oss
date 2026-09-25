@@ -1,0 +1,12 @@
+{
+ "argv": [
+  "evidence",
+  "verify",
+  "examples/edge-cases/02-police-roadside-stop/scenario.instance.json",
+  "examples/edge-cases/03-red-light-ambulance-preemption/scenario.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "1f37b9ed18b6077e368c52f6b3e46671f1d40cc1eab45532dc47f454581c50d4"
+}
