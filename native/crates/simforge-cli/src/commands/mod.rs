@@ -9,6 +9,7 @@ use crate::contract::{CliError, CmdResult, Ctx};
 pub mod assets;
 mod authoring_support;
 pub mod batch;
+pub mod catalog;
 pub mod doctor;
 pub mod env;
 pub mod evaluate;
@@ -102,6 +103,9 @@ pub enum Command {
     Validate(validate::ValidateArgs),
     /// A concrete instance as ASAM OpenSCENARIO XML 1.4, XML 1.3 (esmini) or DSL 2.2, with a capability report.
     Export(export::ExportArgs),
+    /// The deterministic authoring catalog: 100 reserved scenario identities per installed map.
+    #[command(subcommand)]
+    Catalog(catalog::CatalogCommand),
 }
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
@@ -125,6 +129,7 @@ pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
         Command::Evidence(cmd) => evidence::run(cmd, ctx),
         Command::Validate(args) => validate::run(args, ctx),
         Command::Export(args) => export::run(args, ctx),
+        Command::Catalog(cmd) => catalog::run(cmd, ctx),
     }
 }
 

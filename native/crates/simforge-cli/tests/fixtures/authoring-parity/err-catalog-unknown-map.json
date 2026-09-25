@@ -1,0 +1,27 @@
+{
+ "argv": [
+  "catalog",
+  "create",
+  "--maps",
+  "richmond-field-station,no-such-map,Bad_Map",
+  "--out",
+  "{OUT}/c.json"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "bad_value",
+  "detail": {
+   "available": [
+    "richmond-field-station"
+   ],
+   "invalid": [
+    "no-such-map",
+    "Bad_Map"
+   ]
+  },
+  "path": "--map",
+  "reason": "catalog maps must be unique, safe, installed map names"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

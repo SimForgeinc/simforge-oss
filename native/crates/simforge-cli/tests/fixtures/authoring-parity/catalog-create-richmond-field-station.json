@@ -1,0 +1,16 @@
+{
+ "argv": [
+  "catalog",
+  "create",
+  "--map",
+  "richmond-field-station",
+  "--out",
+  "{OUT}/catalog.json"
+ ],
+ "exit": 0,
+ "files": {
+  "catalog.json": "4b3396fc503ddb7ffdc87b63c473ebb69c5176ed8b9b6cae7cd4b781efd1e92b"
+ },
+ "stderr": null,
+ "stdoutSha256": "a1f318e775b74c3308d062432f9f584a3a51113014a56308fbe18edf4069bcbd"
+}
