@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/remaining/opposing-turn-encroachment.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "b5b387de66fbb81a094ec1177d460ca3691441bc9d3c13d6d3508a4f74ba2893"
+}

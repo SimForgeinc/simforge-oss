@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/10-officer-flashing-red-junction/scenario.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "46f24bcad05970f5e89a91634eec262998ac64f860cf12974e7cdc86492916c7"
+}

@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "fixtures/golden-traces/templates/ltap-opposing.pinned.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "e9fe0a9861621b259e4f3b3228ac1e9f0084e4e71a100438ca2689373ad003a8"
+}

@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "template",
+  "new",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "abc123"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "b0911dff0e10846b3e03d81f756f6dd1be866a98c8e22a67c21c5aab25c9f5b2"
+}

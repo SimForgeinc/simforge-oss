@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/remaining/cross-traffic-stop-violation.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "a4d38a4e392017e2220e869769548b0be14416878709daf89f871c12df9040cf"
+}

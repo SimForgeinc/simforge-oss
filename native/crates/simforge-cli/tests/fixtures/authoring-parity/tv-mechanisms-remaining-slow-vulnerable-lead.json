@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/remaining/slow-vulnerable-lead.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "94da76712541741fd1b9c66d0c0bfecdc8e5445e69ba14b785966fa61ba665be"
+}

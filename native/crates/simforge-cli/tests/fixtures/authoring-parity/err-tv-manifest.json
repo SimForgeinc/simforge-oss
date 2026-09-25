@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "fixtures/golden-traces/manifest.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "b79770319714aa1d6d0d62b5c03435f527a588a6b15088832e5f1c703f338ffb"
+}

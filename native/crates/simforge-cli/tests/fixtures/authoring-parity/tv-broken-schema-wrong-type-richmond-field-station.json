@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "packages/cli/parity/fixtures/broken-templates/schema-wrong-type.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "c82b37369ca22eeac3b05b040ba34ea9e99cd4be46f47fccdf4592d6d4d9ab83"
+}

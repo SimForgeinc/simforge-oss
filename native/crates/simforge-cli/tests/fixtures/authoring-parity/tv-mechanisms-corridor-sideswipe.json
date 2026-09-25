@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/corridor/sideswipe.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "ac7fed842a2f4d41f0b2148ce5e6cf8d92509497be14e43fa73dc4556a530393"
+}

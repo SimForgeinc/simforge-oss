@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "packages/cli/parity/fixtures/broken-templates/bad-set-key.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "15a1699d66ab81b1884ec34b9d44abc3de9499f07ee0cc06c5932d0c3fe97e7b"
+}

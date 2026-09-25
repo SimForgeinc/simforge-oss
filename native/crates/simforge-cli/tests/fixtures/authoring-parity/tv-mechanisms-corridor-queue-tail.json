@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/corridor/queue-tail.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "48e2987834dcac42f57178373c1f1b454cda65f30c69adea7872400a0ea529a1"
+}

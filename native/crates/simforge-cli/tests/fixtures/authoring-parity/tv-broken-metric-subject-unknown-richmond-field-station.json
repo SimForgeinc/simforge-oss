@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "packages/cli/parity/fixtures/broken-templates/metric-subject-unknown.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "2cbff182fdccf33a3297f3c2b5dfc2fd151fe810965a3b5886531a39eb017fe4"
+}
