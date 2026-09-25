@@ -283,7 +283,10 @@ def run_job(params_path: str, out_dir: str, resume_path: str | None) -> int:
 
 
 def capabilities() -> dict[str, Any]:
-    library = find_library()
+    try:
+        library = find_library()
+    except EmbeddedRendererError:
+        library = None
     doc: dict[str, Any] = {"workload": "simforge.render-bundle/v1", "protocol": PROTOCOL, "passes": list(PASSES),
                            "library": None, "gpuInterop": False}
     if library:

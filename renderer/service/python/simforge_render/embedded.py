@@ -17,6 +17,7 @@ import ctypes.util
 import json
 import mmap
 import os
+import sys
 from typing import Any
 
 PROTOCOL = 5
@@ -27,40 +28,45 @@ class EmbeddedRendererError(RuntimeError):
     pass
 
 
-RUNTIME_ROOT_ENV = "SIMFORGE_NATIVE_RUNTIME_ROOT"
 LIBRARY_ENV = "SIMFORGE_RENDER_LIB"
+_PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def default_runtime_root() -> str:
-    data = os.environ.get("XDG_DATA_HOME") or os.path.join(os.path.expanduser("~"), ".local", "share")
-    return os.environ.get(RUNTIME_ROOT_ENV) or os.path.join(data, "simforge", "native-runtime")
+def library_name() -> str:
+    """The C ABI library's file name on this platform (renderer/ffi, lib `simforge_render`)."""
+    if sys.platform == "darwin":
+        return "libsimforge_render.dylib"
+    if sys.platform == "win32":
+        return "simforge_render.dll"
+    return "libsimforge_render.so"
 
 
 def library_candidates(path: str | None = None) -> list[str]:
-    """Resolution order: explicit path, `$SIMFORGE_RENDER_LIB`, the installed
-    runtime root's `lib/libsimforge_render.so`, then the loader path."""
-    return [
-        c
-        for c in (
-            path,
-            os.environ.get(LIBRARY_ENV),
-            os.path.join(default_runtime_root(), "lib", "libsimforge_render.so"),
-            ctypes.util.find_library("simforge_render"),
-        )
-        if c
-    ]
+    """Where the library may be, in order: an explicit `path`; beside this package
+    (the platform wheel ships it there); `$SIMFORGE_RENDER_LIB`. Nothing else: no
+    loader-path search, so the library that runs is always one of these."""
+    return [c for c in (path, os.path.join(_PACKAGE_DIR, library_name()), os.environ.get(LIBRARY_ENV)) if c]
 
 
 def find_library(path: str | None = None) -> str | None:
-    return next((c for c in library_candidates(path) if os.path.exists(c)), None)
+    """The first candidate that exists. An explicit `path` or `$SIMFORGE_RENDER_LIB`
+    that does not exist is an error, never skipped for a later candidate."""
+    for candidate in library_candidates(path):
+        if os.path.exists(candidate):
+            return candidate
+        if candidate == path or candidate == os.environ.get(LIBRARY_ENV):
+            raise EmbeddedRendererError(f"{library_name()} not found at {candidate}")
+    return None
 
 
 def _load(path: str | None) -> ctypes.CDLL:
     found = find_library(path)
     if found is None:
         raise EmbeddedRendererError(
-            f"libsimforge_render.so not found (looked at {library_candidates(path)}); install the native "
-            f"runtime ({RUNTIME_ROOT_ENV}) or set {LIBRARY_ENV}"
+            f"{library_name()} not found: it is not beside the simforge_render package "
+            f"({_PACKAGE_DIR}) and {LIBRARY_ENV} is not set. Install the simforge-oss-render "
+            f"wheel for this platform, or build renderer/ffi (cargo build --release -p "
+            f"simforge-render-ffi) and set {LIBRARY_ENV} to the built library."
         )
     return ctypes.CDLL(found)
 
