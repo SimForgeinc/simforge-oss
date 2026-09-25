@@ -90,8 +90,11 @@ itself never depends on private code (`scripts/check-boundary.sh`).
 - **Every CLI command is public, authoring included**: `template`, `sites`,
   `instantiate`, `batch`, `catalog`, `locations`, `variation`, `export`,
   `validate`, `evaluate`, `evidence verify` and `simulate`, plus the runtime
-  commands `package`, `maps pull`, `assets pull`, `timeline build`, `render`,
-  `env serve` and `doctor`. The CLI is Rust only.
+  commands `package`, `maps list`, `maps pull`, `assets pull`, `timeline build`,
+  `render`, `env serve` and `doctor`, and the account commands `login`,
+  `logout`, `auth status` and `whoami`. The CLI is Rust only; it knows a
+  SimForge host by name and discovers its endpoints (RFC 8414), so nothing
+  private is compiled in.
 - **The ingest contract is the scenario package** (`simforge.scenario-package/v1`,
   `docs/engineering/scenario-package.md`), with a `producer {app, appVersion,
   minCli}` field. The hosted app's "Export for CLI" writes it through the same

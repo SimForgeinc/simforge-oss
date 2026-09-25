@@ -157,6 +157,9 @@ fn simforge() -> Command {
         "SIMFORGE_MAPS_PUBLIC_URL",
         "SIMFORGE_MAPS_CACHE_ROOT",
         "SIMFORGE_MAPS_REGISTRY_TOKEN",
+        "SIMFORGE_TOKEN",
+        "SIMFORGE_HOST",
+        "SIMFORGE_CONFIG_DIR",
         "XDG_DATA_HOME",
     ] {
         cmd.env_remove(var);
@@ -314,8 +317,9 @@ fn pulls_over_file_url_and_reuses_the_cache() {
     assert_eq!(code, 0, "{err}");
     assert_eq!(doc["name"], MAP);
     assert_eq!(doc["version"], "v1", "a bare name resolves latest");
-    assert_eq!(doc["registrySource"], "flag:--registry");
-    assert_eq!(doc["registryAuth"], "none");
+    assert_eq!(doc["registry"]["source"], "flag:--registry");
+    assert_eq!(doc["registry"]["auth"], "none");
+    assert_eq!(doc["registry"]["authenticated"], false);
     assert_eq!(doc["cacheRootSource"], "flag:--cache-root");
     let distinct = doc["blobs"]["distinct"].as_u64().unwrap();
     assert_eq!(doc["blobs"]["downloaded"].as_u64().unwrap(), distinct);
@@ -458,9 +462,10 @@ fn pulls_over_http_with_a_bearer_token_that_is_never_printed() {
     assert!(!stdout.contains("sekrit") && !stderr.contains("sekrit"));
     let doc: Value = serde_json::from_str(&stdout).unwrap();
     assert_eq!(
-        doc["registryAuth"],
+        doc["registry"]["auth"],
         "bearer (env:SIMFORGE_MAPS_REGISTRY_TOKEN)"
     );
+    assert_eq!(doc["registry"]["authenticated"], true);
     let seen = auth.lock().unwrap();
     assert!(!seen.is_empty());
     assert!(seen

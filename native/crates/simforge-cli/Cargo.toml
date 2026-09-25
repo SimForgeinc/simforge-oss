@@ -30,8 +30,14 @@ serde_json = "1"
 wgpu = { version = "29.0.4", default-features = false, features = ["std", "vulkan", "metal", "dx12"] }
 futures-lite = "2"
 ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
-fs4 = { version = "1", default-features = false }
+fs4 = { version = "1", default-features = false, features = ["sync"] }
 sha2 = "0.10"
+# `simforge login`: PKCE verifier/state randomness and base64url.
+getrandom = "0.3"
+base64 = "0.22"
+# The OS credential store for `simforge login` tokens: macOS Keychain,
+# Windows Credential Manager, the Secret Service on Linux (pure-Rust D-Bus).
+keyring = { version = "3.6", features = ["apple-native", "windows-native", "async-secret-service", "crypto-rust", "async-io"] }
 flate2 = "1"
 regex = "1"
 # The bundled agent skills (skills/<name>/SKILL.md), embedded at build time.

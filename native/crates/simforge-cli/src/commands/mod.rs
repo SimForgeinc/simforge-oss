@@ -17,6 +17,7 @@ pub mod evidence;
 pub mod export;
 pub mod instantiate;
 pub mod locations;
+pub mod login;
 pub mod maps;
 pub mod package;
 pub mod render;
@@ -54,6 +55,15 @@ impl Preset {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Sign in to a SimForge host in the browser and approve this CLI (device code with --device).
+    Login(login::LoginArgs),
+    /// Revoke this machine's session on the host and delete its stored tokens.
+    Logout(login::HostArgs),
+    /// This machine's login.
+    #[command(subcommand)]
+    Auth(login::AuthCommand),
+    /// The account, organization, scopes, expiry and host of this machine's login (same as `auth status`).
+    Whoami(login::HostArgs),
     /// Check this machine: GPU adapter, ffmpeg, cache roots, disk, registry reachability.
     Doctor(doctor::DoctorArgs),
     /// Content-addressed map releases.
@@ -110,6 +120,10 @@ pub enum Command {
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
     match command {
+        Command::Login(args) => login::login(args, ctx),
+        Command::Logout(args) => login::logout(args, ctx),
+        Command::Auth(cmd) => login::run_auth(cmd, ctx),
+        Command::Whoami(args) => login::whoami(args, ctx),
         Command::Doctor(args) => doctor::run(args, ctx),
         Command::Maps(cmd) => maps::run(cmd, ctx),
         Command::Assets(cmd) => assets::run(cmd, ctx),

@@ -28,7 +28,7 @@ use simforge_package::{Inspection, PackageError, PackageReader, Verification, Ve
 use crate::commands::assets;
 use crate::contract::{CliError, CmdResult, Ctx, Outcome};
 use crate::paths;
-use crate::registry::{self, PullOptions, Registry};
+use crate::registry::{self, PullOptions, Registry, RegistryAuth};
 
 #[derive(Debug, Subcommand)]
 pub enum PackageCommand {
@@ -64,9 +64,12 @@ pub struct ImportArgs {
     /// Fetch nothing: report the map and actor closure this machine still lacks.
     #[arg(long)]
     pub offline: bool,
-    /// Map registry to resolve the package's map from. Default: SIMFORGE_MAPS_REGISTRY, SIMFORGE_MAPS_PUBLIC_URL, then the public registry.
+    /// Map registry to resolve the package's map from. Default: SIMFORGE_MAPS_REGISTRY, SIMFORGE_MAPS_PUBLIC_URL, then the logged-in account's registry (a private map needs no access URL then), then the public registry.
     #[arg(long, value_name = "URL")]
     pub registry: Option<String>,
+    /// SimForge host whose account registry resolves the map (see `simforge login`). Default: SIMFORGE_HOST, then simforge.ai.
+    #[arg(long, value_name = "HOST")]
+    pub host: Option<String>,
     /// Asset store for the actor closure. Default: SIMFORGE_ACTOR_ASSETS_BASE_URL, then the public store.
     #[arg(long, value_name = "URL")]
     pub assets_base_url: Option<String>,
@@ -346,7 +349,11 @@ fn install_embedded(
     #[cfg(unix)]
     std::os::unix::fs::symlink(ws.join("blobs"), reg.join("blobs"))
         .map_err(|e| CliError::new("write_failed", e.to_string()))?;
-    let registry = Registry::new(&format!("file://{}", reg.display()), None)?;
+    let registry = Registry::new(
+        &format!("file://{}", reg.display()),
+        RegistryAuth::None,
+        "package",
+    )?;
     let result = registry::pull(
         &registry,
         &format!("{name}@{version}"),
@@ -427,11 +434,7 @@ fn resolve_map(
         out["reason"] = json!("--offline");
         return Ok(Ok(out));
     }
-    let url = paths::registry_url(args.registry.as_deref());
-    let token = std::env::var(registry::TOKEN_ENV)
-        .ok()
-        .filter(|t| !t.trim().is_empty());
-    let reg = Registry::new(&url.value, token)?;
+    let reg = registry::select(args.registry.as_deref(), args.host.as_deref())?;
     if let Some(reference) = reg.find_release(
         map.registry_release_digest.as_deref(),
         &canonical,
@@ -456,7 +459,7 @@ fn resolve_map(
             let mut out = base;
             out["state"] = json!("pulled");
             out["release"] = json!(reference);
-            out["registry"] = json!(reg.url);
+            out["registry"] = reg.describe();
             out["pull"] = summary;
             return Ok(Ok(out));
         }
@@ -476,7 +479,7 @@ fn resolve_map(
         .collect();
     let mut out = base;
     out["state"] = json!("unavailable");
-    out["registry"] = json!(reg.url);
+    out["registry"] = reg.describe();
     out["missing"] = json!({
         "count": missing.len(),
         "bytes": missing.iter().map(|(_, (_, n))| n).sum::<u64>(),

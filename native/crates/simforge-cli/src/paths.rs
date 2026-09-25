@@ -95,27 +95,26 @@ pub fn assets_root(flag: Option<&Path>) -> Result<Resolved<PathBuf>, CliError> {
     root(flag, "--root", "SIMFORGE_ACTOR_ASSETS_ROOT", "actor-assets")
 }
 
-/// The map registry: `--registry`, `SIMFORGE_MAPS_REGISTRY`, `SIMFORGE_MAPS_PUBLIC_URL`,
-/// then the public registry.
-pub fn registry_url(flag: Option<&str>) -> Resolved<String> {
+/// A registry named explicitly: `--registry`, then `SIMFORGE_MAPS_REGISTRY`,
+/// then `SIMFORGE_MAPS_PUBLIC_URL`. `None` leaves the choice to the login
+/// (`registry::select`): the account's registry when logged in, else the
+/// public one.
+pub fn registry_override(flag: Option<&str>) -> Option<Resolved<String>> {
     if let Some(url) = flag {
-        return Resolved {
+        return Some(Resolved {
             value: url.trim_end_matches('/').to_owned(),
             source: "flag:--registry".into(),
-        };
+        });
     }
     for env in ["SIMFORGE_MAPS_REGISTRY", "SIMFORGE_MAPS_PUBLIC_URL"] {
         if let Some(url) = env_nonempty(env) {
-            return Resolved {
+            return Some(Resolved {
                 value: url.trim_end_matches('/').to_owned(),
                 source: format!("env:{env}"),
-            };
+            });
         }
     }
-    Resolved {
-        value: PUBLIC_REGISTRY_URL.to_owned(),
-        source: "default".into(),
-    }
+    None
 }
 
 /// A path made absolute against the current directory (no symlink resolution,
