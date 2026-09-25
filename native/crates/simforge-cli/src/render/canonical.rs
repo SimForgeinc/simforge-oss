@@ -78,39 +78,11 @@ pub fn q(x: f64) -> f64 {
 }
 
 /// ECMAScript `Number.prototype.toString()` (radix 10) of a finite number;
-/// `-0` prints as `0`.
+/// `-0` prints as `0`. The one implementation: `simforge_core::hash::js_number_to_string`
+/// (shortest round-trip digits, exact ties to even, as ECMA-262 requires).
 pub fn js_number(x: f64) -> String {
     assert!(x.is_finite(), "js_number of a non-finite value");
-    if x == 0.0 {
-        return "0".into();
-    }
-    // Rust's `{:e}` prints the shortest round-trip digits: `d.ddde±x`.
-    let sci = format!("{:e}", x.abs());
-    let (mantissa, exponent) = sci.split_once('e').expect("exponent form");
-    let exponent: i32 = exponent.parse().expect("exponent");
-    let digits: String = mantissa.chars().filter(|c| *c != '.').collect();
-    let k = digits.len() as i32;
-    let n = exponent + 1;
-    let body = if k <= n && n <= 21 {
-        format!("{digits}{}", "0".repeat((n - k) as usize))
-    } else if 0 < n && n <= 21 {
-        format!("{}.{}", &digits[..n as usize], &digits[n as usize..])
-    } else if -6 < n && n <= 0 {
-        format!("0.{}{digits}", "0".repeat((-n) as usize))
-    } else {
-        let e = n - 1;
-        let sign = if e >= 0 { "+" } else { "-" };
-        if k == 1 {
-            format!("{digits}e{sign}{}", e.abs())
-        } else {
-            format!("{}.{}e{sign}{}", &digits[..1], &digits[1..], e.abs())
-        }
-    };
-    if x < 0.0 {
-        format!("-{body}")
-    } else {
-        body
-    }
+    simforge_core::hash::js_number_to_string(x)
 }
 
 fn number(n: &serde_json::Number) -> String {
