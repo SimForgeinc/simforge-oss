@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "validate",
+  "examples/ltap-opposing.template.json",
+  "--tier",
+  "2",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "dbaefb6ead6708498ef8f4bfa7e5d5289c4754bbb0c1b01b87db28217b43f0fa"
+}

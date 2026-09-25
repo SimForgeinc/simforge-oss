@@ -26,6 +26,7 @@ pub mod sites;
 pub mod template;
 pub mod template_new;
 pub mod validate;
+pub mod validation;
 pub mod variation;
 
 pub use simforge_compiler::CompileError;
