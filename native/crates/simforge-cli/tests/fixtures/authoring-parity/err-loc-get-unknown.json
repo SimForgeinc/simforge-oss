@@ -1,0 +1,20 @@
+{
+ "argv": [
+  "locations",
+  "get",
+  "junction/nowhere",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "unknown_reference",
+  "detail": {
+   "hint": "use `simforge locations resolve` for free text, or `simforge locations find` to browse"
+  },
+  "path": "ref",
+  "reason": "no location \"junction/nowhere\" on richmond-field-station"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "locations",
+  "resolve",
+  "construction work zone",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "dc5bcf01847b61e4e9154305c6c16de2d4341b877259724f97a083991f126659"
+}

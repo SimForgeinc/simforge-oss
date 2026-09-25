@@ -1,0 +1,49 @@
+{
+ "argv": [
+  "locations",
+  "find",
+  "--map",
+  "richmond-field-station",
+  "--type",
+  "castle"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "unknown_value",
+  "detail": {
+   "allowed": [
+    "junction",
+    "junction_movement",
+    "driving_corridor",
+    "bike_corridor",
+    "walking_corridor",
+    "midblock_segment",
+    "merge_zone",
+    "lane_drop",
+    "parking_lane",
+    "parking_space",
+    "parking_area",
+    "parking_access_point",
+    "driveway",
+    "loading_zone",
+    "bus_stop",
+    "crosswalk",
+    "sidewalk",
+    "curb",
+    "median",
+    "refuge_island",
+    "building_entrance",
+    "school_zone",
+    "work_zone_suitable",
+    "occlusion_zone",
+    "conflict_zone",
+    "poi_frontage",
+    "address"
+   ]
+  },
+  "path": "type",
+  "reason": "\"castle\" is not a valid type"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

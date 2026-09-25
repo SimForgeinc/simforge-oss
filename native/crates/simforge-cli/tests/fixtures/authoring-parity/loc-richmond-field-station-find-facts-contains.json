@@ -1,0 +1,20 @@
+{
+ "argv": [
+  "locations",
+  "find",
+  "--map",
+  "richmond-field-station",
+  "--facts",
+  "road_name~road",
+  "--limit",
+  "60"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "bad_value",
+  "path": "--facts",
+  "reason": "--facts entries must be key=value, got \"road_name~road\""
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

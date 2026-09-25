@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "locations",
+  "resolve",
+  "the crosswalk by the school",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "4a32b66aad4b6799cb7e99c3149f3378f8385f0811f4691fc10ac16ea9a42701"
+}

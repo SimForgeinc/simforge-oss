@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "locations",
+  "find",
+  "--map",
+  "richmond-field-station",
+  "--limit",
+  "1"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "2aaafd34a1e1131b74fe7205682c2ba8651b393506b8608b1f530e98beb02aea"
+}
