@@ -1,35 +1,26 @@
 # Renderer contract v1 (`simforge.renderer-contract/v1`)
 
 The renderer-neutral boundary between SimForge scene/session state and any
-concrete renderer. It freezes the *shapes* that cross the boundary — camera
+concrete renderer. It freezes the *shapes* that cross the boundary (camera
 commands, actor frame batches, light state, picks, schedules, map
-publications, semantic legends, artifact provenance — without rewriting any
-working renderer internals.
+publications, semantic legends, artifact provenance) without prescribing any
+renderer's internals.
 
-Source of truth: `packages/viewer/src/renderer-contract.ts` (pure types +
-normative pure functions, no `three` import, no runtime dependency).
-Conformance evidence: `packages/viewer/src/renderer-contract.test.ts` against
-`fixtures/renderer-contract/basic-intersection.v1.json`,
-executed through the Three adapter
-(`packages/viewer/src/renderer-contract-adapter.ts`).
-
-## Viewport ownership (frozen)
-
-| Surface | Renderer | Status |
-|---|---|---|
-| Scenario editor + preview + quick VP9 recording | **Packaged Three WebGL** — `@simforge-oss/viewer` `CityViewer` + `ActorRenderer` | Canonical authoring viewport. Keeps custom picking, `G`/`R` modal manipulation, WebCodecs canvas recording. |
-| City / digital-twin | **Platform Three WebGPU** — bespoke `city-viewer` runtime (platform repo) | Canonical map/twin surface. Streaming, TSL post stack, luminaires. |
-| High-fidelity preview, sensor/dataset artifacts | **Native Bevy** — `renderer/{render-core,sensors,service}` | Canonical sensor/cinematic lane. Headless jobs + shm service; not a browser viewport. |
-
-**There is no third browser viewport.** New browser render work lands in one
-of the two existing Three surfaces; Bevy work lands in the native lane. A
-Bevy WASM editor is gated behind the strategy-A feasibility spike and is out
-of scope for this contract version.
+The frozen reference is the parity fixture
+`fixtures/renderer-contract/basic-intersection.v1.json`
+(`simforge.renderer-parity-fixture/v1`) together with this document. The
+native renderer's conformance lives in `renderer/render-core/src/fixture.rs`
+and `actor_lights.rs`, checked by `renderer/render-core/tests/parity_fixture.rs`
+(`cargo test -p render-core --test parity_fixture`, CPU only) and by
+`simforge-render dev parity-check --fixture <fixture>`. The viewport
+protocol's picks use the same layers (`renderer/viewport/PROTOCOL.md`).
+Browser viewers (the hosted app's) conform to the same fixture through their
+own adapters.
 
 ### Native playback readiness
 
 `simforge-render job --job` (a `simforge.render-job/v2` job with a
-`sceneState`) loads the complete native `master.gltf` from an OSS map pull,
+`sceneState`) loads the complete native `master.gltf` from a `simforge maps pull`,
 including its external textures. Playback waits for recursive asset
 dependencies and for the shared GPU-readiness barrier (material bindings
 and compiled pipelines) before counting warmup frames or capturing tick 0.
@@ -40,112 +31,24 @@ captures. Large masters may require a higher process file-descriptor limit
 `simforge-render serve` becomes ready as soon as the map is prewarmed. The
 CPU raycast scenes that lidar, radar and episode road checks need (a BVH
 over every map triangle, plus a road-only BVH) are built on the first
-request that needs them, never at startup. They are built in parallel, and
-the service log carries a `sensor-scenes: still building` heartbeat while
-they build. An RGB-only render never pays for them. On belmont (266 M map
+request that needs them, never at startup, and in parallel. An RGB-only render never pays for them. On belmont (266 M map
 triangles) building them at startup delayed readiness from ~25 s to ~220 s,
-past the worker's 300 s budget on slower hosts.
+past a 300 s readiness budget on slower hosts.
 
 The standalone binary embeds its motion-vector shader, so deployment does
 not require the source checkout at the original build path.
 
 Playback places ground-contact actors and the chase camera using the native
-scene engine's terrain-height field. `--ground-y` explicitly overrides that
-with a constant elevation for flat fixtures. Each captured RGB frame has a
+scene engine's terrain-height field. A scene's `groundY` explicitly
+overrides that with a constant elevation for flat fixtures. Each captured RGB frame has a
 corresponding `observed-frames.jsonl` record containing the rendered actor
 and camera world transforms; these are observations, not echoed input poses.
-
-### CityViewer map-loading observability
-
-`CityViewerStats` reports implementation telemetry separately from the frozen
-renderer wire contract. `downloads.transferredBytes` counts actual received
-bytes, including external textures and startup metadata. `loadProgress`
-reports the current stage and completed decode, texture-upload, and compile
-counts; elapsed time alone is never progress.
-
-Readiness requires road geometry and coarse city tiles in the readiness footprint
-to finish GPU preparation. Required work precedes optional prefetch in both the
-fetch and upload queues. A wanted tile in the prefetch margin is not necessarily
-required: refusing it for budget must defer it, never fail an otherwise usable map.
-Only required coarse fallbacks are pinned. Budget enforcement reclaims optional
-residency, and an evicted prefetch waits for a view change instead of immediately
-refetching. Newly required tiles still load their coarse fallback before refinement.
-`requiredPendingAssets` excludes optional refinements; `requiredError` surfaces
-required download, decode, upload, compile, or memory admission failures. A failed
-compile must not publish the asset as resident.
-Consumers should poll from bootstrap start, use stage-specific idle deadlines
-and an overall deadline, and report processing as indeterminate when no byte
-denominator is available.
-Initial and reset views focus the nearest authored city tile rather than empty
-terrain bounds. WebGL context loss is a required error, including after startup;
-the React surface reports it to its host so a blank canvas cannot remain ready.
-
-`loadDiagnostics` includes actual GPU capabilities and unmasked vendor/renderer,
-published variant IDs, resident texture-format and named RGBA-fallback counts,
-named content warnings, shadow-atlas allocation and any resolution reduction,
-and each layer's largest admission-estimate understatement. Its retained structured
-error identifies a refused asset, whether it was required, the estimate, resident
-and pending bytes, budget, and the original cause chain. New map loads reset that
-error. `residentBytes` includes the R8 shadow atlas; older reports omitted it.
-The 60,000 ms readiness deadline is a recoverable slow-start diagnostic:
-`loadDiagnostics.residencyDeadline` records `missedAtMs` and `recoveredAtMs`.
-The load promise remains pending until the required footprint genuinely becomes
-resident, allowing the normal `onMapLoaded` path to recover the UI. Real asset,
-input, budget, and GPU errors remain terminal. A separate 600,000 ms **without
-progress** terminates a wedged readiness wait with `ResidencyTimeoutError`,
-code `view_residency_stalled`; its payload reports required pending assets,
-missing-in-view tiles, resident/pending bytes, and budget. Received bytes and
-completed decode/upload/compile work renew only this no-progress bound, never
-the initial diagnostic deadline.
-
-
-Verification must continue after initial readiness: an initially correct frame
-does not prove that subsequent prefetch stays within budget. Observe a stationary
-camera for at least 90–120 seconds after readiness, and report moving-camera
-streaming separately rather than calling transient in-view misses a settled state.
-
-
-`textureMaxDimension` selects existing compressed mip levels before GPU upload;
-it does not remove geometry or resample authored pixels. Embedders should pair
-this limit with their quality preset's memory budget. It can change atomically
-through `setAuthoringFidelity`; textures are cached separately by URL and mip
-limit. Map changes renew the decoder's cancellation signal so an aborted prior
-map cannot cancel the next map's texture requests.
-Published Low uses a 256 px UASTC tier; Medium selects a 512 px BC7 or ASTC tier
-when supported, otherwise portable UASTC. Admission checks the unique images in
-the readiness footprint before decode. Medium may explicitly downgrade to Low;
-a required Low working set that cannot fit fails rather than silently reducing
-the promised tier. `tierSelection` and `loadProgress.textureMaxDimension` report
-the actual selection.
-
-Per-GLB file-size ratios are only admission heuristics. A GLB's byte count cannot
-bound the GPU cost of images outside that file: measured tiles exceeded the
-estimate by 15x, while another external-image asset happened to be close.
-The ledger replaces reservations with decoded resource bytes, and enforcement
-reclaims optional allocations under pressure. Brief decode-time overshoots are
-not evidence of a larger configured budget; report their measured peak separately.
-The shadow atlas is capped at the context's real `MAX_TEXTURE_SIZE`, preserving
-world-space UVs while reducing cell resolution if necessary. Its allocation is
-charged to the same ledger and any clamp has the named `shadow-atlas-gpu-limit`
-reason.
-Trimmed Basis mips whose base dimensions are not divisible by four decode to
-RGBA with the same authored pixels, avoiding illegal BC GPU allocations.
-Already-transcoded BC sources retain the nearest block-aligned authored mip.
-Those legal dimensions may exceed the requested ceiling; residency accounting
-still charges their actual bytes.
-
-
-`resolveAssetUrls` optionally resolves a GLTF's external image URLs together
-before texture loading. This lets authenticated embedders batch authorization
-instead of serializing one database-backed request per image. Bounded texture
-requests feed a shared transcoder pool; encoded unused mip levels are removed
-before transcoding.
 
 ## Frozen wire identifiers
 
 `simforge.scene-state.v1` and `uniscenario.static-semantics/v1` are referenced
-byte-identically (see `docs/engineering/simcloud-sync.md`). Identifiers
-introduced by this contract likewise use the `simforge.` prefix:
+byte-identically by every renderer (`docs/engineering/scene-state-v1.md`).
+Identifiers introduced by this contract likewise use the `simforge.` prefix:
 
 - `simforge.renderer-contract/v1` — the contract version.
 - `simforge.renderer-parity-fixture/v1` — the fixture document version.
@@ -158,8 +61,7 @@ order); row-major consumers own the transpose.
 
 ### Camera / view commands — `CameraCommand`, `CameraStateReport`
 
-- `set-pose` — eye/target (+optional up). Formalizes `CameraView` /
-  `CameraRig.applyView`.
+- `set-pose` — eye/target (+optional up).
 - `set-intrinsics` — vertical FoV (deg), aspect, near, far. Pixel-focal
   consumers derive `fy = h / (2·tan(fovY/2))`, `fx = fy`, centred principal
   point.
@@ -170,31 +72,29 @@ order); row-major consumers own the transpose.
 - `follow` — attachment (`actor` / `traffic-signal` / `map-feature`) +
   `chase`/`dash` mode; actor poses are normative (`followCameraPose`).
 - `set-constraints-enabled` — sensor rigs temporarily own the exact eye below
-  editor navigation limits (mirrors `setCameraPoseConstraintsEnabled`).
+  editor navigation limits.
 
 `CameraStateReport` returns pose, intrinsics, view matrix (world→camera) and
 projection matrix (GL depth convention, [-1, 1]).
 
 ### Actor frame batches — `ActorFrameBatch`, `ActorRenderState`
 
-`ActorRenderState` is the proven `ActorView` shape stated neutrally: id,
-catalogId, ground-contact x/y/z, `headingRad` (CCW from +X about +Y), dims,
-plus articulation/cue channels (doors, reversing, emergency, indicator,
-headlights, bodyColor, animationTimeS, speedMps, downProgress). The Three
-adapter compile-asserts `ActorRenderState` → `ActorView` assignability, so
-the contract cannot drift from the renderer.
+`ActorRenderState`: id, catalogId, ground-contact x/y/z, `headingRad` (CCW
+from +X about +Y), dims, plus articulation/cue channels (doors, reversing,
+emergency, indicator, headlights, bodyColor, animationTimeS, speedMps,
+downProgress).
 
 Batch semantics are **idempotent replace-all per layer** (`editor`,
-`sumo-traffic`, renderer-local ids): the renderer draws exactly the batch,
-matching `ActorRenderer.syncLayer`. Spawn/despawn is carried explicitly by
+`sumo-traffic`, renderer-local ids): the renderer draws exactly the batch. Spawn/despawn is carried explicitly by
 scene-state.v1 tick records; `actorRenderStateFromSceneState` is the
 normative mapping from a scene-state actor tick (+ playback cues) to a
 render state (`speedMps = |velocity|`, `animationTimeS = frame.t`).
 
 ### Light state — `LightStateReport`, `deriveVehicleLightStates`
 
-Deterministic, renderer-portable rules (pinned to the Three implementation by
-compile-time constant checks and the fixture test):
+Deterministic, renderer-portable rules (pinned by the fixture's
+`expectedLights`; `actor_lights::derive_vehicle_light_states` in the native
+renderer):
 
 - Low beams: explicit per-actor `headlights` wins; otherwise the
   environment-driven global default (authored darkness). Emissive lenses are
@@ -212,7 +112,7 @@ compile-time constant checks and the fixture test):
 Requests are NDC (+y up) against declared layers (`actors`, `ground`,
 `map-static`). Hits are **id-based**: stable actor id or semantic instance
 id, distance in metres, world-space point, optional semantic classification.
-No `three` `Intersection`, no scene-graph object, ever crosses the boundary.
+No renderer scene-graph object ever crosses the boundary.
 Light/cue volumes (low-beam lenses, emergency strobes, reverse panels) are
 not selection targets.
 
@@ -221,7 +121,7 @@ not selection targets.
 `tickHz`, `startTick`, `frameCount`, exact backing-buffer size, pixel ratio
 pinned to 1. `scheduleTimestampsMicros` yields the exact integer-microsecond
 timestamps (WebCodecs/WebM timebase). A conforming renderer presents exactly
-`frameCount` frames at these timestamps — the browser recorder's capture
+`frameCount` frames at these timestamps; a browser recorder's capture
 manifest and a native render job share this schedule.
 
 ### Map publication — `MapPublicationDescriptor`
@@ -267,58 +167,5 @@ renderer must reproduce:
 | Schedule timestamps (µs) | exact integers |
 
 Tolerances are f64-math tolerances, not pixel tolerances: the fixture pins
-scene semantics, never GPU output. Regenerate after an *intentional*
-behaviour change:
-
-```
-cd packages/viewer
-REGEN_RENDERER_CONTRACT_FIXTURE=1 pnpm vitest run src/renderer-contract.test.ts
-```
-
-## Three adapter (compile-level proof, not a migration)
-
-`ThreeRendererAdapter` wraps the narrow structural slice of `CityViewer`
-(`ThreeAdapterHost`: camera, rig `getView`/`applyView`/`setEnabled`,
-constraint toggle — the same structural trick as the editor's
-`viewer-contract.ts`) plus an `ActorRenderer`. Compile-time proofs:
-
-- `cityViewerAsAdapterHost`: `CityViewer` satisfies the host slice.
-- `contractActorToView`: `ActorRenderState` is assignable to `ActorView`.
-- `PROJECTED_HEADLIGHT_LIMIT` / `STREET_LUMINAIRE_ACTIVE_LIMIT` are pinned to
-  `MAX_PROJECTED_HEADLIGHTS` / `DEFAULT_ACTIVE_LUMINAIRE_LIMIT` by typed
-  constant assignment.
-
-The adapter's light report is read from the *observed* renderer scene graph
-(batch id bands, visible spotlights) and must equal the contract's normative
-derivation — the fixture test asserts both.
-
-## Public APIs this contract replaces at integration time (patch notes)
-
-No implementation is migrated in v1. When a surface adopts the contract, the
-following leaked-Three publics are superseded (replacement in parentheses):
-
-- `CityViewer.scene` / `.camera` / `.renderer` / `.roadGroup` / `.cityGroup` /
-  `.vegetationGroup` — mutable Three objects in the public API
-  (→ `CameraCommand` / `CameraStateReport`; actor mounting via
-  `ActorFrameBatch`; map layers via `MapPublicationDescriptor`).
-- `CityViewer.controls: CameraRig` and `CameraRig.setView(Vector3, Vector3)`,
-  `CameraPoseConstraint(PerspectiveCamera, Vector3)` (→ `set-pose` /
-  `set-constraints-enabled`; `CameraView` capture stays, it is already
-  neutral).
-- Editor `EditorViewer` (`packages/editor/src/viewer-contract.ts`) exposing
-  `Scene`/`PerspectiveCamera`/`renderer.domElement` (→ `ThreeAdapterHost`-
-  style narrow slice + contract camera/pick channels).
-- `Raycaster.setFromCamera` + `ActorRenderer.pickables()` +
-  `actorIdForHit(Intersection)` call sites in editor/platform surfaces
-  (→ `PickRequest`/`PickResult`; `actorIdForHit` remains internal to the
-  Three adapter).
-- `ActorRenderer.group` mounting into `viewer.scene` by platform code
-  (→ adapter-owned mounting; frames via `applyActorFrame`).
-- Ad-hoc light toggles (`setHeadlightsEnabled`, `setStreetLightsEnabled`)
-  consumed cross-package (→ `LightStateReport` + environment default in the
-  frame path).
-- Sensor-capture camera re-posing that mutates Three cameras directly
-  (→ `set-intrinsics`/`set-pose` with `set-constraints-enabled`).
-
-Interior uses of Three inside a renderer are untouched — the contract governs
-what crosses package/process boundaries, not how a renderer draws.
+scene semantics, never GPU output. An *intentional* behaviour change updates
+the fixture and every conforming renderer in step.

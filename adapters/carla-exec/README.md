@@ -8,9 +8,8 @@ compilation, deterministic native execution, RGB/depth/semantic/instance/
 normals cameras, LiDAR, semantic LiDAR, radar, materialized traffic, parity
 evidence, bounded artifact transport, and the official schema validator.
 
-CARLA is optional. The browser editor, local deterministic simulation,
-OpenDRIVE tooling, OpenSCENARIO export, and playback do not import CARLA or
-require a CARLA server.
+CARLA is optional. The engine, the native renderer, the `simforge` CLI and the
+gym do not import CARLA or require a CARLA server.
 
 ## Install
 
@@ -38,8 +37,7 @@ world:
 simforge-oss-carla-exec --host 127.0.0.1 --port 2000 probe
 ```
 
-The unified Node CLI dispatches `--engine carla` to this installed process
-adapter:
+Render a stored render intent:
 
 ```sh
 simforge-oss-carla-exec --host 127.0.0.1 --port 2000 run-intent \
@@ -396,8 +394,7 @@ pose gates (`SIMFORGE_CARLA_POSE_GATES`, `enforce` by default).
 ## Develop and verify
 
 ```sh
-python3 -m pip install -e './adapters/carla-exec[dev]'
-python3 -m pytest adapters/carla-exec/tests -q
+cd adapters/carla-exec && uv run --with pytest python -m pytest -q
 ```
 
 The test corpus uses fake CARLA APIs, so it exercises the compiler, runtime,
@@ -405,5 +402,5 @@ failure handling, security boundaries, and deterministic evidence without a
 GPU server. A real CARLA qualification remains a separate hardware acceptance
 gate.
 
-See `docs/carla-renderer-adapter.md` for the ownership boundary, capability
+See `docs/engineering/carla-renderer-adapter.md` for the ownership boundary, capability
 matrix, and real-runtime acceptance criteria.

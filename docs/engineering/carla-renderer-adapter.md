@@ -159,9 +159,8 @@ render-timeline sampler (`docs/engineering/render-timeline.md`).
 - After the tick, the observed transforms of every live body (one world
   snapshot) are compared with the sampler. The tolerances are 1 cm and 0.1°,
   with exact lifecycle and signal closure. The gate is **blocking**: a
-  violation fails the job, `run-intent` exits non-zero, and the control plane
-  refuses any trace-replay evidence whose recorded maxima exceed the limits
-  (SimCloud migration `20260922150100`).
+  violation fails the job, `run-intent` exits non-zero, and a host must refuse
+  any trace-replay evidence whose recorded maxima exceed the limits.
 - Contacts are the trace's events. Replay attaches no collision sensors, and
   CARLA physics can never rewrite a pose.
 - Time: plan `t = 0` is the clip start after the warm-up, and the warm-up is
@@ -285,7 +284,8 @@ Implemented in the public wheel:
    sensor-manifest, ambient-traffic, cancellation, and parity evidence.
 5. Bounded downloads/uploads, redirect and SSRF controls, deadlines, retries,
    cleanup, and output-volume limits.
-6. A local CLI and a versioned wheel that SimCloud consumes unchanged.
+6. A local CLI and a versioned wheel that the hosted render workers consume
+   unchanged.
 
 Still hardware- and asset-specific acceptance work, not shared source work:
 

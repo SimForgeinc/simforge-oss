@@ -24,7 +24,7 @@ The Warp backend refuses model features MuJoCo Warp documents as unsupported
 capacity — contacts are never dropped silently. Observations, rewards and
 termination are computed on the host from a per-decision device-to-host copy
 of `sensordata`; this is declared in `warp_capabilities()`. Device-resident
-reward/termination and masked-reset kernels belong to the BATCH workstream.
+reward/termination and masked-reset kernels are not implemented.
 
 ### Warp determinism
 

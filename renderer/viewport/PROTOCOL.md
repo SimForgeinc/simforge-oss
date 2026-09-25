@@ -9,8 +9,8 @@ Process: the viewport is the `view` subcommand of the one renderer binary,
 crate, `simforge-render-view`, is a library linked into `simforge-render`).
 
 Transport: newline-delimited JSON, host → viewport on stdin, viewport → host
-on stdout. Electron owns the child process and treats stdout events as
-authoritative. The viewport's own logs go to **stderr**; stdout carries
+on stdout. The embedding host owns the child process and treats stdout events
+as authoritative. The viewport's own logs go to **stderr**; stdout carries
 nothing but events.
 
 Casing: commands are kebab-case names, and **every field in both directions is
@@ -41,9 +41,9 @@ against `.map-release.json` and the bytes on disk before it loads anything
 ```
 
 * `load-map` — verify identity against the root and start the progressive
-  load. `mapRoot` is a host filesystem path and is supplied by the Electron
-  main process, never by page script: the renderer sends identity only and the
-  shell resolves the root under the cache root it owns. A second `load-map`
+  load. `mapRoot` is a host filesystem path and is supplied by the host process
+  that owns the map cache root, never by untrusted UI code: the UI sends
+  identity only and the host resolves the root under the cache root it owns. A second `load-map`
   for the same root and release is a no-op; a different root is rejected
   (`map_root_immutable`), because the process's asset root is fixed at launch.
 * `camera` — set the eye and look-at target. Answered with `camera-state`.
@@ -109,10 +109,9 @@ Every event carries `mapVersionId`, `releaseDigest`, `renderer`, and
 a stream with the release it asked for. `frame-stats` is emitted once per
 second only with `--frame-stats`.
 
-`closed` is not in this list: the process cannot report its own exit. The host
-wrapper (`studio/desktop/native-viewport.mjs`) synthesises
-`{"event":"closed","code":N,"signal":S}` when the child exits, and the editor
-adapter treats an exit it did not ask for as a renderer failure.
+`closed` is not in this list: the process cannot report its own exit. A host
+synthesises `{"event":"closed","code":N,"signal":S}` when the child exits and
+treats an exit it did not ask for as a renderer failure.
 
 ### Readiness states
 
@@ -188,9 +187,9 @@ left of it after the costs that are not map bytes (driver overhead, LUTs,
 and render targets at 64 bytes per window pixel), divided by the measured
 amplification the two allocators below wgpu apply — Bevy's mesh slabs and
 wgpu's device memory blocks, neither of which returns memory on eviction.
-Every one of those figures is measured by
-`node scripts/verify-native-viewport.mjs --checks=memory-census`, and
-`manifest-ready` reports both `budgetBytes` and `processCeilingBytes`.
+Every one of those figures is measured with the `memory-census` command
+(launch with `--memory-census`), and `manifest-ready` reports both
+`budgetBytes` and `processCeilingBytes`.
 
 A texture is charged its **transcoded GPU size including the mip chain**,
 computed from the KTX2 header and this device's transcode target, once per
@@ -215,22 +214,21 @@ is a compositor-level GPU stall, not a slow load.
 ## Compositing: how native pixels reach the editor viewport
 
 Bevy cannot draw into a DOM canvas, so the native backend has to put its
-pixels inside a React layout some other way. Two options were considered:
+pixels inside a host UI layout some other way. Two options were considered:
 
-**(a) A native OS window positioned and clipped over the React container
+**(a) A native OS window positioned and clipped over the host UI's viewport
 region, driven by `resize` — chosen.** The renderer keeps direct ownership of
 its swapchain, so there is no per-frame copy and no second compositor in the
-path, which is the entire reason the native backend exists. The React side
-renders a transparent region, reports its rectangle in screen coordinates
-(`packages/viewer/src/react.tsx`), and the window follows it on resize and
-scroll. The costs are real and are borne here: z-order is managed by an
+path, which is the entire reason the native backend exists. The host UI
+renders a transparent region, reports its rectangle in screen coordinates,
+and the window follows it on resize and scroll. The costs are real and are borne here: z-order is managed by an
 always-on-top window level rather than by the DOM, so a modal drawn over the
 viewport region needs the native window hidden; DPI changes arrive as a
 `pixelRatio` in `resize` rather than being inferred; and occlusion by other
 application windows is the window manager's decision, not the page's.
 
 **(b) An offscreen render target streamed into the renderer process.** This
-composites cleanly with React — correct z-order, clipping and DPI for free —
+composites cleanly with the host UI — correct z-order, clipping and DPI for free —
 but reintroduces a per-frame readback and copy of the full viewport, which is
 precisely the cost the native path exists to avoid, and it doubles the frame's
 peak memory. Kept as the fallback if (a)'s window management proves
@@ -238,13 +236,11 @@ untenable on a platform; it is not implemented.
 
 ## Fallback
 
-`auto` starts this backend only when the executable and a complete native map
-identity are available. Startup failure, device loss or protocol failure emits
-`error` or `device-lost`; the editor then disposes the process and mounts the
-existing WebGL adapter in the same region, without a page reload. Explicit
-`native` reports the same failure to the editor instead of silently falling
-back — a mode the user asked for by name must not quietly mean "whatever
-worked".
+Startup failure, device loss or protocol failure emits `error` or
+`device-lost`. A host may then dispose the process and switch to another
+renderer only when the user did not ask for the native one by name, and it
+must say so: a mode the user asked for by name must not quietly mean
+"whatever worked".
 
 ## v2 (documented, not implemented)
 

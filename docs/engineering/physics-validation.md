@@ -5,8 +5,8 @@ only motion backend: every moving actor is a body in the planar force-based
 solver. A document with no `physics` field runs it, which preserves older
 input JSON and its content hash; a document that explicitly pinned the
 removed `kinematic-v1` choreography model migrates to `dynamic-v1` when it is
-parsed, and the migration is the only rewrite `resolvePhysicsConfig` ever
-sees — it never relabels anything else. Trace format v3 records the selected
+parsed, and the migration is the only rewrite physics resolution ever
+applies — it never relabels anything else. Trace format v3 records the selected
 mode, actual substep, engine build, and the digest of any per-actor
 vehicle-profile overrides, plus per-tick collision impulse/count telemetry.
 OpenSCENARIO exports retain the same provenance in SimForge
@@ -59,10 +59,10 @@ until each has a reference-backed validation gate.
   — and is recorded as `downSinceS` on the actor track plus a `knocked_down`
   event carrying the impulse. Posture is not simulated: the engine stays planar
   and holds the yaw the body was struck with, so lying down is presentation
-  derived from `downSinceS` in the browser renderer. The CARLA adapter drives
-  walkers kinematically and does not present the posture yet, so a managed
-  render shows the body sliding to rest upright while the trace, the metrics and
-  the browser preview agree it is down. OpenSCENARIO carries the translation in the replay
+  derived from `downSinceS` by a renderer. The CARLA adapter drives walkers
+  kinematically and does not present the posture yet, so a CARLA render shows
+  the body sliding to rest upright while the trace and the metrics agree it is
+  down. OpenSCENARIO carries the translation in the replay
   polyline and declares the time in the stored-data-compatible trajectory replay
   header property, because the standard has no element for a body on the ground.
 - Performance: 10 dynamic actors for 20 simulated seconds in at most 1 second
@@ -70,8 +70,8 @@ until each has a reference-backed validation gate.
 - Existing baked OpenSCENARIO replay: position RMSE at most 0.1 m, position p95
   at most 0.2 m, and heading p95 at most 1 degree.
 
-The validation library reports failed and not-run gates; absence of a result is
-never interpreted as a pass. Reference values must come from declared external
+Validation reports failed and not-run gates; absence of a result is never
+interpreted as a pass. Reference values must come from declared external
 measurements or pinned profiles, not from the implementation under test.
 
 ## Versioning and evidence

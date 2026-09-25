@@ -12,8 +12,8 @@ motion, whatever the engine, trace format or sampler version is now.
 | `timelines/` | Stored render timelines, when one was archived with its trace. |
 | `documents/` | Scenario documents and revision contents. |
 
-Expectations are computed from the stored bytes alone by
-`scripts/archive-corpus/archive-corpus.ts`, never by the reader under test:
+Expectations are computed from the stored bytes alone, never by the reader
+under test:
 
 - `shape` / `traceVersion` / `unrecorded`: how the reader must classify the
   trace, and exactly which sections its source never recorded (the reader lists
@@ -28,23 +28,22 @@ Expectations are computed from the stored bytes alone by
 
 ## Tests
 
-- `cargo test -p simforge-core --test archive_corpus` (CI `determinism` job)
-  checks every trace. It must still be the same bytes and still read, upgraded
+- `cargo test -p simforge-core --test archive_corpus` (run by the merge gate's
+  `rust` step, `scripts/gate-local.sh`) checks every trace. It must still be the same bytes and still read, upgraded
   in memory where older, as the expected shape with the expected unrecorded
   sections. It must keep its identity. And it must replay the same motion: the
   upgraded trace, the render timeline built from it on the CPU (no GPU), and
   the shared sampler at every tick all reproduce `motionSha256`. An archived
   timeline must carry the same motion as the timeline re-derived under the
   current sampler.
-- `pnpm archive-corpus:verify` rechecks the stored bytes and the
-  reference digests.
-- `packages/scenario/src/__tests__/archive-corpus.test.ts` loads every archived
-  document and revision through the current document parser.
+- `cargo test -p simforge-package --test round_trip archive_corpus_documents_round_trip`
+  packages every archived document and checks that the package's document
+  digest is the entry's `documentSha256`.
 
 ## Rules
 
-- **Append-only.** Never edit or delete an entry or a stored file; `add-*`
-  refuses an existing id. If a reader change breaks an entry, fix the reader
+- **Append-only.** Never edit or delete an entry or a stored file, and never
+  reuse an id. If a reader change breaks an entry, fix the reader
   (add an upgrade step), not the entry.
 - A new trace format ships with its `vN_to_vN+1` step in
   `native/crates/simforge-core/src/trace/upgrade.rs`, in the same change.
@@ -59,19 +58,17 @@ Expectations are computed from the stored bytes alone by
 
 ## Release step: add to the corpus at every release
 
-After cutting `release/0.1.0-rc.N`, add at least one trace produced by that
-release's engine (and its timeline, if the release stores one), plus one
-document saved by that release's Studio:
+After cutting a release, add at least one trace produced by that release's
+engine (and its timeline, if the release stores one), plus one scenario
+document saved by that release of the hosted editor. Store the bytes verbatim
+under `traces/`, `timelines/` or `documents/`, append the entry to
+`corpus.json` with its provenance (`release`, `recorded`, `source`), the
+sha256 of the stored bytes and expectations computed independently of the
+reader under test, then run:
 
 ```sh
-pnpm archive-corpus add-trace <trace.json.gz> --id rcN-<short-name> \
-  --release v0.1.0-rc.N --recorded <YYYY-MM-DD> --source "<where it came from>" \
-  [--recorded-trace-sha256 <sim_results.trace_sha256>] [--timeline <timeline.json>] \
-  [--note "<engine x.y.z, what it exercises>"]
-pnpm archive-corpus add-document <document.json> --id rcN-<short-name>-doc \
-  --release v0.1.0-rc.N --recorded <YYYY-MM-DD> --source "<where it came from>" [--kind revision]
-pnpm archive-corpus:verify
 cargo test -p simforge-core --test archive_corpus
+cargo test -p simforge-package --test round_trip
 ```
 
 Pick artifacts that exercise something the corpus lacks: a new actor kind,

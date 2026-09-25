@@ -1,8 +1,8 @@
 # simforge-oss-timeline
 
 Python binding of the SimForge render timeline. It exposes the shared sampler
-`pose(timeline, actor_id, t)`, the same Rust function the editor (WASM) and
-the Bevy renderer call. Given the same timeline bytes and the same `t`, every
+`pose(timeline, actor_id, t)`, the same Rust function (`simforge-core`) the
+`simforge` CLI, the Bevy renderer and the hosted editor call. Given the same timeline bytes and the same `t`, every
 consumer gets bit-identical poses.
 
 ```python

@@ -1,11 +1,8 @@
-# Frame bundles (F4): atomic multi-camera sensor frames over the shm ring
-
-Status: implemented (lane/shmbridge). Owner: ShmBridge. Consumed by PolicyStep's
-`frameBundle` observation ref (`packages/training-env/src/policy-step.ts`).
+# Frame bundles: atomic multi-camera sensor frames over the shm ring
 
 The native render service (`renderer/service`) publishes per-tick, per-camera
 frames into a single-writer shared-memory ring (`renderer/service/src/shm.rs`).
-F4 adds *bundles*: one atomic record per sim tick covering ALL rig cameras, so
+A *bundle* is one atomic record per sim tick covering ALL rig cameras, so
 a policy runner can consume a calibrated multi-camera frame set zero-copy and
 can never observe a torn (partially written) tick.
 
@@ -32,7 +29,7 @@ iteration). A response never mixes outputs of different submissions and
 never reports a pass that was not rendered by that submission. `frames[]`
 are FrameRecords with a mandatory `digest` (CRC32/IEEE of payload bytes,
 8-char lowercase hex). `bundle_offset`/`bundle_len` locate the bundle record
-for `bundle_at`-style consumers and PolicyStep frameBundle refs. `device`
+for `bundle_at`-style consumers and frame-bundle references (below). `device`
 maps each requested device sensor to `{stream, slot, generation}`.
 
 Publish order per tick (single writer, deterministic): every camera in rig
@@ -66,7 +63,7 @@ entry  (96 B): camera_id[48] | pass[16] | payload_offset u64 | payload_len u64
 
 `payload_offset` points at PAYLOAD bytes (record header at `-128`).
 `digest` is CRC32 (IEEE) of the payload — deterministic per rendered frame,
-`zlib.crc32` / `crc32fast` / `@simforge-oss/render` `crc32()` all agree.
+`zlib.crc32` and `crc32fast` agree.
 Payloads keep the wgpu 256-byte row alignment: `rowStride = payload_len /
 height` for 4-byte-per-pixel formats.
 
@@ -168,29 +165,18 @@ job --params P --out-dir D [--resume C]` renders a scene-state stream through
 prints protocol, passes, the resolved library (path, sha256) and whether it
 was built with `gpu-interop` (`simforge_render_gpu_interop()`).
 
-**TypeScript (studio worker, copying)** — `@simforge-oss/render/native`:
-
-```ts
-import { ShmBundleReader } from '@simforge-oss/render/native';
-const reader = new ShmBundleReader(shmPath);
-const bundle = reader.latestNew();   // null until a NEW sim_tick appears
-// bundle.entries[i]: {cameraId, pass, byteOffset, byteLength, width, height,
-//                     format, digest}; bundle.payloads[i]: verified Buffer copy
-```
-
-Every payload is copied and digest-verified at read time; `TornBundleError`
-means the writer lapped mid-read — retry on the next poll.
-
-**Rust (in-repo)** — `render_service::shm::{read_bundle_pointer, decode_bundle,
-read_record_header}` mirror the same protocol for tests and future native
+**Rust** — `render_service::shm::{read_bundle_pointer, decode_bundle,
+read_record_header}` implement the same protocol for tests and native
 consumers.
 
-## PolicyStep frameBundle mapping
+## Frame-bundle references
 
-`FrameBundleRef {shmName, simTick, cameras[]}` (locked with PolicyStep
-2026-08-24): `shmName` = ring path from `hello.shm.path`; per camera
-`{id, digest, byteOffset, byteLength, width, height, format}` map 1:1 from
-the `render_bundle` response frames (`digest` hex, `byteOffset = offset+128`).
+A host that hands a bundle to a policy by reference (rather than by pixels)
+carries `FrameBundleRef {shmName, simTick, cameras[]}`: `shmName` = ring path
+from `hello.shm.path`; per camera `{id, digest, byteOffset, byteLength, width,
+height, format}` map 1:1 from the `render_bundle` response frames (`digest`
+hex, `byteOffset = offset+128`). A consumer resolves the whole bundle with
+`BundleRingReader.bundle_at(bundle_offset, bundle_len)`.
 
 ## Tests & bench
 
@@ -199,7 +185,5 @@ the `render_bundle` response frames (`digest` hex, `byteOffset = offset+128`).
 - Python: `python3 -m pytest tests/test_bundles.py` (from
   `renderer/service/python`) against `renderer/service/testdata/
   bundle-ring.shm.gz`, a ring recorded by the real service.
-- TS: `npx vitest run src/native/shm-bundles.test.ts` (packages/render),
-  same recorded ring.
 - Bench: `renderer/service/python/bench_bundles.py` — sustained 10 Hz
-  render+publish+consume latency; results in the lane report.
+  render+publish+consume latency.

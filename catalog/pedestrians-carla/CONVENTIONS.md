@@ -18,9 +18,9 @@ travels inside the closure with the models.
 - Fetch the pack (verified, cached): `node scripts/actor-assets/closures.mjs dir pedestrians-carla`
   prints the materialized directory (`simforge assets pull --closure <sha256>` installs the same closure).
 - After regenerating models (the tools write `models/`, which is gitignored) or
-  editing a travelling sidecar: `node scripts/actor-assets/seal-packs.mjs seal`,
-  then `publish` (needs write access to the public asset bucket), then commit
-  `closure.json` and the lock. The merge gate runs `seal-packs.mjs check`.
+  editing a travelling sidecar, a maintainer with write access to the public
+  asset store reseals and publishes the closure; commit the new `closure.json`
+  and the lock entry with it.
 
 ## Coordinate frame and binding
 
@@ -101,33 +101,9 @@ exactly; the GLB bytes are left as shipped. (A future re-animation should
 retarget child clips against the child rest pose; `ground.py` must then be
 rerun.)
 
-## Browser proof and known cadence limitation
-
-Real Chrome WebGL proof used the production viewer `ActorRenderer`, production
-external GLB loader, generated bindings and actual `studio/public` model URLs.
-Response SHA-256 and raw node-zero identities verified 0015/G2 and 0051/G3, avoiding
-any deterministic native walker substitution. Captures at 0, 0.3, 0.6, 0.9, 1.2
-and 1.8 seconds show changing arm/leg poses. Both rigs face and stride along actor
-+X after binding correction. No collapsed/exploded mesh, wrong-axis joint motion
-or inverted knees was observed on these representatives; this is not a visual
-certification of all 38.
-
-**Known fidelity defect, deliberately not fixed here:** browser playback calls
-`setTime(animationTimeS)` without speed-dependent cadence scaling. At an actor
-speed of **1.2 m/s**, corrected G2 stance feet slip backward approximately
-**0.19–0.21 m/s**, and G3 **0.66–0.76 m/s** (over three times as much). Measurements
-use foot-bone world-space finite differences at 60 Hz and the lowest 40% of foot
-heights as a stance approximation, not a contact solver. Natural stance speed
-is about 1.4 m/s for this G2 walk and 1.9 m/s for this G3 walk. G3's mismatch is
-already substantial at 1.2 m/s; at 2 m/s G2 has about 0.6 m/s forward slip.
-There is no universal perceptual threshold: camera distance and terrain matter.
-Translating-actor captures exercise 1.2 and 2 m/s. A future fix needs per-clip
-calibration, not one global multiplier. This is separate from the corrected
-sideways-gait bug and from root-motion drift.
-
 ## Material defect and bounded mitigation
 
-Browser proof uncovered **105 normal-as-base-colour slots across all 38 files**,
+An audit of the assembled files found **105 normal-as-base-colour slots across all 38 files**,
 representing 57 unique material instances. Example 0015 pants/jacket originally
 used `baseColorTexture.index = 0`, image `T_Plastic_02_n@d1024`, median RGB
 **(128,128,254)**. Pants' actual normal was a distinct image at index 1. Its face
@@ -148,9 +124,8 @@ and ORM bindings intact and **preserving the complete binary GLB payload**.
 texture is synthesized. Unreferenced old images remain in the binary payload.
 
 Authoritative material-instance `.uasset` and `.uexp` records were recovered
-from local Docker image `simforge/carla-render-worker:native-migration-abi2`,
-under `/home/carla/CarlaUnreal/Content/Carla/Static/Pedestrian`, and decoded with
-CUE4Parse. **49/57 instances (84/105 slots)** have primary `Color_1` vector
+from the cooked CARLA 0.10.0 content (`CarlaUnreal/Content/Carla/Static/Pedestrian`)
+and decoded with CUE4Parse. **49/57 instances (84/105 slots)** have primary `Color_1` vector
 parameters; these are used as flat `baseColorFactor` RGB. **UE FLinearColor is
 linear RGB, as is glTF baseColorFactor: no sRGB conversion was performed.**
 The existing glTF alpha is retained (1.0 on these slots), not UE colour-parameter
@@ -181,21 +156,10 @@ self-contained glTF packaging, embedded/PBR-normalized textures, native in-place
 motion and the documented material mitigation. All 38 attribution records include
 the modifications.
 
-## Streaming size consequence
+## Streaming size
 
-Animation commit `e2c7dc38`, compared with its parent:
-
-| Payload | Before animation | Animated | Animation increase |
-|---|---:|---:|---:|
-| 38 GLBs | 649,379,924 B (619.297 MiB) | 678,461,252 B (647.031 MiB) | 29,081,328 B (27.734 MiB), **4.478%** |
-| 0015 | 17,880,708 B | 18,699,244 B | 818,536 B |
-| 0051 | 13,057,140 B | 13,440,024 B | 382,884 B |
-
-Subsequent material/convention metadata repair adds **33,396 bytes** of JSON:
-the final pack is **678,494,648 bytes** (647.063 MiB). Current per-model exact
-byte counts are in `manifest.json`. Mesh, texture and animation
-binary bytes did not change. Animation bytes are embedded, so a model request
-streams its clips too. This is real but modest overhead relative to the existing
-mesh/texture pack; showing one actor does not require downloading all 38.
-All 38 served `studio/public/catalog/pedestrians-carla/models` copies are updated
-together and SHA-256 checked against canonical files after repair.
+Animation adds 29,081,328 bytes (**4.478%**) to the 38 GLBs; the pack is
+**678,494,648 bytes** (647.063 MiB) including the material metadata repair.
+Current per-model exact byte counts are in `manifest.json`. Animation bytes are
+embedded, so a model request streams its clips too; showing one actor does not
+require downloading all 38.

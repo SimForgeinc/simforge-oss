@@ -1,10 +1,10 @@
-# Native golden store + regression gate (WSB6)
+# Native golden store + regression gate
 
-Status: implemented 2026-08-22. Since 2026-09-23 the goldens are recorded and
-verified on **Mesa lavapipe** (the CPU Vulkan driver), the adapter of record.
-Pass hashes are compared exactly, never with a tolerance. Chrome RGB is
-provably not goldenable (0/8 and 5/6 frames byte-equal) and is excluded from
-this suite.
+Render goldens are recorded and verified on **Mesa lavapipe** (the CPU Vulkan
+driver), the adapter of record. Pass hashes are compared exactly, never with a
+tolerance. The merge gate runs the suite (`scripts/gate-local.sh`, step
+`goldens`) whenever the renderer, the engine core, the harness, its fixtures or
+the catalog changed.
 
 Why lavapipe:
 - With every draw order made a function of the scene, two identical runs on an
@@ -30,26 +30,22 @@ Differences are at most 1 LSB in a handful of pixels. They survive with every sc
 
 | Path | What |
 |---|---|
-| `qualification/golden-harness/golden.mjs` | record / verify CLI driving the native renderer binary |
-| `qualification/golden-harness/scenes/*.json` | scene definitions (corpus files + renderer args + expected passes) |
+| `qualification/golden-harness/golden.mjs` | record / verify / plan CLI driving the renderer binary (plain Node, no dependencies) |
+| `qualification/golden-harness/scenes/*.json` | scene definitions (corpus files, render job, expected passes) |
 | `qualification/golden-harness/goldens/<gpuFingerprint>/<scene>.json` | the golden store (committed) |
-| `qualification/golden-harness/ci-local.sh` | local execution of the exact CI steps |
-| `.github/workflows/native-golden.yml` | self-hosted runner workflow (lavapipe; the recorded CPU model) |
+| `qualification/golden-harness/fixtures/` | committed scene-state and render-timeline inputs for the actor scenes |
+| `qualification/golden-harness/ci-local.sh` | the suite as the gate runs it: build `simforge-render` and the `render-parity` example, prepare the verified sky plates, plan every scene, then verify (or `record`, then verify) |
 
-Renderer binary resolution order: `--bin` flag → `scene.binary` →
+Renderer binary resolution order: `--bin` flag → `GOLDEN_RENDER_BIN` →
 `target/release/simforge-render` (the one renderer binary,
 `cargo build --release -p simforge-render`). Every scene is turned into a
-`simforge.render-job/v2` job file (scene spec, optional `sceneState`, one
-camera per `cameras`, `ticks`, `passes`) and rendered with
-`simforge-render job --job <file>`; the hashed passes are the
-`<sensor>/<tick>.rgb.png` / `.id.png` / `.depth.f32.bin` artifacts listed with
-their sha256 in the job's `results.json`. The harness runs the job with
-`VK_ICD_FILENAMES=<lvp_icd.json>` and `SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1`.
-Every capture is a single
-submission with its copies ordered after the camera passes, so consecutive
-frames never carry the previous frame's pixels. The former `native-render`
-spike CLI (AgX output, unordered readback) is removed; goldens recorded
-against it are retired and must be re-recorded (see `goldens/README.md`).
+`simforge.render-job/v2` job file (scene spec, optional `sceneState`, the rig,
+`ticks`, `passes`) and rendered with `simforge-render job --job <file>`; the
+hashed passes are the `<sensor>/<tick:08>.<pass>.png` / `.depth.f32.bin`
+artifacts listed with their sha256 in the job's `results.json`. The harness
+runs the job on the lavapipe ICD with `SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1`.
+Every capture is a single submission with its copies ordered after the camera
+passes, so consecutive frames never carry the previous frame's pixels.
 
 ## Adapter fingerprint policy
 
@@ -67,198 +63,133 @@ CPU model means: `record` on that host first, then verify
 goldens/<gpuFingerprint>/<scene>.json
 ```
 
-The file is a full evidence manifest (below); the gates read `passHashes` and
-`timings.avgFrameMs`. Committed to git so CI verifies against reviewed hashes.
+The file is a full evidence manifest (below); the gates read `passHashes`.
+Committed to git so the gate verifies against reviewed hashes. The current
+entry is listed in `qualification/golden-harness/goldens/README.md`.
 
 ## Manifest schema
 
-Extends `simforge-oss.render-determinism-manifest.v1`; the top-level
-`schema/generatedAt/claim/mode/scenario/rendererPath/hardware/verdict` keys stay
-compatible. Additions:
+Schema `simforge-oss.render-determinism-manifest.v1`:
 
 ```jsonc
 {
   "schema": "simforge-oss.render-determinism-manifest.v1",
   "mode": "golden-record" | "golden-verify",
-  "profile": "sensor",                    // render profile; only sensor is goldenable today
   "rendererPath": {
-    "engine": "native-bevy",              // was chrome/three.js in WSB4 manifests
+    "engine": "native-bevy",
     "file": "target/release/simforge-render",
     "sha256": "…",                        // binary pin
-    "invocation": { "args": ["…"] },
-    "versions": { "bevy": "0.19.1", "wgpu": "29.0.4", "rustc": "…", "backend": "vulkan" }
+    "invocation": { "args": [ … ], "job": { … } },   // the command and the full render job
+    "versions": { "bevy": "0.19.1", "wgpu": "…", "rustc": "…", "backend": "vulkan" }
   },
-  "hardware": {                           // WSB4 host shape, minus chrome/webgl blocks
+  "hardware": {
     "collectedAt": "…",
-    "gpuFingerprint": "16-hex",           // NEW: the store key
-    "host": { "osPrettyName": …, "kernel": …, "arch": …, "cpuModel": …,
-              "hostname": …, "gpus": [{ "name", "driverVersion", "vbiosVersion", "pciBusId" }] }
+    "gpuFingerprint": "16-hex",           // the store key
+    "host": { "adapter": …, "osPrettyName": …, "kernel": …, "arch": …, "cpuModel": …, "cpuCount": … }
   },
-  "passHashes": {                         // NEW: sha256 per logical pass
-    "rgb0":   { "file": "<scene>.rgb0.png",     "sha256": "…", "bytes": N },
-    "id0":    { "file": "<scene>.id.png",       "sha256": "…", "bytes": N },
-    "depth0": { "file": "<scene>.depth.f32.bin","sha256": "…", "bytes": N }, // raw buffer, not PNG viz
-    "legend": { "sha256": "…", "diagnostic": true }                          // metadata, not gated
+  "renderConfig": { … },
+  "passHashes": {                         // sha256 per logical pass (the scene's expectedPasses)
+    "chase.t60.rgb": { "file": "chase/00000060.rgb.png", "sha256": "…", "bytes": N },
+    "chase.t60.id":  { "file": "chase/00000060.id.png",  "sha256": "…", "bytes": N }
   },
-  "corpusChecksums": [ { "path", "sha256", "bytes" } ],   // NEW: inputs pinned per golden
-  "timings": {                            // NEW: perf baseline + budget fields
-    "avgFrameMs": …, "p50FrameMs": …, "p99FrameMs": …, "fps": …, "measuredFrames": …,
-    "baselineAvgFrameMs": …, "regressionPct": …, "budgetFactor": 1.10   // verify mode
-  },
+  "idPasses": { … },                      // decoded instance counts and coverage per ID pass
+  "parity": { … },                        // parity scenes: observed transforms vs the timeline sampler
+  "corpusChecksums": [ { "path", "sha256", "bytes" } ],   // inputs pinned per golden
+  "sceneStateSha256": "…",
+  "timings": { "avgFrameMs": …, "p50FrameMs": …, "p99FrameMs": …, "fps": …, "measuredFrames": … },
   "twoRunEvidence": { "runsCompared": 2, "byteStable": true, … }, // record mode only
+  "previousVersions": [ … ],              // superseded goldens, append-only
   "verdict": {
     "byteStable": true, "driftedPasses": [],
-    "frameTimeBudgetExceeded": false,
-    "scope": "sensor-profile pass hashes, single GPU/driver/wgpu backend — cross-hardware reproducibility NOT claimed"
+    "scope": "render-job pass hashes (pinned capture clock), one lavapipe build on one CPU model (the adapter of record) — cross-adapter reproducibility NOT claimed"
   }
 }
 ```
 
-Pass keys map to renderer outputs: `rgb0`→`<out>.rgb0.png`, `id0`→`<out>.id.png`,
-`depth0`→`<out>.depth.f32.bin`, and (when WSB2 ships it) `mv0`→`<out>.mv.f32.bin`.
-New passes = new key in `passFiles()` + `expectedPasses` in the scene JSON, then
-re-record.
+Pass keys are the scene's `expectedPasses`; `passPaths` maps each to its
+artifact under the job's output directory. A new pass is a new key in both,
+then a re-record.
 
 ## Gates and exit codes
 
 | Exit | Meaning |
 |---|---|
 | 0 | all passes match golden (and frame time within budget when `GOLDEN_FRAME_BUDGET` is set) |
+| 1 | environment/usage error (missing binary/corpus) |
 | 2 | pass-hash drift on any non-diagnostic pass |
-| 3 | avg frame time regressed beyond `GOLDEN_FRAME_BUDGET` (e.g. 1.10) vs the recorded baseline; opt-in, since lavapipe times measure the CPU host (GPU performance is gated by `scripts/bench`) |
+| 3 | avg frame time regressed beyond `GOLDEN_FRAME_BUDGET` (e.g. 1.10) vs the recorded baseline; opt-in, since lavapipe times measure the CPU host |
 | 4 | record-mode nondeterminism: two runs disagreed — no golden written |
 | 5 | no golden exists for this adapter fingerprint — record first |
-| 1 | environment/usage error (missing binary/corpus) |
 | 7 | vacuous ID pass — an ID pass encodes fewer than `idPass.minInstances` distinct ids or covers less than `idPass.minCoverage` of the frame (checked on record and verify) |
 | 8 | observed actor transforms fail parity with the render timeline (`parity` scenes; Bevy profile 1e-3 m / 0.05°) |
+| 9 | non-finite (NaN/inf) pixels in a frame before tone mapping |
+| 10 | the scene declares `recording: "unrecorded"`: it has no hashes yet, so verifying it fails |
 
 Record runs the scene twice and refuses to write a golden unless the two runs
-agree byte-for-byte (the determinism evidence itself). Verify runs once. Frame-time uses the renderer-reported steady-state
-`avg_frame_ms` over ≥30 measured frames after warmup.
+agree byte-for-byte (the determinism evidence itself). Verify runs once.
 
-## Measured findings baked into this gate (2026-08-22)
+Pass expectations: depth (raw geometry) and ID (unlit slot encoding) passes
+are expected to survive lighting and atmosphere changes; only RGB is expected
+to drift when lighting changes. Verify reports per-pass verdicts so an RGB
+re-record never masks an ID or depth regression.
 
-1. **Multi-GLB spawn-order hygiene fix.** `check_assets` spawned tile content as
-   each GLB finished loading, so entity/draw order raced async load completion.
-   Fixed to spawn only after all GLBs resolve, in CLI `--glbs` order
-   (`renderer/render-core/src/bin/native-render.rs`; WSB2 notified).
-2. **Residual rare RGB instability under co-tenant load.** Even after the fix,
-   during heavy GPU sharing (load avg ~30, 10.6/16.3 GiB VRAM in use) ~1-in-10
-   processes produced a second RGB population: the same 88 scattered pixels on
-   one sunlit facade differing by 1–26 LSB. ID-slot and depth outputs were
-   byte-identical in every observation (30+ runs); single-GLB scenes and
-   sun-off (`--lux 0`) scenes were always stable. Not correlated with load
-   level, frame parity, warmup, or codegen-units in controlled probes.
-   Encoded here: record requires two agreeing runs (exit 4 otherwise); gates
-   run only on a quiet GPU (exit 6). Escalated to WSB2/WSB4 (lit-path owners).
-3. **id0 was vacuous (fixed 2026-09-22: now gated).** Tracked spike source hardcodes
-   `id_clones_done: true` at init — no ID clones are built, `.id.png` is solid
-   background, no legend is written. The id0 hash stays gated (it will catch
-   any accidental change) but carries no semantic evidence until WSB2
-   re-enables clone building. Since 2026-09-22 every scene's ID passes are
-   decoded (`lib/png.mjs`) and must encode real instances (`idPass`
-   thresholds, exit 7), so a hash of a blank pass can no longer be recorded
-   or pass verify. `yale-frame0`'s retired spike golden fails this gate by
-   construction until it is re-recorded with `simforge-render job`.
-4. **Perf baselines are load-sensitive.** The recorded baseline (19.45 ms avg)
-   was taken under co-tenant load; quiet-GPU steady state is ~4–5 ms (FINDINGS:
-   4.33 ms). Re-record during a quiet window before trusting the +10% budget;
-   exit 6 keeps CI off loaded windows.
-5. **Lighting-independence expectation (stated policy).** depth0 (raw geometry)
-   and id0 (unlit slot encoding) are expected to survive lighting/atmosphere
-   changes, including WSB4's realism stack; only rgb0 is expected to drift when
-   sensor-profile lighting changes. Verify reports per-pass verdicts so an rgb0
-   re-record never masks an id0/depth0 regression.
+Instance ids are assigned deterministically: every mesh is numbered by
+sorting on `(name, glTF sub-asset label <file>#MeshN/PrimitiveM, world pose)`,
+with entity bits only as the last tie-break for exact duplicates, and unnamed
+meshes are named `unnamed_mesh`. Scene-state playback uses the same ordering.
 
 ## Golden lifecycle
 
-Invalidation triggers — any of these means the golden must be re-recorded:
-- `rendererPath.sha256` changes (new renderer binary; e.g. WSB5's job-mode
-  binary uses Tonemapping::None while the spike CLI uses AgX — different RGB by
-  construction, keyed separately).
-- `corpusChecksums` change (spike corpus → WSB1 `.corpus/<mapId>/` decoded
-  corpus alters texture/material sampling paths).
-- `profile` / renderer-arg change (sun, EV100, weather, resolution, rig).
-- WSB4 realism-stack landing: current yale-frame0 rgb0 golden
-  (`e7185b3ae850c644…`) is **pre-realism-stack**; WSB4's default rung-2
-  sensor lighting (IBL sky + 100k lux + fixed EV100) will invalidate it.
+Goldens are valid only for the exact tuple recorded in each file. Any of these
+means the golden must be re-recorded:
+- `rendererPath.sha256` changes (a new renderer binary);
+- `corpusChecksums` or `sceneStateSha256` change (new scene inputs);
+- the render config or job changes (sun, EV100, weather, resolution, rig);
+- the adapter fingerprint changes (a new Mesa, LLVM or CPU model).
 
-Re-record procedure:
+Record appends the superseded golden to `previousVersions` in the stored JSON
+(append-only), so RGB history is preserved across re-records and ID/depth
+lineage stays auditable.
+
+## Running it
+
+Corpus roots come from each scene's `corpusRootEnv`: `SIMFORGE_CORPUS_RICHMOND`
+and `SIMFORGE_CORPUS_YALE`, which default in the gate to
+`${SIMFORGE_MAPS_CACHE_ROOT:-~/.local/share/simforge/maps}/.corpus/<map>`, the
+native install that `simforge maps pull <map>` writes. Actor scenes also read
+the CARLA model packs pinned in `catalog/closures.lock.json`, fetched by digest
+and verified before any render.
 
 ```sh
+qualification/golden-harness/ci-local.sh           # plan + verify every recorded scene
+qualification/golden-harness/ci-local.sh record    # re-record every scene, then verify
+
+# One scene by hand:
 cargo build --release -p simforge-render
-SIMFORGE_SENSOR_CORPUS=<corpus-root> node qualification/golden-harness/golden.mjs record yale-frame0
+node qualification/golden-harness/golden.mjs plan all
+node qualification/golden-harness/golden.mjs record <scene>
 node qualification/golden-harness/golden.mjs verify all
 ```
 
-Record appends the superseded golden to `previousVersions` in the stored JSON
-(append-only), so rgb0 history is preserved across re-records and id0/depth0
-lineage stays auditable. Scenes may carry `"extraArgs": [...]` appended
-verbatim to the renderer invocation for forward-compatible flags (e.g.
-WSB4's `--rung`, `--profile`, `--weather`).
+Scenes render up to `GOLDEN_JOBS` at a time (default 2, bounded by available
+memory), each with an even share of the cores (`LP_NUM_THREADS`).
 
-## CI
-
-`.github/workflows/native-golden.yml` targets `[self-hosted, Linux, X64,
-gpu-rtx5080]`; jobs are serialized (`concurrency: native-golden-gpu`) because
-the 5080 is shared. The runner itself may not be registered yet — until then
-the workflow queues indefinitely; run `qualification/golden-harness/ci-local.sh`
-locally (identical steps; log committed under
-`qualification/golden-harness/evidence/`).
-Registration steps are documented at the top of the workflow file.
-
-## Render-timeline scenes (2026-09-22)
+## Render-timeline scenes
 
 Actor scenes replay the render contract (`docs/engineering/render-timeline.md`):
 a committed `simforge.scene-state.v1` document sampled from a render
-timeline (`fixtures/<scene>.scene-state.json.gz`, from
-`simforge render scene-state --fps 24`) is played by `simforge-render job
+timeline (`fixtures/<scene>.scene-state.json.gz`, sampled at 24 fps) is played by `simforge-render job
 --job` (the job's `sceneState`), so every body sits at the timeline's baked
-XODR height with its road + body attitude. (These goldens were recorded with
-the former `scen-play --authored-height` binary; its binary sha is in each
-golden file.) Three gates per run:
+height with its road + body attitude. Three gates per run:
 
-1. pass hashes (`frame60.rgb`, `frame60.id`), two-run byte stability on record;
+1. pass hashes, with two-run byte stability on record;
 2. the ID pass encodes the map's and actors' instances (`idPass`, exit 7);
 3. `observed-frames.jsonl` matches the timeline sampler within the Bevy
-   parity profile (`parity`, exit 8; `simforge render parity`, or
-   `GOLDEN_PARITY_CMD`).
+   parity profile (`parity`, exit 8; graded by the `simforge-core` example
+   `render-parity`, which `ci-local.sh` builds, or by `GOLDEN_PARITY_CMD`).
 
-| Scene | Map | Actors | GPU fingerprint recorded |
-|---|---|---|---|
-| `richmond-06-timeline` | richmond-field-station | 4 (car, motorcycle, bus, wrong-way sedan) | `0c79cc9fe7b267f4` (RTX 3080, driver 595.91.07) |
-| `yale-05-timeline` | yale-street | 4 (truck, car, cyclist, pedestrian) | `0c79cc9fe7b267f4` |
-| `package-smoke-richmond` | richmond-field-station (public release 11) | 1 (ambulance), from the release smoke package `fixtures/scenario-package/smoke/richmond-public.scenario.zip` | none yet: the scene declares `recording: "unrecorded"`, so `verify` fails with exit 10 until the first lavapipe record (which clears the field) |
-
-Corpus roots: `SIMFORGE_CORPUS_RICHMOND` / `SIMFORGE_CORPUS_YALE` →
-`${SIMFORGE_MAPS_CACHE_ROOT:-~/.local/share/simforge/maps}/.corpus/<map>`.
-Recorded parity (both runs): richmond max 7.8e-6 m / 1.3e-5° heading,
-yale max 6.2e-5 m / 6.3e-6° heading (f32 world coordinates at ~1.8 km).
-
-### Instance-ID assignment was not deterministic (fixed 2026-09-22)
-
-`richmond-frame0` (static job render over the richmond master) was
-not byte-stable in `id0`: 6 of 306,176 pixels carried a different instance
-id from run to run while RGB and depth were identical. It was not a depth
-tie. `SceneApp::finalize_scene` numbers every mesh by sorting on
-`(name, entity bits)`, and entity allocation follows async asset-load
-completion; unnamed meshes were even named after their entity. So two
-same-named meshes (a split primitive, an instanced prop) could swap ids.
-
-The sort is now `(name, glTF sub-asset label `<file>#MeshN/PrimitiveM`,
-world pose)`, with entity bits only as the last tie-break for exact
-duplicates, and unnamed meshes are named `unnamed_mesh`. Evidence on the RTX
-5080 under co-tenant load, 6 runs each:
-
-| build | distinct id0 hashes | rgb0 | depth0 |
-|---|---|---|---|
-| before (entity-bit order) | 3 (`b82aee85…`, `713742cf…` ×4, `92d28b92…`) | 1 | 1 |
-| after | 1 (`b3feedec…`, 12/12 runs) | 1 | 1 |
-
-The same ordering now applies to scene-state playback (`playback.rs`, then
-the `scen-play` binary, now `simforge-render job --job` with `sceneState`).
-Instance ids of existing scenes are renumbered once by this change: goldens
-that hash an ID pass must be re-recorded (the two render-timeline goldens
-above were recorded before it; scene-state playback id0 was 3/3 stable
-after it on the 5080). `richmond-frame0` is committed as a
-scene; record its golden per GPU with a quiet window.
+| Scene | Map | Actors |
+|---|---|---|
+| `richmond-06-timeline` | richmond-field-station | 4 (car, motorcycle, bus, wrong-way sedan) |
+| `yale-05-timeline` | yale-street | 4 (truck, car, cyclist, pedestrian) |
+| `package-smoke-richmond` | richmond-field-station | 1 (ambulance), from the release smoke package `fixtures/scenario-package/smoke/richmond-public.scenario.zip`; declares `recording: "unrecorded"` until its first lavapipe record |

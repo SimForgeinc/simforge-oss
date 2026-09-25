@@ -18,8 +18,7 @@ It has two parts:
 
 ## The derivative (`derived/texture-density`)
 
-`@simforge-oss/map-pipeline` `buildTextureDensity` writes
-`derived/texture-density/manifest.json` (schema
+Map ingest writes `derived/texture-density/manifest.json` (schema
 `simforge.map-texture-density.v1`). For every KTX2 image the master's
 materials sample, it records:
 
@@ -41,25 +40,20 @@ two axis derivatives the hardware uses.
 - Uses of one image are merged per 64 m cell (box union, lowest density).
 
 The derivative is a pure function of the master, so the master and the map
-version do not change:
+version do not change: new maps get it when the master is built, and
+published versions get it backfilled as a derivative set (descriptor key
+`textureDensity`). The ingest pipeline that builds it is not part of this
+repository; maps arrive with it through `simforge maps pull`.
 
-- **New maps:** the master pipeline builds it.
-- **Published versions:** it is backfilled as a derivative set
-  (`reconcile-map-derivatives.ts --derivative texture-density`, descriptor
-  key `textureDensity`).
+## The plan (`native/crates/simforge-cli/src/render/residency.rs`)
 
-The master stage's tool fingerprint includes its builder fingerprint (and
-the road decals' fingerprint).
-
-## The plan (`@simforge-oss/render` `texture-residency.ts`)
-
-For a `uastc-full` job on a map with the derivative, the worker downloads the
-density manifest with the job's inputs (`selectNativeRenderInputs`, which also
-takes the road decal manifest). A run whose intent declares a derivative the
-run reads, but whose inputs do not carry it, fails
-`native_derivative_not_delivered`: it would otherwise upload every mip level
-without saying so. The worker computes the plan after lowering, from the camera
-schedule:
+For a `uastc-full` job on a map with the derivative, `simforge render` reads
+the density manifest from the map closure (`render/derivatives.rs` lists
+every derivative a native render reads). A derivative the closure lists but
+the run cannot read fails `native_derivative_not_delivered`: it would
+otherwise upload every mip level without saying so. The plan is computed from
+the camera schedule (the hosted render worker computes the identical plan and
+digest):
 
 ```
 texels per pixel >= density * max(near plane, closest horizontal approach) / focalCorner
@@ -77,18 +71,14 @@ The level is then clamped to the staged file's chain and to a whole 4×4-block
 base size, because wgpu refuses a block-compressed texture whose base is not
 whole blocks. Every factor errs in the conservative direction.
 
-The worker then:
+The command then:
 
 - writes the plan (`simforge.texture-residency-plan.v1`: `{uri, dropLevels}`
   per trimmed texture, staged URIs) to the job workspace and names it in the
   scene spec (`textureResidency`);
-- runs the admission check (capacity, and the device's free memory) on the
-  bytes the job will upload. The staging check is deferred until then.
-
-The control plane leaves such a job's admission to the worker. The submission
-check skips the map's measured full-chain demand, and so does lease routing:
-a worker's `cacheStatus.demand` (full mip chains) does not keep the job off
-that worker (`workerCanRun`, `texture_residency`).
+- runs the admission check on the bytes the job will upload, against
+  `--vram-budget` (without a budget the capacity is unmeasured, and the
+  skipped check is reported).
 
 ## The load (`render-core` `texture_residency`)
 
@@ -129,12 +119,12 @@ It is `null` when no residency applied:
 
 - the tier is `bc7-512`;
 - the map has no derivative;
-- the worker set `SIMFORGE_NATIVE_TEXTURE_RESIDENCY=off`, which is also a
+- `SIMFORGE_NATIVE_TEXTURE_RESIDENCY=off` was set, which is also a
   `texture_residency_disabled` warning.
 
 ## Measurements
 
-Single-frame CEO-comparison stills, 1920×1080, showcase. The Easterbrook
+Single-frame comparison stills, 1920×1080, showcase. The Easterbrook
 rig has four cameras (95°, 105°, 115° and 125°) and San Ramon has one (105°).
 The freeway drive is one 105° camera:
 

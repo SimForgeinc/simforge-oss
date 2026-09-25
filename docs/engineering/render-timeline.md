@@ -1,7 +1,6 @@
 # Render timeline and shared sampler (`simforge.render-timeline.v1`)
 
-Status: accepted 2026-09-22. This is the render contract (SimCloud ADR 0005,
-amended 2026-09-22). One authoritative simulation produces one canonical
+This is the render contract. One authoritative simulation produces one canonical
 trace. Every consumer replays that trace through this timeline and this
 sampler. OpenSCENARIO `.xosc` is a derived interop export and not a render
 input.
@@ -9,11 +8,14 @@ input.
 | Piece | Where |
 |---|---|
 | Rust types, builder, height source, sampler | `native/crates/simforge-core/src/trace/timeline/` (`mod.rs`, `height.rs`, `sampler.rs`) |
-| WASM (editor, Node) | `RenderTimeline` in `@simforge-oss/native-runtime/browser` (`native/crates/simforge-bindings-wasm`) |
 | Python (CARLA adapter) | `simforge-oss-timeline` wheel, module `simforge_oss_timeline` (`adapters/timeline`, crate `native/crates/simforge-timeline-python`) |
-| Node hosts (timeline job, CLI, Bevy lowering) | `@simforge-oss/render/timeline`: `buildRenderTimeline`, `openRenderTimeline`, `pose`, `compareObserved` (WASM loaded in Node) |
-| Scene-state projection (Bevy) | `sampler::scene_yup`; `packages/render/src/native/timeline-lowering.ts` → `load_scene_state` |
-| Parity comparator | `native/crates/simforge-core/src/trace/timeline/parity.rs`; Python `compare_observed`, WASM `compareObservedJson`, CLI `simforge render parity` |
+| CLI | `simforge timeline build` (build and key a timeline), `simforge render` (lower, render, grade parity) |
+| Scene-state projection (Bevy) | `sampler::scene_yup`; `native/crates/simforge-cli/src/render/lowering.rs` → `load_scene_state` |
+| Parity comparator | `native/crates/simforge-core/src/trace/timeline/parity.rs`; Python `compare_observed`; `simforge render` grades every render; the `render-parity` example of `simforge-core` grades an observed-frames file on its own |
+
+Other hosts (for example the hosted app's editor and render workers) link the
+same `simforge-core` through their own bindings and must pass the same
+binding identity corpus (`fixtures/render-timeline/identity-corpus.json`).
 
 ## 1. Pipeline position
 
@@ -25,7 +27,7 @@ document ─► ResolvedInput ─► SIMULATE (once, authoritative) ─► Canon
                                            TIMELINE (CPU, deterministic, keyed)
                                                                    │  timelineSha256
                        ┌────────────────────┬──────────────────────┼───────────────────┐
-                    editor (WASM)      Bevy (Rust/Node)     CARLA (Python)     xosc export (derived)
+                  other hosts          Bevy (Rust)          CARLA (Python)     xosc export (derived)
                     pose(tl, id, t)    pose(tl, id, t)      pose(tl, id, t)
 ```
 
@@ -62,7 +64,7 @@ timelineKey = sha256(canonicalJson({
 
 **Content digest.** `timelineSha256 = sha256(canonicalJson(timeline))`.
 The stored and shipped bytes are exactly `canonicalJson(timeline)`
-(`to_canonical_json` / `toCanonicalJson`), so the sha256 of the artifact
+(`to_canonical_json`, in Rust and Python), so the sha256 of the artifact
 bytes equals `timelineSha256`.
 
 **`catalogDigest` in v1.** Pass `null`. The v1 timeline derives everything
@@ -72,8 +74,8 @@ covered by `traceSha256`. The key reserves this slot for a later sampler
 that reads catalog data (wheelbase, track, body gains). That sampler will
 take the actor-asset closure digest (`actors.native-closure`), and its
 `samplerVersion` bump will change every key anyway.
-Render jobs reference `timelineSha256`. Storage layout (owned by WS-D):
-`timelines/sha256/<timelineSha256>.json.gz`, indexed by `timelineKey`.
+Render jobs reference `timelineSha256`. A workspace stores its timeline as
+`timeline/<timelineSha256>.json` (`simforge timeline build`).
 
 ## 3. Frame and units
 
@@ -182,7 +184,7 @@ its manifest as `capture.policy`:
 
 `catalogId`, `actorClass`, `dims` and `color` are bound exactly as
 scene-state.v1 `ActorDesc` binds them. `color` is the actor's
-`studio:body-color:#rrggbb` tag (the paint a Studio role authors), absent
+`studio:body-color:#rrggbb` tag (the paint a role authors), absent
 when the role authors none. `emit_scene_state` and the timeline
 share `catalog_id_for` / `actor_class_of`.
 
@@ -272,7 +274,7 @@ A single Rust function (`sampler::pose`). Its rules:
 
 1. **Domain.** `t` is clip-relative seconds on `[0, clipEndS]`. Values within
    ±1e-9 of the edges are clamped. Anything else is an error: `OutOfRange` in
-   Rust and WASM, `ValueError` in Python. `t` is never wrapped or extrapolated.
+   Rust, `ValueError` in Python. `t` is never wrapped or extrapolated.
 2. **Tick.** `i` is the last tick with `t[i] ≤ t`, and
    `f = (t − t[i]) / (t[i+1] − t[i])`.
 3. **Presence.** `present[i]` alone decides whether the body exists.
@@ -291,8 +293,8 @@ A single Rust function (`sampler::pose`). Its rules:
    - `acceleration` is the per-tick backward difference of velocity (zero on
      a spawn tick), interpolated linearly.
    - Trig uses the core's portable V8 port (`crate::math`). Every other
-     operation is IEEE-exact, so native, WASM and Python produce identical
-     bits.
+     operation is IEEE-exact, so every binding of the core (Rust, Python,
+     and any other) produces identical bits.
 
 The sampler returns a `TimelinePose` with these fields:
 `{present, tick, x, y, z, headingRad, pitchRad, rollRad, speedMps, velocity[3], acceleration[3], roadPitchRad, roadRollRad, bodyPitchRad, bodyRollRad, wheelSteerRad?, wheelSpinRad?, wheelDropM?, downed}`.
@@ -308,29 +310,29 @@ The companions follow the same domain rules:
 
 ### Binding API
 
-| | Rust | WASM (`RenderTimeline`) | Python (`simforge_oss_timeline`) |
-|---|---|---|---|
-| load | `RenderTimeline::from_json_slice` (gzip ok) | `RenderTimeline.fromBytes(u8)` | `Timeline.from_json(bytes\|str)`, `Timeline.load(path)` |
-| build | `build_render_timeline(&trace, &height, catalog)` | `build(trace, xodr, topology, catalog?)`, `buildFlat`, `buildPlane` | `build_timeline(trace, xodr=, topology=, catalog_digest=, flat_z=, plane=)` → JSON |
-| pose | `sampler::pose` | `poseArray`, `poseJson`, `posesArray` | `pose(tl, id, t)`, `tl.pose`, `tl.pose_array`, `tl.poses` |
-| lights/signals | `sampler::{lights_at, signals_at}` | `lightsAtJson`, `signalsAtJson` | `tl.lights_at`, `tl.light_modes_at`, `tl.signals_at` |
-| identity | `timeline_key`, `RenderTimeline::sha256` | `key`, `sha256`, `traceSha256` | `timeline_key`, `trace_sha256`, `tl.key`, `tl.sha256` |
+| | Rust | Python (`simforge_oss_timeline`) |
+|---|---|---|
+| load | `RenderTimeline::from_json_slice` (gzip ok) | `Timeline.from_json(bytes\|str)`, `Timeline.load(path)` |
+| build | `build_render_timeline(&trace, &height, catalog)` | `build_timeline(trace, xodr=, topology=, catalog_digest=, flat_z=, plane=)` → JSON |
+| pose | `sampler::pose` | `pose(tl, id, t)`, `tl.pose`, `tl.pose_array`, `tl.poses` |
+| lights/signals | `sampler::{lights_at, signals_at}` | `tl.lights_at`, `tl.light_modes_at`, `tl.signals_at` |
+| identity | `timeline_key`, `RenderTimeline::sha256` | `timeline_key`, `trace_sha256`, `tl.key`, `tl.sha256` |
 
 ## 8. Renderer obligations and parity
 
 | Level | Guarantee | Gate |
 |---|---|---|
-| Sampler across bindings | bit-identical | binding identity corpus (Rust vs WASM vs Python) |
-| Bevy observed transforms vs sampler | ≤ 1e-3 m, ≤ 0.05° | `simforge render parity` on `observed-frames.jsonl` |
+| Sampler across bindings | bit-identical | binding identity corpus (`render_timeline_identity.rs`, `adapters/timeline/tests/test_identity.py`) |
+| Bevy observed transforms vs sampler | ≤ 1e-3 m, ≤ 0.05° | `simforge render` (and the golden harness) on `observed-frames.jsonl` |
 | CARLA observed transforms vs sampler (trace replay) | ≤ 1 cm, ≤ 0.1° | same comparator, CARLA tolerance profile |
-| Pixels | never an identity | per-GPU goldens only |
+| Pixels | never an identity | lavapipe goldens only (`native-golden-ci.md`) |
 
 - **Bevy.** Loads the timeline and samples it at the exact µs frame times.
   - It sends `load_scene_state` frames built from `scene_yup(pose)`, with the
     baked `z` as scene `y` and `groundY: 0`, so the baked height is
     authoritative even at `z = 0`.
-  - The native service currently applies yaw only; applying road/body
-    pitch/roll is a follow-up.
+  - `simforge render` lowers with attitude on: each frame carries the road +
+    body pitch and roll, not only yaw.
   - Each frame also carries the actor's lit lamps (`lights`, from
     `lights_at`) and the frame's signal lenses (`signals`, from `signals_at`,
     keyed by the map GLB head GUID that the OpenDRIVE `<vectorSignal
@@ -343,8 +345,9 @@ The companions follow the same domain rules:
     (low beams, indicators, reverse and emergency lamps are not drawn yet),
     `native_signal_unbound`, `native_signal_head_undriven`,
     `native_signal_lens_substituted`, `native_actor_color_untintable`.
-  - xosc lowering remains only as a clearly marked fallback for execution
-    packages that carry no timeline.
+  - The renderer still accepts legacy frames lowered from an xosc (no lamp,
+    signal or attitude state); it draws them and reports each missing
+    channel as a warning. `simforge render` never produces them.
 - **CARLA** (trace replay):
   - Spawn at the sampled pose with physics off before the first tick.
   - Call `set_transform` per tick from the sampler, and set lights and
@@ -352,8 +355,9 @@ The companions follow the same domain rules:
   - Use the timeline time origin.
   - Physics runs only in the labelled "physics validation" mode, which is
     never shown as the scenario's render.
-- **Editor.** Samples the same timeline through WASM. A local preview trace
-  and the worker trace are compared by `traceSha256`.
+- **Other hosts** (for example a browser editor) sample the same timeline
+  through their own binding of the core. Traces are compared by
+  `traceSha256`.
 
 ### Parity report (`simforge.render-parity/v1`)
 
@@ -379,26 +383,22 @@ Profiles:
 - A JSON profile can override the tolerance, the frame, the height reference
   (`ground` | `body-centre`) and `compareAttitude`.
 
-A failing report fails the render. `simforge render parity` exits 2 on
-failure.
+A failing report fails the render: `simforge render` writes `parity.json`
+and exits with findings.
 
 ### Tooling
 
 ```sh
-simforge render timeline trace.json.gz --map <mapId> --out scenario.timeline.json   # prints the key and digests
-simforge render sample scenario.timeline.json --t 3.04 [--actor <id>]
-simforge render scene-state scenario.timeline.json --fps 24 --out scene.json          # scene-state.v1 projection
-simforge-render job --job job.json                                                  # Bevy playback of it (render-job/v2, sceneState: scene.json)
-simforge render parity scenario.timeline.json observed-frames.jsonl --profile bevy
+simforge timeline build <workspace>                           # build + key the workspace's timeline (timeline/<sha256>.json)
+simforge timeline build --trace trace.json.gz --map-dir <map> --out scenario.timeline.json
+simforge render <workspace> --preset training --rig rig.json --out <dir>   # lower, render, grade parity
+cargo run --release -p simforge-core --example render-parity -- \
+  scenario.timeline.json observed-frames.jsonl --profile bevy  # grade an observed-frames file on its own
 ```
 
-The native render engine uses the timeline when a job carries the
-`render.timeline` input. That input holds the canonical bytes, and their
-sha256 must equal `timelineSha256`. The engine records
-`sceneSource: "render-timeline"` and `timelineSha256` in its manifest and
-diagnostics. Without that input it falls back to re-lowering the xosc,
-records `sceneSource: "openscenario-legacy"`, and adds the warning
-`scene_source_openscenario_legacy`.
+`simforge render` renders from the workspace's timeline only. Its
+`render.json` records the timeline's `timelineSha256` and the lowering's
+digest.
 
 ## 9. Compatibility and versioning
 
@@ -406,10 +406,10 @@ records `sceneSource: "openscenario-legacy"`, and adds the warning
   unknown `samplerVersion`s are rejected. There is no silent fallback.
 - A renderer also reads an adjacent `samplerVersion` whose sampling rules
   are unchanged (`ACCEPTED_SAMPLER_VERSIONS`; today /2 and /3, where /3 only
-  binds `color`). Dev promotion accepts a build on the new web before it
-  updates the GPU fleet, so workers must read a sampler version one release
-  before the platform derives it. A sampler bump therefore lands in two
-  builds: first the readers, then the derivation (which keeps the previous
+  binds `color`). A host may upgrade the code that derives timelines before
+  it upgrades its renderers, so renderers must read a sampler version one
+  release before anything derives it. A sampler bump therefore lands in two
+  releases: first the readers, then the derivation (which keeps the previous
   version readable).
 - **Additive, optional fields.** Consumers must tolerate unknown fields. A
   new optional channel does not bump the version. A change in how a channel

@@ -94,8 +94,9 @@ rewards, ended flags and SHA-256 digests of the observation/reward arrays).
 
 ## Qualification tooling (not run by this package's author)
 
-* `node adapters/gpu/tools/reference-rollout.mjs` — dumps a reference
-  `EnvSession` rollout JSONL for a document/episode/action sequence.
+* The reference is a per-decision JSONL rollout of the CPU `EnvSession` for a
+  document/episode/action sequence (the format `conformance.load_rollout`
+  reads). No generator for it ships in this repository yet.
 * `simforge-oss-gpu-conformance --input … --topology … --actions … --rollout …`
   — replays the same actions on device and reports exact discrete transitions
   and per-channel tolerance violations; `--worlds N` adds cross-world identity.

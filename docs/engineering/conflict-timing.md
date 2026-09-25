@@ -33,16 +33,13 @@ semantics and can leave a second maintainer armed.
 
 ## Tuning controls at executor boundaries
 
-These compatibility knobs exist in the platform executor and are documented here
-so their semantics have one owner:
+An executor may carry compatibility knobs of its own (a legacy reactive release
+timing, a fixed walker step-off delay, a walker acceleration used to interpret
+step-off latency). None of them may apply to an authored conflict schedule, and
+none may become a second schedule clock.
 
-| variable | behavior |
-| --- | --- |
-| `SIMFORGE_UNREACTIVE_CONFLICT_TIMING=0` | A/B escape hatch that restores legacy reactive release timing. New execution should leave unreactive authored timing enabled. |
-| `SIMFORGE_UE5_WALKER_STEPOFF_DELAY_S` | Legacy fixed walker step-off delay; platform default is `1.0` s. It must not apply to an authored conflict schedule. |
-| `SIMFORGE_UE5_WALKER_ACCEL_MPS2` | Walker acceleration used when interpreting step-off latency; platform default is `1.5` m/s². It affects the distance lost during acceleration but must not become a second schedule clock. |
-
-The fixed step-off delay and an acceleration ramp can add roughly 1.36 s of bias,
+A fixed step-off delay (for example 1.0 s) and an acceleration ramp (for example
+1.5 m/s²) can add roughly 1.36 s of bias,
 which is wider than a typical conflict window. An authored-timing marker must
 therefore bypass both the closed-loop hold and the legacy fixed delay. If a target
 runtime has genuine actuator latency, calibrate it as motion behavior or probe it;
@@ -84,23 +81,23 @@ attribution and clearance margin for avoidance cells. A safe stop six or seven
 metres away can still be too weak as an authored near-miss; target a chosen minimum
 gap when scene criticality requires it.
 
-## OSS implementation state
+## Implementation state
 
-The OSS compiler and engine preserve authored actor schedules and already warn in
+The SDK compiler and engine preserve authored actor schedules and already warn in
 materialization/ambient settling code that advancing the ego or challenger during
-warm-up destroys conflict timing. The OSS engine has no duplicate walker kerb-hold
-maintainers and does not read the three executor environment variables above.
+warm-up destroys conflict timing. The engine has no duplicate walker kerb-hold
+maintainers and reads no executor compatibility knobs.
 Visibility- and detection-triggered interactions can author the reaction separately
 from the conflict actor's schedule.
 
-There is no OSS `authored_conflict_timing` execution flag or unreactive conflict
-solver API today. The platform scenario generator and CARLA executor still own the
+There is no `authored_conflict_timing` execution flag or unreactive conflict
+solver API in the SDK today. The hosted scenario generator still owns the
 specialized marker, probe loop, and compatibility knobs.
 
-## TODO: portable conflict staging
+## Remaining work: portable conflict staging
 
 Extract a typed compiler operation that solves and marks an authored conflict
 against an unreactive ego, plus an executor capability that promises not to rewrite
 that schedule. Its acceptance gate must run the paired staging and avoidance checks
-above. Do not port legacy hold maintainers into OSS merely to support the marker;
-the OSS runtime's current authored-schedule behavior is the desired end state.
+above. Do not port legacy hold maintainers into the SDK merely to support the
+marker; the engine's current authored-schedule behavior is the desired end state.

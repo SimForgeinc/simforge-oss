@@ -1,7 +1,7 @@
 # Scenario package fixtures
 
 Fixtures for `simforge.scenario-package/v1` (docs/engineering/scenario-package.md),
-read by the `simforge-package` crate, the Node binding test and the CLI.
+read by the `simforge-package` crate and the `simforge` CLI tests.
 
 | Path | What |
 |---|---|
@@ -35,8 +35,9 @@ SIMFORGE_UPDATE_PACKAGE_FIXTURES=1 cargo test -p simforge-package --test fixture
 ```
 
 `fixtures/canonical-json/vectors.json` carries the thin fixture's manifest
-as the `scenario-package-manifest` vector (the TypeScript and Rust canonical
-encoders are held to it); the fixtures test checks the two agree.
+as the `scenario-package-manifest` vector, which every canonical-JSON encoder
+(including the hosted exporter's) is held to; the fixtures test checks that
+the vector is the thin fixture's manifest.
 
 ## smoke/
 
@@ -53,8 +54,7 @@ release's simulation members. The motion is the archived
 derived under the current sampler from the release's OpenDRIVE and
 topology. `smoke.json` lists the identities and the placeholder parts
 (document, resolution record, `simKey`, `simContentSha256`): the smoke
-covers import, timeline and render, not re-simulation. It is rebuilt on the
-re-versioned maps (#797).
+covers import, timeline and render, not re-simulation.
 
 Its render expectation is the golden-harness scene `package-smoke-richmond`
 (scene-state sampled from this timeline). Until its first lavapipe record
@@ -66,7 +66,8 @@ Regenerate (inputs are fetched by digest and verified): put the release's
 `release.json`, `canonical-closure.json` and `web-closure.json` (served
 canonical), its members `map/map.xodr` and `map/topology-index.json.gz`,
 `actor-closure.json` and its `catalog-models.json`, `map-closure-digest.txt`
-(`MapBundle.fromSources` over the release's simulation members) and
+(`MapBundle::from_sources(...).closure_digest()` in `simforge-compiler`, over
+the release's simulation members) and
 `coordinate-system-sha256.txt` in a directory, then
 
 ```sh

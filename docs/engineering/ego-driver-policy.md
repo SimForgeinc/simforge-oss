@@ -68,15 +68,16 @@ flicker from resetting first-visible time.
 values must convert using actor dimensions rather than silently reusing the
 number.
 
-## OSS implementation state
+## Implementation state
 
-The OSS engine already owns several pieces of the eventual percept:
+The engine already owns several pieces of the eventual percept:
 
-- `src/sim/visibility.ts` performs geometric line-of-sight checks against
-  oriented occluders.
+- `native/crates/simforge-core/src/engine/visibility.rs` performs geometric
+  line-of-sight checks against oriented occluders.
 - `visible` trigger conditions use that geometry and the operational visibility
   range.
-- The perception runtime exposes sensor-aware `detected` conditions; atmosphere,
+- The perception runtime (`engine/perception.rs`) exposes sensor-aware
+  `detected` conditions; atmosphere,
   optics, and occlusion can therefore delay an authored brake interaction.
 - Actor driver data and controller limits contain headway, reaction time,
   comfortable deceleration, and hard-brake authority.
@@ -86,9 +87,9 @@ The engine does **not** currently expose `Percept`, `DriverCommand`,
 interactions and controller targets. The ambient-driver configuration is not the
 swappable ego boundary described here, and must not be presented as one.
 
-## TODO: policy implementation
+## Remaining work
 
-This mechanism still lives in executor/product code. Land it in OSS in four
+The policy boundary does not exist in the engine yet. It lands in four
 separable steps:
 
 1. Assemble a read-only percept with no behavior change.

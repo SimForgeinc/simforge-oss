@@ -2,8 +2,8 @@
 
 Regenerates `../models/*.glb` from CARLA cooked content. Nothing here runs at
 product runtime. `../models/` is a gitignored working directory: after a
-regeneration, seal and publish the pack (`scripts/actor-assets/seal-packs.mjs`,
-see `../CONVENTIONS.md`) so the new bytes reach the content-addressed store.
+regeneration the pack is resealed and published to the content-addressed store
+(see `../CONVENTIONS.md`, "Where the model bytes live").
 
 ## 0. Source content (one-time, local machine)
 

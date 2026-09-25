@@ -1,6 +1,6 @@
 # Native render: GPU/hardware profile (Belmont job, RTX 3080)
 
-The workload is job `usrj_118093d74fcc4a6896698eae`:
+The workload is one Belmont render job:
 - Belmont: 266M logical triangles, 5.5 GB UASTC textures.
 - 480 ticks.
 - 8 cinematic RGB cameras at 1280×720: seven at 120° HFOV plus a 70° chase camera.
@@ -8,7 +8,7 @@ The workload is job `usrj_118093d74fcc4a6896698eae`:
 
 rc.73 took 3.35 s of service time per tick.
 
-All numbers below were measured on box 3: an RTX 3080 10 GB and a Xeon E5-2670 v3 in an HP Z840, driver 595.91. The measurements used `render-bench` (now `simforge-render job`), which runs the service's `render_bundle` path in-process, at ticks 200–211 with 11 measured ticks per configuration.
+All numbers below were measured on an RTX 3080 10 GB and a Xeon E5-2670 v3 in an HP Z840, driver 595.91. The measurements used `render-bench` (now `simforge-render job`), which runs the service's `render_bundle` path in-process, at ticks 200–211 with 11 measured ticks per configuration.
 
 ## Tools
 
@@ -33,13 +33,14 @@ Every look knob is one typed `RenderConfig` (`renderer/render-core/src/render_co
 A request is a preset plus dotted overrides, and the same request shape works everywhere:
 - the CLI: `simforge-render serve|job --preset training --set shadows.mapSize=2048`;
 - the scene spec's `render: {preset, set}`;
-- the render intent's `render: {preset, set, geometryLod}` (`packages/scenario/src/render-intent.ts`);
+- the render intent's `render: {preset, set, geometryLod}`;
+- `simforge render --preset training|showcase --set key=value`;
 - sweep files.
 
 Unknown keys and invalid values are errors. `simforge-render serve --scene S --print-render-config` lists every key.
-The service reports the resolved config in its ready record and `hello`, and platform runs record it in the native manifest (`render`, behind `native-evidence.render-config`).
+The service reports the resolved config in its ready record and `hello`, and the native manifest records it (`render`, behind `native-evidence.render-config`).
 
-- `showcase` (default for platform renders) and `training` differ only in quality levels. Both keep every effect: shadows, SSAO, SSR, atmosphere, sky and clouds, bloom, grading and vegetation.
+- `showcase` and `training` differ only in quality levels. Both keep every effect: shadows, SSAO, SSR, atmosphere, sky and clouds, bloom, grading and vegetation.
 - `training` renders at the consumer's own resolution.
 - No preset renders at the maximum. `RenderConfig::reference()` is the measurement reference, and `--set` reaches any value.
 - Output encoding (`output.*`) is a consumer knob, not part of a preset's identity.
@@ -83,9 +84,7 @@ Findings:
 
 Showcase is the cheapest candidate in the 0.90–0.95 SSIM band. Training keeps every effect at its cheapest level and lands at about 0.83 SSIM against its own-resolution reference, the nearest measured point to the 0.80 target.
 
-A dump-free timing pass on the render-video agent's rig replaces these GPU numbers when it runs.
-
-Knob notes, from both the sweep and the render-video agent's one-knob pass on a single 1080p chase camera:
+Knob notes, from both the sweep and a one-knob pass on a single 1080p chase camera:
 - `shadows.shared` affects only rig cameras. A presentation camera (a trailing chase that shows its host) always fits its own cascades.
 - Foliage has no density knob. Its cost scales only with `lod.pixelErrorPx` (coarser levels and impostors).
 - SSR is visible only on glossy surfaces: roughness between 0.12 and 0.55, such as car paint and wet road. On a dry scene every SSR setting measures FLIP 0.0000 against the reference, at no measurable cost. Both presets keep it on because it carries wet-road reflections (`lighting.wetness`).
@@ -101,7 +100,7 @@ The sky fill is physical. On a 0.5-albedo plane under a box (the `sky_fill_probe
 ### The camera model (`render-core/src/camera_model.rs`, `camera.*` and `grading.toneMap: dashcamWdr`)
 
 1. The camera meters every frame from its own HDR image and nothing else, so a capture never depends on earlier frames. The meter is a 128-bin log-luminance histogram built with integer atomics, so it is deterministic. The metering mask weights the bottom of the frame over the sky (`dashcam`); `average` and `centerWeighted` are the other modes. The meter takes a trimmed mean and aims it at an 18% key, plus `compensationEv`.
-2. The metered EV100 is split into shutter (1/32000 to 1/30 s at f/1.8) and then gain (up to ISO 6400). Each frame records EV100, shutter, ISO and gain in the result `exposure` field and in the platform `exposure` diagnostics.
+2. The metered EV100 is split into shutter (1/32000 to 1/30 s at f/1.8) and then gain (up to ISO 6400). Each frame records EV100, shutter, ISO and gain in the result `exposure` field and in the run's `exposure` diagnostics.
 3. A global WDR log curve maps the image: white at `whiteStops` above the key, the key at `midGrey`, highlights desaturating to white.
 
 There is no temporal adaptation. Bevy's `AutoExposure` depends on the previous frame, which would break history-free captures. `camera_model_exposure_does_not_depend_on_the_previous_frame` is the test for this.
@@ -127,7 +126,7 @@ Road luminance on the Belmont clear scene (sun 36°, 8×720p rig, tick 381), bef
 
 ### Haze
 
-Clear air is 25 km (TS weather presets and the engine weather table; it was 80 km), and cloudy is 20 km. `atmosphere.hazeDensity` (default 1) scales the boundary-layer term that closes Koschmieder's relation. At 25 km the term is weak: about 1.6% veil at 100 m. Toward a low sun, forward scattering (g ≈ 0.78) makes it visible. Its value is calibrated against real dash-cam footage (dash-cam calibration notes).
+Clear air is 25 km (the weather presets and the engine weather table; it was 80 km), and cloudy is 20 km. `atmosphere.hazeDensity` (default 1) scales the boundary-layer term that closes Koschmieder's relation. At 25 km the term is weak: about 1.6% veil at 100 m. Toward a low sun, forward scattering (g ≈ 0.78) makes it visible. Its value is calibrated against real dash-cam footage (dash-cam calibration notes).
 
 ### Tree shadows through geometry LOD (fixed)
 
@@ -152,7 +151,7 @@ places:
 
 The golden gate fails (exit 9) on any frame that has one.
 
-On the San Ramon CEO-comparison and fit frames, 5 of 31 frames had 4-20 NaN
+On the San Ramon comparison and fit frames, 5 of 31 frames had 4-20 NaN
 pixels, in 2x2 quads on pine and bush foliage. They appeared only with SSAO
 on, because SSAO enables the normal prepass. With `LOAD_PREPASS_NORMALS`, the
 main pass lit each fragment with the 10-bit normal the prepass stored for its
@@ -290,11 +289,3 @@ For 8 × 1280×720 views on a 3080 with the cinematic stack:
   - NVENC for eight 720p frames: about 6 ms, asynchronous;
   - lidar ray trace on RT cores: under 1 ms per 120 k rays.
 - **The 480-tick job's floor** is therefore about 12–15 s of GPU time. Reaching it needs the CPU side (Bevy encoding, host sensor work) parallelised or overlapped.
-
-## Ranked next steps
-
-1. **Parallel per-camera command encoding.** Record each camera's passes in its own encoder on a worker thread (vendored camera driver). CPU is about 355 ms on the Xeon; expected about ÷4 on the 24-thread box.
-2. **Parallel camera publish.** Strip, CRC and copy per camera on the pool: about 48 → 10 ms.
-3. **Shadow LOD policy.** Draw casters with the manifest's `shadowPixelErrorPx = 4` levels on a light-only layer.
-4. **Ship the geometry-LOD derivative through prewarm**, so jobs pass `geometryLod`. It is off until the map carries it.
-5. **Binary PLY for the lidar video path.** The TS consumer parses it; this removes the ASCII formatting.

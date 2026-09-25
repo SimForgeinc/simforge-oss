@@ -4,8 +4,7 @@ The Road-Painter-equivalent for the native (Bevy) renderer: per-tile
 splat-blended asphalt/concrete variants, procedural wheel-track/oil wear,
 worn lane markings, and baked decal stamps (cracks, patches, oil, stains) —
 all CC0-seeded and **deterministic** (same inputs → same pixels on the same
-device). This closes the last asset-level gap identified against CARLA's
-Road Painter workflow (`nextdir/bevy-look-research.md`, paths 2/3).
+device). It is the counterpart of CARLA's Road Painter workflow.
 
 Components:
 
@@ -13,13 +12,12 @@ Components:
 |---|---|
 | Master material (Bevy `ExtendedMaterial`) | `renderer/render-core/src/road_detail.rs` |
 | Fragment shader | `renderer/render-core/src/shaders/road_detail.wgsl` |
-| Sidecar generator | `tools/road-detail-gen` |
 | Engine entry point | `renderer/render-core/src/engine.rs` (`SceneApp::apply_road_detail`); no job/serve wiring today (see Renderer wiring) |
 
 ## Sidecar document
 
-One JSON sidecar + textures per tile, produced by `road-detail-gen`,
-conventionally at
+One JSON sidecar + textures per tile, produced at map ingest (the generator
+is not part of this repository), conventionally at
 `<bundle>/browser/3d/tiles/<tile>.road-detail/<tile>.road-detail.json`.
 Texture paths resolve **relative to the sidecar's directory**.
 
@@ -79,7 +77,7 @@ Field semantics:
     world clear color.
 - **variants** — 1–2 extra surfaces blended over the authored GLB material
   (variant 0). `role` selects the splat channel (`a` → R, `b` → G). ORM uses
-  the packed AO/rough/metal convention of `tools/glb-orm-repair`. Sources
+  the packed AO/rough/metal (glTF ORM) convention. Sources
   MUST be CC0 or SimForge-authored; the `source` block records provenance.
 - **detailNormal** — high-frequency normal layer tiled at
   `tilingPerMeter`, scaled by `strength`; damped under decals.
@@ -87,26 +85,17 @@ Field semantics:
   `decalOverlay` is the pre-composited bake of these instances from
   `decalAtlas` (2×2 grid: crack / patch / oil / stain; R = shade,
   A = shape). Renderers consume only the baked overlay; the instance list
-  is retained so future true-decal renderers (or the web viewer) can
-  re-composite at higher fidelity.
+  is retained so a true-decal renderer can re-composite at higher
+  fidelity.
 - **digests** — sha256 of the **raw RGBA payloads** (not the PNG bytes);
-  this is the determinism contract asserted by
-  `tools/road-detail-gen/test/gen.test.mjs`.
+  this is the generator's determinism contract.
 
-## Generator
+## Generation rules
 
-```bash
-node tools/road-detail-gen/bin/road-detail-gen.mjs generate \
-  --bundle ~/simforge-assets/map-bundles/easterbrook-discovery-school \
-  --textures ~/simforge-assets/map-bundles/cc0-textures \
-  --seed 1337
-```
-
-Inputs: `browser/lane-polygons.geojson.gz` (WGS84 lane polygons),
-`browser/topology-index.json.gz` (lane widths), the map `xodr`
-`<geoReference>` (tmerc origin). Lon/lat → SimForge XZ uses a local
+Inputs: the map's lane polygons (WGS84), lane widths from the topology index,
+and the map `xodr` `<geoReference>` (tmerc origin). Lon/lat → SimForge XZ uses a local
 ellipsoidal ENU approximation (≪ texel error over <1 km maps) with the
-verified frame mapping `sf.x = local_x`, `sf.z = −local_y`.
+frame mapping `sf.x = local_x`, `sf.z = −local_y`.
 
 Everything is seeded: value-noise lattices hash integer coordinates with the
 tile seed; per-lane amplitudes hash the lane `road:section:lane` id; decal
@@ -129,11 +118,8 @@ scene readiness the engine loads the sidecar textures (CPU-decoded, mipless, fix
 swaps every mesh whose `GltfMaterialName` is listed in `materials` to
 `ExtendedMaterial<StandardMaterial, RoadDetailExtension>`; the authored
 material remains the blend base, so tile UV density, alpha modes, and any
-ORM repair (`tools/glb-orm-repair`) survive. The instance-ID pass and
+ORM repair survive. The instance-ID pass and
 legend are unaffected (ID clones use engine-created unlit materials).
-
-The Node adapter (`@simforge-oss/render` native engine) does not forward
-road-detail sidecars.
 
 ## Determinism & tests
 
@@ -141,14 +127,9 @@ road-detail sidecars.
 - `cargo test -p render-core --test road_detail_pipeline` — WGSL composes
   through naga_oil and specializes to an `Ok` pipeline on a real adapter
   (set `SF_NO_GPU=1` to skip on GPU-less hosts).
-- `node --test tools/road-detail-gen/test/gen.test.mjs` — mask digest
-  determinism, seed sensitivity, wear/erosion placement, atlas stability,
-  PNG encoding, georeference math.
 
 ## Licensing
 
-Variant textures: CC0 only (Poly Haven / ambientCG), staged under
-`~/simforge-assets/map-bundles/cc0-textures/`, provenance pinned per variant
-in the sidecar. The decal atlas is procedurally generated in-process
-(SimForge-authored). No RoadRunner Asset Library content is referenced —
-its redistribution is under legal review (`nextdir/asset-gap-analysis.md`).
+Variant textures: CC0 only (Poly Haven / ambientCG), provenance pinned per
+variant in the sidecar. The decal atlas is procedurally generated
+(SimForge-authored). No RoadRunner Asset Library content is referenced.
