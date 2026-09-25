@@ -1,0 +1,285 @@
+{
+  "scenarioVersion": 2,
+  "meta": {
+    "name": "Broken: missing-dynamics",
+    "description": "Continuous interactions with no dynamics and a when trigger with no byLatest.",
+    "createdAt": "2026-08-01T00:00:00.000Z",
+    "modifiedAt": "2026-08-01T00:00:00.000Z",
+    "appVersion": "simforge/0.0.1",
+    "archetype": "vru.cyclist-right-hook",
+    "tags": [
+      "vru",
+      "bicycle",
+      "right-hook",
+      "parallel"
+    ],
+    "author": "agent/remaining-mechanisms",
+    "negativeControl": false
+  },
+  "params": {
+    "declarations": [
+      {
+        "id": "cyclistSpeedKph",
+        "type": "continuous",
+        "unit": "kph",
+        "tier": 1,
+        "range": [
+          16.4,
+          16.6
+        ],
+        "default": 16.5,
+        "distribution": "uniform"
+      },
+      {
+        "id": "overlapM",
+        "type": "continuous",
+        "unit": "m",
+        "tier": 1,
+        "range": [
+          6.8,
+          7.2
+        ],
+        "default": 7,
+        "distribution": "uniform"
+      }
+    ],
+    "constraints": []
+  },
+  "environment": {
+    "weather": "clear",
+    "timeOfDay": "afternoon"
+  },
+  "anchor": {
+    "id": "broken-missing-dynamics",
+    "corridor": {
+      "throughLanesSameDir": {
+        "value": [
+          1,
+          6
+        ],
+        "essentiality": "required"
+      },
+      "requiresAdjacent": {
+        "value": [
+          "bike"
+        ],
+        "essentiality": "preferred"
+      },
+      "runwayUpstreamM": {
+        "value": [
+          55,
+          null
+        ],
+        "essentiality": "required"
+      },
+      "runwayDownstreamM": {
+        "value": [
+          70,
+          null
+        ],
+        "essentiality": "required"
+      }
+    },
+    "features": [
+      {
+        "id": "hook-junction",
+        "kind": "junction",
+        "essentiality": "required",
+        "atM": {
+          "value": [
+            0,
+            0
+          ],
+          "essentiality": "required"
+        },
+        "arms": {
+          "value": [
+            3,
+            4
+          ],
+          "essentiality": "required"
+        },
+        "egoTurn": {
+          "value": [
+            "right"
+          ],
+          "essentiality": "required"
+        }
+      }
+    ],
+    "policy": {
+      "allowMirror": false,
+      "maxSitesPerMap": 12,
+      "diversity": "strict",
+      "minScore": 0.45
+    }
+  },
+  "roles": [
+    {
+      "id": "ego",
+      "kind": "on_reference",
+      "actor": {
+        "class": "car",
+        "catalogId": "vehicle.sedan"
+      },
+      "pose": {
+        "laneOffset": 0,
+        "s": -42,
+        "tFrac": 0,
+        "headingOffsetRad": 0
+      },
+      "initialSpeedKph": 18
+    },
+    {
+      "id": "cyclist",
+      "kind": "relative_to",
+      "ref": "ego",
+      "dLane": 0,
+      "dsM": "param.overlapM",
+      "tFrac": -0.82,
+      "actor": {
+        "class": "bicycle"
+      },
+      "initialSpeedKph": "param.cyclistSpeedKph",
+      "extensions": {
+        "movementSemantics": "same-approach-straight-kerb-edge",
+        "mustNotSubstituteClass": true
+      }
+    }
+  ],
+  "props": [],
+  "choreography": {
+    "clipSeconds": 14,
+    "warmupSeconds": 2,
+    "interactions": [
+      {
+        "id": "ego-indicates-right",
+        "actor": "ego",
+        "verb": "set",
+        "trigger": {
+          "kind": "at",
+          "t": 1
+        },
+        "target": {
+          "key": "lights.indicator",
+          "value": "right"
+        }
+      },
+      {
+        "id": "ego-fails-to-yield-cyclist",
+        "actor": "ego",
+        "verb": "set",
+        "trigger": {
+          "kind": "at",
+          "t": 1
+        },
+        "target": {
+          "key": "rules.collisionAvoidance",
+          "value": false
+        }
+      },
+      {
+        "id": "cyclist-keeps-course",
+        "actor": "cyclist",
+        "verb": "set",
+        "trigger": {
+          "kind": "at",
+          "t": 0
+        },
+        "target": {
+          "key": "rules.collisionAvoidance",
+          "value": false
+        }
+      },
+      {
+        "id": "ego-turns-right",
+        "actor": "ego",
+        "verb": "route",
+        "trigger": {
+          "kind": "when",
+          "condition": {
+            "kind": "reaches",
+            "of": "ego",
+            "region": {
+              "feature": "hook-junction",
+              "at": "entry"
+            },
+            "toleranceM": 5
+          },
+          "byLatest": 9,
+          "ifNever": "fire"
+        },
+        "target": {
+          "mode": "turn",
+          "feature": "hook-junction",
+          "turn": "right"
+        }
+      },
+      {
+        "id": "ego-slows",
+        "actor": "ego",
+        "verb": "speed",
+        "trigger": {
+          "kind": "at",
+          "t": 3
+        },
+        "target": {
+          "mode": "absolute",
+          "valueKph": 10
+        }
+      },
+      {
+        "id": "cyclist-drifts",
+        "actor": "cyclist",
+        "verb": "laneOffset",
+        "trigger": {
+          "kind": "when",
+          "condition": {
+            "kind": "speed",
+            "of": "ego",
+            "op": "<",
+            "valueKph": 12
+          }
+        },
+        "target": {
+          "tFrac": 0.3
+        }
+      }
+    ]
+  },
+  "invariants": [
+    {
+      "id": "parallel-overlap",
+      "kind": "gap",
+      "of": "ego",
+      "to": "cyclist",
+      "unit": "distance",
+      "range": [
+        0,
+        8
+      ],
+      "window": [
+        0,
+        6
+      ],
+      "essentiality": "required"
+    },
+    {
+      "id": "hook-criticality",
+      "kind": "pet",
+      "of": "ego",
+      "to": "cyclist",
+      "range": [
+        0.2,
+        3
+      ],
+      "window": [
+        0,
+        12
+      ],
+      "essentiality": "required"
+    }
+  ],
+  "variants": [],
+  "metricSubject": "ego"
+}

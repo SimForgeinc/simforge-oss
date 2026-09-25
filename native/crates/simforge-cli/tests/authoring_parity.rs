@@ -101,6 +101,18 @@ fn read_tree(dir: &Path) -> Value {
     Value::Object(out)
 }
 
+/// Where goldens' platform-only inputs (`packages/...`) live in the SDK.
+const INPUTS: &str = "native/crates/simforge-cli/tests/fixtures/authoring-inputs/";
+
+/// An argv entry as run here: platform-only inputs come from [`INPUTS`].
+fn sdk_arg(arg: &str) -> String {
+    if arg.starts_with("packages/") {
+        format!("{INPUTS}{arg}")
+    } else {
+        arg.to_owned()
+    }
+}
+
 fn canonical(value: &Value) -> String {
     canonical_json(value).expect("canonical JSON")
 }
@@ -135,7 +147,7 @@ fn authoring_commands_match_their_parity_goldens() {
             .as_array()
             .unwrap()
             .iter()
-            .map(|a| a.as_str().unwrap().replace("{OUT}", &out_text))
+            .map(|a| sdk_arg(&a.as_str().unwrap().replace("{OUT}", &out_text)))
             .collect();
         let output = Command::new(env!("CARGO_BIN_EXE_simforge"))
             .args(&argv)
@@ -157,6 +169,7 @@ fn authoring_commands_match_their_parity_goldens() {
             "stderr": parse_json(stderr_line.as_bytes()),
             "files": read_tree(&out),
         });
+        let result = rewrite(result, INPUTS, "");
         let result = rewrite(rewrite(result, &out_text, "<OUT>"), &maps_text, "<MAPS>");
         let files: Map<String, Value> = result["files"]
             .as_object()
