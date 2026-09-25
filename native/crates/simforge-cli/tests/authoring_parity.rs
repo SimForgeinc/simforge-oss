@@ -7,7 +7,8 @@
 //! replays the argv through the built binary and requires the same exit
 //! code and stderr error, and the same sha256 of the canonical stdout
 //! document and of each written file (gzip members inflated first). `<OUT>`
-//! is the case's output directory, `<MAPS>` the maps root.
+//! is the case's output directory, `<MAPS>` the maps root, `<ROOT>` the SDK
+//! root (the working directory every case runs in).
 //!
 //! Re-record (after an intentional change, from the platform checkout):
 //! `node oss/packages/cli/parity/authoring-parity.mjs --rust <simforge> \
@@ -159,6 +160,7 @@ fn authoring_commands_match_their_parity_goldens() {
     let home = tmp.path().join("home");
     std::fs::create_dir_all(&home).unwrap();
     let maps_text = maps.display().to_string();
+    let root_text = sdk_root().display().to_string();
 
     let mut failures = Vec::new();
     for golden_file in &files {
@@ -177,15 +179,29 @@ fn authoring_commands_match_their_parity_goldens() {
             .iter()
             .map(|a| sdk_arg(&a.as_str().unwrap().replace("{OUT}", &out_text)))
             .collect();
-        let output = Command::new(env!("CARGO_BIN_EXE_simforge"))
-            .args(&argv)
-            .current_dir(sdk_root())
-            .env("HOME", &home)
-            .env("SCEN_DEV_ASSETS", &maps)
-            .env_remove("SIMFORGE_MAPS_CACHE_ROOT")
-            .env_remove("XDG_DATA_HOME")
-            .output()
-            .expect("run simforge");
+        let simforge = |args: &[String]| {
+            Command::new(env!("CARGO_BIN_EXE_simforge"))
+                .args(args)
+                .current_dir(sdk_root())
+                .env("HOME", &home)
+                .env("SCEN_DEV_ASSETS", &maps)
+                .env_remove("SIMFORGE_MAPS_CACHE_ROOT")
+                .env_remove("XDG_DATA_HOME")
+                .output()
+                .expect("run simforge")
+        };
+        // `pre`: commands run first in the same output directory (a batch
+        // that resumes the cells an earlier run wrote).
+        for pre in golden["pre"].as_array().into_iter().flatten() {
+            let pre: Vec<String> = pre
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|a| sdk_arg(&a.as_str().unwrap().replace("{OUT}", &out_text)))
+                .collect();
+            simforge(&pre);
+        }
+        let output = simforge(&argv);
         let stderr_line = String::from_utf8_lossy(&output.stderr)
             .lines()
             .filter(|l| l.starts_with('{'))
@@ -202,19 +218,23 @@ fn authoring_commands_match_their_parity_goldens() {
         });
         let result = rewrite(result, INPUTS, "");
         let result = rewrite(rewrite(result, &out_text, "<OUT>"), &maps_text, "<MAPS>");
+        let result = rewrite(result, &root_text, "<ROOT>");
         let files: Map<String, Value> = result["files"]
             .as_object()
             .unwrap()
             .iter()
             .map(|(k, v)| (k.clone(), Value::String(sha256(&canonical(v)))))
             .collect();
-        let actual = serde_json::json!({
+        let mut actual = serde_json::json!({
             "argv": golden["argv"],
             "exit": output.status.code(),
             "stdoutSha256": sha256(&canonical(&result["stdout"])),
             "stderr": result["stderr"],
             "files": files,
         });
+        if golden.get("pre").is_some() {
+            actual["pre"] = golden["pre"].clone();
+        }
         if canonical(&actual) != canonical(&golden) {
             failures.push(format!("{name}: expected {golden} got {actual}"));
         }

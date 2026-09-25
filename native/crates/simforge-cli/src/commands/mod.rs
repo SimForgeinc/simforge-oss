@@ -20,6 +20,7 @@ pub mod sites;
 pub mod skills;
 pub mod template;
 pub mod timeline;
+pub mod variation;
 
 /// Commands whose surface is fixed but whose implementation has not landed.
 /// `--help` marks them `"status": "planned"` and running one fails loudly
@@ -82,6 +83,9 @@ pub enum Command {
     /// Query an installed map's location catalog: handles, never road ids.
     #[command(subcommand)]
     Locations(locations::LocationsCommand),
+    /// Child variations of a template: fork a portable one, transfer a map-bound one.
+    #[command(subcommand)]
+    Variation(variation::VariationCommand),
 }
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
@@ -99,6 +103,7 @@ pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
         Command::Instantiate(args) => instantiate::run(args, ctx),
         Command::Template(cmd) => template::run(cmd, ctx),
         Command::Locations(cmd) => locations::run(cmd, ctx),
+        Command::Variation(cmd) => variation::run(cmd, ctx),
     }
 }
 

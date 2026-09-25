@@ -1,0 +1,21 @@
+{
+ "argv": [
+  "variation",
+  "fork",
+  "fixtures/golden-traces/templates/ltap-opposing.pinned.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "3dd7bb59d80de7ee",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 0,
+ "files": {
+  "v/instance.json": "a2783e4d858fbc989ed03981b5adfe97c00e746f84d49c1ccf66082d77cc7f98",
+  "v/trace.json.gz": "e3893fbf0f8f7427962db67a244562903da27847f5d556b980aa42a6d00279f8",
+  "v/variation.json": "8b87fa61e3daf351b638feabc0a18556c9709d531c32342ae8a62b70f4867dbd"
+ },
+ "stderr": null,
+ "stdoutSha256": "69cdfd2132736f313e79094b205426ac1e254b2eec61bb63bd72684b4e8e9c89"
+}

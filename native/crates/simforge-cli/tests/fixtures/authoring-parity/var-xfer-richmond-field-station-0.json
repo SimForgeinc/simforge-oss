@@ -1,0 +1,24 @@
+{
+ "argv": [
+  "variation",
+  "transfer",
+  "packages/compiler/src/__fixtures__/richmond-map-bound.template.json",
+  "--source-map",
+  "richmond-field-station",
+  "--target-map",
+  "richmond-field-station",
+  "--site",
+  "023840a1206e8b91",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 0,
+ "files": {
+  "v/instance.json": "3aecc1cfe69fbc0794e28523bddf3e8b495daab06e31c316b35e160e020304e4",
+  "v/portable.template.json": "2992a9e53da22a51e334a2dbe2e930317eb01ba0e1fe5c2cfc6e10fc0cc8eca6",
+  "v/trace.json.gz": "96d9c4f3a29345bcaf5f4dc4d74375f7664bf878aab27a4db57d1910182a2883",
+  "v/variation.json": "b5752f086913d64a9d64b002a75ea3d2d7fbf205f6118596ab3795cc13fa91b4"
+ },
+ "stderr": null,
+ "stdoutSha256": "dca5e49009d9907a89612bdfece4ffb5a30d145959d4233e597d87b6e2f9740d"
+}
