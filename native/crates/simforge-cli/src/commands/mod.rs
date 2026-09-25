@@ -13,6 +13,7 @@ pub mod doctor;
 pub mod env;
 pub mod evaluate;
 pub mod evidence;
+pub mod export;
 pub mod instantiate;
 pub mod locations;
 pub mod maps;
@@ -99,6 +100,8 @@ pub enum Command {
     Evidence(evidence::EvidenceCommand),
     /// Tier 1 (static) or tier 2 (one engine pass + invariant residuals) validation of an instance or template.
     Validate(validate::ValidateArgs),
+    /// A concrete instance as ASAM OpenSCENARIO XML 1.4, XML 1.3 (esmini) or DSL 2.2, with a capability report.
+    Export(export::ExportArgs),
 }
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
@@ -121,6 +124,7 @@ pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
         Command::Evaluate(args) => evaluate::run(args, ctx),
         Command::Evidence(cmd) => evidence::run(cmd, ctx),
         Command::Validate(args) => validate::run(args, ctx),
+        Command::Export(args) => export::run(args, ctx),
     }
 }
 

@@ -13,6 +13,7 @@ pub mod batch;
 pub mod engine;
 pub mod evaluate;
 pub mod evidence;
+pub mod export;
 pub mod instance;
 pub mod jsfmt;
 pub mod json;
