@@ -141,7 +141,7 @@ export type StudioHostIdentity = {
 export type StudioHostPersistence =
   | { kind: "pglite-filesystem"; dataRoot: string }
   | { kind: "managed-postgres-object-storage" };
-export type StudioHostAction = "transfer" | "driver-in-the-loop";
+export type StudioHostAction = "transfer" | "driver-in-the-loop" | "scenario-package-export";
 
 export type StudioHostActionCapability = {
   available: boolean;

@@ -45,6 +45,7 @@ import {
 } from "./document-list-utils";
 import { ScenarioRating } from "./ScenarioRating";
 import { useScenarioOpenScenarioExport } from "./useScenarioOpenScenarioExport";
+import { useScenarioPackageExport } from "./useScenarioPackageExport";
 import { useStudioHost } from "../../host";
 import { useStudioHostCapabilities } from "@simforge-oss/studio-host/react";
 import { textLayout, typography } from "../../stylex/recipes.stylex";
@@ -220,7 +221,7 @@ function DocumentActionCluster({
 > ) {
   const hostCapabilities = useStudioHostCapabilities(useStudioHost());
   const actionCapability = (
-    action: "transfer" | "driver-in-the-loop",
+    action: "transfer" | "driver-in-the-loop" | "scenario-package-export",
   ) => hostCapabilities.capabilities?.actions?.[action];
   const transferCapability = actionCapability("transfer");
   const driverCapability = actionCapability("driver-in-the-loop");
@@ -230,12 +231,19 @@ function DocumentActionCluster({
     onError,
     onNotice,
   });
+  // A new action: a host that does not advertise it has no package route, so absent means hidden.
+  const packageExport = useScenarioPackageExport({
+    documentId: document.id,
+    available: actionCapability("scenario-package-export")?.available === true,
+    onError,
+    onNotice,
+  });
   const renderState: RenderState = renderInProgress
     ? "running"
     : document.hasRender
       ? "complete"
       : "missing";
-  const anyBusy = busy || openScenarioExport.busy;
+  const anyBusy = busy || openScenarioExport.busy || packageExport.busy;
   const renderDisabled = !document.hasSensorProfile;
 
   return (
@@ -263,6 +271,7 @@ function DocumentActionCluster({
             Download JSON
           </DropdownMenuItem>
           {openScenarioExport.menuItem}
+          {packageExport.menuItem}
           <DropdownMenuItem disabled={!mutable} onSelect={() => onEditDetails(document)}>
             <Pencil {...stylex.props(styles.editDetailsPencil)} aria-hidden="true" />
             Edit details
@@ -287,6 +296,7 @@ function DocumentActionCluster({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      {packageExport.dialog}
       {renaming ? (
         <input
           autoFocus

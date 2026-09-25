@@ -521,6 +521,25 @@ export function createHttpStudioHost(options: HttpStudioHostOptions = {}): Studi
       throw new Error("OpenSCENARIO export did not finish in time");
     },
 
+    exportScenarioPackage(revisionId, request = {}, signal) {
+      return call(jobEndpoints.exportScenarioPackage, { params: { revisionId }, body: request, signal });
+    },
+    getScenarioPackageExport(revisionId, exportId, signal) {
+      return call(jobEndpoints.getScenarioPackageExport, { params: { revisionId, exportId }, signal });
+    },
+    async waitForScenarioPackageExport(revisionId, exportId, opts = {}) {
+      const attempts = opts.attempts ?? 600;
+      const intervalMs = opts.intervalMs ?? 2_000;
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        const exported = await jobs.getScenarioPackageExport(revisionId, exportId, opts.signal);
+        opts.onProgress?.(exported);
+        if (exported.state === "succeeded") return exported;
+        if (exported.state === "failed") throw new Error(exported.error?.message ?? exported.error?.code ?? "The package export failed");
+        await delay(intervalMs, opts.signal);
+      }
+      throw new Error("The package export did not finish in time");
+    },
+
     async listValidationRuns(revisionId, signal) {
       return (await call(jobEndpoints.listValidationRuns, { query: { revisionId }, signal })).validationRuns;
     },

@@ -8,6 +8,8 @@ import {
   type PresignedArtifact,
   type ScenarioExportDto,
   type ScenarioExportInspectionDto,
+  type ScenarioPackageExportDto,
+  type ScenarioPackageExportRequest,
   type ScenarioGalleryItemDto,
   type ScenarioJobEventDto,
   type ScenarioJobFamily,
@@ -315,6 +317,27 @@ export const ScenarioExportSchema = object<ScenarioExportDto>({
   completedAt: nullable(string()),
 });
 
+export const ScenarioPackageExportSchema = object<ScenarioPackageExportDto>({
+  exportId: string(),
+  revisionId: string(),
+  form: oneOf(["thin", "full"] as const),
+  textures: nullable(oneOf(["include", "exclude"] as const)),
+  state: oneOf(["queued", "building", "succeeded", "failed"] as const),
+  packageId: string(),
+  displayId: string(),
+  fileName: string(),
+  mediaType: string(),
+  sizeBytes: nullable(number()),
+  estimatedSizeBytes: nullable(number()),
+  sha256: nullable(string()),
+  downloadUrl: nullable(string()),
+  cliCommand: string(),
+  summary: passthrough<ScenarioPackageExportDto["summary"]>(),
+  error: nullable(object({ code: string(), message: string() })),
+  createdAt: string(),
+  completedAt: nullable(string()),
+});
+
 export const ScenarioExportInspectionSchema = object<ScenarioExportInspectionDto>({
   exportId: string(),
   revisionId: string(),
@@ -471,6 +494,19 @@ export const jobsProtocol = {
     method: "GET",
     path: ({ exportId }) => `${EXPORTS}/${encodeURIComponent(exportId)}/inspection`,
     response: ScenarioExportInspectionSchema,
+  }),
+
+  /** "Export for CLI": `simforge.scenario-package/v1` of one revision (thin in the request, full as a job). */
+  exportScenarioPackage: endpoint<{ revisionId: string }, void, ScenarioPackageExportRequest, ScenarioPackageExportDto>({
+    method: "POST",
+    path: ({ revisionId }) => `/api/simforge/revisions/${encodeURIComponent(revisionId)}/package`,
+    response: ScenarioPackageExportSchema,
+  }),
+  getScenarioPackageExport: endpoint<{ revisionId: string; exportId: string }, void, void, ScenarioPackageExportDto>({
+    method: "GET",
+    path: ({ revisionId, exportId }) =>
+      `/api/simforge/revisions/${encodeURIComponent(revisionId)}/package/${encodeURIComponent(exportId)}`,
+    response: ScenarioPackageExportSchema,
   }),
 
   listValidationRuns: endpoint<void, { revisionId: string }, void, { validationRuns: ScenarioValidationRunDto[] }>({

@@ -93,6 +93,24 @@ export default {
         { cwd: "studio", run: ["pnpm", "run", "test:render-preset"] },
       ],
     },
+    {
+      // "Export for CLI" (scenario packages): the composer against the crate's
+      // fixture, and the export routes on PGlite (refusals, thin, full job).
+      name: "studio-scenario-package",
+      when: [
+        "studio/app/lib/scenario/scenario-package/**",
+        "studio/app/api/simforge/revisions/[revisionId]/package/**",
+        "studio/app/lib/scenario/__tests__/scenario-package-*.test.ts",
+        "studio/migrations/*scenario_package*",
+        "packages/native-runtime/src/scenario-package.ts",
+        "fixtures/scenario-package/**",
+      ],
+      steps: [
+        // The binding's addon and WASM are build artifacts (shared turbo cache).
+        { turbo: "build:artifacts", packages: ["@simforge-oss/native-runtime"] },
+        { cwd: "studio", run: ["pnpm", "run", "test:scenario-package"] },
+      ],
+    },
     { name: "release-scripts", when: ["scripts/release/**"], run: ["node", "--test", "scripts/release/*.test.mjs"] },
     // Content-addressed asset closures (the CARLA model packs are not in git).
     { name: "actor-assets", when: ["scripts/actor-assets/**", "catalog/**"], run: ["node", "--test", "scripts/actor-assets/*.test.mjs"] },

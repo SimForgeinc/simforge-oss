@@ -18,6 +18,7 @@ import { LOCAL_CLOUD_ROOT } from "@/app/lib/db/config";
 import { queryRows } from "@/app/lib/db/data-api";
 import { liveCpuWorkers } from "@/app/lib/scenario/jobs/local-native-render-store";
 import { localRenderCapability, localRenderWorkers } from "./local-render";
+import { scenarioPackageExportAction } from "@/app/lib/scenario/scenario-package/flag";
 
 const HEARTBEAT_WINDOW = "90 seconds";
 let studioVersion: string | null | undefined;
@@ -123,6 +124,7 @@ export async function getLocalHostCapabilities(context: AppContext): Promise<Stu
       displayName: context.session.name,
     },
     persistence: { kind: "pglite-filesystem", dataRoot: LOCAL_CLOUD_ROOT },
+    actions: { "scenario-package-export": scenarioPackageExportAction() },
     execution: {
       browserSimulation: true,
       // Registered fleet nodes (if any were approved against this host) first, then this

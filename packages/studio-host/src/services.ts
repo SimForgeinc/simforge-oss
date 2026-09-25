@@ -11,6 +11,8 @@ import type {
   ScenarioDocumentDto,
   ScenarioDocumentSummaryPageDto,
   ScenarioExportDto,
+  ScenarioPackageExportDto,
+  ScenarioPackageExportRequest,
   ScenarioExportInspectionDto,
   ScenarioGalleryItemDto,
   ScenarioJobFamily,
@@ -319,6 +321,16 @@ export interface StudioJobService {
     exportId: string,
     options?: { attempts?: number; intervalMs?: number; signal?: AbortSignal },
   ): Promise<ScenarioExportDto>;
+
+  /** "Export for CLI": thin is stored in the request; full answers `queued` and runs as a job. */
+  exportScenarioPackage(revisionId: string, request?: ScenarioPackageExportRequest, signal?: AbortSignal): Promise<ScenarioPackageExportDto>;
+  getScenarioPackageExport(revisionId: string, exportId: string, signal?: AbortSignal): Promise<ScenarioPackageExportDto>;
+  /** Poll a package export until its container is stored (`succeeded`) or it fails (thrown). */
+  waitForScenarioPackageExport(
+    revisionId: string,
+    exportId: string,
+    options?: { attempts?: number; intervalMs?: number; signal?: AbortSignal; onProgress?: (exported: ScenarioPackageExportDto) => void },
+  ): Promise<ScenarioPackageExportDto>;
 
   listValidationRuns(revisionId: string, signal?: AbortSignal): Promise<ScenarioValidationRunDto[]>;
   createValidationRun(

@@ -642,6 +642,57 @@ export type ScenarioExportInspectionDto = {
   };
 };
 
+/**
+ * One "Export for CLI" of a revision: a `simforge.scenario-package/v1`
+ * container (docs/engineering/scenario-package.md). Thin exports are stored
+ * in the request; full ones are a background job whose `downloadUrl` appears
+ * once the verified container is stored. The link expires; `packageId` does not.
+ */
+export type ScenarioPackageExportDto = {
+  exportId: string;
+  revisionId: string;
+  form: "thin" | "full";
+  textures: "include" | "exclude" | null;
+  state: "queued" | "building" | "succeeded" | "failed";
+  packageId: string;
+  /** `pkg_<first 12 hex>`. */
+  displayId: string;
+  /** `<title-slug>.<first 12 hex>.scenario.zip`. */
+  fileName: string;
+  mediaType: string;
+  sizeBytes: number | null;
+  estimatedSizeBytes: number | null;
+  sha256: string | null;
+  downloadUrl: string | null;
+  /** `simforge package import <file> … && simforge render …`, ready to paste. */
+  cliCommand: string;
+  summary: ScenarioPackageSummaryDto | Record<string, never>;
+  error: { code: string; message: string } | null;
+  createdAt: string;
+  completedAt: string | null;
+};
+
+export type ScenarioPackageSummaryDto = {
+  title: string;
+  revisionId: string;
+  revisionNumber: number;
+  committedAt: string;
+  engineSemVer: string;
+  traceFormat: number;
+  samplerVersion: string;
+  simulatedAt: string;
+  minCli: string;
+  motionSource: "original" | "resimulated";
+  map: { mapVersionId: string; label: string; browserClosureSha256: string; memberCount: number; bytes: number; textureBytes: number };
+  actors: { catalogIds: string[]; referencedBlobs: { count: number; bytes: number } };
+};
+
+export type ScenarioPackageExportRequest = {
+  form?: "thin" | "full";
+  /** Full form only. */
+  textures?: "include" | "exclude";
+};
+
 export type ScenarioArtifactDto = {
   id: string;
   revisionId: string | null;
