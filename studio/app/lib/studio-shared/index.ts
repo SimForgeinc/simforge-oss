@@ -43,27 +43,6 @@ export type {
   ScenarioIntention,
 } from "./scenario-intention";
 export {
-  ALL_CATEGORIES,
-  ImportedCategorySchema,
-  LIVE_CATEGORIES,
-  RESERVED_CATEGORIES,
-  SCENARIO_CATALOG_VERSION,
-  ScenarioCatalogGroupSchema,
-  ScenarioCatalogStatusSchema,
-  categoryById,
-  resolveCategory,
-} from "./scenario-catalog";
-export type {
-  CategoryResolution,
-  ConflictClassification,
-  GeneratorClassification,
-  ImportedCategory,
-  NominalClassification,
-  ScenarioCatalogEntry,
-  ScenarioCatalogGroup,
-  ScenarioCatalogStatus,
-} from "./scenario-catalog";
-export {
   DATASET_EXPORT_RECIPES,
   DatasetExportRecipeIdSchema,
   assertDatasetExportRecipeQueueable,
@@ -91,14 +70,6 @@ export {
   environmentPresetToCarlaWeather,
 } from "./carla-weather";
 export type { CarlaWeather } from "./carla-weather";
-// Self-check on documents WE emit (an assertion about our writer, not a
-// reader for third-party files; SimForge does not import OpenSCENARIO).
-export {
-  SCENARIO_RUNNER_1_0_ACTION_ALLOWLIST,
-  SCENARIO_RUNNER_1_0_CONDITION_ALLOWLIST,
-  classifyXoscDocument,
-} from "./xosc/allowlist-self-check";
-export type { XoscAllowlistClassification } from "./xosc/allowlist-self-check";
 export {
   SCENARIO_METADATA_SCHEMA_VERSION,
   GeneratedScenarioMetadataSchema,
@@ -236,8 +207,6 @@ export type {
   AnchorStation,
   RouteAnchorRef,
 } from "./semantic-map/route-through-anchors";
-export { fitRunwayTurns } from "./semantic-map/fit-runway-turns";
-export type { FitRunwayTurns, FitRunwayTurnsArgs } from "./semantic-map/fit-runway-turns";
 export {
   baselineAction,
   baselineChoice,
@@ -324,36 +293,6 @@ export type {
   SemanticSiteQueryResult,
 } from "./semantic-map/site-query";
 export {
-  SCENARIO_RENDER_ANNOTATION_SCHEMA_VERSION,
-  ScenarioRenderAnnotationSchema,
-  ScenarioRenderAnnotationInputSchema,
-} from "./scenario-render-annotation";
-export type {
-  ScenarioRenderAnnotation,
-  ScenarioRenderAnnotationInput,
-} from "./scenario-render-annotation";
-export {
-  SCENARIO_RATING_SCHEMA_VERSION,
-  ScenarioRatingSchema,
-  ScenarioRatingInputSchema,
-  ScenarioRatingAggregateSchema,
-  ScenarioReviewedViaSchema,
-  ScenarioReviewQueueRenderSchema,
-  ScenarioReviewQueueItemSchema,
-  ScenarioReviewQueuePageSchema,
-  ScenarioReviewStateSchema,
-} from "./scenario-rating";
-export type {
-  ScenarioRating,
-  ScenarioRatingInput,
-  ScenarioRatingAggregate,
-  ScenarioReviewedVia,
-  ScenarioReviewQueueRender,
-  ScenarioReviewQueueItem,
-  ScenarioReviewQueuePage,
-  ScenarioReviewState,
-} from "./scenario-rating";
-export {
   SEMANTIC_SCENARIO_TEMPLATE_SCHEMA_VERSION,
   SemanticScenarioTemplateFamilySchema,
   SemanticScenarioTemplateSchema,
@@ -413,17 +352,6 @@ export type {
   NpcAggressiveness,
 } from "./scenario-families/collision-templates";
 export {
-  CRASH_CATEGORY_PRONE,
-  CRASH_CATEGORY_BASE_RATES,
-  CRASH_CATEGORY_PRIOR_PARAMS,
-  CRASH_SHARED_CATEGORIES,
-  CRASH_PRONE_TAG_SUFFIX,
-  crashSharedCategoriesForCandidate,
-  crashPropensityFamiliesForCandidate,
-  crashPropensityTagsForCandidate,
-} from "./scenario-families/crash-category-prior";
-export type { CrashSharedCategory } from "./scenario-families/crash-category-prior";
-export {
   SCENARIO_VALIDATION_ENGINE,
   ScenarioValidationReportSchema,
   ValidationVerdictSchema,
@@ -446,19 +374,6 @@ export type {
   ValidationRepair,
   ValidationPoint,
 } from "./scenario-validation";
-export {
-  SCENARIO_INTERACTION_RELOCATION_SCHEMA_VERSION,
-  ScenarioInteractionRelocationStatusSchema,
-  ScenarioInteractionRelocationDiagnosticCodeSchema,
-  ScenarioInteractionRelocationDiagnosticSchema,
-  ScenarioInteractionRelocationActorBindingSchema,
-  ScenarioInteractionRelocationPreviewPathSchema,
-  ScenarioInteractionRelocationCandidateSchema,
-  ScenarioInteractionRelocationSourceSchema,
-  ScenarioInteractionRelocationReportSchema,
-  ScenarioInteractionRelocationRequestSchema,
-  ScenarioInteractionRelocationResultSchema,
-} from "./scenario-interaction-relocation";
 export {
   SCENE_FORMATION_SCHEMA_VERSION,
   SCENE_FORMATION_SOLUTION_SCHEMA_VERSION,
@@ -486,47 +401,6 @@ export type {
   SceneFormationSolveReport,
   SceneFormationSolution,
 } from "./scene-formation";
-export {
-  CROSS_MAP_SCENE_MOTIF_SCHEMA_VERSION,
-  CROSS_MAP_VARIATION_SCHEMA_VERSION,
-  CrossMapMotifActorBehaviorSchema,
-  CrossMapMotifActorSchema,
-  CrossMapMotifRelationSchema,
-  CrossMapSceneMotifSchema,
-  CrossMapVariationDiagnosticSchema,
-  CrossMapVariationMatchSchema,
-  CrossMapVariationConstraintSettingsSchema,
-  CrossMapVariationPreviewRequestSchema,
-  CrossMapVariationPreviewResponseSchema,
-  CrossMapVariationMaterializeRequestSchema,
-  CrossMapVariationMaterializeResponseSchema,
-} from "./scenario-cross-map";
-export type {
-  CrossMapSceneMotif,
-  CrossMapVariationMatch,
-  CrossMapVariationConstraintSettings,
-  CrossMapVariationPreviewRequest,
-  CrossMapVariationPreviewResponse,
-  CrossMapVariationMaterializeRequest,
-  CrossMapVariationMaterializeResponse,
-} from "./scenario-cross-map";
-export type {
-  ScenarioInteractionRelocationStatus,
-  ScenarioInteractionRelocationDiagnosticCode,
-  ScenarioInteractionRelocationDiagnostic,
-  ScenarioInteractionRelocationActorBinding,
-  ScenarioInteractionRelocationCandidate,
-  ScenarioInteractionRelocationSource,
-  ScenarioInteractionRelocationReport,
-  ScenarioInteractionRelocationRequest,
-  ScenarioInteractionRelocationResult,
-} from "./scenario-interaction-relocation";
-export {
-  ActorSensorRigSchema,
-} from "./scenario-render-config";
-export type {
-  ActorSensorRig,
-} from "./scenario-render-config";
 export {
   EditorOffsetMSchema,
   EuclideanBboxMSchema,
@@ -669,28 +543,6 @@ export {
 } from "./carla-ue5-vehicle-blueprints";
 export type { CarlaUe5VehicleBlueprint } from "./carla-ue5-vehicle-blueprints";
 export {
-  BlueprintSubstitutionRelaxationSchema,
-  CARLA_BLUEPRINT_CLASS_FALLBACK_DIMENSIONS_M,
-  CARLA_BLUEPRINT_CLASSES,
-  classifyCarlaBlueprint,
-  CrossMapVariationRelaxationSchema,
-  planBlueprintSubstitutions,
-  selectSubstituteBlueprint,
-  SignalCommandDroppedRelaxationSchema,
-  SignalPlanDroppedRelaxationSchema,
-} from "./carla-blueprint-substitution";
-export type {
-  BlueprintFootprintDimensions,
-  BlueprintSubstitutionPlan,
-  BlueprintSubstitutionRelaxation,
-  BlueprintSubstituteSelection,
-  CarlaBlueprintClass,
-  CrossMapVariationRelaxation,
-  SignalCommandDroppedRelaxation,
-  SignalPlanDroppedRelaxation,
-  SubstituteCatalogEntry,
-} from "./carla-blueprint-substitution";
-export {
   CARLA_UE5_WALKER_BLUEPRINTS,
   CARLA_UE5_WALKER_ADULTS,
   CARLA_UE5_WALKER_CHILDREN,
@@ -709,8 +561,6 @@ export type {
 } from "./carla-runtime-catalog";
 export { MapAssetAddressSchema } from "./map-asset-address";
 export type { MapAssetAddress } from "./map-asset-address";
-export { MapAssetBuildingSchema } from "./map-asset-building";
-export type { MapAssetBuilding } from "./map-asset-building";
 export {
   getMapAssetDescriptorTag,
   MAP_ASSET_DESCRIPTOR_TAGS,
@@ -757,26 +607,11 @@ export {
   expandBbox,
   featureBbox,
   deriveEnrichmentTags,
-  buildCandidateLocations,
-  clusterLocations,
-  clusterLocationsKeyed,
-  MIN_BBOX_RADIUS_M,
   extractJunctionCandidates,
-  extractStreetParkingCandidates,
-  extractOvertureCandidates,
-  extractBuildings,
-  extractAddresses,
-  attachRoadAccessToAddresses,
-  applyAddressContext,
-  copyBuildingRowAddressFieldsToFeature,
-  mapAssetAddressRowId,
-  mapAssetBuildingRowId,
-  extractParkingCandidates,
   pointInPolygon,
   pointInBbox,
   parsePolygonRings,
   simplifyPolygon,
-  // XODR geometry & projection utilities (used by scene graph builders and apps/web metadata)
   localToLonLat,
   sampleGeometry,
   resolveSTtoXY,
@@ -792,11 +627,8 @@ export {
   parseDatum,
   parseHorizontalUnits,
   parseVerticalUnits,
-  // proj4-backed projection wrapper (replaces hand-rolled TMerc and the
-  // earlier flat-earth equirectangular it replaced).
   MapProjection,
   synthesizeTmercProjString,
-  // Scene graph + pipeline
   buildMapSceneGraph,
   buildParkingClusters,
   buildRoadSegments,
@@ -805,22 +637,12 @@ export {
   generateCandidates,
   selectTopK,
   poolCandidates,
-  // Road proximity filter
-  extractRoadNetworkPoints,
-  filterByRoadProximity,
-  filterEnrichmentSnapshotByRoadProximity,
-  ROAD_PROXIMITY_THRESHOLD_M,
-  // Convex hull (standalone geometry utility)
   convexHull,
-  // Street name resolver
   resolveStreetNamesForCandidates,
   NAMEABLE_KINDS,
-  // Occlusion-likelihood candidate generation
   runMetadataPhaseOcclusion,
   runEnrichmentPhaseOcclusion,
   OCCLUSION_DETECTOR_VERSION,
-  // Pedestrian-spawn eligibility (canonical signal consumed by sidecar
-  // build, legacy corpus build, geometry tool, scenario builder)
   isPedestrianSpawnCandidate,
   PEDESTRIAN_SPAWN_KINDS,
   PEDESTRIAN_SPAWN_OCCLUSION_SUBTYPES,
@@ -833,22 +655,14 @@ export type {
   OcclusionLatLng,
 } from "./enrichment";
 export type { XodrJunctionMatchInfo } from "./enrichment";
-export type { ExtractedOvertureCandidate } from "./enrichment";
-export type { ExtractedParkingCandidate } from "./enrichment";
 export type { OvertureParkingLot } from "./enrichment";
 export type { XY, GeometrySegment, CoordTransform } from "./enrichment";
 export type {
   BuildSceneGraphOptions,
   BuildSceneGraphResult,
 } from "./enrichment";
-export type { RoadNetworkPoint } from "./enrichment";
 export type { LngLat } from "./enrichment";
 export type {
-  ExtractedAddress,
-  ExtractAddressesResult,
-  OvertureAddressInput,
-  ExtractedBuilding,
-  OvertureBuildingInput,
   Ring,
   PolygonRings,
 } from "./enrichment";
@@ -860,8 +674,6 @@ export type {
   MatchedRoadSegment,
   ResolveOptions,
 } from "./enrichment";
-export type { AttachRoadAccessOptions } from "./enrichment";
-export type { ApplyAddressContextOptions } from "./enrichment";
 
 // Map intelligence types — scene graph entities, detectors, pipeline output
 export {
@@ -924,12 +736,6 @@ export type {
   EsminiCollisionEvent,
   EsminiValidationMetrics,
 } from "./scenario-validation-job";
-export {
-  parseEsminiCsv,
-  summarizeMetrics,
-  verdictFromMetrics,
-} from "./esmini-state-log";
-export type { ParsedEsminiStateLog } from "./esmini-state-log";
 
 export {
   DEFAULT_LINT_CONFIG,
@@ -996,25 +802,6 @@ export type {
   JobPurpose,
 } from "./job-family";
 
-
-
-export {
-  DatasetPublicationKindSchema,
-  DatasetPublicationSchema,
-  DatasetSnapshotItemRoleSchema,
-  DatasetSnapshotItemSchema,
-  DatasetSnapshotSchema,
-  DatasetSplitSchema,
-} from "./dataset-snapshot";
-export type {
-  DatasetPublication,
-  DatasetPublicationKind,
-  DatasetSnapshot,
-  DatasetSnapshotItem,
-  DatasetSnapshotItemRole,
-  DatasetSplit,
-} from "./dataset-snapshot";
-
 export {
   DatasetExportScopeSchema,
 } from "./dataset-export-scope";
@@ -1068,58 +855,6 @@ export type {
   DatasetExportTaskStatus,
   RequestedExportOutput,
 } from "./dataset-export-v2";
-
-export {
-  CarlaDeterminismSchema,
-  CarlaRunManifestSchema,
-} from "./carla-run-manifest";
-export type {
-  CarlaDeterminism,
-  CarlaRunManifest,
-} from "./carla-run-manifest";
-
-export {
-  DatasetCompletenessBlockerSchema,
-  DatasetCompletenessReportSchema,
-  DatasetContractKindSchema,
-  DatasetReadinessLevelSchema,
-} from "./dataset-completeness";
-export type {
-  DatasetCompletenessBlocker,
-  DatasetCompletenessReport,
-  DatasetContractKind,
-  DatasetReadinessLevel,
-} from "./dataset-completeness";
-
-export {
-  CARLA_LIVE_E2E_FIXTURE_VERSION,
-  CARLA_LIVE_E2E_REPORT_VERSION,
-  CARLA_LIVE_E2E_TIMELINE_VERSION,
-  CarlaLiveE2eComparisonSchema,
-  CarlaLiveE2eEnvironmentSchema,
-  CarlaLiveE2eFixtureManifestSchema,
-  CarlaLiveE2eFixtureSchema,
-  CarlaLiveE2eReportSchema,
-  CarlaLiveE2eStatusSchema,
-  CarlaLiveE2eSuiteSchema,
-  CarlaLiveE2eToleranceSchema,
-  CarlaTimelineActorSampleSchema,
-  CarlaTimelineArtifactSchema,
-  CarlaTimelineFrameSchema,
-} from "./carla-live-e2e";
-export type {
-  CarlaLiveE2eComparison,
-  CarlaLiveE2eEnvironment,
-  CarlaLiveE2eFixture,
-  CarlaLiveE2eFixtureManifest,
-  CarlaLiveE2eReport,
-  CarlaLiveE2eStatus,
-  CarlaLiveE2eSuite,
-  CarlaLiveE2eTolerance,
-  CarlaTimelineActorSample,
-  CarlaTimelineArtifact,
-  CarlaTimelineFrame,
-} from "./carla-live-e2e";
 export {
   baseActionForDraft,
   baseClip,
@@ -1133,21 +868,6 @@ export {
   withCompiledBaseClip,
   type CompiledActorPlacementFields,
 } from "./behavior-base-clip";
-export {
-  BEHAVIOR_FIDELITY_GLYPHS,
-  BEHAVIOR_FIDELITY_LABELS,
-  clipFidelity,
-  emptyFidelitySummary,
-  fidelityContextForActor,
-  hasFidelityLoss,
-  signalPlanFidelity,
-  summarizeFidelity,
-} from "./scenario-behavior-fidelity";
-export type {
-  ClipFidelityContext,
-  ClipFidelityVerdict,
-  FidelitySummary,
-} from "./scenario-behavior-fidelity";
 export {
   BEHAVIOR_EVENT_SIGNAL_STATE_CHANGED,
   BEHAVIOR_SCENE_ACTOR_ID,
@@ -1219,20 +939,13 @@ export {
   attachSignalIdsToGates,
   buildSignalPlacementIndex,
   deriveXodrSignalGroups,
-  enrichXodrWithSignalControllers,
-  isEsminiTrafficLightSignal,
-  normalizeXodrForEsmini,
-  normalizeXodrForEsminiWithStats,
   refineMovementSignalIds,
 } from "./xodr-signal-controllers";
 export type {
   ApproachSide,
   DeriveXodrSignalGroupsResult,
-  EnrichXodrOptions,
-  EnrichXodrResult,
   GateWithSignals,
   MovementBindingWithSignals,
-  NormalizeXodrForEsminiResult,
   XodrApproachSignals,
   XodrJunctionSignalGroup,
   XodrMovementSignals,
@@ -1240,55 +953,6 @@ export type {
   XodrPhaseGrouping,
   XodrSignalPlacement,
 } from "./xodr-signal-controllers";
-// Post-sim checks/parity.
-export {
-  buildPostSimChecklist,
-  summarizeChecks,
-  tracksFromEsminiTrajectories,
-  tracksFromCarlaTimeline,
-  runKinematicChecks,
-  DEFAULT_KINEMATIC_THRESHOLDS,
-  // The barrel-level `compareRuns` is the M3.3 parity harness below; the
-  // post-sim checklist's track-level comparator keeps an aliased name.
-  compareRuns as comparePostSimRuns,
-  parityToChecks,
-} from "./scenario-checks/index";
-export type {
-  CheckActorTrack,
-  CheckTrackSample,
-  ScenarioCheck,
-  ScenarioCheckCategory,
-  ScenarioCheckReport,
-  ScenarioCheckStatus,
-  KinematicThresholds,
-  PostSimChecklistInput,
-  ParityResult,
-  ActorParity,
-  ParityTolerance,
-} from "./scenario-checks/index";
-export {
-  DEFAULT_PARITY_CONFIG,
-  PARITY_REPORT_VERSION,
-  ParityActorResultSchema,
-  ParityCollisionPairResultSchema,
-  ParityConfigSchema,
-  ParityExcludedActorSchema,
-  ParityReportSchema,
-  compareRuns,
-  resolveParityConfig,
-} from "./parity";
-export type {
-  DeepPartial,
-  ParityActorResult,
-  ParityCollisionEvent,
-  ParityConfig,
-  ParityEventInputs,
-  ParityExcludedActor,
-  ParityFrame,
-  ParityFrameActor,
-  ParityReport,
-  ParityRunEvents,
-} from "./parity";
 export {
   isScenarioParityEvidenceAccepted,
   isScenarioRenderEvidence,

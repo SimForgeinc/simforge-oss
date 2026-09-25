@@ -13,7 +13,6 @@ import {
   attachSignalIdsToGates,
   buildSignalPlacementIndex,
   deriveXodrSignalGroups,
-  enrichXodrWithSignalControllers,
   refineMovementSignalIds,
 } from "../xodr-signal-controllers";
 
@@ -222,106 +221,6 @@ describe("deriveXodrSignalGroups", () => {
     const result = deriveXodrSignalGroups(xodr);
     expect(result.junctions).toEqual([]);
     expect(result.unassigned_signal_ids).toEqual([]);
-  });
-});
-
-describe("enrichXodrWithSignalControllers", () => {
-  it("can conservatively emit one deterministic controller per signal", () => {
-    const result = enrichXodrWithSignalControllers(FIXTURE, { singleSignalControllers: true });
-    expect(result.stats.controllers_added).toBe(6);
-    expect(result.stats.controls_added).toBe(6);
-    const controlsPerController = [...result.xodr.matchAll(/<controller\b[^>]*>([\s\S]*?)<\/controller>/g)]
-      .map((match) => [...match[1]!.matchAll(/<control\b/g)].length);
-    expect(controlsPerController).toEqual([1, 1, 1, 1, 1, 1]);
-    expect(result.groups.junctions[0]?.phase_groups.map((group) => group.controller_id)).toEqual([
-      "951", "952", "953", "954", "955", "956",
-    ]);
-  });
-
-  it("emits one controller per phase group, with its controls", () => {
-    const { xodr, stats } = enrichXodrWithSignalControllers(FIXTURE);
-    expect(stats).toEqual({
-      junctions_enriched: 1,
-      junctions_skipped_existing_controllers: 0,
-      controllers_added: 2,
-      controls_added: 6,
-      junctions_skipped_self_closing: 0,
-    });
-    expect(xodr).toContain('<controller id="951" name="sf:100:ew:1.0.r">');
-    expect(xodr).toContain('<control signalId="900" type="0"/>');
-    expect(xodr).toContain('<control signalId="905" type="0"/>');
-  });
-
-  it("places controllers where the root xs:sequence requires", () => {
-    // OpenDRIVE 1.4/1.6/1.7 root order: header, road+, controller*, junction*.
-    const { xodr } = enrichXodrWithSignalControllers(FIXTURE);
-    const lastRoadEnd = xodr.lastIndexOf("</road>");
-    const firstController = xodr.indexOf("<controller ");
-    const firstJunction = xodr.search(/<junction\b/);
-    expect(firstController).toBeGreaterThan(lastRoadEnd);
-    expect(firstController).toBeLessThan(firstJunction);
-  });
-
-  it("back-references each controller from its junction", () => {
-    // CARLA's TrafficLightManager drops a controller's lights entirely when the
-    // controller is not referenced by a junction, so this is load-bearing.
-    const { xodr } = enrichXodrWithSignalControllers(FIXTURE);
-    const junctionBody = /<junction\b[^>]*>([\s\S]*?)<\/junction>/.exec(xodr)![1]!;
-    expect(junctionBody).toContain('<controller id="951" sequence="0"/>');
-    expect(junctionBody).toContain('<controller id="952" sequence="1"/>');
-    // References sit after the connections, per the junction's own sequence.
-    expect(junctionBody.lastIndexOf("</connection>")).toBeLessThan(
-      junctionBody.indexOf("<controller"),
-    );
-  });
-
-  it("preserves the road and junction structure the enriched file parses to", () => {
-    const before = parseXodr(FIXTURE);
-    const after = parseXodr(enrichXodrWithSignalControllers(FIXTURE).xodr);
-    expect([...after.roads.keys()].sort()).toEqual([...before.roads.keys()].sort());
-    expect(after.junctions.map((j) => j.id)).toEqual(before.junctions.map((j) => j.id));
-    expect(after.junctions[0]!.connections).toEqual(before.junctions[0]!.connections);
-  });
-
-  it("is deterministic and idempotent", () => {
-    const once = enrichXodrWithSignalControllers(FIXTURE).xodr;
-    expect(enrichXodrWithSignalControllers(FIXTURE).xodr).toBe(once);
-    // The second pass sees the junction references the first pass wrote and
-    // leaves the file alone.
-    const twice = enrichXodrWithSignalControllers(once);
-    expect(twice.xodr).toBe(once);
-    expect(twice.stats.controllers_added).toBe(0);
-    expect(twice.stats.junctions_skipped_existing_controllers).toBe(1);
-  });
-
-  it("returns the input untouched when there is nothing to control", () => {
-    const xodr = buildJunctionXodr(300, []);
-    const result = enrichXodrWithSignalControllers(xodr);
-    expect(result.xodr).toBe(xodr);
-    expect(result.stats.controllers_added).toBe(0);
-  });
-
-  it("re-enriches an already-controlled junction only when asked", () => {
-    const once = enrichXodrWithSignalControllers(FIXTURE).xodr;
-    const forced = enrichXodrWithSignalControllers(once, {
-      includeJunctionsWithExistingControllers: true,
-    });
-    expect(forced.stats.controllers_added).toBe(2);
-    expect(forced.stats.junctions_skipped_existing_controllers).toBe(0);
-  });
-
-  it("marks a junction whose lights an unreferenced controller already claims", () => {
-    // The DeepMap corpus shape: top-level controllers, no junction references.
-    const orphaned = FIXTURE.replace(
-      /<junction\b/,
-      '<controller id="800" name="vendor">\n    <control signalId="900" type="0"/>\n  </controller>\n  <junction',
-    );
-    const result = deriveXodrSignalGroups(orphaned);
-    expect(result.junctions[0]!.had_existing_controllers).toBe(true);
-    expect(
-      enrichXodrWithSignalControllers(orphaned).stats
-        .junctions_skipped_existing_controllers,
-    ).toBe(1);
   });
 });
 

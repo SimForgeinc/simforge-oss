@@ -17,37 +17,8 @@ export {
 } from "./pedestrian-spawn";
 export { simplifyPolygon } from "./simplify-polygon";
 export { bufferLineString } from "./buffer-line-string";
-export { buildCandidateLocations } from "./build-candidate-locations";
-export { clusterLocations, clusterLocationsKeyed, MIN_BBOX_RADIUS_M } from "./extractors/cluster-locations";
 export { extractJunctionCandidates } from "./extractors/geojson-junction-extractor";
 export type { XodrJunctionMatchInfo } from "./extractors/geojson-junction-extractor";
-export { extractStreetParkingCandidates } from "./extractors/geojson-street-parking-extractor";
-export { extractOvertureCandidates } from "./extractors/overture-candidate-extractor";
-export type { ExtractedOvertureCandidate } from "./extractors/overture-candidate-extractor";
-export { extractBuildings } from "./extractors/overture-building-extractor";
-export type {
-  ExtractedBuilding,
-  OvertureBuildingInput,
-} from "./extractors/overture-building-extractor";
-export { extractAddresses } from "./extractors/overture-address-extractor";
-export type {
-  ExtractedAddress,
-  ExtractAddressesResult,
-  OvertureAddressInput,
-} from "./extractors/overture-address-extractor";
-export { attachRoadAccessToAddresses } from "./extractors/address-road-access-extractor";
-export type { AttachRoadAccessOptions } from "./extractors/address-road-access-extractor";
-export {
-  applyAddressContext,
-  copyBuildingRowAddressFieldsToFeature,
-} from "./extractors/apply-address-context";
-export type { ApplyAddressContextOptions } from "./extractors/apply-address-context";
-export {
-  mapAssetAddressRowId,
-  mapAssetBuildingRowId,
-} from "./extractors/overture-row-ids";
-export { extractParkingCandidates } from "./extractors/parking-cluster-extractor";
-export type { ExtractedParkingCandidate } from "./extractors/parking-cluster-extractor";
 export {
   pointInPolygon,
   pointInBbox,
@@ -97,10 +68,6 @@ export { runAllDetectors, DETECTOR_REGISTRY } from "./detectors";
 // ── Candidate engine ───────────────────────────────────────────────────────
 export { generateCandidates, selectTopK, poolCandidates } from "./candidate-engine";
 export type { GenerateCandidatesOptions, RankingStrategy } from "./candidate-engine";
-
-// ── Road proximity filter ──────────────────────────────────────────────────
-export { extractRoadNetworkPoints, filterByRoadProximity, filterEnrichmentSnapshotByRoadProximity, ROAD_PROXIMITY_THRESHOLD_M } from "./road-proximity-filter";
-export type { RoadNetworkPoint } from "./road-proximity-filter";
 
 // ── Convex hull (standalone geometry utility) ─────────────────────────────
 export { convexHull } from "./convex-hull";

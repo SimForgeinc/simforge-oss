@@ -14,16 +14,3 @@ export {
   type XodrPhaseGrouping,
   type XodrSignalPlacement,
 } from "./derive-signal-groups";
-
-export {
-  enrichXodrWithSignalControllers,
-  type EnrichXodrOptions,
-  type EnrichXodrResult,
-} from "./enrich-xodr";
-
-export {
-  isEsminiTrafficLightSignal,
-  normalizeXodrForEsmini,
-  normalizeXodrForEsminiWithStats,
-  type NormalizeXodrForEsminiResult,
-} from "./normalize-for-esmini";

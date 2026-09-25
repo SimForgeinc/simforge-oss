@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  CROSS_MAP_SCENE_MOTIF_SCHEMA_VERSION,
-  CROSS_MAP_VARIATION_SCHEMA_VERSION,
-  CrossMapVariationPreviewResponseSchema,
   SEMANTIC_FEATURE_GRAPH_COMPILER_VERSION,
   SEMANTIC_FEATURE_GRAPH_SCHEMA_VERSION,
   SemanticFeatureGraphSchema,
@@ -19,51 +16,6 @@ const runtimeProvenance = {
   runtimeRoadGraphSha256: "b".repeat(64),
   projectionIdentitySha256: "c".repeat(64),
   compilerVersion: "runtime-topology-v1",
-};
-
-const formation = {
-  schemaVersion: "simforge.scene-formation.v2" as const,
-  id: "formation:ego",
-  kind: "vehicle_interaction" as const,
-  transferPolicy: "event_constrained" as const,
-  source: {
-    scenarioId: "scenario-source",
-    mapAssetId: "map-source",
-    mapName: "TownSource",
-    runtime: "carla_ue5" as const,
-    featureGraphRevision: `sha256:${"e".repeat(64)}`,
-  },
-  anchors: [{
-    id: "anchor:primary",
-    frameKind: "movement" as const,
-    featureId: "lane:source",
-    featureKind: "driving_corridor",
-    origin: { x: 0, y: 0, z: 0 },
-    tangent: { x: 1, y: 0 },
-    normal: { x: 0, y: 1 },
-    stationM: 0,
-    lateralOriginM: 0,
-    usableIntervalM: null,
-    widthM: 3.5,
-    curvaturePerM: 0,
-    grade: 0,
-    runtimeBindingIds: ["1:0:-1"],
-  }],
-  members: [{
-    sourceActorId: "ego",
-    kind: "vehicle" as const,
-    role: "ego" as const,
-    blueprint: "vehicle.tesla.model3",
-    isStatic: false,
-    anchorId: "anchor:primary",
-    pose: { longitudinalM: 0, lateralM: 0, verticalM: 0, yawDeltaDeg: 0, pitchDeltaDeg: 0, rollDeltaDeg: 0 },
-    footprint: null,
-    requiredFeatureKinds: ["driving_corridor"],
-    eventSamples: [],
-    pattern: null,
-  }],
-  constraints: [],
-  hash: `sha256:${"1".repeat(64)}`,
 };
 
 describe("semantic feature graph contract", () => {
@@ -121,62 +73,5 @@ describe("semantic feature graph contract", () => {
 
     expect(graph.features.map((feature) => feature.sources[0]?.source)).toEqual(["opendrive", "geojson"]);
     expect(graph.features[1]?.runtimeBinding.status).toBe("projected");
-  });
-});
-
-describe("cross-map variation contract", () => {
-  it("carries motif, match, actors, and graph revision as one reproducible preview", () => {
-    const motifWithoutHash = {
-      schemaVersion: CROSS_MAP_SCENE_MOTIF_SCHEMA_VERSION,
-      source: {
-        scenarioId: "scenario-source",
-        mapAssetId: "map-source",
-        mapName: "TownSource",
-        runtime: "carla_ue5" as const,
-        featureGraphRevision: `sha256:${"e".repeat(64)}`,
-      },
-      primaryActorId: "ego",
-      actors: [{
-        sourceActorId: "ego",
-        kind: "vehicle" as const,
-        role: "ego" as const,
-        isStatic: false,
-        behavior: "corridor_route" as const,
-        sourcePathLengthM: 40,
-        sourceDurationS: 8,
-        speedKph: 18,
-        requiredFeatureKinds: ["driving_corridor"],
-        properties: {},
-      }],
-      relations: [],
-      formations: [formation],
-      formationHash: `sha256:${"2".repeat(64)}`,
-      timingToleranceS: 1,
-      spatialToleranceM: 3,
-    };
-    const parsed = CrossMapVariationPreviewResponseSchema.parse({
-      schemaVersion: CROSS_MAP_VARIATION_SCHEMA_VERSION,
-      motif: { ...motifWithoutHash, motifHash: `sha256:${"f".repeat(64)}` },
-      matches: [{
-        matchId: "cm_match",
-        targetMapAssetId: "map-target",
-        targetMapName: "TownTarget",
-        runtime: "carla_ue5",
-        featureGraphRevision: `sha256:${"d".repeat(64)}`,
-        status: "incompatible",
-        fidelity: "incompatible",
-        score: 0,
-        targetAnchor: null,
-        targetJunctionId: null,
-        actors: null,
-        diagnostics: [{ code: "NO_MATCH", severity: "error", message: "No compatible target." }],
-        selectedFeatureIds: [],
-        formationContractHash: null,
-      }],
-      generatedAt: "2026-07-11T00:00:00.000Z",
-    });
-
-    expect(parsed.motif.source.featureGraphRevision).toMatch(/^sha256:/);
-    expect(parsed.matches[0]?.status).toBe("incompatible");
   });
 });

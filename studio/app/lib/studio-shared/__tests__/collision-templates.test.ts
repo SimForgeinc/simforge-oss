@@ -11,11 +11,13 @@ import {
   isNearMissFamily,
   parseAggressivenessLabel,
 } from "../index";
-import {
-  DEFAULT_CONTACT_GRACE_M,
-  DEFAULT_NEAR_MISS_MAX_M,
-} from "../esmini-state-log";
 import { BehaviorActionKindSchema } from "@simforge-oss/scenario/contracts";
+
+// The band the esmini state-log grader scored near misses against (its
+// DEFAULT_CONTACT_GRACE_M / DEFAULT_NEAR_MISS_MAX_M; the grader module had no
+// caller and was deleted). The template margins still target that band.
+const DEFAULT_CONTACT_GRACE_M = 1.0;
+const DEFAULT_NEAR_MISS_MAX_M = 5.0;
 
 describe("collision template catalog", () => {
   it("declares one template per family id", () => {
