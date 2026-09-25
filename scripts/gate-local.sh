@@ -167,7 +167,16 @@ steps_json="[]"; failing=""
 record_step() { steps_json="$(jq -c --arg n "$1" --arg s "$2" --argjson t "$3" --arg l "$4" --arg d "$5" '. + [{name:$n,status:$s,seconds:$t,log:$l,detail:$d}]' <<<"$steps_json")"; printf '  %-4s  %-22s %5ss  %s\n' "$(tr a-z A-Z <<<"$2")" "$1" "$3" "$5"; }
 SANDBOX="${GATE_SANDBOX:-off}"
 container=""
-cleanup() { test -n "$container" && docker rm -f "$container" >/dev/null 2>&1; return 0; }
+cleanup() { # the sandbox, and on the host any step still running (each is its own process group)
+  test -n "$container" && docker rm -f "$container" >/dev/null 2>&1
+  local n pg
+  for n in "${bg_names[@]}"; do
+    test -z "${bg_status[$n]:-}" || continue
+    pg="$(pgrep -P "${bg_pid[$n]}" 2>/dev/null | head -1)"
+    test -n "$pg" && kill -TERM -- "-$pg" 2>/dev/null
+  done
+  return 0; }
+bg_names=(); declare -A bg_detail bg_pid bg_t0 bg_status bg_end
 trap cleanup EXIT
 if test "$SANDBOX" = required; then
   defs_src="${GATE_SANDBOX_DEFS:?GATE_SANDBOX=required needs GATE_SANDBOX_DEFS (Dockerfile, proxy.Dockerfile, squid.conf, allowlist)}"
@@ -242,7 +251,6 @@ skip_step() { record_step "$1" skip 0 "" "$2"; }
 # Concurrent steps: start_step launches one in the background; wait_steps records
 # them in launch order. The first failure cancels the rest (the sandbox container
 # is removed; on the host each step is its own process group).
-bg_names=(); declare -A bg_detail bg_pid bg_t0 bg_status bg_end
 start_step() { # name detail -- step args...
   local name="$1" detail="$2"; shift 3
   bg_names+=("$name"); bg_detail[$name]="$detail"; bg_t0[$name]=$(date +%s)
