@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "locations",
+  "get",
+  "junction_movement/rd-69-straight-at-rd-59-e-6e994",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "9978b70eb078d11c5998f4e8b2d9246c62d003d42e20bf72cc400e6234d35eca"
+}

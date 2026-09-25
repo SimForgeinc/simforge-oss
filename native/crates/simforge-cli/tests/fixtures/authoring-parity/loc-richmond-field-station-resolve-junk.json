@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "locations",
+  "resolve",
+  "zzzz qqqq",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "26f7ea99f79e36aaaf0b4f8a2be8b8faec4085ceaf1f589d89bb415b1d0b4391"
+}

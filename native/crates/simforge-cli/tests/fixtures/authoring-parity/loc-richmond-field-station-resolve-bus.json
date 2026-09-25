@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "locations",
+  "resolve",
+  "bus stop on the main street",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "90c86c1106aa3bcd38c239545be9da8cf2443197ee26ba34b106009c3c4933e1"
+}
