@@ -494,3 +494,120 @@ fn doctor_reports_missing_sky_plates_as_a_failure() {
     assert!(sky["fix"].as_str().unwrap().contains("SIMFORGE_SKY_ASSETS"));
     assert_eq!(exit, 2);
 }
+
+#[test]
+fn help_json_is_the_whole_typed_surface() {
+    let home = home();
+    for args in [&["--help", "--json"][..], &["help", "--json"]] {
+        let (code, doc, stderr, _) = run(simforge(home.path()).args(args));
+        assert_eq!(code, 0, "{stderr}");
+        assert_eq!(doc["schema"], "simforge.cli-surface/v1");
+        let commands = doc["commands"].as_array().unwrap();
+        let render = commands.iter().find(|c| c["command"] == "render").unwrap();
+        let flag = |name: &str| {
+            render["flags"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|f| f["name"] == name)
+                .unwrap_or_else(|| panic!("render has no {name}"))
+                .clone()
+        };
+        assert_eq!(flag("--preset")["type"], "enum");
+        assert_eq!(flag("--out")["type"], "path");
+        assert_eq!(flag("--allow-software-adapter")["type"], "bool");
+        assert_eq!(flag("--vram-budget")["type"], "integer");
+        assert_eq!(render["arguments"][0]["type"], "path");
+        // Every runnable command is in the tree, and no group is.
+        let names: Vec<&str> = commands
+            .iter()
+            .map(|c| c["command"].as_str().unwrap())
+            .collect();
+        for expected in [
+            "doctor",
+            "maps pull",
+            "render",
+            "env serve",
+            "skills install",
+            "package import",
+        ] {
+            assert!(names.contains(&expected), "{expected} missing");
+        }
+        assert!(!names.contains(&"maps"));
+    }
+    // Scoped to a group.
+    let (_, doc, _, _) = run(simforge(home.path()).args(["package", "--help", "--json"]));
+    assert_eq!(doc["commands"].as_array().unwrap().len(), 3);
+}
+
+#[test]
+fn skills_install_copies_the_bundle_and_never_overwrites_silently() {
+    let home = home();
+    let (code, doc, _, _) = run(simforge(home.path()).args(["skills", "list"]));
+    assert_eq!(code, 0);
+    assert!(doc["skills"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|s| s["name"] == "simforge-cli"));
+
+    // A target is required.
+    let (code, _, stderr, _) = run(simforge(home.path()).args(["skills", "install"]));
+    assert_eq!(code, 1);
+    assert_eq!(stderr_error(&stderr)["code"], "missing_argument");
+
+    let (code, doc, stderr, _) = run(simforge(home.path()).args(["skills", "install", "--claude"]));
+    assert_eq!(code, 0, "{stderr}");
+    let skill = home.path().join(".claude/skills/simforge-cli/SKILL.md");
+    assert!(skill.is_file());
+    assert_eq!(doc["installed"][0]["updated"], false);
+    assert_eq!(
+        doc["dest"],
+        home.path().join(".claude/skills").to_str().unwrap()
+    );
+
+    // Re-installing over its own files is fine.
+    let (code, doc, _, _) = run(simforge(home.path()).args(["skills", "install", "--claude"]));
+    assert_eq!(code, 0);
+    assert_eq!(doc["installed"][0]["updated"], true);
+
+    // An edited file is a finding (exit 2), and nothing is written.
+    std::fs::write(&skill, "edited").unwrap();
+    let (code, _, stderr, _) = run(simforge(home.path()).args(["skills", "install", "--claude"]));
+    assert_eq!(code, 2);
+    let error = stderr_error(&stderr);
+    assert_eq!(error["code"], "skills_modified");
+    assert_eq!(std::fs::read_to_string(&skill).unwrap(), "edited");
+
+    // --force overwrites, and says what it overwrote.
+    let (code, doc, _, _) =
+        run(simforge(home.path()).args(["skills", "install", "--claude", "--force"]));
+    assert_eq!(code, 0);
+    assert_eq!(doc["forced"], true);
+    assert_eq!(doc["overwritten"].as_array().unwrap().len(), 1);
+    assert!(std::fs::read_to_string(&skill).unwrap().starts_with("---"));
+
+    // A skill directory some other tool wrote is not ours to overwrite.
+    let foreign = home.path().join("foreign/simforge-cli");
+    std::fs::create_dir_all(&foreign).unwrap();
+    std::fs::write(foreign.join("SKILL.md"), "someone else's").unwrap();
+    let (code, _, _, _) = run(simforge(home.path())
+        .args(["skills", "install", "--dir"])
+        .arg(home.path().join("foreign")));
+    assert_eq!(code, 2);
+
+    // --codex honours CODEX_HOME; --dir takes any directory.
+    let codex = home.path().join("codex-home");
+    let (code, doc, _, _) = run(simforge(home.path())
+        .args(["skills", "install", "--codex"])
+        .env("CODEX_HOME", &codex));
+    assert_eq!(code, 0);
+    assert_eq!(doc["dest"], codex.join("skills").to_str().unwrap());
+    let custom = home.path().join("custom");
+    let (code, _, _, _) = run(simforge(home.path())
+        .args(["skills", "install", "--dir"])
+        .arg(&custom));
+    assert_eq!(code, 0);
+    assert!(custom.join("simforge-cli/SKILL.md").is_file());
+    assert!(custom.join("simforge-cli/.simforge-install.json").is_file());
+}

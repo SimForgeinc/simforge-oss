@@ -13,12 +13,13 @@ pub mod maps;
 pub mod package;
 pub mod render;
 pub mod simulate;
+pub mod skills;
 pub mod timeline;
 
 /// Commands whose surface is fixed but whose implementation has not landed.
 /// `--help` marks them `"status": "planned"` and running one fails loudly
 /// with `not_implemented` (exit 1). Each command's PR removes its entry.
-pub const PLANNED: &[&str] = &["env serve"];
+pub const PLANNED: &[&str] = &[];
 
 /// The one render preset definition lives in the renderer
 /// (`render_core::render_config::Preset`); these are its names.
@@ -62,6 +63,9 @@ pub enum Command {
     /// simforge.scenario-package/v1 containers.
     #[command(subcommand)]
     Package(package::PackageCommand),
+    /// The agent skills bundled with this binary.
+    #[command(subcommand)]
+    Skills(skills::SkillsCommand),
 }
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
@@ -74,6 +78,7 @@ pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
         Command::Simulate(args) => simulate::run(args, ctx),
         Command::Env(cmd) => env::run(cmd, ctx),
         Command::Package(cmd) => package::run(cmd, ctx),
+        Command::Skills(cmd) => skills::run(cmd, ctx),
     }
 }
 

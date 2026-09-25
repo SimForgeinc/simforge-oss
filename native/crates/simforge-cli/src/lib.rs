@@ -10,6 +10,8 @@
 
 pub mod commands;
 pub mod contract;
+#[cfg(unix)]
+pub mod env_serve;
 pub mod help;
 pub mod installed_maps;
 pub mod net;
@@ -76,7 +78,13 @@ fn help(argv: &[String]) -> i32 {
         emit_error(&error);
         return Exit::CommandError.code();
     }
-    if argv.iter().any(|a| a == "--pretty") {
+    if argv.iter().any(|a| a == "--json") {
+        // The whole surface under this command, every flag typed.
+        emit(
+            &help::surface(&root, cmd, &path),
+            argv.iter().any(|a| a == "--pretty"),
+        );
+    } else if argv.iter().any(|a| a == "--pretty") {
         print!("{}", help::text(cmd, &path));
     } else {
         emit(&help::document(&root, cmd, &path), false);
@@ -205,7 +213,9 @@ where
 
     match commands::dispatch(command, &ctx) {
         Ok(outcome) => {
-            emit(&outcome.value, ctx.pretty);
+            if !outcome.value.is_null() {
+                emit(&outcome.value, ctx.pretty);
+            }
             outcome.exit.code()
         }
         Err(error) => {

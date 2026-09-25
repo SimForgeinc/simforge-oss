@@ -466,3 +466,82 @@ fn check_golden(scene: &str, hashes: &Value) {
         path.display()
     );
 }
+
+/// A workspace around an archive-corpus trace (oss/fixtures/archive-corpus),
+/// bound by its recorded identity, with its timeline baked on the public
+/// map's OpenDRIVE: a scenario authored and simulated by an earlier release,
+/// rendered by this one.
+fn archive_fixture(id: &str) -> Fixture {
+    let home = tempfile::tempdir().unwrap();
+    let dir = home.path().to_path_buf();
+    let corpus = oss().join("fixtures/archive-corpus");
+    let index: Value =
+        serde_json::from_slice(&std::fs::read(corpus.join("corpus.json")).unwrap()).unwrap();
+    let entry = index["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["id"] == id)
+        .unwrap_or_else(|| panic!("no archive entry {id}"))
+        .clone();
+    let recorded = entry["expect"]["recordedTraceSha256"]
+        .as_str()
+        .unwrap_or_else(|| panic!("{id} has no recorded identity"))
+        .to_owned();
+    let stored = corpus.join(entry["path"].as_str().unwrap());
+    let plain = simforge_core::trace::timeline::maybe_gunzip(&std::fs::read(&stored).unwrap())
+        .unwrap()
+        .into_owned();
+    let world = ungrounded_world(&dir);
+    let (code, identity, err) = run(simforge(&dir)
+        .args(["timeline", "build", "--height", "xodr", "--trace"])
+        .arg(&stored)
+        .args(["--recorded-trace-sha256", &recorded])
+        .arg("--map-dir")
+        .arg(&world));
+    assert_eq!(code, 0, "{err}");
+    let ws = workspace(&dir, &plain, &recorded, &identity, ACTOR_CLOSURE);
+    Fixture {
+        _home: home,
+        home: dir,
+        ws,
+    }
+}
+
+/// A trailing chase camera on `actor`: 9 m behind, 3 m up, 10 deg down.
+fn chase_rig(dir: &Path, actor: &str) -> PathBuf {
+    let path = dir.join("chase-rig.json");
+    let doc = json!({
+        "schema": "simforge.render-rig/v1",
+        "sources": [{
+            "actorId": actor, "sensorId": "chase", "sensorLabel": "Chase camera",
+            "outputName": "chase-rgb", "modality": "rgb",
+            "transform": { "position": { "x": -9.0, "y": 3.0, "z": 0 }, "rotation": { "yawRad": 0, "pitchRad": -0.17453292519943295, "rollRad": 0 } },
+            "attributes": { "width": 320, "height": 180, "fps": 10, "horizontalFovDeg": 70, "nearM": 0.1, "farM": 1000 },
+        }],
+        "clip": { "startSeconds": 0.0, "endSeconds": 1.0 },
+        "video": { "width": 320, "height": 180, "fps": 10, "container": "mp4", "codec": "h264", "quality": "standard" },
+    });
+    std::fs::write(&path, serde_json::to_vec_pretty(&doc).unwrap()).unwrap();
+    path
+}
+
+#[test]
+#[ignore = "renders on lavapipe with the installed richmond map and actor closure (see module docs)"]
+fn lavapipe_renders_an_archived_scenario_to_its_golden() {
+    // rc72: an ambulance on Richmond Field Station, simulated by engine 0.7.0
+    // (trace format 4, upgraded in memory) and archived with its identity.
+    let f = archive_fixture("rc72-engine070-richmond-commit");
+    let rig_path = chase_rig(&f.home, "vehicle-muasiqo3-6wehouy0");
+    let out = f.home.join("out");
+    let (code, doc, err) = lavapipe_render(
+        &f,
+        &rig_path,
+        &out,
+        &["--passes", "rgb,id", "--video", "off"],
+    );
+    assert_eq!(code, 0, "{err} {doc}");
+    assert_eq!(doc["gates"]["parity"]["pass"], true, "{}", doc["gates"]);
+    assert_eq!(doc["frames"], 10);
+    check_golden("archive-rc72-richmond-commit-chase", &artifact_hashes(&out));
+}

@@ -25,13 +25,13 @@ pub struct JobOutput {
 
 /// Redirect this process's stderr (fd 2) into `log` until dropped.
 #[cfg(unix)]
-struct StderrCapture {
+pub struct StderrCapture {
     saved: i32,
 }
 
 #[cfg(unix)]
 impl StderrCapture {
-    fn start(log: &Path) -> std::io::Result<Self> {
+    pub fn start(log: &Path) -> std::io::Result<Self> {
         use std::io::Write;
         use std::os::fd::AsRawFd;
         let file = std::fs::OpenOptions::new()
@@ -68,11 +68,11 @@ impl Drop for StderrCapture {
 
 /// On Windows the renderer's diagnostics stay on stderr (documented gap).
 #[cfg(not(unix))]
-struct StderrCapture;
+pub struct StderrCapture;
 
 #[cfg(not(unix))]
 impl StderrCapture {
-    fn start(_log: &Path) -> std::io::Result<Self> {
+    pub fn start(_log: &Path) -> std::io::Result<Self> {
         Ok(Self)
     }
 }

@@ -124,6 +124,16 @@ impl Outcome {
             exit: Exit::Findings,
         }
     }
+
+    /// A long-running command that already wrote its one stdout document
+    /// (`env serve` prints its ready line while it serves); nothing more is
+    /// emitted when it returns.
+    pub fn already_emitted(exit: Exit) -> Self {
+        Self {
+            value: Value::Null,
+            exit,
+        }
+    }
 }
 
 pub type CmdResult = Result<Outcome, CliError>;

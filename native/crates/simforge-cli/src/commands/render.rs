@@ -36,26 +36,22 @@ use serde_json::{json, Value};
 use super::timeline::{self as timeline_cmd, HeightChoice};
 use super::Preset;
 use crate::contract::{CliError, CmdResult, Ctx, Outcome};
-use crate::installed_maps::{self, InstalledMap, GROUND_MESH, XODR};
+use crate::installed_maps::GROUND_MESH;
 use crate::paths;
-use crate::render::actor_assets::{self, ActorAppearance};
+use crate::render::actor_assets::ActorAppearance;
 use crate::render::derivatives;
 use crate::render::gates;
-use crate::render::geometry_lod::{plan_geometry_lod, GeometryLodMode};
 use crate::render::job_runner;
-use crate::render::lighting;
 use crate::render::lowering::{self, lower_timeline};
-use crate::render::luminaires;
-use crate::render::map_closure::{MapClosure, MemberSource};
 use crate::render::residency::{self, ResidencyCamera};
 use crate::render::rig::{self, Clip, RenderSource, Rig};
-use crate::render::road_decals::plan_road_decals;
+use crate::render::scene_setup::{self, Warnings};
 use crate::render::schedule::{self, CameraFormat, FixedSchedule};
 use crate::render::sensor_video::{
     parse_lidar_ply, parse_radar_csv, LidarVideoRasterizer, RadarVideoRasterizer,
 };
 use crate::render::signal_heads::signal_head_guids;
-use crate::render::textures::{stage_texture_profile, StageInput, TextureTier};
+use crate::render::textures::TextureTier;
 use crate::render::video::{self, FfmpegResolution, VideoCodec, VideoEncoder, VideoFormat};
 use crate::workspace::{Workspace, TRACE};
 
@@ -72,7 +68,7 @@ pub enum Pass {
 }
 
 impl Pass {
-    fn as_str(self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             Pass::Rgb => "rgb",
             Pass::Id => "id",
@@ -157,18 +153,6 @@ pub struct RenderArgs {
     pub allow_map_drift: bool,
 }
 
-struct Warnings(Vec<Value>);
-
-impl Warnings {
-    fn push(&mut self, code: &str, message: impl Into<String>) {
-        self.0
-            .push(json!({ "code": code, "message": message.into() }));
-    }
-    fn extend_values(&mut self, values: impl IntoIterator<Item = Value>) {
-        self.0.extend(values);
-    }
-}
-
 fn write_json(path: &Path, value: &Value) -> Result<(), CliError> {
     let bytes = serde_json::to_vec_pretty(value).expect("JSON values serialize");
     std::fs::write(path, bytes).map_err(|e| {
@@ -210,89 +194,6 @@ fn prepare_out(out: &Path) -> Result<PathBuf, CliError> {
     Ok(out)
 }
 
-/// The native (`.corpus`) install of the map the trace was simulated on.
-fn native_map(
-    xodr_sha256: &str,
-    map_id: &str,
-    map_dir: Option<&Path>,
-    cache_root: Option<&Path>,
-) -> Result<InstalledMap, CliError> {
-    if let Some(dir) = map_dir {
-        let map =
-            installed_maps::describe(&paths::absolutize(dir), "explicit").ok_or_else(|| {
-                CliError::new("map_not_found", format!("{} has no {XODR}", dir.display()))
-            })?;
-        if map.xodr_sha256 != xodr_sha256 {
-            return Err(CliError::findings(
-                "map_mismatch",
-                format!(
-                    "{} holds an OpenDRIVE with sha256 {}, but the trace was simulated on {xodr_sha256}",
-                    dir.display(),
-                    map.xodr_sha256
-                ),
-            ));
-        }
-        return Ok(map);
-    }
-    let root = paths::maps_root(cache_root)?;
-    let installed = installed_maps::list(&root.value);
-    installed
-        .iter()
-        .filter(|m| m.profile == ".corpus" && m.xodr_sha256 == xodr_sha256)
-        .min_by_key(|m| m.name != map_id)
-        .cloned()
-        .ok_or_else(|| {
-            CliError::new(
-                "map_not_installed",
-                format!("no native map install (.corpus/) has an OpenDRIVE with sha256 {xodr_sha256}"),
-            )
-            .with_detail(json!({
-                "xodrSha256": xodr_sha256,
-                "mapId": map_id,
-                "mapsRoot": root.value,
-                "hint": format!("`simforge maps pull {map_id}@<version>` installs the native profile"),
-            }))
-        })
-}
-
-/// Cross-check the installed map against the workspace's map closure
-/// (`map/closure.json`, the browser asset set the scenario was made with):
-/// every member both list must have the same digest. `None` when the
-/// workspace carries no map closure.
-fn map_drift(ws: &Workspace, closure: &MapClosure) -> Result<Option<Value>, CliError> {
-    let path = ws.member("map/closure.json");
-    if !path.is_file() {
-        return Ok(None);
-    }
-    let doc: Value = serde_json::from_slice(&ws.read_member("map/closure.json")?).map_err(|e| {
-        CliError::findings(
-            "workspace_invalid",
-            format!("map/closure.json is not JSON: {e}"),
-        )
-    })?;
-    let members = doc["members"].as_array().ok_or_else(|| {
-        CliError::findings("workspace_invalid", "map/closure.json has no members list")
-    })?;
-    let mut shared = 0u64;
-    let mut differing = Vec::new();
-    for m in members {
-        let (Some(rel), Some(sha)) = (m["relativePath"].as_str(), m["sha256"].as_str()) else {
-            continue;
-        };
-        if let Some(installed) = closure.sha256(rel) {
-            shared += 1;
-            if installed != sha {
-                differing.push(json!({ "path": rel, "workspace": sha, "installed": installed }));
-            }
-        }
-    }
-    let count = differing.len();
-    differing.truncate(20);
-    Ok(Some(
-        json!({ "shared": shared, "differingCount": count, "differing": differing }),
-    ))
-}
-
 fn micros(seconds: f64) -> i64 {
     simforge_core::math::js_round(seconds * 1_000_000.0) as i64
 }
@@ -305,7 +206,7 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
         stages.insert(name, mark.elapsed().as_secs_f64());
         *mark = Instant::now();
     };
-    let mut warnings = Warnings(Vec::new());
+    let mut warnings = Warnings::default();
 
     if args.allow_software_adapter {
         // The renderer's own explicit opt-in (render_core::engine), set
@@ -385,53 +286,16 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
     stage("timeline", &mut mark);
 
     // 2. The native map and its closure.
-    let map = native_map(
+    let map = scene_setup::native_map(
         &trace.header.engine_graph_digest,
         &trace.header.map_id,
         args.map_dir.as_deref(),
         args.cache_root.as_deref(),
     )?;
-    let closure = if map.dir.join(".map-release.json").is_file() {
-        MapClosure::open(&map.dir).map_err(|e| e.into_cli())?
-    } else {
-        warnings.push(
-            "map_receipt_absent",
-            format!(
-                "{} has no .map-release.json; its members were hashed in place",
-                map.dir.display()
-            ),
-        );
-        MapClosure::hash_directory(&map.dir).map_err(|e| e.into_cli())?
-    };
-    derivatives::assert_closure_derivatives(tier, &closure).map_err(|e| e.into_cli())?;
-    let map_drift = map_drift(&ws, &closure)?;
-    if let Some(drift) = &map_drift {
-        if drift["differing"].as_array().is_some_and(|d| !d.is_empty()) {
-            if !args.allow_map_drift {
-                return Err(CliError::findings(
-                    "map_release_mismatch",
-                    format!(
-                        "the installed map {} differs from the workspace's map in {} shared member(s); pull the release the scenario was made on, or pass --allow-map-drift to render on this one",
-                        map.release.as_deref().unwrap_or("(no receipt)"),
-                        drift["differingCount"]
-                    ),
-                )
-                .with_detail(drift.clone()));
-            }
-            warnings.push(
-                "map_release_drift_accepted",
-                format!("--allow-map-drift: rendering on {} although {} shared member(s) differ from the workspace's map", map.release.as_deref().unwrap_or("(no receipt)"), drift["differingCount"]),
-            );
-        } else if drift["shared"] == 0 {
-            warnings.push("map_release_unverified", "the workspace's map closure shares no member with the installed map; its release could not be cross-checked");
-        }
-    }
-    let xodr_text = std::fs::read_to_string(map.file(XODR)).map_err(|e| {
-        CliError::new(
-            "missing_file",
-            format!("cannot read {}: {e}", map.file(XODR).display()),
-        )
-    })?;
+    let closure = scene_setup::open_closure(&map, tier, &mut warnings)?;
+    let map_drift =
+        scene_setup::check_map_drift(&ws, &closure, &map, args.allow_map_drift, &mut warnings)?;
+    let xodr_text = scene_setup::xodr_text(&map)?;
     stage("map", &mut mark);
 
     // 3. The rig, schedules, lowering, camera schedule.
@@ -510,64 +374,28 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
 
     // The sky plates are verified before any staging or GPU work: a render without them
     // fails in the renderer after minutes of setup otherwise.
-    let sky = render_core::sky_pass::SkyAssetPaths::resolve().map_err(|e| {
-        CliError::new("sky_assets_missing", format!("{e:#}")).with_detail(json!({
-            "hint": "set SIMFORGE_SKY_ASSETS to a directory holding SOURCES.json and the two .skytex plates (`simforge doctor` checks it)",
-        }))
-    })?;
+    let sky = scene_setup::sky_assets()?;
     // 4. Derivatives and the staged texture tier.
-    let geometry_lod =
-        plan_geometry_lod(GeometryLodMode::Auto, &closure).map_err(|e| e.into_cli())?;
-    let road_decals = plan_road_decals(&closure).map_err(|e| e.into_cli())?;
-    let luminaires_plan = luminaires::plan_luminaires(
-        |member| closure.sha256(member).map(str::to_owned),
-        |member| closure.read_text(member).map_err(|e| e.into_cli()),
-    )?;
-    let residency_off = derivatives::residency_disabled();
-    if let Some(w) = &residency_off {
-        warnings.extend_values([w.to_json()]);
-    }
-    let density = if tier == TextureTier::UastcFull && residency_off.is_none() {
-        residency::plan_texture_density(&closure).map_err(|e| e.into_cli())?
-    } else {
-        None
-    };
-    let frame_pixels: u64 = rig
-        .sources
-        .iter()
-        .map(|s| match s.rgb() {
-            Some(c) => u64::from(c.attributes.width) * u64::from(c.attributes.height),
-            None => u64::from(sensor_video.width) * u64::from(sensor_video.height),
-        })
-        .sum();
-    let mut extra: Vec<String> = Vec::new();
-    extra.extend(geometry_lod.iter().flat_map(|p| p.members.clone()));
-    extra.extend(road_decals.iter().flat_map(|p| p.members.clone()));
-    extra.extend(luminaires_plan.iter().flat_map(|p| p.members.clone()));
-    let profile = stage_texture_profile(StageInput {
-        closure: &closure,
-        render_textures: tier,
+    let derived = scene_setup::plan_derivatives(&closure, tier, true, &mut warnings)?;
+    let frame_pixels = scene_setup::frame_pixels(
+        &rig.sources,
+        Some((sensor_video.width, sensor_video.height)),
+    );
+    let profile = scene_setup::stage_textures(
+        &closure,
+        tier,
         frame_pixels,
-        budget_bytes: args.vram_budget,
-        device_capacity_bytes: None,
-        cache_directory: None,
-        extra_members: &extra,
-        defer_capacity_check: density.is_some(),
-    })
-    .map_err(|e| e.into_cli())?;
-    warnings.extend_values(profile.warnings.iter().map(|w| w.to_json()));
+        args.vram_budget,
+        &derived,
+        &mut warnings,
+    )?;
     write_json(
         &job_dir.join("texture-profile.json"),
         &serde_json::to_value(&profile).expect("profile serializes"),
     )?;
-    let master_dir = profile
-        .master_path
-        .parent()
-        .expect("the staged master has a directory")
-        .to_path_buf();
     let mut residency_path = None;
     let mut residency_summary = Value::Null;
-    if let Some(density) = &density {
+    if let Some(density) = &derived.density {
         let frames: Vec<Vec<ResidencyCamera>> = cameras
             .iter()
             .map(|tick| {
@@ -602,19 +430,7 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
     stage("textures", &mut mark);
 
     // 5. Actor assets.
-    let digest = match &args.actor_closure {
-        Some(d) => d.clone(),
-        None => ws
-            .manifest
-            .pointer("/catalog/actorClosureDigest")
-            .and_then(Value::as_str)
-            .map(str::to_owned)
-            .ok_or_else(|| {
-                CliError::findings("workspace_invalid", "the workspace manifest has no catalog.actorClosureDigest; pass --actor-closure")
-            })?,
-    };
-    let assets_root = paths::assets_root(args.assets_root.as_deref())?;
-    let assets = actor_assets::ensure_actor_assets(&assets_root.value, &digest, None, None)?;
+    let digest = scene_setup::actor_closure_digest(&ws, args.actor_closure.as_deref())?;
     let appearances: Vec<ActorAppearance> = lowered
         .appearances
         .iter()
@@ -625,69 +441,30 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
             authored: a.authored,
         })
         .collect();
-    let asset_hosts: Vec<actor_assets::SensorHost> = hosts
-        .iter()
-        .map(|h| actor_assets::SensorHost {
-            source_id: h.source_id.clone(),
-            actor_id: h.actor_id.clone(),
-            catalog_asset_id: h.vehicle_asset["catalogAssetId"]
-                .as_str()
-                .unwrap_or_default()
-                .to_owned(),
-        })
-        .collect();
-    actor_assets::assert_actor_appearance_grounded(
-        &appearances,
-        &asset_hosts,
+    let assets = scene_setup::bind_actor_assets(
         &digest,
-        &assets.models,
-    )?;
-    actor_assets::assert_actor_animations_bound(
+        args.assets_root.as_deref(),
         &appearances,
+        &hosts,
         &lowered.states,
-        &digest,
-        &assets.models,
     )?;
     stage("actorAssets", &mut mark);
 
     // 6. Lighting and luminaires.
-    let document: Value =
-        serde_json::from_slice(&ws.read_member("document.json")?).map_err(|e| {
-            CliError::findings(
-                "workspace_invalid",
-                format!("document.json is not JSON: {e}"),
-            )
-        })?;
-    let environment = lighting::authored_environment_from_document(&document)?;
-    let site = lighting::lighting_site_from_opendrive(&xodr_text, &trace.header.map_id)?;
     let rgb_fps: Vec<f64> = rgb_schedules.iter().map(|s| s.frames_per_second).collect();
-    let look = lighting::resolve_native_lighting(
-        &environment,
-        &site,
-        None,
-        Some(lighting::cloud_fixed_step_s(&rgb_fps)),
+    let eyes: Vec<[f64; 3]> = cameras
+        .iter()
+        .flat_map(|t| t.iter().map(|c| c.eye))
+        .collect();
+    let (scene_lighting, lighting_provenance) = scene_setup::scene_lighting(
+        &ws,
+        &xodr_text,
+        &trace.header.map_id,
+        &rgb_fps,
+        derived.luminaires.as_ref(),
+        &eyes,
+        &mut warnings,
     )?;
-    let sun_elev = look.lighting["sun_elev_deg"].as_f64().unwrap_or(90.0);
-    let night = sun_elev <= luminaires::LUMINAIRES_ON_ELEVATION_DEG;
-    let scene_lighting = match &luminaires_plan {
-        Some(plan) => {
-            let eyes: Vec<[f64; 3]> = cameras
-                .iter()
-                .flat_map(|t| t.iter().map(|c| c.eye))
-                .collect();
-            let (ordered, observer) = luminaires::order_fixtures(&plan.fixtures, &eyes);
-            luminaires::with_fixtures(&look.lighting, &ordered, observer)
-        }
-        None => {
-            if night {
-                warnings.push(
-                    "night_luminaires_absent",
-                    format!("the sun is {sun_elev:.1} deg below the horizon but the map carries no {}: street lights stay dark", luminaires::LUMINAIRES_MANIFEST),
-                );
-            }
-            look.lighting.clone()
-        }
-    };
     stage("lighting", &mut mark);
 
     // 7. Contact gate.
@@ -718,32 +495,18 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
     stage("contactGate", &mut mark);
 
     // 8. The job.
-    let mut render_set = serde_json::Map::new();
-    render_set.insert("textures.tier".into(), json!(tier.as_str()));
-    let mut scene = json!({
-        "glbs": [profile.master_path],
-        "lighting": scene_lighting,
-        "autoMeter": true,
-        "nearM": near_m,
-        "farM": far_m,
-        "warmupFrames": 20,
-        "vehicleModels": assets.directory,
-        "pedestrianModels": assets.directory,
-        "render": { "preset": args.preset.as_str(), "set": render_set },
-        "textureTier": tier.as_str(),
+    let scene = scene_setup::scene_spec(&scene_setup::SpecInput {
+        profile: &profile,
+        lighting: scene_lighting,
+        near_m,
+        far_m,
+        models_dir: &assets.directory,
+        preset: args.preset.as_str(),
+        tier,
+        derivatives: &derived,
+        residency_path: residency_path.as_deref(),
+        ground_mesh: ground.as_deref(),
     });
-    if geometry_lod.is_some() {
-        scene["geometryLod"] = json!(master_dir.join("derived/geometry-lod/manifest.json"));
-    }
-    if road_decals.is_some() {
-        scene["roadDecals"] = json!(master_dir.join("derived/road-decals/manifest.json"));
-    }
-    if let Some(path) = &residency_path {
-        scene["textureResidency"] = json!(path);
-    }
-    if let Some(path) = &ground {
-        scene["groundMesh"] = json!(path);
-    }
     let scene_state_path = job_dir.join("scene-state.json.gz");
     {
         let file = std::fs::File::create(&scene_state_path)
@@ -830,12 +593,12 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
         "textureProfile": { "masterPath": profile.master_path, "cacheKey": profile.cache_key, "textureBytes": profile.texture_bytes, "capacitySource": profile.capacity_source.as_str() },
         "residency": residency_summary,
         "derivatives": {
-            "geometryLod": geometry_lod.is_some(),
-            "roadDecals": road_decals.is_some(),
-            "luminaires": luminaires_plan.is_some(),
+            "geometryLod": derived.geometry_lod.is_some(),
+            "roadDecals": derived.road_decals.is_some(),
+            "luminaires": derived.luminaires.is_some(),
             "ground": ground.is_some(),
         },
-        "lighting": look.provenance,
+        "lighting": lighting_provenance,
         "gates": {
             "contact": contact_summary,
             "parity": {
