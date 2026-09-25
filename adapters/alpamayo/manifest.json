@@ -1,7 +1,7 @@
 {
   "name": "@simforge-oss/alpamayo-runtime",
   "description": "Locally runnable Alpamayo 1 / 1.5 / 2 Super inference services: closed-loop act() over unix-socket MessagePack plus an HTTP facade on the same resident engine.",
-  "note": "Pins are declared once in src/simforge_alpamayo/families.py and mirrored, with per-file digests, in packages/model-store/models.lock.json. This file is the human-readable summary; the lock is the integrity contract and packages/model-store/src/catalog.ts is what the product displays.",
+  "note": "Pins are declared once in src/simforge_alpamayo/families.py; this file is their human-readable summary (tests/test_families.py keeps them in agreement).",
   "families": {
     "alpamayo-1": {
       "package": "alpamayo_r1",

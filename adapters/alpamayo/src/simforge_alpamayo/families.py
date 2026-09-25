@@ -5,11 +5,10 @@ upstream inference-code commit, the sidecar repos the checkpoint needs at
 load time, the camera contract the engine enforces, and the quantization
 modes that are actually supported (as opposed to merely conceivable).
 
-Every value here was read from the Hugging Face and GitHub APIs at pin time
-and is mirrored byte-for-byte by ``studio/app/lib/models/store/catalog.ts``
-(TypeScript, browser-safe) and by ``studio/app/lib/models/models.lock.json``
-(digests). ``tests/test_families.py`` asserts the three stay in agreement, so
-a drift is a test failure rather than a silent product lie.
+Every value here was read from the Hugging Face and GitHub APIs at pin time.
+This module is the one pin source in this repository; ``manifest.json`` is
+its human-readable summary, and ``tests/test_families.py`` asserts the two
+agree.
 
 Camera ids are the upstream ``CAMERA_NAMES_TO_INDICES`` integers, identical
 in all three upstream packages:
