@@ -16,3 +16,5 @@ thiserror = { workspace = true }
 sha2 = { workspace = true }
 flate2 = { workspace = true }
 rmp-serde = { workspace = true }
+# ECMAScript Number::toString (shortest round-trip, ties to even): canonical JSON must match JavaScript byte for byte.
+ryu-js = "1"
