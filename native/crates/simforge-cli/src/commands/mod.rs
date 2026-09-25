@@ -23,6 +23,7 @@ pub mod sites;
 pub mod skills;
 pub mod template;
 pub mod timeline;
+pub mod validate;
 pub mod variation;
 
 /// Commands whose surface is fixed but whose implementation has not landed.
@@ -96,6 +97,8 @@ pub enum Command {
     /// Evidence integrity between an instance and a trace.
     #[command(subcommand)]
     Evidence(evidence::EvidenceCommand),
+    /// Tier 1 (static) or tier 2 (one engine pass + invariant residuals) validation of an instance or template.
+    Validate(validate::ValidateArgs),
 }
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
@@ -117,6 +120,7 @@ pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
         Command::Batch(args) => batch::run(args, ctx),
         Command::Evaluate(args) => evaluate::run(args, ctx),
         Command::Evidence(cmd) => evidence::run(cmd, ctx),
+        Command::Validate(args) => validate::run(args, ctx),
     }
 }
 
