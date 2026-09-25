@@ -44,13 +44,14 @@ pub const DEFAULT_ORIGIN: &str = "https://da3tufozhdsvl.cloudfront.net";
 /// Written last into a materialized tree; a tree without it is incomplete.
 pub const TREE_COMPLETE_MARKER: &str = ".simforge-closure-complete";
 
-/// The native actor closure every render binds: catalog-models.json keyed by
-/// catalog id (each entry carries its CC-BY attribution) plus every model.
+/// The actor closure every render binds and the SDK distributes:
+/// catalog-models.json keyed by catalog id, every model, an ATTRIBUTION.json
+/// member covering every catalog entry, and a licence for every member.
 /// Mirrors `PINNED_ACTOR_ASSETS_DIGEST` in packages/render/src/native/actor-assets.ts
 /// and `closures.actors` in catalog/closures.lock.json (checked by this crate's tests).
 pub const PINNED_ACTOR_CLOSURE: Pin = Pin {
-    sha256: "218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f",
-    bytes: 22971,
+    sha256: "793ec86ceda7734f1f5f7c0b260a396c11c970a471ab4418987e4d531f33daa4",
+    bytes: 80788,
 };
 
 #[derive(Debug, thiserror::Error)]

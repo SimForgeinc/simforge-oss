@@ -11,6 +11,7 @@ import {
   assertActorAppearanceGrounded,
   ensureActorAssets,
   parseActorClosureCatalog,
+  parseActorClosureWithheld,
   type ActorClosureModel,
 } from './actor-assets.js';
 import { NATIVE_KIND_DEFAULT_CATALOG_IDS, nativeActorCatalogId, nativeActorClass, type NativeSceneState } from './lowering.js';
@@ -169,6 +170,19 @@ describe('assertActorAppearanceGrounded', () => {
     ], [host], assets)).toThrow(expect.objectContaining({
       code: 'native_actor_model_missing', message: expect.stringMatching(/parked requires catalog model vehicle.hatchback/),
     }));
+  });
+
+  it('refuses a model the closure withholds, naming why (the public closure withholds unlicensed models)', () => {
+    const withheld = new Map([['vehicle.porsche_911', { reason: 'redistribution licence unconfirmed; this model is available only in the hosted app', source: 'meshy-refined' }]]);
+    expect(() => assertActorAppearanceGrounded([
+      { actorId: 'coupe', kind: 'car', catalogId: 'vehicle.porsche_911', authored: true },
+    ], [], { ...assets, withheld })).toThrow(expect.objectContaining({
+      code: 'native_actor_model_withheld', message: expect.stringMatching(/coupe requires catalog model vehicle.porsche_911, which actor closure a+ withholds: redistribution licence unconfirmed.*meshy-refined/),
+    }));
+    expect(parseActorClosureWithheld(Buffer.from(JSON.stringify({ 'vehicle.sedan': {}, withheld: { 'vehicle.porsche_911': { reason: 'r', source: 's' } } }))))
+      .toEqual(new Map([['vehicle.porsche_911', { reason: 'r', source: 's' }]]));
+    expect(parseActorClosureWithheld(Buffer.from('{"vehicle.sedan":{}}')).size).toBe(0);
+    expect(() => parseActorClosureWithheld(Buffer.from('{"withheld":{"x.y":{}}}'))).toThrow(expect.objectContaining({ code: 'native_actor_catalog_invalid' }));
   });
 
   it('refuses an unauthored actor whose kind default the closure cannot model: no class primitive stands in', () => {

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { after, describe, it } from 'node:test';
 
+import { MESHY_ATTRIBUTION, deriveAttributed } from './public-closure.mjs';
 import {
   AssetUnavailableError, TREE_COMPLETE_MARKER, blobCachePath, blobUrl, closureUrl, materializeClosure, packClosure,
   UNCONFIRMED_LICENSE, parseClosure, pinnedDirSync, pullBlob, readLock, sealClosure, sha256Bytes, unlicensedMembers,
@@ -100,6 +101,38 @@ describe('content-addressed closures', () => {
       assert.ok(closure.members.has('ATTRIBUTION.json'), `${name} carries ATTRIBUTION.json`);
       assert.ok([...closure.members.keys()].some((member) => member.startsWith('models/')), `${name} carries models`);
     }
-    assert.equal(lock.closures.actors.sha256, '218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f');
+    assert.equal(lock.closures.actors.sha256, '793ec86ceda7734f1f5f7c0b260a396c11c970a471ab4418987e4d531f33daa4');
+  });
+
+  it('the attributed closure licenses every member, attributes every entry and drops orphans', () => {
+    const id = (c) => ({ sha256: c.repeat(64), bytes: 1 });
+    const base = { members: new Map([
+      ['catalog-models.json', id('0')], ['models/vehicle.sedan/model.glb', id('1')], ['models/robot.x/model.glb', id('2')],
+      ['models/animal.cat/model.glb', id('3')], ['models/pedestrian.adult/animations/walk.glb', id('4')],
+    ]) };
+    const catalog = Buffer.from(JSON.stringify({
+      'vehicle.sedan': { model: { glbPath: 'models/vehicle.sedan/model.glb', attribution: 'Sedan (c) CARLA, CC BY 4.0', source: 'carla-0.10.0-ue5' },
+        provenance: { boundUrl: '/catalog/vehicles-carla/models/vehicle_sedan.glb' } },
+      'robot.x': { model: { glbPath: 'models/robot.x/model.glb', attribution: 'procedural robot', source: 'asset-catalog-procedural' } },
+      'animal.cat': { model: { glbPath: 'models/animal.cat/model.glb', attribution: 'Generated with Meshy for SimForge', source: 'meshy-refined' } },
+    }));
+    const carla = new Map([['vehicles-carla/models/vehicle_sedan.glb', {
+      title: 'Sedan', license: 'CC-BY-4.0', license_url: 'https://creativecommons.org/licenses/by/4.0/', attribution: 'Sedan (c) CARLA',
+      source: 'CARLA 0.10.0', modifications: ['converted to glTF'],
+    }]]);
+    const result = deriveAttributed(base, catalog, carla);
+    assert.deepEqual(result.excluded, ['models/pedestrian.adult/animations/walk.glb']);
+    assert.equal(result.assets['animal.cat'].license, 'CC-BY-4.0');
+    assert.equal(result.assets['animal.cat'].attribution, MESHY_ATTRIBUTION);
+    assert.ok(result.assets['animal.cat'].modifications.length > 0 && result.assets['animal.cat'].note);
+    assert.equal(result.assets['robot.x'].license, 'Apache-2.0');
+    assert.deepEqual(result.assets['vehicle.sedan'].modifications, ['converted to glTF']);
+    assert.equal(result.members['catalog-models.json'].sha256, sha256Bytes(catalog), 'the catalog is carried byte for byte');
+    const sealed = sealClosure(result.members, { licenses: result.licenses });
+    const closure = parseClosure(sealed.bytes, { sha256: sealed.sha256, bytes: sealed.size });
+    assert.deepEqual(unlicensedMembers(closure), []);
+    assert.ok(closure.members.has('ATTRIBUTION.json'));
+    const unknown = Buffer.from(JSON.stringify({ 'x.y': { model: { glbPath: 'models/robot.x/model.glb', source: 'somewhere' } } }));
+    assert.throws(() => deriveAttributed(base, unknown, carla), /no known licence/);
   });
 });

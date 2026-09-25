@@ -3,10 +3,10 @@
   "origin": "https://da3tufozhdsvl.cloudfront.net",
   "closures": {
     "actors": {
-      "sha256": "218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f",
-      "bytes": 22971,
-      "members": 168,
-      "description": "The native actor closure every render binds (packages/render/src/native/actor-assets.ts PINNED_ACTOR_ASSETS_DIGEST): catalog-models.json keyed by catalog id, each entry carrying its own CC-BY attribution string."
+      "sha256": "793ec86ceda7734f1f5f7c0b260a396c11c970a471ab4418987e4d531f33daa4",
+      "bytes": 80788,
+      "members": 163,
+      "description": "The actor closure every render binds and the SDK distributes: the catalog and models of 218209f5 with an ATTRIBUTION.json member and a licence for every member (scripts/actor-assets/public-closure.mjs)."
     },
     "pedestrians-carla": {
       "sha256": "fabfc5150b4afa96107bc1f6ca2bf179ab29bdd52aa19dd4f2b0ad13da227689",

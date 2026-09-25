@@ -16,6 +16,13 @@
 //   closures/<digest>.json       closure documents, verified the same way
 //   trees/<digest>/...           a closure laid out by member path, hard links into blobs/
 //
+// A closure document may carry a `licenses` table (member -> {license,
+// attribution?, source?}); the digest binds it and v1 readers ignore it. A
+// public closure has a confirmed licence for every member
+// (unlicensedMembers). A closure's catalog-models.json may list catalog ids it
+// deliberately does not carry under `withheld` (public-closure.mjs); the render
+// refuses those by name (native_actor_model_withheld).
+//
 // The pins live in oss/catalog/closures.lock.json. Nothing here substitutes
 // anything: an asset that cannot be fetched or does not verify is an error
 // naming the digest and the URL.

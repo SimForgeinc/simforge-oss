@@ -2001,6 +2001,14 @@ fn resolve_actor_model(
             actor.id
         ));
     };
+    if let Some(reason) = catalog.withheld(catalog_id) {
+        // Never a primitive in its place, whatever the scene spec allows: the
+        // model exists, this closure is not licensed to carry it.
+        return Err(format!(
+            "[native_actor_model_withheld] actor {}: catalog id {catalog_id} is withheld by the {which} catalog: {reason}",
+            actor.id
+        ));
+    }
     match catalog.resolve(catalog_id) {
         Some(entry) => Ok(Some(entry.clone())),
         None => primitive(format!(

@@ -202,6 +202,11 @@ pub fn fnv1a32(text: &str) -> u32 {
 pub struct VehicleModelCatalog {
     by_catalog_id: HashMap<String, VehicleModelEntry>,
     fallback: Vec<(String, VehicleModelEntry)>,
+    /// Catalog ids the closure deliberately does not carry (its top-level
+    /// `withheld` table: `{ "<catalogId>": { "reason", "source"? } }`), with
+    /// why. The public actor closure withholds models whose redistribution
+    /// licence is unconfirmed.
+    withheld: HashMap<String, String>,
 }
 
 // Shared editorial assignments also generate the browser bindings and the
@@ -231,6 +236,11 @@ impl VehicleModelCatalog {
 
     pub fn resolve(&self, catalog_id: &str) -> Option<&VehicleModelEntry> {
         self.by_catalog_id.get(catalog_id)
+    }
+
+    /// Why this catalog withholds `catalog_id`, if it does.
+    pub fn withheld(&self, catalog_id: &str) -> Option<&str> {
+        self.withheld.get(catalog_id).map(String::as_str)
     }
 
     /// Select one entry deterministically for an actor whose generic catalog id
@@ -456,9 +466,33 @@ impl VehicleModelCatalog {
             .map(|(id, entry)| (id.clone(), entry.clone()))
             .collect();
         fallback.sort_by(|a, b| a.0.cmp(&b.0));
+        let mut withheld = HashMap::new();
+        if let Some(table) = raw.get("withheld") {
+            let table = table
+                .as_object()
+                .with_context(|| format!("{}: withheld is not an object", path.display()))?;
+            for (catalog_id, value) in table {
+                let reason = value
+                    .get("reason")
+                    .and_then(|v| v.as_str())
+                    .filter(|r| !r.is_empty())
+                    .with_context(|| {
+                        format!("{}: withheld {catalog_id} states no reason", path.display())
+                    })?;
+                let source = value.get("source").and_then(|v| v.as_str());
+                withheld.insert(
+                    catalog_id.clone(),
+                    match source {
+                        Some(source) => format!("{reason} (source {source})"),
+                        None => reason.to_string(),
+                    },
+                );
+            }
+        }
         Ok(Self {
             by_catalog_id,
             fallback,
+            withheld,
         })
     }
 }
@@ -556,6 +590,49 @@ mod tests {
             let colors = (0..64).map(|i| rider.colors_for(&format!("actor-{i}")));
             assert!(colors.clone().any(|c| c.is_empty()) && colors.clone().any(|c| !c.is_empty()));
         }
+    }
+
+    #[test]
+    fn a_withheld_catalog_id_is_named_with_its_reason_and_never_resolves() {
+        let root = std::env::temp_dir().join(format!(
+            "simforge-actor-catalog-withheld-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("models/vehicle.sedan")).unwrap();
+        fs::write(root.join("models/vehicle.sedan/model.glb"), b"glb").unwrap();
+        fs::write(
+            root.join("catalog-models.json"),
+            r#"{
+              "vehicle.sedan": {
+                "model": {"glbPath":"models/vehicle.sedan/model.glb","source":"carla-0.10.0-ue5"},
+                "tintable":true,
+                "scaleToDims":true
+              },
+              "withheld": {
+                "vehicle.porsche_911": {"reason":"redistribution licence unconfirmed","source":"meshy-refined"}
+              }
+            }"#,
+        )
+        .unwrap();
+        let catalog = VehicleModelCatalog::load(&root).unwrap();
+        assert!(catalog.resolve("vehicle.sedan").is_some());
+        assert!(catalog.resolve("vehicle.porsche_911").is_none());
+        assert_eq!(
+            catalog.withheld("vehicle.porsche_911"),
+            Some("redistribution licence unconfirmed (source meshy-refined)")
+        );
+        assert_eq!(catalog.withheld("vehicle.sedan"), None);
+        fs::write(
+            root.join("catalog-models.json"),
+            r#"{"withheld": {"vehicle.x": {"source":"meshy-refined"}}}"#,
+        )
+        .unwrap();
+        assert!(
+            VehicleModelCatalog::load(&root).is_err(),
+            "a withheld id must state why"
+        );
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

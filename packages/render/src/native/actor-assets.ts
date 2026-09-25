@@ -31,6 +31,14 @@ export const NATIVE_ACTOR_ASSETS_CATALOG_PATH = 'catalog-models.json';
  * The immutable actor closure: sha256 and byte size of the closure document
  * `actor-assets/closures/<digest>.json` as served by the origin.
  *
+ * `793ec86c` is `218209f5` with its attribution inside: an `ATTRIBUTION.json`
+ * member covering all 165 catalog entries and a `licenses` table covering
+ * every member (CARLA and Meshy-generated models CC-BY-4.0, procedural
+ * geometry and the metadata Apache-2.0; scripts/actor-assets/public-closure.mjs).
+ * Its catalog-models.json and every model are `218209f5`'s bytes, so renders
+ * do not change; the 6 orphan animation GLBs no entry bound (origin not
+ * recorded) are no longer members. It is also what the SDK distributes.
+ *
  * `218209f5` carries the CARLA 0.10.0-UE5 vehicle and pedestrian geometry: 68
  * of its 165 catalog entries are `carla-0.10.0-ue5` (1,316.0 MiB of distinct
  * blobs), and the 35 generated and 62 procedural entries no CARLA model covers are
@@ -42,8 +50,8 @@ export const NATIVE_ACTOR_ASSETS_CATALOG_PATH = 'catalog-models.json';
  * 6 cm deep in the ground. No model bytes changed. `4f298a9f` differed from `70dde8bb` only
  * in the ridden `vehicle.bicycle` and `vehicle.motorcycle`.
  */
-export const PINNED_ACTOR_ASSETS_DIGEST = '218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f';
-export const PINNED_ACTOR_ASSETS_SIZE_BYTES = 22971;
+export const PINNED_ACTOR_ASSETS_DIGEST = '793ec86ceda7734f1f5f7c0b260a396c11c970a471ab4418987e4d531f33daa4';
+export const PINNED_ACTOR_ASSETS_SIZE_BYTES = 80788;
 export const DEFAULT_ACTOR_ASSETS_BASE_URL = 'https://da3tufozhdsvl.cloudfront.net';
 
 
@@ -140,6 +148,32 @@ export interface VerifiedActorAssets extends ActorAssetsClosure {
   readonly directory: string;
   /** Catalog ids the service can bind to a verified closure model. */
   readonly models: ReadonlyMap<string, ActorClosureModel>;
+  /**
+   * Catalog ids this closure deliberately does not carry (the public closure
+   * withholds models whose redistribution licence is unconfirmed), with why.
+   */
+  readonly withheld?: ReadonlyMap<string, ActorClosureWithheld>;
+}
+
+/** A catalog id a closure's catalog-models.json lists under `withheld`. */
+export interface ActorClosureWithheld { readonly reason: string; readonly source?: string }
+
+/**
+ * The optional top-level `withheld` table of a closure's catalog-models.json
+ * (`{ "<catalogId>": { reason, source? } }`). The service skips the key (it has
+ * no dot); the render refuses a withheld id by name.
+ */
+export function parseActorClosureWithheld(bytes: Uint8Array): ReadonlyMap<string, ActorClosureWithheld> {
+  const raw = JSON.parse(Buffer.from(bytes).toString('utf8')) as unknown;
+  const table = isRecord(raw) ? raw.withheld : undefined;
+  const withheld = new Map<string, ActorClosureWithheld>();
+  if (table === undefined) return withheld;
+  if (!isRecord(table)) throw catalogError('withheld is not an object');
+  for (const [catalogId, entry] of Object.entries(table)) {
+    if (!isRecord(entry) || typeof entry.reason !== 'string' || entry.reason.length === 0) throw catalogError(`withheld ${catalogId} states no reason`);
+    withheld.set(catalogId, { reason: entry.reason, ...(typeof entry.source === 'string' ? { source: entry.source } : {}) });
+  }
+  return withheld;
 }
 
 function sha256(bytes: Uint8Array): string {
@@ -314,7 +348,7 @@ function isProcedural(catalogId: string): boolean {
 export function assertActorAppearanceGrounded(
   appearances: readonly NativeActorAppearance[],
   sensorHosts: readonly RenderSensorSourceHost[],
-  assets: Pick<VerifiedActorAssets, 'digest' | 'models'>,
+  assets: Pick<VerifiedActorAssets, 'digest' | 'models' | 'withheld'>,
 ): void {
   const byActor = new Map(appearances.map((appearance) => [appearance.actorId, appearance]));
   for (const host of sensorHosts) {
@@ -341,6 +375,14 @@ export function assertActorAppearanceGrounded(
       }
     }
     if (isProcedural(appearance.catalogId) || assets.models.has(appearance.catalogId)) continue;
+    const withheld = assets.withheld?.get(appearance.catalogId);
+    if (withheld) {
+      throw new RenderInputError(
+        'native_actor_model_withheld',
+        `actor ${appearance.actorId} requires catalog model ${appearance.catalogId}, which actor closure ${assets.digest} withholds: ${withheld.reason}${withheld.source ? ` (source ${withheld.source})` : ''}`,
+        { actorId: appearance.actorId, catalogId: appearance.catalogId, closure: assets.digest, reason: withheld.reason },
+      );
+    }
     throw new RenderInputError(
       'native_actor_model_missing',
       `actor ${appearance.actorId} requires catalog model ${appearance.catalogId} (${appearance.authored ? 'authored' : `${appearance.kind} default`}), which actor closure ${assets.digest} does not provide`,
@@ -560,7 +602,12 @@ export async function ensureActorAssets(options: EnsureActorAssetsOptions): Prom
   if (sha256(catalogBytes) !== catalogMember.sha256) {
     throw new Error(`materialized ${NATIVE_ACTOR_ASSETS_CATALOG_PATH} does not match closure ${closure.digest}`);
   }
-  return { ...closure, directory, models: parseActorClosureCatalog(catalogBytes, closure.members) };
+  return {
+    ...closure,
+    directory,
+    models: parseActorClosureCatalog(catalogBytes, closure.members),
+    withheld: parseActorClosureWithheld(catalogBytes),
+  };
 }
 
 /**

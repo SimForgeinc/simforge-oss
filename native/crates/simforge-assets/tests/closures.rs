@@ -200,3 +200,19 @@ fn the_public_origin_serves_the_pinned_actor_closure() {
     let (path, fetched) = store.pull_blob(catalog).unwrap();
     assert!(fetched && path.is_file());
 }
+
+#[test]
+#[ignore = "network: fetches the pinned actor closure document from the public origin"]
+fn the_pinned_actor_closure_licenses_every_member_and_ships_its_attribution() {
+    let cache = tempfile::tempdir().unwrap();
+    let store = Store::new(simforge_assets::DEFAULT_ORIGIN, cache.path());
+    let closure = store
+        .pull_closure(&Identity::from(PINNED_ACTOR_CLOSURE))
+        .unwrap();
+    assert!(
+        closure.unlicensed().is_empty(),
+        "{:?}",
+        closure.unlicensed()
+    );
+    assert!(closure.members.contains_key("ATTRIBUTION.json"));
+}

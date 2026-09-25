@@ -32,20 +32,18 @@
 //       no model bytes are tracked by git. Runs in the merge gate.
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  LOCK_PATH, LOCK_SCHEMA, assetsOrigin, closureUrl, hashFile, parseClosure, pullBlob, readLock, sealClosure, sha256Bytes,
-  unlicensedMembers,
+  LOCK_PATH, LOCK_SCHEMA, assetsOrigin, hashFile, parseClosure, readLock, sealClosure, sha256Bytes, unlicensedMembers,
 } from './closures.mjs';
+import { DEFAULT_BUCKET, publishClosure, upload } from './publish.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const CATALOG_DIR = path.join(REPO_ROOT, 'catalog');
 export const PACKS = ['pedestrians-carla', 'vehicles-carla'];
-const DEFAULT_BUCKET = 'simforge-maps-public';
 
 function option(argv, name, fallback) {
   const index = argv.indexOf(name);
@@ -156,84 +154,23 @@ async function seal(packs) {
   await writeFile(LOCK_PATH, `${JSON.stringify({ ...lock, closures: ordered }, null, 2)}\n`);
 }
 
-function aws(args, { profile, input } = {}) {
-  const env = { ...process.env, ...(profile ? { AWS_PROFILE: profile } : {}), AWS_PAGER: '' };
-  const result = spawnSync('aws', args, { env, encoding: 'utf8', input, maxBuffer: 1 << 26 });
-  return { status: result.status, stdout: result.stdout ?? '', stderr: (result.stderr ?? '').replace(/(AKIA|ASIA)[A-Z0-9]{16}/gu, '<key>') };
-}
-
-function remoteExists(bucket, key, profile) {
-  const result = aws(['s3api', 'head-object', '--bucket', bucket, '--key', key, '--query', 'ContentLength', '--output', 'text'], { profile });
-  if (result.status === 0) return Number(result.stdout.trim());
-  if (/Not Found|404|NoSuchKey/u.test(result.stderr)) return null;
-  throw new Error(`head-object s3://${bucket}/${key} failed: ${result.stderr.trim().split('\n').pop()}`);
-}
-
-function upload(bucket, key, file, contentType, cacheControl, profile) {
-  const result = aws(['s3api', 'put-object', '--bucket', bucket, '--key', key, '--body', file, '--content-type', contentType,
-    '--cache-control', cacheControl, '--checksum-algorithm', 'SHA256', '--output', 'text', '--query', 'ChecksumSHA256'], { profile });
-  if (result.status !== 0) throw new Error(`put-object s3://${bucket}/${key} failed: ${result.stderr.trim().split('\n').pop()}`);
-}
-
 async function publish(packs, argv) {
   const bucket = option(argv, '--bucket', DEFAULT_BUCKET);
   const profile = option(argv, '--profile', process.env.AWS_PROFILE);
   const lock = readLock();
   const origin = assetsOrigin(option(argv, '--origin', lock.origin));
-  const immutable = 'public, max-age=31536000, immutable';
   for (const pack of packs) {
     const dir = packDir(pack);
     const pin = lock.closures[pack];
     const documentBytes = await readFile(path.join(dir, 'closure.json'));
     const closure = parseClosure(documentBytes, pin);
-    let uploaded = 0;
-    let present = 0;
-    for (const [memberPath, member] of closure.members) {
-      const key = `actor-assets/blobs/sha256/${member.sha256.slice(0, 2)}/${member.sha256}`;
-      const size = remoteExists(bucket, key, profile);
-      if (size === member.bytes) { present += 1; continue; }
-      if (size !== null) throw new Error(`s3://${bucket}/${key} exists with ${size} bytes, not ${member.bytes}; refusing to overwrite a content-addressed blob`);
-      const local = path.join(dir, memberPath);
-      if (!existsSync(local)) throw new Error(`${pack} member ${memberPath} (${member.sha256}) is in neither the bucket nor the working tree`);
-      const actual = await hashFile(local);
-      if (actual.sha256 !== member.sha256) throw new Error(`${local} no longer hashes to its sealed identity; re-run seal`);
-      upload(bucket, key, local, 'application/octet-stream', immutable, profile);
-      uploaded += 1;
-    }
-    const documentKey = `actor-assets/closures/${pin.sha256}.json`;
-    const documentSize = remoteExists(bucket, documentKey, profile);
-    if (documentSize === null) {
-      const scratch = await mkdtemp(path.join(tmpdir(), 'seal-packs-'));
-      const file = path.join(scratch, 'closure.json');
-      await writeFile(file, documentBytes);
-      upload(bucket, documentKey, file, 'application/json', immutable, profile);
-      await rm(scratch, { recursive: true, force: true });
-    } else if (documentSize !== pin.bytes) {
-      throw new Error(`s3://${bucket}/${documentKey} exists with ${documentSize} bytes, not ${pin.bytes}`);
-    }
+    const { uploaded, present } = await publishClosure({
+      closure, documentBytes, pin, bucket, profile, origin, label: pack,
+      localFile: async (memberPath) => path.join(dir, memberPath),
+    });
     // The browser-facing copies under catalog/<pack>/models carry their licence beside them.
     upload(bucket, `catalog/${pack}/ATTRIBUTION.json`, path.join(dir, 'ATTRIBUTION.json'), 'application/json', 'public, max-age=3600', profile);
-    process.stdout.write(`${pack}: ${uploaded} blobs uploaded, ${present} already present; verifying through ${origin}\n`);
-
-    // Read everything back through the public origin into a throwaway cache.
-    const scratch = await mkdtemp(path.join(tmpdir(), 'seal-verify-'));
-    try {
-      const response = await fetch(closureUrl(pin.sha256, origin));
-      if (!response.ok) throw new Error(`${closureUrl(pin.sha256, origin)} -> HTTP ${response.status}`);
-      const served = Buffer.from(await response.arrayBuffer());
-      if (sha256Bytes(served) !== pin.sha256) throw new Error(`the origin serves a different closure document for ${pin.sha256}`);
-      const entries = [...closure.members.values()];
-      let cursor = 0;
-      await Promise.all(Array.from({ length: 8 }, async () => {
-        while (cursor < entries.length) {
-          const member = entries[cursor++];
-          await pullBlob(member, { origin, cacheDir: scratch });
-        }
-      }));
-      process.stdout.write(`${pack}: closure ${pin.sha256} and all ${entries.length} members verify by sha256 through ${origin}\n`);
-    } finally {
-      await rm(scratch, { recursive: true, force: true });
-    }
+    process.stdout.write(`${pack}: ${uploaded} blobs uploaded, ${present} already present; closure ${pin.sha256} and all ${closure.members.size} members verify by sha256 through ${origin}\n`);
   }
 }
 
@@ -281,6 +218,7 @@ async function check() {
   const pins = [
     ['packages/render/src/native/actor-assets.ts', /PINNED_ACTOR_ASSETS_DIGEST = '([0-9a-f]{64})'/u, /PINNED_ACTOR_ASSETS_SIZE_BYTES = (\d+)/u],
     ['native/crates/simforge-assets/src/lib.rs', /PINNED_ACTOR_CLOSURE: Pin = Pin \{\s*sha256: "([0-9a-f]{64})"/u, /PINNED_ACTOR_CLOSURE: Pin = Pin \{[^}]*bytes: (\d+)/u],
+    ['packages/render/scripts/fetch-actor-closure.mjs', /const PINNED_DIGEST = '([0-9a-f]{64})'/u, /const PINNED_SIZE_BYTES = (\d+)/u],
     // The release stack config names the digest only; its size check is the lock's.
     ['config/simforge-oss-stack.json', /"actorAssets":\s*\{[^}]*"digest":\s*"([0-9a-f]{64})"/u, null],
   ];

@@ -22,9 +22,9 @@ export type { NativeResidencyCamera, NativeTextureDensityImage, NativeTextureDen
 export {
   DEFAULT_ACTOR_ASSETS_BASE_URL, NATIVE_ACTOR_ASSETS_INPUT_ID, NATIVE_ACTOR_ASSETS_RELATIVE_PATH,
   PINNED_ACTOR_ASSETS_DIGEST, PINNED_ACTOR_ASSETS_SIZE_BYTES, actorAssetsClosureUrl, assertActorAppearanceGrounded,
-  actorAssetBlobUrl, ensureActorAssets, nativeActorAssetsCacheDir, nativeActorAssetsInput, prewarmActorAssets,
+  actorAssetBlobUrl, ensureActorAssets, nativeActorAssetsCacheDir, nativeActorAssetsInput, parseActorClosureWithheld, prewarmActorAssets,
 } from './actor-assets.js';
-export type { EnsureActorAssetsOptions, NativeActorAssetsInput, VerifiedActorAssets } from './actor-assets.js';
+export type { ActorClosureWithheld, EnsureActorAssetsOptions, NativeActorAssetsInput, VerifiedActorAssets } from './actor-assets.js';
 export { nativeActorCatalogId } from './lowering.js';
 export type { NativeActorAppearance } from './lowering.js';
 export {
