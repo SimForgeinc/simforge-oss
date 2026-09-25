@@ -19,7 +19,6 @@ pub mod timeline;
 /// `--help` marks them `"status": "planned"` and running one fails loudly
 /// with `not_implemented` (exit 1). Each command's PR removes its entry.
 pub const PLANNED: &[&str] = &[
-    "assets pull",
     "render",
     "simulate",
     "env serve",

@@ -191,3 +191,39 @@ pub fn is_transient(error: &FetchError) -> bool {
         FetchError::Io(_) | FetchError::Scheme(_) => false,
     }
 }
+
+/// An agent for large downloads: no overall deadline (a big blob on a slow
+/// link is not an error), but a connect deadline and a deadline for the
+/// response to start. Clones share one connection pool.
+pub fn stream_agent(idle: Duration) -> ureq::Agent {
+    ureq::Agent::config_builder()
+        .timeout_connect(Some(idle))
+        .timeout_recv_response(Some(idle))
+        .user_agent(concat!("simforge/", env!("CARGO_PKG_VERSION")))
+        .build()
+        .into()
+}
+
+/// Open `url` (http(s) or `file://`) as a byte stream. The caller bounds and
+/// verifies what it reads.
+pub fn open_stream(agent: &ureq::Agent, url: &str) -> Result<Box<dyn Read + Send>, FetchError> {
+    if let Some(path) = file_url_path(url) {
+        return Ok(Box::new(std::fs::File::open(path).map_err(FetchError::Io)?));
+    }
+    if !(url.starts_with("https://") || url.starts_with("http://")) {
+        return Err(FetchError::Scheme(
+            url.split("://").next().unwrap_or(url).to_owned(),
+        ));
+    }
+    let response = agent.get(url).call().map_err(|e| match e {
+        ureq::Error::StatusCode(code) => FetchError::Status(code),
+        other => FetchError::Unreachable(other.to_string()),
+    })?;
+    Ok(Box::new(
+        response
+            .into_body()
+            .into_with_config()
+            .limit(u64::MAX)
+            .reader(),
+    ))
+}
