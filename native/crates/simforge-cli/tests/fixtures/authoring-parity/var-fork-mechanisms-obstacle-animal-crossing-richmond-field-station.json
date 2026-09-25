@@ -1,0 +1,25 @@
+{
+ "argv": [
+  "variation",
+  "fork",
+  "examples/mechanisms/obstacle/animal-crossing.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "030c6282a2eb6293",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "arrival_unconverged",
+  "detail": {
+   "reason": "clamped: achieved Δt -3.872 s vs requested -1.800 s",
+   "siteId": "030c6282a2eb6293"
+  },
+  "path": "interactions.animal-arrival.trigger.arrival",
+  "reason": "required arrival interaction \"animal-arrival\" cannot be resolved"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

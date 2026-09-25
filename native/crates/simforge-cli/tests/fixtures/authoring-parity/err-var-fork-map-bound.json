@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "variation",
+  "fork",
+  "packages/compiler/src/__fixtures__/richmond-map-bound.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "x",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "variation_source_map_bound",
+  "detail": {
+   "sceneAbsoluteRoles": [
+    "vehicle-muasiqo3-6wehouy0"
+   ]
+  },
+  "path": "roles",
+  "reason": "variation fork requires portable roles; map-bound scene_absolute roles need variation transfer"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

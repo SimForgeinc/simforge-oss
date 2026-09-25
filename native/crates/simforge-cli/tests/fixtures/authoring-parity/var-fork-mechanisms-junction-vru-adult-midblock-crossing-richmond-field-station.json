@@ -1,0 +1,21 @@
+{
+ "argv": [
+  "variation",
+  "fork",
+  "examples/mechanisms/junction-vru/adult-midblock-crossing.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "0a3bd41f71ed07db",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 0,
+ "files": {
+  "v/instance.json": "a24b23a96d0581e7a40f53804d30178bdc75a8976489417d1df8f6e46bd07686",
+  "v/trace.json.gz": "0e4ef4f80903996f27a8d30cfb11bce6d65c9491a89d9747828cb0e2fbb1ea38",
+  "v/variation.json": "e6ab534c4a27bb65ad739947ba174c57a9d4922993ed8551b71a88a66c492912"
+ },
+ "stderr": null,
+ "stdoutSha256": "b43b098b947dad00172c8b4f836d8699ae3728a57bc1ad160c13f092f5c9d1dc"
+}

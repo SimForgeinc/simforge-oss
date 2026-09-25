@@ -1,0 +1,15 @@
+{
+ "argv": [
+  "variation",
+  "graft",
+  "packages/compiler/src/__fixtures__/richmond-map-bound.template.json"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "unknown_command",
+  "path": "graft",
+  "reason": "unrecognized subcommand 'graft'"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

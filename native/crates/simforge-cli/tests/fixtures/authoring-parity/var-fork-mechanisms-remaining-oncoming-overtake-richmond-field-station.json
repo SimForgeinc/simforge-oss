@@ -1,0 +1,37 @@
+{
+ "argv": [
+  "variation",
+  "fork",
+  "examples/mechanisms/remaining/oncoming-overtake.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "6bc90b7974510a7e",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "role_semantic_projection_failed",
+  "detail": {
+   "bindingLaneRsl": "41:0:-1",
+   "frameS": -55,
+   "maxDistanceM": 12,
+   "routeLaneChain": [
+    "41:0:-1",
+    "260:0:-1",
+    "44:0:-1",
+    "234:0:-1",
+    "47:0:-1",
+    "350:0:-1",
+    "52:0:-1",
+    "378:0:-1",
+    "53:0:-1"
+   ]
+  },
+  "path": "roles.slow-vehicle.pose.s",
+  "reason": "constrained role \"slow-vehicle\" cannot reach its matcher-selected local lane within 12.00 m"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}
