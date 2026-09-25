@@ -147,6 +147,8 @@ if test "$SANDBOX" = required; then
   maps="${GATE_SANDBOX_MAPS:-${SIMFORGE_MAPS_CACHE_ROOT:-$HOME/.local/share/simforge/maps}}"
   sky="${GATE_SANDBOX_SKY:-${XDG_CACHE_HOME:-$HOME/.cache}/simforge/sky-products}"
   mounts=(-v "$sbx:/cache" -v "$common:$common:ro" -v "$script_path:/gate/gate-local.sh:ro" -v "$defs/proxy.crt:/gate/proxy.crt:ro" -v "$defs/ca-bundle.crt:/etc/ssl/certs/ca-certificates.crt:ro")
+  # Object stores this clone borrows from (git alternates) are mounted read-only too.
+  while IFS= read -r alt; do test -d "$alt" && mounts+=(-v "$alt:$alt:ro"); done < <(cat "$common/objects/info/alternates" 2>/dev/null)
   test -d "$maps/.corpus" && mounts+=(-v "$maps/.corpus:/maps/.corpus:ro")
   test -d "$sky" && mounts+=(-v "$sky:/cache/xdg/simforge/sky-products:ro")
   proxy=http://gate-proxy:8888; sproxy=https://gate-proxy:8443
