@@ -1,4 +1,5 @@
-import { connection, NextResponse } from "next/server";
+import { connection, NextResponse, type NextRequest } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 import { getMapAssets } from "@/app/lib/map-assets";
 import { MapAssetsListResponse } from "@/app/lib/api-schemas";
 void MapAssetsListResponse; // referenced in JSDoc for OpenAPI
@@ -11,7 +12,9 @@ void MapAssetsListResponse; // referenced in JSDoc for OpenAPI
  * @tag Map assets
  * @openapi
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const access = await requireRouteSession(request);
+  if (!access.ok) return access.response;
   await connection();
   const assets = await getMapAssets();
   return NextResponse.json(assets);

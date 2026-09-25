@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 import { AssetUrlServiceError, getBrowserAssetUrl } from "@/app/lib/assets/asset-url-service";
 import { getMapArtifactLocation } from "@/app/lib/db/map-asset-store";
 import { MapAssetIdParams } from "@/app/lib/api-schemas";
@@ -18,7 +19,9 @@ type RouteContext = { params: Promise<{ mapAssetId: string }> };
  * @tag Map assets
  * @openapi
  */
-export async function GET(_req: NextRequest, { params }: RouteContext) {
+export async function GET(req: NextRequest, { params }: RouteContext) {
+  const access = await requireRouteSession(req);
+  if (!access.ok) return access.response;
   const { mapAssetId } = await params;
 
   const location = await getMapArtifactLocation(mapAssetId, "geojson");

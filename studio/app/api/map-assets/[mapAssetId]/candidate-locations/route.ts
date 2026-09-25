@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireMapAssetMutationAccess, requireRouteSession } from "@/app/lib/auth/route-session";
 import {
   getCandidateLocationsByMapAssetId,
   deleteCandidateLocationsByMapAssetId,
@@ -19,6 +20,8 @@ type RouteContext = { params: Promise<{ mapAssetId: string }> };
  * @openapi
  */
 export async function GET(req: NextRequest, { params }: RouteContext) {
+  const access = await requireRouteSession(req);
+  if (!access.ok) return access.response;
   const { mapAssetId } = await params;
   if (!mapAssetId?.trim()) {
     return NextResponse.json({ error: "Missing mapAssetId" }, { status: 400 });
@@ -48,7 +51,9 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
  * @tag Map assets
  * @openapi
  */
-export async function DELETE(_req: NextRequest, { params }: RouteContext) {
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
+  const access = await requireMapAssetMutationAccess(req);
+  if (!access.ok) return access.response;
   const { mapAssetId } = await params;
   if (!mapAssetId?.trim()) {
     return NextResponse.json({ error: "Missing mapAssetId" }, { status: 400 });

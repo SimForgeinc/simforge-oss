@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 import { getMapAssetByIdFromDb } from "@/app/lib/db/map-asset-store";
 import { RuntimeTopologyBundleError } from "@/app/lib/editor-map/runtime-topology-bundle";
 import {
@@ -31,7 +32,9 @@ type RouteContext = { params: Promise<{ mapAssetId: string }> };
  * @tag Map assets
  * @openapi
  */
-export async function GET(_req: NextRequest, { params }: RouteContext) {
+export async function GET(req: NextRequest, { params }: RouteContext) {
+  const access = await requireRouteSession(req);
+  if (!access.ok) return access.response;
   const timing = new ServerTimingRecorder();
   const { mapAssetId } = await params;
   if (!mapAssetId?.trim()) {

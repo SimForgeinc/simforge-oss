@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 import type { MapAssetArtifactType } from "@simforge-oss/studio-shared";
 import { UploadUrlBody, UploadUrlResponse } from "@/app/lib/api-schemas";
 void UploadUrlBody; void UploadUrlResponse;
@@ -45,6 +46,8 @@ function buildS3Key(mapAssetId: string, fileId: string, filename: string): strin
  * @openapi
  */
 export async function POST(request: NextRequest) {
+  const access = await requireRouteSession(request);
+  if (!access.ok) return access.response;
   try {
     const body = await request.json();
     const mapAssetId = (body.mapAssetId as string)?.trim();

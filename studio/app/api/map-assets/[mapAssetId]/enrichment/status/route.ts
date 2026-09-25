@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 import { getLatestEnrichmentJobs } from "@/app/lib/db/map-asset-enrichment-job-store";
 import { getMapAssetEnrichmentManifest } from "@/app/lib/db/map-asset-enrichment-store";
 import { mapAssetExistsInDb } from "@/app/lib/db/map-asset-store";
@@ -10,7 +11,9 @@ type RouteContext = { params: Promise<{ mapAssetId: string }> };
  * third-party history) plus the enrichment manifest when a snapshot exists.
  * Clients poll this while a job is pending or running.
  */
-export async function GET(_request: Request, { params }: RouteContext) {
+export async function GET(request: Request, { params }: RouteContext) {
+  const access = await requireRouteSession(request);
+  if (!access.ok) return access.response;
   const { mapAssetId } = await params;
   if (!mapAssetId?.trim()) {
     return NextResponse.json({ error: "Missing mapAssetId" }, { status: 400 });

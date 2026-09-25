@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 import type { MapAssetArtifactType } from "@simforge-oss/studio-shared";
 import { MapAssetIdParams, MediaUploadUrlsBody, MediaUploadUrlsResponse } from "@/app/lib/api-schemas";
 void MapAssetIdParams; void MediaUploadUrlsBody; void MediaUploadUrlsResponse;
@@ -36,6 +37,8 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ mapAssetId: string }> }
 ) {
+  const access = await requireRouteSession(request);
+  if (!access.ok) return access.response;
   try {
     const { mapAssetId } = await context.params;
     const body = await request.json();

@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 import {
   AssetUrlServiceError,
   assertAssetKeyAllowed,
@@ -27,6 +28,8 @@ type RouteContext = { params: Promise<{ mapAssetId: string; path: string[] }> };
  * @tag Map assets
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
+  const access = await requireRouteSession(request);
+  if (!access.ok) return access.response;
   const { mapAssetId, path } = await params;
 
   if (isLocalBelmontEnabled()) {

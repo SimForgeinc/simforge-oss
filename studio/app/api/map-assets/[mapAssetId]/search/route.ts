@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 import { getMapAssetByIdFromDb } from "@/app/lib/db/map-asset-store";
 import { searchMapLocations } from "@/app/lib/maps/search/server/map-search-service";
 import { MapAssetIdParams, MapSearchRequestBody, MapSearchResponse } from "@/app/lib/api-schemas";
@@ -20,6 +21,8 @@ type RouteContext = { params: Promise<{ mapAssetId: string }> };
  * @openapi
  */
 export async function POST(req: NextRequest, { params }: RouteContext) {
+  const access = await requireRouteSession(req);
+  if (!access.ok) return access.response;
   const { mapAssetId } = await params;
   if (!mapAssetId?.trim()) {
     return NextResponse.json({ error: "Missing mapAssetId" }, { status: 400 });

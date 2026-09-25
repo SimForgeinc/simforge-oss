@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 import {
   MAP_ASSET_ARTIFACT_TYPE_VALUES,
   type MapAsset,
@@ -37,6 +38,8 @@ function hasRequiredArtifactTypes(
  * @openapi
  */
 export async function POST(request: NextRequest) {
+  const access = await requireRouteSession(request);
+  if (!access.ok) return access.response;
   // Per-step timing. Logged incrementally (not as one summary line) so that
   // when Amplify's SSR proxy kills a slow request with
   // "Request timed out - your application took too long to respond", the LAST

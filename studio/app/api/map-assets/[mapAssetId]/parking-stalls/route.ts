@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 
 import { lngLatToRuntimePoint } from "@/app/lib/editor-map/coordinates";
 import { getMapArtifactLocation, getMapAssetByIdFromDb } from "@/app/lib/db/map-asset-store";
@@ -39,7 +40,9 @@ const STALL_CACHE_LIMIT = 8;
  * @tag Map assets
  * @openapi
  */
-export async function GET(_req: NextRequest, { params }: RouteContext) {
+export async function GET(req: NextRequest, { params }: RouteContext) {
+  const access = await requireRouteSession(req);
+  if (!access.ok) return access.response;
   const { mapAssetId } = await params;
 
   const cached = stallCache.get(mapAssetId);

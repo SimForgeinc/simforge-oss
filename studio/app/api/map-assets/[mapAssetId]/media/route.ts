@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 import { AssetUrlServiceError, getBrowserAssetUrl } from "@/app/lib/assets/asset-url-service";
 import { MapAssetIdParams, MediaQueryParams } from "@/app/lib/api-schemas";
 import { objectRedirect } from "@/app/lib/s3/local-object-redirect";
@@ -19,6 +20,8 @@ type RouteContext = { params: Promise<{ mapAssetId: string }> };
  * @openapi
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
+  const access = await requireRouteSession(request);
+  if (!access.ok) return access.response;
   const { mapAssetId } = await params;
   const key = new URL(request.url).searchParams.get("key") ?? "";
   if (!key) {

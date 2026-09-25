@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 import { getMapAssetEnrichmentManifest } from "@/app/lib/db/map-asset-enrichment-store";
 import { mapAssetExistsInDb } from "@/app/lib/db/map-asset-store";
 
@@ -10,7 +11,9 @@ type RouteContext = { params: Promise<{ mapAssetId: string }> };
  * enrichment snapshot has been stored for this map (local ingest never writes
  * one; imported maps that carry a snapshot serve it from the local store).
  */
-export async function GET(_request: Request, { params }: RouteContext) {
+export async function GET(request: Request, { params }: RouteContext) {
+  const access = await requireRouteSession(request);
+  if (!access.ok) return access.response;
   const { mapAssetId } = await params;
   if (!mapAssetId?.trim()) {
     return NextResponse.json({ error: "Missing mapAssetId" }, { status: 400 });

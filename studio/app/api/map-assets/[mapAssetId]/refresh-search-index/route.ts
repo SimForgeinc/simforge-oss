@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireMapAssetMutationAccess } from "@/app/lib/auth/route-session";
 import { getMapAssetByIdFromDb } from "@/app/lib/db/map-asset-store";
 import { refreshMapSearchIndex } from "@/app/lib/maps/search-index/refresh-search-index";
 
@@ -12,6 +13,8 @@ type RouteContext = { params: Promise<{ mapAssetId: string }> };
  * the rebuild landed.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
+  const access = await requireMapAssetMutationAccess(request);
+  if (!access.ok) return access.response;
   try {
     const { mapAssetId } = await params;
     if (!mapAssetId?.trim()) {

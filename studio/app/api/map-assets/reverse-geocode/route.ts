@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireRouteSession } from "@/app/lib/auth/route-session";
 import { reverseGeocodeCity } from "@/app/lib/maps/metadata/reverse-geocode";
 import { ReverseGeocodeQuery, ReverseGeocodeResponse } from "@/app/lib/api-schemas";
 void ReverseGeocodeQuery; void ReverseGeocodeResponse;
@@ -13,6 +14,8 @@ void ReverseGeocodeQuery; void ReverseGeocodeResponse;
  * @openapi
  */
 export async function GET(req: NextRequest) {
+  const access = await requireRouteSession(req);
+  if (!access.ok) return access.response;
   const lat = Number(req.nextUrl.searchParams.get("lat"));
   const lon = Number(req.nextUrl.searchParams.get("lon"));
 

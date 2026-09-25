@@ -4,7 +4,7 @@ import { MapCoordinateRefSchema, MapImageryTilesetSchema } from "@simforge-oss/s
 import type { MapAsset, MapAssetArtifact, MapAssetArtifactType, MapPlaceContext } from "@simforge-oss/studio-shared";
 import { z } from "zod";
 import { MapAssetIdParams, UpdateMapAssetResponse } from "@/app/lib/api-schemas";
-import { requireRouteSession } from "@/app/lib/auth/route-session";
+import { requireMapAssetMutationAccess } from "@/app/lib/auth/route-session";
 import {
   deleteMapAssetById,
   getMapAssetByIdFromDb,
@@ -72,7 +72,7 @@ type Params = { params: Promise<{ mapAssetId: string }> };
  */
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
-    const auth = await requireRouteSession(request);
+    const auth = await requireMapAssetMutationAccess(request);
     if (!auth.ok) return auth.response;
 
     const { mapAssetId } = await params;
@@ -290,7 +290,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
  * Requires JSON body `{ confirmEmail }` matching the signed-in user's email (case-insensitive).
  */
 export async function DELETE(request: NextRequest, { params }: Params) {
-  const auth = await requireRouteSession(request);
+  const auth = await requireMapAssetMutationAccess(request);
   if (!auth.ok) return auth.response;
 
   let body: unknown;
