@@ -232,12 +232,12 @@ fn argument_errors_are_structured_exit_1_with_nothing_on_stdout() {
 fn planned_commands_fail_loudly() {
     let home = home();
     let (exit, stdout, stderr, _) =
-        run(simforge(home.path()).args(["maps", "pull", "richmond-field-station@v2"]));
+        run(simforge(home.path()).args(["package", "verify", "some.scenario.zip"]));
     assert_eq!(exit, 1);
     assert_eq!(stdout, Value::Null);
     let error = stderr_error(&stderr);
     assert_eq!(error["code"], "not_implemented");
-    assert_eq!(error["path"], "maps pull");
+    assert_eq!(error["path"], "package verify");
 }
 
 /// A one-shot HTTP server answering every request with `body` (status 200) or 404.
