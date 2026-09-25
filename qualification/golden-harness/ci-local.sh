@@ -30,12 +30,33 @@ if [ "${1:-verify}" = "record" ]; then
 fi
 # Every recorded scene is verified; a scene still marked `recording: unrecorded`
 # is listed by name (it gates once its owner records it on lavapipe), never passed.
-unrecorded=()
+# Scenes are independent (each writes artifacts/golden-harness/verify/<id>), so
+# they render GOLDEN_JOBS at a time (default 3), each with an even share of the
+# cores for lavapipe (LP_NUM_THREADS), logs printed in scene order. Frame times
+# under contention are informational only (the frame-time check is not gated).
+unrecorded=(); ids=()
 for scene in qualification/golden-harness/scenes/*.json; do
   id="$(basename "$scene" .json)"
   if test "$(jq -r '.recording // "recorded"' "$scene")" = unrecorded; then unrecorded+=("$id"); continue; fi
-  node qualification/golden-harness/golden.mjs verify "$id"
+  ids+=("$id")
 done
+jobs_n="${GOLDEN_JOBS:-3}"; cores="$(nproc)"
+threads="${LP_NUM_THREADS:-$(( cores / jobs_n > 1 ? cores / jobs_n : 1 ))}"
+logs="$(mktemp -d)"
+for id in "${ids[@]}"; do
+  while test "$(jobs -rp | wc -l)" -ge "$jobs_n"; do wait -n || true; done
+  ( set +e; LP_NUM_THREADS="$threads" node qualification/golden-harness/golden.mjs verify "$id" >"$logs/$id.log" 2>&1; echo $? >"$logs/$id.rc" ) &
+done
+wait
+echo "(${#ids[@]} scenes, $jobs_n at a time, LP_NUM_THREADS=$threads)"
+rc=0
+for id in "${ids[@]}"; do
+  status="$(cat "$logs/$id.rc" 2>/dev/null || echo 1)"
+  cat "$logs/$id.log"
+  if test "$status" -ne 0; then echo "[golden-harness] scene $id failed (exit $status)"; test "$rc" -ne 0 || rc=$status; fi
+done
+rm -rf "$logs"
+test "$rc" -eq 0 || exit "$rc"
 if test ${#unrecorded[@]} -gt 0; then echo "UNRECORDED (not gated until recorded): ${unrecorded[*]}"; fi
 
 echo "=== native-golden local run: PASS (${#unrecorded[@]} unrecorded) ==="
