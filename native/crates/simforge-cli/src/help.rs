@@ -41,6 +41,35 @@ pub fn locate<'a>(
     (current, path, None)
 }
 
+/// The value type an argument parses to, for machine readers.
+fn value_type(arg: &Arg, takes_value: bool) -> &'static str {
+    use std::any::TypeId;
+    if !takes_value && !arg.is_positional() {
+        return "bool";
+    }
+    if !arg.get_possible_values().is_empty() {
+        return "enum";
+    }
+    let t = arg.get_value_parser().type_id();
+    if t == TypeId::of::<std::path::PathBuf>() {
+        "path"
+    } else if t == TypeId::of::<u64>()
+        || t == TypeId::of::<u32>()
+        || t == TypeId::of::<u16>()
+        || t == TypeId::of::<usize>()
+        || t == TypeId::of::<i64>()
+        || t == TypeId::of::<i32>()
+    {
+        "integer"
+    } else if t == TypeId::of::<f64>() || t == TypeId::of::<f32>() {
+        "number"
+    } else if t == TypeId::of::<bool>() {
+        "bool"
+    } else {
+        "string"
+    }
+}
+
 fn arg_json(arg: &Arg) -> Value {
     let takes_value = matches!(arg.get_action(), ArgAction::Set | ArgAction::Append);
     let possible: Vec<String> = arg
@@ -79,6 +108,7 @@ fn arg_json(arg: &Arg) -> Value {
             );
         }
     }
+    out.insert("type".into(), json!(value_type(arg, takes_value)));
     out.insert("required".into(), json!(arg.is_required_set()));
     if matches!(arg.get_action(), ArgAction::Append) {
         out.insert("repeatable".into(), json!(true));
@@ -161,10 +191,16 @@ pub fn document(root: &Command, cmd: &Command, path: &[String]) -> Value {
         .get_arguments()
         .filter(|a| a.is_global_set())
         .map(arg_json)
-        .chain(std::iter::once(json!({
-            "name": "--help", "takesValue": false, "required": false, "global": true,
-            "help": "print this command's surface as JSON (with --pretty: as text)",
-        })))
+        .chain([
+            json!({
+                "name": "--help", "takesValue": false, "type": "bool", "required": false, "global": true,
+                "help": "print this command's surface as JSON (with --pretty: as text)",
+            }),
+            json!({
+                "name": "--json", "takesValue": false, "type": "bool", "required": false, "global": true,
+                "help": "with --help (or `help`): the whole command tree under this command, every flag typed (simforge.cli-surface/v1)",
+            }),
+        ])
         .collect();
 
     let mut doc = serde_json::Map::new();
@@ -205,4 +241,42 @@ pub fn text(cmd: &Command, path: &[String]) -> String {
         format!("simforge {}", path.join(" "))
     });
     cmd.render_long_help().to_string()
+}
+
+/// The whole command surface under `cmd` (`simforge.cli-surface/v1`): every
+/// runnable command with its arguments and flags (type, value name, default,
+/// possible values, required, repeatable, env), for skill generators and the
+/// gate that checks skills against the binary.
+pub fn surface(root: &Command, cmd: &Command, path: &[String]) -> Value {
+    fn walk(root: &Command, cmd: &Command, path: &mut Vec<String>, out: &mut Vec<Value>) {
+        if cmd.has_subcommands() {
+            for sub in cmd.get_subcommands().filter(|s| !s.is_hide_set()) {
+                path.push(sub.get_name().to_owned());
+                walk(root, sub, path, out);
+                path.pop();
+            }
+        } else {
+            let mut doc = document(root, cmd, path);
+            if let Value::Object(map) = &mut doc {
+                for key in ["bin", "version", "globalFlags", "exitCodes", "output"] {
+                    map.remove(key);
+                }
+            }
+            out.push(doc);
+        }
+    }
+    let mut commands = Vec::new();
+    let mut at = path.to_vec();
+    walk(root, cmd, &mut at, &mut commands);
+    let root_doc = document(root, root, &[]);
+    json!({
+        "schema": "simforge.cli-surface/v1",
+        "bin": "simforge",
+        "version": env!("CARGO_PKG_VERSION"),
+        "command": path.join(" "),
+        "globalFlags": root_doc["globalFlags"],
+        "exitCodes": root_doc["exitCodes"],
+        "output": root_doc["output"],
+        "commands": commands,
+    })
 }

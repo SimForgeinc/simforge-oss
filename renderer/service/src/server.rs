@@ -1435,6 +1435,7 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
                 | RequestBody::RenderBundle { .. }
                 | RequestBody::Load { .. }
                 | RequestBody::LoadSceneState { .. }
+                | RequestBody::AppendSceneState { .. }
                 | RequestBody::SetLighting { .. }
         )
     {
@@ -1671,6 +1672,35 @@ pub fn dispatch(state: &mut ServiceState, request: WireRequest) -> WireResponse 
                     ok: true,
                     ticks,
                     map_id,
+                },
+            }
+        }
+        RequestBody::AppendSceneState { states } => {
+            let Some(map_id) = state.scene.first().map(|frame| frame.map_id.clone()) else {
+                return WireResponse::error(
+                    i,
+                    "[native_scene_state_empty] append_scene_state needs a stream loaded with load_scene_state first",
+                );
+            };
+            for (index, frame) in states.iter().enumerate() {
+                if let Err(error) = frame.validate() {
+                    return WireResponse::error(
+                        i,
+                        format!("appended scene frame {index}: {error}"),
+                    );
+                }
+                if frame.map_id != map_id {
+                    return WireResponse::error(i, format!(
+                        "[native_scene_map_mismatch] appended scene frame {index} is on map {:?}, the stream on {map_id:?}", frame.map_id
+                    ));
+                }
+            }
+            state.scene.extend(states);
+            WireResponse {
+                i,
+                body: ResponseBody::AppendSceneState {
+                    ok: true,
+                    ticks: state.scene.len(),
                 },
             }
         }

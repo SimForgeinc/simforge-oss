@@ -23,8 +23,12 @@ except ImportError as error:  # pragma: no cover - environment guard
     _unavailable = True
     _reason = f"simforge_oss_gym is not importable ({error})"
 if _unavailable:  # pragma: no cover - environment guard
-    print(f"skipping adapters/gym tests: {_reason}")
-    collect_ignore_glob.append("test_*.py")
+    # The socket client (test_socket_env.py) needs no extension: only the
+    # native suites are left out.
+    print(f"skipping the native adapters/gym tests: {_reason}")
+    collect_ignore_glob.extend(
+        str(path.name) for path in Path(__file__).parent.glob("test_*.py") if path.name != "test_socket_env.py"
+    )
 
 
 @pytest.fixture(scope="session")

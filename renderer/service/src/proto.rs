@@ -26,6 +26,7 @@ pub const NATIVE_SERVICE_CAPABILITIES: &[&str] = &[
     "render_bundle.observe",
     "render_bundle.pipeline",
     "ground_mesh",
+    "append_scene_state",
 ];
 
 /// Rigid attachment of a camera to a scene-state actor (CARLA
@@ -234,6 +235,14 @@ pub enum RequestBody {
     LoadSceneState {
         states: Vec<crate::scene::SceneState>,
     },
+    /// Append frames to the loaded scene-state stream, keeping every actor
+    /// already spawned (a caller-clocked closed loop learns each frame only
+    /// after the step that produced it). Frames validate as in
+    /// `load_scene_state` and must be on the loaded stream's map; their
+    /// spawn/update/despawn kinds continue the stream's.
+    AppendSceneState {
+        states: Vec<crate::scene::SceneState>,
+    },
     /// Drop every registered camera, lidar and radar; the next render
     /// re-registers from its request.
     ResetCameras,
@@ -404,6 +413,11 @@ pub enum ResponseBody {
         ok: bool,
         ticks: usize,
         map_id: String,
+    },
+    AppendSceneState {
+        ok: bool,
+        /// Frames in the stream after the append.
+        ticks: usize,
     },
     ResetCameras {
         ok: bool,

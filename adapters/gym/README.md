@@ -44,6 +44,29 @@ engine completion; stepping a finished episode raises.
 state (engine RNG, timers, controllers, contacts, episode accumulators) and
 resume bit-identically.
 
+## Over a socket: `simforge env serve`
+
+The SimForge CLI serves the same episode over a Unix socket
+(`simforge.env-serve/v1`), optionally with rendered sensors. The client
+needs no compiled extension (stdlib + numpy + gymnasium):
+
+```python
+from simforge_oss_gym import SimForgeSocketEnv, spawn_env_server
+
+server, ready = spawn_env_server("ws/", "/tmp/sf.sock", "--rig", "rig.json", "--allow-software-adapter")
+env = SimForgeSocketEnv("/tmp/sf.sock")                 # same spaces and info as SimForgeEnv
+obs, info = env.reset(seed=7)
+obs, reward, terminated, truncated, info = env.step([9.0, 0.0])
+rgb = info["sensors"]["ego-front-camera-rgb"]["rgb"]    # uint8 (H, W, 4); depth float32 (H, W)
+```
+
+Observations, rewards, flags, `info` and checkpoints are the `_native`
+session's byte for byte (the server runs the same `EnvSession` glue);
+sensor frames ride in `info["sensors"]` so the observation space stays the
+scenario's. `python -m simforge_oss_gym.tools.socket_runner --socket ...`
+runs the reference `scripted`/`torch` control policies with a digested trace.
+The in-process `_native` path stays the default.
+
 ## Episode specs
 
 Form A lists pre-materialised instances (raw input or `scenario-instance`

@@ -23,6 +23,7 @@ pub mod map_closure;
 pub mod residency;
 pub mod rig;
 pub mod road_decals;
+pub mod scene_setup;
 pub mod schedule;
 pub mod sensor_video;
 pub mod signal_heads;
