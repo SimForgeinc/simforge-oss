@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readMapAssetCacheBudgetSetting } from "../../../src/lib/maps/frontend/map-asset-cache";
 import {
   MAP_ASSET_CACHE_DEFAULT_BUDGET_BYTES,
   MAP_ASSET_CACHE_MAX_QUOTA_SHARE,
@@ -154,13 +155,14 @@ describe("map cache ceiling", () => {
 });
 
 describe("chosen cache size", () => {
+  // The reader takes its storage as an argument, so the module is imported once,
+  // statically: a cold `vi.resetModules()` + dynamic import of the whole cache
+  // graph took longer than the 10 s test timeout under the merge gate's load.
   beforeEach(() => {
     localStorage.clear();
-    vi.resetModules();
   });
 
-  it("reads the default, a preset and Max from storage, ignoring junk", async () => {
-    const { readMapAssetCacheBudgetSetting } = await import("../../../src/lib/maps/frontend/map-asset-cache");
+  it("reads the default, a preset and Max from storage, ignoring junk", () => {
     const store = memoryStorage();
     expect(readMapAssetCacheBudgetSetting(store)).toEqual({ kind: "bytes", bytes: 32 * GIB });
     store.setItem("simforge.map-cache.budget.v1", JSON.stringify({ kind: "bytes", bytes: 8 * GIB }));
