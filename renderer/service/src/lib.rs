@@ -6,6 +6,7 @@
 //! hard 64 MiB frame cap. The endpoint is a Unix-domain socket on Unix and a
 //! local named pipe on Windows ([`endpoint`]); frame payloads are handed off
 //! through a memory-mapped ring file ([`shm`]) on every OS.
+// Pipeline canary: A2 (2026-09-25), a no-op marker for the change-to-dev benchmark.
 pub mod carla;
 pub mod cli;
 pub mod dynamics;
