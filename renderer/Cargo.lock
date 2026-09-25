@@ -5585,6 +5585,7 @@ name = "simforge-authoring"
 version = "0.1.0"
 dependencies = [
  "flate2",
+ "regex",
  "serde",
  "serde_json",
  "serde_path_to_error",

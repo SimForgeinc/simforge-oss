@@ -1,0 +1,27 @@
+{
+ "argv": [
+  "export",
+  "examples/ltap-opposing.template.json",
+  "--format",
+  "xosc-1.4",
+  "--out",
+  "{OUT}/x/out"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "instance_invalid",
+  "detail": {
+   "issues": [
+    {
+     "code": "invalid_type",
+     "message": "Required",
+     "path": "actors"
+    }
+   ]
+  },
+  "path": "examples/ltap-opposing.template.json",
+  "reason": "the document is neither an instance nor a SimScenarioInput"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}
