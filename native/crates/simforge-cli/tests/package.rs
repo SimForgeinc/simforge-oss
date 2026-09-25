@@ -21,7 +21,6 @@ fn simforge(home: &Path) -> Command {
         .env_remove("XDG_CACHE_HOME")
         .env_remove("SIMFORGE_CACHE_DIR")
         .env_remove("SIMFORGE_ACTOR_ASSETS_CACHE_DIR")
-        .env_remove("SIMFORGE_SKY_ASSETS")
         .env_remove("SIMFORGE_NATIVE_RUNTIME_ROOT")
         .env_remove("SIMFORGE_MAPS_REGISTRY_URL")
         .env_remove("SIMFORGE_MAPS_REGISTRY_TOKEN")
@@ -31,6 +30,13 @@ fn simforge(home: &Path) -> Command {
             format!("file://{}/no-store", home.display()),
         )
         .env("HOME", home);
+    // No sky plates, explicitly: an empty SIMFORGE_SKY_ASSETS is the selected
+    // directory, so the lookup never falls through to the source checkout's
+    // assets/sky (plates materialised there by goldens or a build would
+    // otherwise report the sky as installed).
+    let no_sky = home.join("no-sky");
+    std::fs::create_dir_all(&no_sky).unwrap();
+    cmd.env("SIMFORGE_SKY_ASSETS", no_sky);
     cmd
 }
 
