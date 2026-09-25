@@ -291,7 +291,10 @@ pub fn drop_levels(ktx2: &[u8], drop: u32) -> Result<Vec<u8>> {
     );
     if vk_format == 0 || (131..=156).contains(&vk_format) {
         ensure!(
-            (width >> drop) % 4 == 0 && (height >> drop) % 4 == 0,
+            (width >> drop) >= 4
+                && (height >> drop) >= 4
+                && (width >> drop) % 4 == 0
+                && (height >> drop) % 4 == 0,
             "level {drop} of {width}x{height} is {}x{}, not whole 4x4 blocks",
             width >> drop,
             height >> drop
@@ -447,6 +450,12 @@ mod tests {
         let (source, _) = bc7(24, 24, 5, false);
         assert!(drop_levels(&source, 1).is_ok());
         assert!(drop_levels(&source, 2).is_err());
+        // 16x512 BC7 (Di Rosa ships these): level 2 is 4x128, level 5 would be
+        // 0x16, a multiple of 4 in both directions but not a texture.
+        let (source, _) = bc7(16, 512, 10, false);
+        assert!(drop_levels(&source, 2).is_ok());
+        assert!(drop_levels(&source, 3).is_err());
+        assert!(drop_levels(&source, 5).is_err());
     }
 
     #[test]
