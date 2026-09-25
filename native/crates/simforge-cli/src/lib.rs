@@ -8,6 +8,7 @@
 //! `Subcommand`) type and a `run(args, ctx) -> CmdResult`, one variant in
 //! [`commands::Command`] and one arm in [`commands::dispatch`].
 
+pub mod auth;
 pub mod commands;
 pub mod contract;
 #[cfg(unix)]

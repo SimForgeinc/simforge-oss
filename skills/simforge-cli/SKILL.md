@@ -1,6 +1,6 @@
 ---
 name: simforge-cli
-description: Drive the `simforge` command line (SimForge SDK) from an agent. Use when asked to verify or import a SimForge scenario package, pull a map or the actor assets, build a render timeline, render a scenario offline (frames, id/depth/semantic, lidar, radar, video), re-simulate it, or serve closed-loop episodes to a policy over a socket.
+description: Drive the `simforge` command line (SimForge SDK) from an agent. Use when asked to sign in to SimForge (`simforge login`), list or pull a map (including an organization's private maps), verify or import a SimForge scenario package, pull the actor assets, build a render timeline, render a scenario offline (frames, id/depth/semantic, lidar, radar, video), re-simulate it, or serve closed-loop episodes to a policy over a socket.
 ---
 
 # simforge CLI
@@ -39,3 +39,33 @@ simforge env serve ws --socket /tmp/env.sock --rig rig.json   # closed-loop epis
   its timeline pose.
 - The rig is `simforge.render-rig/v1`: the hosted render's `sources`,
   `sensorHosts`, `clip` and `video`, pasted as they are.
+
+## Signing in (private maps)
+
+`richmond-field-station` is public. Every other map comes from the user's
+SimForge account, after one sign-in on this machine:
+
+```sh
+simforge auth status                 # exit 1 + code not_logged_in / session_invalid: sign in
+simforge login                       # browser: the user signs in on simforge.ai and clicks Approve
+simforge login --device              # no browser here (SSH, CI box): print a URL + code
+simforge maps list                   # the maps the user's organization can use
+simforge maps pull <name>@<version>  # uses the login automatically
+simforge logout                      # revoke on the host, delete the local tokens
+```
+
+- `login` needs a person: it waits (default 600 s) while they approve in a
+  browser. Tell the user what to do from the stderr event line: `login.browser`
+  (a browser tab opened; `url` if it did not), `login.device` (`userCode` and
+  `verificationUriComplete` to open anywhere). Never guess or retry an approval.
+- Without a local browser (SSH, no `DISPLAY`) `login` uses the device code and
+  says why (`methodReason`); `--device` asks for it explicitly.
+- `--host dev.simforge.ai` (or `SIMFORGE_HOST`) targets another deployment.
+  `SIMFORGE_TOKEN` (an access token) overrides the stored login for CI.
+- Results say which registry answered and as whom: `"registry": {"url",
+  "authenticated": true, "source": "account:<host>", "account"}`. When not
+  logged in, `maps` reads the public registry (`"authenticated": false`).
+- `unauthorized` (exit 1) means the session was revoked, expired or lacks
+  `maps:read`: run `simforge login` again. A refused pull installs nothing.
+- Never print, log or paste tokens. `auth status` reports where they are kept
+  (`keyring`, or a 0600 `file` with the reason), never their value.

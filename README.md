@@ -12,8 +12,9 @@ and a Python gym. The same engine and renderer power the hosted SimForge app at
   ID/depth/segmentation, lidar and radar. It runs headless on Vulkan (Linux), Metal (macOS)
   and DX12/Vulkan (Windows).
 - **CLI** (`native/crates/simforge-cli`, binary `simforge`): the scenario-package workflow,
-  `package`, `maps pull`, `assets pull`, `timeline build`, `render`, `simulate`, `env serve`
-  and `doctor`, plus the authoring commands. Every command prints JSON on stdout and exits
+  `package`, `maps list`/`maps pull`, `assets pull`, `timeline build`, `render`, `simulate`,
+  `env serve` and `doctor`, the authoring commands, and `login`/`logout`/`auth status` for
+  your SimForge account. Every command prints JSON on stdout and exits
   0 (ok), 1 (could not run) or 2 (input rejected).
 - **Python** (`adapters/`): `simforge-oss-gym` (Gymnasium environments over the Rust runtime,
   a policy runner, vector envs), `simforge-oss-timeline` (the shared pose sampler) and adapters:
@@ -62,7 +63,27 @@ simforge render ws/ --preset training --rig rig.json --out out/
 never re-simulates: the pixels follow the package's trace exactly.
 `simforge simulate ws/` re-simulates from the resolved inputs instead. The result is
 labelled as re-simulated and gets a new trace digest. `richmond-field-station` is the
-public map; other maps need a registry you are authorised for (`--registry`).
+public map; for your organization's maps, sign in first (below).
+
+## Sign in: your account's maps
+
+```sh
+simforge login                  # opens simforge.ai: sign in, check the device, Approve
+simforge login --device         # SSH or no browser: prints a URL and a code to approve anywhere
+simforge auth status            # account, organization, scopes, expiry, host, where the tokens are
+simforge maps list              # the maps your organization can use ("registry.authenticated": true)
+simforge maps pull <name>@<version>
+simforge logout                 # revokes the session on the host and deletes the tokens
+```
+
+`login` is OAuth 2.0 for a native app: a browser sign-in with PKCE and a loopback
+redirect (or the device code grant), a short-lived access token and a rotating refresh
+token, scoped to `maps:read` for the organization you approve. The tokens live in the OS
+keychain, or in a 0600 file under `~/.config/simforge` when there is no keychain (`auth
+status` says which). They are never printed. `--host` (or `SIMFORGE_HOST`) picks another
+SimForge deployment; `SIMFORGE_TOKEN` supplies an access token for CI. While logged in,
+`maps list`, `maps pull` and `package import` read your account's registry; revoke a
+machine's access any time on the account page under **CLI sessions**.
 
 The Python gym runs the same engine in-process:
 

@@ -15,7 +15,6 @@ use serde::Serialize;
 use serde_json::{json, Value};
 
 use crate::contract::{CliError, CmdResult, Ctx, Outcome};
-use crate::net;
 use crate::paths::{self, Resolved};
 
 #[derive(Debug, Args)]
@@ -563,43 +562,45 @@ fn cache_checks() -> Vec<Check> {
 // ------------------------------------------------------------------ registry
 
 fn registry_check(args: &DoctorArgs) -> Check {
-    let registry = paths::registry_url(args.registry.as_deref());
-    let url = format!("{}/index.json", registry.value);
-    let base = json!({ "registry": registry.value, "source": registry.source, "url": url });
     if args.offline {
-        return Check::new("registry", Status::Skipped, "not probed (--offline)", base);
+        return Check::new(
+            "registry",
+            Status::Skipped,
+            "not probed (--offline)",
+            crate::registry::planned(args.registry.as_deref()),
+        );
     }
-    let started = Instant::now();
-    let result = net::get_bytes(&url, Duration::from_secs(args.timeout));
-    let elapsed_ms = started.elapsed().as_millis() as u64;
-    let mut detail = base;
-    detail["elapsedMs"] = json!(elapsed_ms);
-    match result {
-        Ok(bytes) => match serde_json::from_slice::<serde_json::Map<String, Value>>(&bytes) {
-            Ok(index) => {
-                let maps: Vec<&String> = index.keys().collect();
-                detail["maps"] = json!(maps);
-                Check::new(
-                    "registry",
-                    Status::Ok,
-                    format!("{} reachable, {} map(s)", registry.value, maps.len()),
-                    detail,
-                )
-            }
-            Err(error) => {
-                detail["error"] = json!(error.to_string());
-                Check::new(
-                    "registry",
-                    Status::Fail,
-                    format!("{url} is not a registry index"),
-                    detail,
-                )
-                .fix("check the registry URL")
-            }
-        },
+    let registry = match crate::registry::select(args.registry.as_deref(), None) {
+        Ok(registry) => registry,
         Err(error) => {
-            detail["error"] = json!(error.to_string());
-            Check::new("registry", Status::Fail, format!("{url}: {error}"), detail)
+            return Check::new(
+                "registry",
+                Status::Fail,
+                error.reason.clone(),
+                error.to_json(),
+            )
+            .fix("run `simforge login` again, or name a registry with --registry")
+        }
+    };
+    let mut detail = registry.describe();
+    detail["url"] = json!(format!("{}/index.json", registry.url));
+    let started = Instant::now();
+    let result = registry.index_strict(Duration::from_secs(args.timeout));
+    detail["elapsedMs"] = json!(started.elapsed().as_millis() as u64);
+    match result {
+        Ok(index) => {
+            let maps: Vec<&String> = index.keys().collect();
+            detail["maps"] = json!(maps);
+            Check::new(
+                "registry",
+                Status::Ok,
+                format!("{} reachable, {} map(s)", registry.url, maps.len()),
+                detail,
+            )
+        }
+        Err(error) => {
+            detail["error"] = error.to_json();
+            Check::new("registry", Status::Fail, error.reason.clone(), detail)
                 .fix("check the network or the registry URL; use --offline to skip this probe explicitly")
         }
     }

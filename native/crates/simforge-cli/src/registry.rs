@@ -18,16 +18,19 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 
+use crate::auth;
 use crate::contract::CliError;
 use crate::net::{self, FetchError};
+use crate::paths;
 
-/// The env var holding a bearer token for a private http(s) registry.
+/// The env var holding a bearer token for a private http(s) registry named
+/// by `--registry` or `SIMFORGE_MAPS_REGISTRY`.
 pub const TOKEN_ENV: &str = "SIMFORGE_MAPS_REGISTRY_TOKEN";
 
 /// Timeout for registry documents (index, versions, release, closures).
@@ -326,15 +329,27 @@ pub fn parse_release(value: &Value) -> Result<Release, CliError> {
 
 // ------------------------------------------------------------------ transport
 
+/// How requests to a registry are authorized.
+pub enum RegistryAuth {
+    None,
+    /// `SIMFORGE_MAPS_REGISTRY_TOKEN`, for a registry named explicitly.
+    Env(String),
+    /// The logged-in account's session on a SimForge host (`simforge login`
+    /// or `SIMFORGE_TOKEN`), refreshed once if the registry rejects it.
+    Account(Arc<auth::Credential>),
+}
+
 /// A read-only registry: a `file://` directory or an http(s) origin.
 pub struct Registry {
     pub url: String,
-    token: Option<String>,
+    /// Why this registry: `flag:--registry`, `env:NAME`, `account:<host>` or `default`.
+    pub source: String,
+    auth: RegistryAuth,
     agent: ureq::Agent,
 }
 
 impl Registry {
-    pub fn new(url: &str, token: Option<String>) -> Result<Self, CliError> {
+    pub fn new(url: &str, auth: RegistryAuth, source: impl Into<String>) -> Result<Self, CliError> {
         let url = url.trim_end_matches('/').to_owned();
         if url.starts_with("s3://") {
             return Err(CliError::new(
@@ -352,20 +367,76 @@ impl Registry {
                     .with_path("--registry"),
             );
         }
-        let token = if url.starts_with("file://") {
-            None
+        let auth = if url.starts_with("file://") {
+            RegistryAuth::None
         } else {
-            token
+            auth
         };
         Ok(Self {
             url,
-            token,
+            source: source.into(),
+            auth,
             agent: net::pooled_agent(),
         })
     }
 
     pub fn authenticated(&self) -> bool {
-        self.token.is_some()
+        !matches!(self.auth, RegistryAuth::None)
+    }
+
+    /// The `registry` object of a result document: where, why, and as whom
+    /// (never a token).
+    pub fn describe(&self) -> Value {
+        let mut out = json!({
+            "url": self.url,
+            "source": self.source,
+            "authenticated": self.authenticated(),
+        });
+        match &self.auth {
+            RegistryAuth::None => {
+                out["auth"] = json!("none");
+            }
+            RegistryAuth::Env(_) => {
+                out["auth"] = json!(format!("bearer (env:{TOKEN_ENV})"));
+            }
+            RegistryAuth::Account(credential) => {
+                out["auth"] = json!(format!("account ({})", credential.source_label()));
+                out["host"] = json!(credential.host.name);
+                if let auth::Source::Stored(record) = credential.source() {
+                    out["account"] = json!(record.account.email);
+                    out["organization"] = json!(record.organization.name);
+                }
+            }
+        }
+        out
+    }
+
+    /// Why a request was refused, with what to do about it.
+    fn refusal(&self, error: FetchError, url: &str) -> CliError {
+        let status = match &error {
+            FetchError::Status(code @ (401 | 403)) => Some(*code),
+            _ => None,
+        };
+        let cli = error.into_cli(url);
+        let Some(status) = status else {
+            return cli;
+        };
+        let hint = match &self.auth {
+            RegistryAuth::Account(credential) => format!(
+                "the login for {} was revoked, expired or lacks {}; run `simforge login --host {}`",
+                credential.host.name,
+                auth::host::MAPS_READ,
+                credential.host.name
+            ),
+            RegistryAuth::Env(_) => format!("{TOKEN_ENV} is not accepted by this registry"),
+            RegistryAuth::None => "this registry needs credentials: run `simforge login`, or set SIMFORGE_MAPS_REGISTRY_TOKEN for a registry you name with --registry".into(),
+        };
+        CliError::new(
+            "unauthorized",
+            format!("the registry refused access (HTTP {status}): {hint}"),
+        )
+        .with_path(url.to_owned())
+        .with_detail(json!({ "url": url, "status": status, "registry": self.url, "hint": hint }))
     }
 
     fn object_url(&self, key: &str) -> String {
@@ -378,12 +449,25 @@ impl Registry {
     }
 
     fn open(&self, key: &str, timeout: Duration) -> Result<Box<dyn Read + Send>, FetchError> {
-        net::open(
-            &self.agent,
-            &self.object_url(key),
-            timeout,
-            self.token.as_deref(),
-        )
+        let url = self.object_url(key);
+        match &self.auth {
+            RegistryAuth::None => net::open(&self.agent, &url, timeout, None),
+            RegistryAuth::Env(token) => net::open(&self.agent, &url, timeout, Some(token)),
+            RegistryAuth::Account(credential) => {
+                let token = credential.access_token();
+                match net::open(&self.agent, &url, timeout, Some(&token)) {
+                    // The access token expired mid-run or was rotated by another
+                    // process: refresh once and retry; a second 401 stands.
+                    Err(FetchError::Status(401)) => {
+                        match credential.refresh_after_rejection(&token) {
+                            Ok(Some(fresh)) => net::open(&self.agent, &url, timeout, Some(&fresh)),
+                            Ok(None) | Err(_) => Err(FetchError::Status(401)),
+                        }
+                    }
+                    other => other,
+                }
+            }
+        }
     }
 
     /// A registry document, or `None` when the registry does not have it.
@@ -401,7 +485,7 @@ impl Registry {
             }
             Err(FetchError::Status(404)) => Ok(None),
             Err(FetchError::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(e) => Err(e.into_cli(&self.object_url(key))),
+            Err(e) => Err(self.refusal(e, &self.object_url(key))),
         }
     }
 
@@ -439,6 +523,27 @@ impl Registry {
             }
         }
         Ok(None)
+    }
+
+    /// `index.json` read within `timeout`, which must exist and be an object
+    /// (the `doctor` probe: a missing index is a failure there, not `{}`).
+    pub fn index_strict(&self, timeout: Duration) -> Result<Map<String, Value>, CliError> {
+        let url = self.object_url("index.json");
+        let reader = self
+            .open("index.json", timeout)
+            .map_err(|e| self.refusal(e, &url))?;
+        let mut bytes = Vec::new();
+        reader
+            .take(net::MAX_DOCUMENT_BYTES)
+            .read_to_end(&mut bytes)
+            .map_err(|e| FetchError::Unreachable(e.to_string()).into_cli(&url))?;
+        serde_json::from_slice::<Map<String, Value>>(&bytes).map_err(|e| {
+            CliError::new(
+                "registry_document_invalid",
+                format!("{url} is not a registry index: {e}"),
+            )
+            .with_path(url.clone())
+        })
     }
 
     /// The registry's `index.json` (`{}` when it has none).
@@ -479,6 +584,10 @@ impl Registry {
         // A bound on the whole transfer: two minutes plus 64 KiB/s.
         let timeout = Duration::from_secs(120 + member.bytes / 65_536);
         let reader = self.open(&key, timeout).map_err(BlobFailure::Fetch)?;
+        // The cache directory appears only once the registry has answered,
+        // so a refused pull leaves nothing behind.
+        let parent = target.parent().expect("a blob path has a parent");
+        std::fs::create_dir_all(parent).map_err(|e| BlobFailure::Local(io_error(parent, e)))?;
         let mut file = std::fs::OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -517,6 +626,101 @@ impl Registry {
         }
         Ok(())
     }
+}
+
+/// The registry a command reads, and as whom, in this order:
+/// 1. one named explicitly (`--registry`, `SIMFORGE_MAPS_REGISTRY`,
+///    `SIMFORGE_MAPS_PUBLIC_URL`), with `SIMFORGE_MAPS_REGISTRY_TOKEN` as its bearer;
+/// 2. the logged-in account's registry on the host (`--host`, `SIMFORGE_HOST`,
+///    `simforge.ai`): the maps that account's organization can use;
+/// 3. the public registry, when no login exists for the default host.
+///
+/// A host named explicitly (`--host`, `SIMFORGE_HOST`) without a login is an
+/// error, never a silent switch to the public registry.
+pub fn select(registry_flag: Option<&str>, host_flag: Option<&str>) -> Result<Registry, CliError> {
+    if let Some(url) = paths::registry_override(registry_flag) {
+        if host_flag.is_some() {
+            return Err(CliError::new(
+                "conflicting_arguments",
+                format!("--host selects the account's registry; {} names another ({}). Pass one of them.", url.source, url.value),
+            )
+            .with_path("--host"));
+        }
+        let auth = std::env::var(TOKEN_ENV)
+            .ok()
+            .map(|t| t.trim().to_owned())
+            .filter(|t| !t.is_empty())
+            .map_or(RegistryAuth::None, RegistryAuth::Env);
+        return Registry::new(&url.value, auth, url.source);
+    }
+    let host = auth::resolve_host(host_flag)?;
+    match auth::credential(&host)? {
+        Some(credential) => {
+            let url = credential.metadata.simforge_maps_registry.clone();
+            Registry::new(
+                &url,
+                RegistryAuth::Account(Arc::new(credential)),
+                format!("account:{}", host.name),
+            )
+        }
+        None if host.source != "default" => Err(auth::not_logged_in(&host)),
+        None => Registry::new(paths::PUBLIC_REGISTRY_URL, RegistryAuth::None, "default"),
+    }
+}
+
+/// Where [`select`] would look, without touching the network (`doctor --offline`).
+pub fn planned(registry_flag: Option<&str>) -> Value {
+    if let Some(url) = paths::registry_override(registry_flag) {
+        return json!({ "registry": url.value, "source": url.source });
+    }
+    let logged_in = auth::resolve_host(None).ok().and_then(|host| {
+        let store = auth::store::Store::open().ok()?;
+        store.record(&host.name).ok().flatten().map(|r| (host, r))
+    });
+    match logged_in {
+        Some((host, record)) => json!({
+            "registry": record.metadata.simforge_maps_registry,
+            "source": format!("account:{}", host.name),
+        }),
+        None => json!({ "registry": paths::PUBLIC_REGISTRY_URL, "source": "default" }),
+    }
+}
+
+/// `maps list`: every map the registry lists, with its versions.
+pub fn list(registry: &Registry) -> Result<Value, CliError> {
+    let index = registry.index()?;
+    let entries = index.as_object().ok_or_else(|| {
+        invalid("registry_document_invalid", "index.json is not an object").with_path("index.json")
+    })?;
+    let mut maps = Vec::new();
+    for (name, entry) in entries {
+        if !is_map_name(name) {
+            continue;
+        }
+        let records = registry
+            .get_json_optional(&format!("maps/{name}/versions.json"))?
+            .unwrap_or_else(|| json!([]));
+        let versions: Vec<Value> = records
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|r| {
+                json!({
+                    "version": r.get("version"),
+                    "releaseDigest": r.get("releaseDigest"),
+                    "closureDigest": r.get("closureDigest"),
+                    "createdAt": r.get("createdAt"),
+                })
+            })
+            .collect();
+        maps.push(json!({
+            "name": name,
+            "latest": entry.get("latest"),
+            "summary": entry.get("summary"),
+            "versions": versions,
+        }));
+    }
+    Ok(json!({ "maps": maps }))
 }
 
 enum BlobFailure {
@@ -760,8 +964,6 @@ fn ensure_blob(
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
         Err(e) => return Err(io_error(&cached, e)),
     }
-    let parent = cached.parent().expect("a blob path has a parent");
-    std::fs::create_dir_all(parent).map_err(|e| io_error(parent, e))?;
     let mut attempt = 0;
     loop {
         attempt += 1;
@@ -778,9 +980,11 @@ fn ensure_blob(
             }
             Err(BlobFailure::Fetch(e)) => {
                 let url = registry.object_url(&blob_key(&member.sha256));
-                Err(e
-                    .into_cli(&url)
-                    .with_detail(json!({ "member": member_path, "url": url })))
+                let mut error = registry.refusal(e, &url);
+                let mut detail = error.detail.take().unwrap_or_else(|| json!({}));
+                detail["member"] = json!(member_path);
+                detail["url"] = json!(url);
+                Err(error.with_detail(detail))
             }
         };
         let _ = std::fs::remove_file(&temporary);

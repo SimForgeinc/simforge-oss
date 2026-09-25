@@ -31,6 +31,10 @@ fn simforge(home: &Path) -> Command {
         "WGPU_ADAPTER_NAME",
         "VK_DRIVER_FILES",
         "XDG_DATA_HOME",
+        "XDG_CONFIG_HOME",
+        "SIMFORGE_CONFIG_DIR",
+        "SIMFORGE_TOKEN",
+        "SIMFORGE_HOST",
     ] {
         cmd.env_remove(var);
     }
@@ -530,6 +534,11 @@ fn help_json_is_the_whole_typed_surface() {
             "env serve",
             "skills install",
             "package import",
+            "login",
+            "logout",
+            "auth status",
+            "whoami",
+            "maps list",
         ] {
             assert!(names.contains(&expected), "{expected} missing");
         }

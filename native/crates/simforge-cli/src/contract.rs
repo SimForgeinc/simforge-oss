@@ -3,7 +3,10 @@
 //! - **stdout is the result**: exactly one JSON document, pretty-printed only
 //!   with `--pretty`. Nothing else is ever written there.
 //! - **stderr carries the structured error**: one JSON line
-//!   `{code, path?, reason, detail?}`, no progress chatter.
+//!   `{code, path?, reason, detail?}`, no progress chatter. The one
+//!   exception is `login`, which waits on a person: it writes the prompt they
+//!   must act on as JSON event lines (`{event, message, ...}`) before the
+//!   result, so an agent can relay the URL or code.
 //! - **Exit codes**: `0` ok; `1` the command could not run (bad flags, missing
 //!   file, unreachable registry); `2` it ran and found something wrong with
 //!   its input (a failed verification, a failed doctor check). Callers key
