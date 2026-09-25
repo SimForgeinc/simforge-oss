@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "catalog",
+  "verify"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "missing_argument",
+  "path": "<CATALOG>",
+  "reason": "missing required argument <CATALOG>"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

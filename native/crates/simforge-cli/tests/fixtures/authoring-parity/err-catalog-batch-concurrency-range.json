@@ -1,0 +1,17 @@
+{
+ "argv": [
+  "catalog",
+  "batch",
+  "{OUT}/catalog.json",
+  "--concurrency",
+  "33"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "bad_value",
+  "path": "--concurrency",
+  "reason": "--concurrency must be an integer from 1 to 32"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

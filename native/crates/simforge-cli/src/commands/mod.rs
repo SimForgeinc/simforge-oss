@@ -9,6 +9,7 @@ use crate::contract::{CliError, CmdResult, Ctx};
 pub mod assets;
 mod authoring_support;
 pub mod batch;
+pub mod catalog;
 pub mod doctor;
 pub mod env;
 pub mod instantiate;
@@ -81,6 +82,9 @@ pub enum Command {
     Variation(variation::VariationCommand),
     /// Sites x draws matrix of a template: instantiate -> simulate -> evaluate per cell, resumable.
     Batch(batch::BatchArgs),
+    /// The deterministic authoring catalog: 100 reserved scenario identities per installed map.
+    #[command(subcommand)]
+    Catalog(catalog::CatalogCommand),
 }
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
@@ -98,6 +102,7 @@ pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
         Command::Instantiate(args) => instantiate::run(args, ctx),
         Command::Variation(cmd) => variation::run(cmd, ctx),
         Command::Batch(args) => batch::run(args, ctx),
+        Command::Catalog(cmd) => catalog::run(cmd, ctx),
     }
 }
 

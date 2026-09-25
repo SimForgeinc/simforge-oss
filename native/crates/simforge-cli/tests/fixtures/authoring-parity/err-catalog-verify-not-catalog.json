@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "catalog",
+  "verify",
+  "fixtures/golden-traces/manifest.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "8b0528bd5eca86c88c0445af6b67c5b5d4b1cd603429d96be1196ec8fecf5d7c"
+}

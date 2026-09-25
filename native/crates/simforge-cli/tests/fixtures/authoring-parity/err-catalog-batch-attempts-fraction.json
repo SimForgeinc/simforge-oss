@@ -1,0 +1,17 @@
+{
+ "argv": [
+  "catalog",
+  "batch",
+  "{OUT}/catalog.json",
+  "--attempts",
+  "1.5"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "bad_value",
+  "path": "--attempts",
+  "reason": "--attempts must be an integer, got \"1.5\""
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}
