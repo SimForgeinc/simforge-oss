@@ -707,6 +707,22 @@ pub fn find_site(template_json: &str, map: &MapAsset, site_id: Option<&str>) -> 
     Ok(Site { site })
 }
 
+/// An authored signal reference as hosts send it.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields, untagged)]
+enum RefJson {
+    Handle {
+        handle: String,
+    },
+    // `rename_all` on the enum renames variants; the fields of an
+    // untagged variant need their own, or `featureId` never matches.
+    #[serde(rename_all = "camelCase")]
+    Feature {
+        feature_id: String,
+        approach: String,
+    },
+}
+
 impl MapAsset {
     /// `SiteSignalPlan` JSON for the site's origin junction.
     pub fn site_signal_plan_json(&self, site: &Site) -> Result<String> {
@@ -724,17 +740,6 @@ impl MapAsset {
         site: &Site,
         ref_json: &str,
     ) -> Result<Option<String>> {
-        #[derive(serde::Deserialize)]
-        #[serde(rename_all = "camelCase", deny_unknown_fields, untagged)]
-        enum RefJson {
-            Handle {
-                handle: String,
-            },
-            Feature {
-                feature_id: String,
-                approach: String,
-            },
-        }
         let r: RefJson = json_arg("site signal ref", ref_json)?;
         let view = self.bundle.signal_view();
         let plan = build_site_signal_plan(&view, site.inner());
@@ -947,6 +952,7 @@ pub fn rehearse_situation_json(
 
 /// Bounded deterministic solve; `on_evaluation` receives each evaluated
 /// `{program, rehearsal}` JSON and may abort by returning an error.
+#[allow(clippy::type_complexity)]
 pub fn solve_situation_json(
     document_json: &str,
     map: &MapAsset,
@@ -1125,4 +1131,23 @@ pub fn materialize_ambient_traffic(
         Scenario::from_input(result.input),
         serde_json::to_string(&result.provenance)?,
     ))
+}
+
+#[cfg(test)]
+mod signal_ref_tests {
+    use super::RefJson;
+
+    #[test]
+    fn both_signal_reference_forms_parse() {
+        let handle: RefJson = serde_json::from_str(r#"{"handle":"h1"}"#).unwrap();
+        assert!(matches!(handle, RefJson::Handle { handle } if handle == "h1"));
+        let feature: RefJson =
+            serde_json::from_str(r#"{"featureId":"junction:4","approach":"subject"}"#).unwrap();
+        assert!(
+            matches!(feature, RefJson::Feature { feature_id, approach } if feature_id == "junction:4" && approach == "subject")
+        );
+        assert!(
+            serde_json::from_str::<RefJson>(r#"{"feature_id":"x","approach":"left"}"#).is_err()
+        );
+    }
 }
