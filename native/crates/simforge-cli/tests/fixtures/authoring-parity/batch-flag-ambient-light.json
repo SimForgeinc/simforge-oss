@@ -1,0 +1,24 @@
+{
+ "argv": [
+  "batch",
+  "examples/ltap-opposing.template.json",
+  "--map",
+  "richmond-field-station",
+  "--max-sites",
+  "1",
+  "--concurrency",
+  "1",
+  "--ambient",
+  "light",
+  "--out",
+  "{OUT}/b"
+ ],
+ "exit": 0,
+ "files": {
+  "b/batch-summary.json": "aaee0ddfd8154c3a54f21a6c720e2e4c0b911f61c4666e4dad67d11c201d41bb",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.instance.json": "a22356230b488ba0623aedc1f329beba6d2ff568577185d169ce3b1d2aadd3ac",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.result.json": "ebd3b5e8b045b93d5beabe332c78b03cd4614f5f32400126c056fa096595be0a"
+ },
+ "stderr": null,
+ "stdoutSha256": "3779e9879597efe8b532485f29897445d8c42cd95a57811f9be3a613a64cabb2"
+}

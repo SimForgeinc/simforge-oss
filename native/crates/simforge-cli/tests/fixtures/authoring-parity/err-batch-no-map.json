@@ -1,0 +1,16 @@
+{
+ "argv": [
+  "batch",
+  "examples/ltap-opposing.template.json",
+  "--out",
+  "{OUT}/b"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "missing_option",
+  "path": "--map",
+  "reason": "one of --map, --maps or --all-maps is required"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

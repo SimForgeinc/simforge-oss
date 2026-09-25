@@ -119,6 +119,16 @@ fn read_tree(dir: &Path) -> Value {
     Value::Object(out)
 }
 
+/// Wall clock is not part of a golden (`elapsedMs` of a batch summary).
+fn mask_volatile(mut value: Value) -> Value {
+    if value.get("kind").and_then(Value::as_str) == Some("scenario-batch-summary")
+        && value.get("elapsedMs").is_some()
+    {
+        value["elapsedMs"] = Value::String("<ms>".into());
+    }
+    value
+}
+
 /// Where goldens' platform-only inputs (`packages/...`) live in the SDK.
 const INPUTS: &str = "native/crates/simforge-cli/tests/fixtures/authoring-inputs/";
 
@@ -223,12 +233,17 @@ fn authoring_commands_match_their_parity_goldens() {
             .as_object()
             .unwrap()
             .iter()
-            .map(|(k, v)| (k.clone(), Value::String(sha256(&canonical(v)))))
+            .map(|(k, v)| {
+                (
+                    k.clone(),
+                    Value::String(sha256(&canonical(&mask_volatile(v.clone())))),
+                )
+            })
             .collect();
         let mut actual = serde_json::json!({
             "argv": golden["argv"],
             "exit": output.status.code(),
-            "stdoutSha256": sha256(&canonical(&result["stdout"])),
+            "stdoutSha256": sha256(&canonical(&mask_volatile(result["stdout"].clone()))),
             "stderr": result["stderr"],
             "files": files,
         });
