@@ -18,6 +18,7 @@ pub mod simulate;
 pub mod sites;
 pub mod skills;
 pub mod timeline;
+pub mod variation;
 
 /// Commands whose surface is fixed but whose implementation has not landed.
 /// `--help` marks them `"status": "planned"` and running one fails loudly
@@ -74,6 +75,9 @@ pub enum Command {
     Sites(sites::SitesCommand),
     /// Template x site x draw -> one concrete scenario instance.
     Instantiate(instantiate::InstantiateArgs),
+    /// Child variations of a template: fork a portable one, transfer a map-bound one.
+    #[command(subcommand)]
+    Variation(variation::VariationCommand),
 }
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
@@ -89,6 +93,7 @@ pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
         Command::Skills(cmd) => skills::run(cmd, ctx),
         Command::Sites(cmd) => sites::run(cmd, ctx),
         Command::Instantiate(args) => instantiate::run(args, ctx),
+        Command::Variation(cmd) => variation::run(cmd, ctx),
     }
 }
 

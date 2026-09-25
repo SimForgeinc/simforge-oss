@@ -1,0 +1,21 @@
+{
+ "argv": [
+  "variation",
+  "fork",
+  "examples/edge-cases/01-construction-chicane-reversing-truck/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "7ec5a0ea0bab2ba5",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 0,
+ "files": {
+  "v/instance.json": "5dcee74adead20958fe3abaf24c1297d0ddb2914225a6a4647eb212c076ff71a",
+  "v/trace.json.gz": "94eb8fdde40e82cf39285c98b383d62fe156ad3d912b260bfb6b3d7e0707a5b9",
+  "v/variation.json": "459bbf6f6421862b836cbc22cd014fbbc74287b82366d0d3d23a2a237b558b9e"
+ },
+ "stderr": null,
+ "stdoutSha256": "401a8d216f0855143f1a6dc22be8f0ca407e051be9a564a77cf175faff930f6f"
+}
