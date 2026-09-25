@@ -94,6 +94,8 @@ export default {
       ],
     },
     { name: "release-scripts", when: ["scripts/release/**"], run: ["node", "--test", "scripts/release/*.test.mjs"] },
+    // Content-addressed asset closures (the CARLA model packs are not in git).
+    { name: "actor-assets", when: ["scripts/actor-assets/**", "catalog/**"], run: ["node", "--test", "scripts/actor-assets/*.test.mjs"] },
     { name: "integration-scripts", when: ["scripts/integration/**"], run: ["node", "--test", "scripts/integration/*.test.mjs"] },
     { name: "devflow", when: ["scripts/devflow/**", "devflow.config.mjs", "turbo.json"], run: ["node", "--test", "scripts/devflow/*.test.mjs"] },
     {

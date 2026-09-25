@@ -66,9 +66,7 @@ renderer/vendor/bevy_gltf/target/
 
 # Static assets studio/scripts/sync-studio-assets.mjs copies from installed
 # packages (Three's Basis transcoder, MapLibre's worker, studio-ui public
-# assets) and from this repository's own catalog packs (the CARLA model GLBs
-# the viewer fetches by their catalog `model.url`; they are versioned once
-# under catalog/<pack>/models, not a second time under what Next serves).
+# assets). Older checkouts also copied the catalog packs here.
 studio/public/catalog/
 studio/public/basis/
 studio/public/maplibre/
@@ -89,3 +87,9 @@ studio/public/scenario-editor/driver-behaviors/
 # devflow (pnpm verify / agent:env) and turbo run state
 .devflow/
 .turbo/
+
+# The CARLA model packs' bytes are content-addressed closures on the public
+# asset CDN (catalog/closures.lock.json); git keeps only their manifests and
+# attribution. models/ is the local working directory the pack tools write and
+# scripts/actor-assets/seal-packs.mjs seals and publishes from.
+catalog/*/models/

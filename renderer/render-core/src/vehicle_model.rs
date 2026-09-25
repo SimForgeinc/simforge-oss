@@ -530,7 +530,7 @@ mod tests {
 
     #[test]
     fn the_pack_sidecar_binds_ridden_two_wheelers() {
-        let pack = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../catalog/vehicles-carla");
+        let pack = crate::test_packs::pack("vehicles-carla");
         let catalog = VehicleModelCatalog::load(&pack).unwrap();
         for id in ["vehicle.bicycle", "vehicle.motorcycle"] {
             let entry = catalog.resolve(id).unwrap();

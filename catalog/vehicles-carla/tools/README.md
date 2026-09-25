@@ -1,7 +1,9 @@
 # Vehicle pipeline tooling
 
 Regenerates `../models/*.glb` from CARLA cooked content. Nothing here runs at
-product runtime.
+product runtime. `../models/` is a gitignored working directory: after a
+regeneration, seal and publish the pack (`scripts/actor-assets/seal-packs.mjs`,
+see `../CONVENTIONS.md`) so the new bytes reach the content-addressed store.
 
 ## 0. Source content (one-time, local machine)
 

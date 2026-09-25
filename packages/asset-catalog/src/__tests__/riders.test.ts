@@ -1,15 +1,14 @@
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
+// The models are not in git: each is fetched by its digest in the sealed
+// vehicles-carla closure (catalog/vehicles-carla/closure.json) into the shared
+// asset cache. An unreachable or non-verifying model fails the test.
+import { packClosure, pullBlob } from '../../../../scripts/actor-assets/closures.mjs';
 import { CATALOG } from '../catalog.js';
 import type { CatalogEntry } from '../types.js';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const repo = resolve(here, '..', '..', '..', '..');
 
 interface GltfNode { readonly name?: string; readonly mesh?: number; readonly skin?: number; readonly children?: readonly number[]; readonly extras?: Record<string, unknown> }
 interface Gltf {
@@ -42,10 +41,12 @@ describe('ridden two-wheelers', () => {
   });
 
   for (const entry of TWO_WHEELERS.filter((candidate) => candidate.model?.kind === 'glb')) {
-    it(`${entry.id}: the GLB carries the rider, its clip and every palette slot`, () => {
+    it(`${entry.id}: the GLB carries the rider, its clip and every palette slot`, async () => {
       const model = entry.model!;
       if (model.kind !== 'glb' || !model.rider) throw new Error(`${entry.id} is not ridden`);
-      const bytes = readFileSync(resolve(repo, 'catalog', 'vehicles-carla', model.url.replace(/^\/catalog\/vehicles-carla\//, '')));
+      const member = packClosure('vehicles-carla').members.get(model.url.replace(/^\/catalog\/vehicles-carla\//, ''));
+      expect(member?.sha256, `${model.url} is a member of the sealed vehicles-carla closure`).toBe(model.contentHash);
+      const bytes = readFileSync(await pullBlob(member!));
       expect(createHash('sha256').update(bytes).digest('hex')).toBe(model.contentHash);
       const gltf = glbJson(bytes);
       const rider = gltf.nodes.find((node) => node.name === 'rider');
@@ -68,6 +69,6 @@ describe('ridden two-wheelers', () => {
         expect(gltf.nodes.some((node) => node.name === 'rider_helmet')).toBe(true);
         expect(model.rider.slots).toContain('rider_helmet');
       }
-    });
+    }, 300_000); // a cold cache downloads the model (tens of MB)
   }
 });

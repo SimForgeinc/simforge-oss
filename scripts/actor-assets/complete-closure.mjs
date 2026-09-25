@@ -18,7 +18,11 @@
 //                    Its dist entry and its own `three` instance do the export.
 //                    Defaults to `packages/asset-catalog` in this repository.
 //   --external-root  Directory that resolves root-relative catalog `model.url`
-//                    bindings (`/catalog/...`). Defaults to the repository root.
+//                    bindings (`/catalog/...`). By default a `/catalog/<pack>/...`
+//                    binding resolves into that pack's content-addressed
+//                    closure (catalog/closures.lock.json), fetched by digest
+//                    (closures.mjs); the models are not in git. Other
+//                    root-relative bindings resolve under the repository root.
 //
 // An id the catalog binds to an external `glb` model is always taken from the
 // catalog, replacing whatever the base closure held for it: the web viewer
@@ -62,6 +66,8 @@ import { copyFile, link, mkdir, readdir, readFile, rename, rm, stat, writeFile }
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+import { pullPinned } from './closures.mjs';
 
 const CLOSURE_SCHEMA = 'simforge.actor-assets-closure/v1';
 const CATALOG_MEMBER = 'catalog-models.json';
@@ -361,11 +367,22 @@ async function findExternalSidecar(externalRoot, glbFile) {
  */
 const NATIVE_MOTION_KEYS = { idle: 'idle', locomotion: 'walk', run: 'run' };
 
-async function resolveExternal(externalRoot, id, binding) {
+/** Where a root-relative binding's bytes are: an explicit --external-root, else the pinned pack closure, else the repository. */
+async function externalLocation(explicitRoot, url) {
+  if (explicitRoot) return { root: explicitRoot, file: path.join(explicitRoot, ...url.slice(1).split('/')) };
+  const pack = /^\/catalog\/([^/]+)\/(models\/.+)$/u.exec(url);
+  if (pack) {
+    const root = await pullPinned(pack[1]);
+    return { root, file: path.join(root, ...pack[2].split('/')) };
+  }
+  return { root: REPO_ROOT, file: path.join(REPO_ROOT, ...url.slice(1).split('/')) };
+}
+
+async function resolveExternal(explicitRoot, id, binding) {
   if (binding.kind !== 'glb') fail(`${id}: catalog binds a ${binding.kind} model, which is a placeholder, not exportable geometry`);
   if (binding.clipAssets) fail(`${id}: external clip-asset bindings need their clip GLBs in the closure; this generator only carries clips authored into the bound model`);
   if (!binding.url.startsWith('/') || binding.url.includes('..')) fail(`${id}: model url ${binding.url} is not a root-relative catalog path resolvable under --external-root`);
-  const file = path.join(externalRoot, ...binding.url.slice(1).split('/'));
+  const { root: externalRoot, file } = await externalLocation(explicitRoot, binding.url);
   const bytes = await readFile(file).catch(() => fail(`${id}: bound model ${binding.url} is not present under ${externalRoot}`));
   const digest = sha256(bytes);
   if (digest !== binding.contentHash) fail(`${id}: ${file} hashes to ${digest}, catalog declares ${binding.contentHash}`);
@@ -449,7 +466,8 @@ async function resolveExternal(externalRoot, id, binding) {
 
 const baseRoot = path.resolve(option('--base-root'));
 const outputRoot = path.resolve(option('--out'));
-const externalRoot = path.resolve(option('--external-root', REPO_ROOT));
+const explicitExternalRoot = option('--external-root', null);
+const externalRoot = explicitExternalRoot ? path.resolve(explicitExternalRoot) : null;
 const catalogRoot = path.resolve(option('--catalog', path.join(REPO_ROOT, 'packages', 'asset-catalog')));
 const reportPath = option('--report', null);
 const baseDigestOption = option('--base-digest', null);

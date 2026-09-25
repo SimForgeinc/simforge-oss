@@ -1,7 +1,9 @@
 /**
  * Emit `src/vehicles-carla.generated.ts`: the `vehicle.*` -> CARLA GLB
- * bindings, derived from `catalog/vehicles-carla` (its `manifest.json` and the
- * bytes of each model).
+ * bindings, derived from `catalog/vehicles-carla`: its `manifest.json`, the
+ * content hash each model has in the pack's sealed closure (`closure.json`),
+ * and, for ridden models, the GLB bytes fetched by that digest
+ * (scripts/actor-assets/closures.mjs; the models are not in git).
  *
  * Generated rather than hand-written because every field except the family
  * choice is mechanical — content hash, articulated node names and the paint
@@ -16,13 +18,20 @@
  * school bus, mobility scooter, police/fire SUVs) are deliberately absent and
  * keep their procedural builder.
  */
-import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { packClosure, pullBlob } from '../../../scripts/actor-assets/closures.mjs';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const packRoot = resolve(here, '..', '..', '..', 'catalog', 'vehicles-carla');
+const sealed = packClosure('vehicles-carla');
+function member(file: string): { readonly sha256: string; readonly bytes: number } {
+  const identity = sealed.members.get(file);
+  if (!identity) throw new Error(`${file} is not a member of the sealed vehicles-carla closure; run scripts/actor-assets/seal-packs.mjs seal`);
+  return identity;
+}
 const out = resolve(here, '..', 'src', 'vehicles-carla.generated.ts');
 
 const rustOut = resolve(here, '..', '..', '..', 'renderer', 'render-core', 'src', 'vehicle_assignments.generated.rs');
@@ -122,16 +131,19 @@ const nativeEntries: Record<string, unknown> = {};
 for (const [catalogId, key, reason] of ASSIGNMENTS) {
   const vehicle = manifest.vehicles[key];
   if (!vehicle) throw new Error(`${catalogId}: ${key} is not in the pack manifest`);
-  const bytes = readFileSync(resolve(packRoot, vehicle.file));
-  const contentHash = createHash('sha256').update(bytes).digest('hex');
+  const identity = member(vehicle.file);
+  const contentHash = identity.sha256;
   // A ridden model's clip poses its wheels, crank and rider together, so the
   // renderer's own wheel/handlebar articulation would fight it.
   const rider = vehicle.rider
-    ? { ...vehicle.rider, palettes: riderExtras(bytes).palettes }
+    ? { ...vehicle.rider, palettes: riderExtras(readFileSync(await pullBlob(identity))).palettes }
     : undefined;
   const nodes = rider ? [] : articulation(vehicle.nodes);
   const paint = vehicle.tintable && vehicle.materials.includes('body_paint');
-  const glbPath = `catalog/vehicles-carla/${vehicle.file}`;
+  // Pack-relative (`models/x.glb`): the pack is a content-addressed closure,
+  // materialized under a digest-named directory, so a path must not assume
+  // the directory's name.
+  const glbPath = vehicle.file;
   nativeEntries[catalogId] = {
     model: {
       glbPath,
@@ -179,7 +191,7 @@ for (const [catalogId, key, reason] of ASSIGNMENTS) {
     ] : []),
     '  },',
   ].join('\n'));
-  report.push(`${catalogId} -> ${key} (${(bytes.byteLength / 1e6).toFixed(1)} MB${paint ? ', tintable' : ', livery'}${rider ? ', ridden' : nodes.length > 0 ? '' : ', static'})`);
+  report.push(`${catalogId} -> ${key} (${(identity.bytes / 1e6).toFixed(1)} MB${paint ? ', tintable' : ', livery'}${rider ? ', ridden' : nodes.length > 0 ? '' : ', static'})`);
 }
 
 const source = `import type { ExternalModelBinding } from './types';

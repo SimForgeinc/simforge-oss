@@ -7,7 +7,9 @@ import {
   externalModelScene,
   externalModelState,
   onExternalModelChange,
+  externalModelUrl,
   requestExternalModel,
+  setExternalModelAssetOrigin,
   setExternalModelLoader,
 } from './externalModel';
 interface TestGltf {
@@ -44,6 +46,29 @@ function model(): { gltf: TestGltf; scene: Group; clip: AnimationClip } {
 
 afterEach(() => {
   disposeExternalModels();
+});
+
+describe('pack model URLs', () => {
+  afterEach(() => setExternalModelAssetOrigin(''));
+
+  it('fetches a repository pack model by its content hash, never by its pack path', async () => {
+    const hash = 'c'.repeat(64);
+    const loader = vi.fn(async () => model().gltf);
+    setExternalModelLoader(loader);
+    const binding = { kind: 'glb' as const, url: '/catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz.glb', contentHash: hash };
+    expect(externalModelUrl(binding)).toBe(`/actor-assets/blobs/sha256/cc/${hash}`);
+    requestExternalModel(binding);
+    await vi.waitFor(() => expect(externalModelState(hash)).toBe('ready'));
+    expect(loader).toHaveBeenCalledWith(`/actor-assets/blobs/sha256/cc/${hash}`);
+
+    setExternalModelAssetOrigin('https://cdn.example/actor-assets/');
+    expect(externalModelUrl(binding)).toBe(`https://cdn.example/actor-assets/blobs/sha256/cc/${hash}`);
+  });
+
+  it('keeps other bindings on their own URL and refuses a pack model without a digest', () => {
+    expect(externalModelUrl({ url: 'https://assets.example/gallery.glb', contentHash: 'd'.repeat(64) })).toBe('https://assets.example/gallery.glb');
+    expect(() => externalModelUrl({ url: '/catalog/pedestrians-carla/models/pedestrian_0015.glb', contentHash: 'nope' })).toThrow(/contentHash/);
+  });
 });
 
 describe('external GLB model cache', () => {

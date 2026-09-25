@@ -310,7 +310,7 @@ def prepare(args) -> None:
         job = {"schema": "simforge.bevy-campaign-job/v1", **row, "fps": FPS, "width": WIDTH, "height": HEIGHT,
                "frameCount": len(states), "corpusGlbs": corpus_glbs(repo, map_id),
                "vegGlbs": veg_glbs, "vegSidecars": veg_sidecars,
-               "vehicleModels": str((repo / "catalog/vehicles-carla").resolve()),
+               "vehicleModels": str(model_pack(repo, "vehicles-carla")),
                "rigProgram": str((repo / "qualification/render-qualification-program.v1.json").resolve()),
                "xodr": str((Path.home() / "simforge-assets/maps" / map_id / "xodr.xodr").resolve()),
                "jobDir": str(job_dir.resolve())}
@@ -776,6 +776,15 @@ def render_shard(args) -> None:
 
 
 
+def model_pack(repo: Path, name: str) -> Path:
+    """A CARLA model pack's directory: its content-addressed closure, fetched by
+    digest and verified (scripts/actor-assets/closures.mjs). The models are not
+    in git; an unavailable pack fails the run."""
+    out = subprocess.run(["node", str(repo / "scripts/actor-assets/closures.mjs"), "dir", name],
+                         check=True, capture_output=True, text=True)
+    return Path(out.stdout.strip())
+
+
 def deploy(args) -> None:
     repo, parity = Path(args.repo), Path(args.parity)
     for host in HOSTS if not args.host else [args.host]:
@@ -783,8 +792,8 @@ def deploy(args) -> None:
         run(["rsync", "-a", "--checksum", args.binary, f"root@{host}:{REMOTE_ROOT}/bin/simforge-render"])
         run(["rsync", "-a", "--checksum", str(repo / "renderer/service/python/simforge_render") + "/", f"root@{host}:{REMOTE_ROOT}/bin/simforge_render/"])
         run(["rsync", "-a", "--checksum", str(repo / "scripts/bevy-campaign-parity.py"), f"root@{host}:{REMOTE_ROOT}/bin/bevy-campaign-parity.py"])
-        run(["rsync", "-a", "--checksum", str(repo / "catalog/vehicles-carla") + "/", f"root@{host}:{REMOTE_ROOT}/catalog/vehicles-carla/"])
-        run(["rsync", "-a", "--checksum", str(repo / "catalog/pedestrians-carla") + "/", f"root@{host}:{REMOTE_ROOT}/catalog/pedestrians-carla/"])
+        for pack in ("vehicles-carla", "pedestrians-carla"):
+            run(["rsync", "-a", "--checksum", str(model_pack(repo, pack)) + "/", f"root@{host}:{REMOTE_ROOT}/catalog/{pack}/"])
         run(["rsync", "-a", "--checksum", str(repo / ".corpus/belmont-research-center") + "/", f"root@{host}:{REMOTE_ROOT}/corpus/belmont-research-center/"])
         run(["rsync", "-a", "--checksum", str(repo / ".corpus/richmond-field-station") + "/", f"root@{host}:{REMOTE_ROOT}/corpus/richmond-field-station/"])
         run(["rsync", "-a", "--checksum", str(parity / "jobs") + "/", f"root@{host}:{REMOTE_ROOT}/jobs/"])

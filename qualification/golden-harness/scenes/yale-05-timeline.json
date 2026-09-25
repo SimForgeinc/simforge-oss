@@ -24,8 +24,8 @@
         "preset": "training"
       },
       "warmupFrames": 20,
-      "vehicleModels": "{repo}/catalog/vehicles-carla",
-      "pedestrianModels": "{repo}/catalog/pedestrians-carla"
+      "vehicleModels": "{pack:vehicles-carla}",
+      "pedestrianModels": "{pack:pedestrians-carla}"
     },
     "rig": {
       "cameras": [

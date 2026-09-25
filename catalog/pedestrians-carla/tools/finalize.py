@@ -50,7 +50,7 @@ for blueprint, item in sorted(stats.items()):
     animated = bool(item.get("clips"))
     entries[blueprint] = {
         "model": {
-            "glbPath": f"catalog/pedestrians-carla/{item['file']}",
+            "glbPath": item["file"],
             "attribution": line,
             "source": "carla-0.10.0-ue5",
             "animated": animated,

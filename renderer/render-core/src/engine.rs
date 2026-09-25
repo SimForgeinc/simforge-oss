@@ -8606,10 +8606,10 @@ mod tests {
     #[test]
     #[ignore = "focused GPU integration test"]
     fn service_actor_catalog_models_instantiate_mesh_nodes() {
-        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-
-        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
-        let pedestrian = repo.join("catalog/pedestrians-carla/models/pedestrian_0015.glb");
+        let vehicle = crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let pedestrian =
+            crate::test_packs::pack("pedestrians-carla").join("models/pedestrian_0015.glb");
         assert!(vehicle.is_file() && pedestrian.is_file());
 
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
@@ -8669,11 +8669,11 @@ mod tests {
     #[test]
     #[ignore = "focused GPU integration test"]
     fn ridden_two_wheeler_rider_is_its_own_instance() {
-        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let bike = repo.join("catalog/vehicles-carla/models/vehicle_motorcycle_harley_rider.glb");
+        let bike = crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_motorcycle_harley_rider.glb");
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
-        app.load_tiles(&[repo
-            .join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb")
+        app.load_tiles(&[crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb")
             .to_string_lossy()
             .into_owned()])
             .unwrap();
@@ -8773,12 +8773,12 @@ mod tests {
     #[test]
     #[ignore = "focused GPU integration test"]
     fn catalog_walkers_stand_on_their_soles_through_bevy_skinning() {
-        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let catalog = crate::vehicle_model::VehicleModelCatalog::load(
-            &repo.join("catalog/pedestrians-carla"),
-        )
+        let catalog = crate::vehicle_model::VehicleModelCatalog::load(&crate::test_packs::pack(
+            "pedestrians-carla",
+        ))
         .unwrap();
-        let tile = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let tile = crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb");
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
         app.load_tiles(&[tile.to_string_lossy().into_owned()])
             .unwrap();
@@ -8868,9 +8868,10 @@ mod tests {
     #[test]
     #[ignore = "focused GPU integration test"]
     fn actor_sensor_meshes_are_the_drawn_catalog_meshes() {
-        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
-        let pedestrian = repo.join("catalog/pedestrians-carla/models/pedestrian_0015.glb");
+        let vehicle = crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let pedestrian =
+            crate::test_packs::pack("pedestrians-carla").join("models/pedestrian_0015.glb");
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
         app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
             .unwrap();
@@ -9040,9 +9041,10 @@ mod tests {
     #[test]
     #[ignore = "focused GPU integration test"]
     fn every_id_pass_pixel_decodes_to_a_known_instance() {
-        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
-        let pedestrian = repo.join("catalog/pedestrians-carla/models/pedestrian_0015.glb");
+        let vehicle = crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let pedestrian =
+            crate::test_packs::pack("pedestrians-carla").join("models/pedestrian_0015.glb");
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
         app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
             .unwrap();
@@ -9187,9 +9189,8 @@ mod tests {
                 };
                 let mut app = SceneApp::new_with_profile_config(&lighting, look).unwrap();
                 // Readiness needs one loaded tile; it is moved out of view.
-                let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-                app.load_tiles(&[repo
-                    .join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb")
+                app.load_tiles(&[crate::test_packs::pack("vehicles-carla")
+                    .join("models/vehicle_sedan_lincoln_mkz_2020.glb")
                     .to_string_lossy()
                     .into_owned()])
                     .unwrap();
@@ -9316,8 +9317,8 @@ mod tests {
     }
 
     fn sedan_scene_with(config: &crate::render_config::RenderConfig) -> SceneApp {
-        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let vehicle = crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb");
         let mut app =
             SceneApp::new_with_profile_config(&Lighting::default(), config.profile_config())
                 .unwrap();
@@ -9328,8 +9329,8 @@ mod tests {
     }
 
     fn sedan_scene() -> SceneApp {
-        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let vehicle = crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb");
         assert!(vehicle.is_file());
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
         app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
@@ -9399,8 +9400,8 @@ mod tests {
     /// and for explicit N-sample TAA; the free (rc.73) clock is expected to
     /// drift with them, which is the determinism bug the pinned clock fixes.
     fn pinned_scene(aa: crate::profiles::AntiAlias, clock: CaptureClock) -> SceneApp {
-        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let vehicle = crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb");
         let lighting = Lighting {
             atmosphere: true,
             cloud_cover: Some(0.6),
@@ -9481,8 +9482,8 @@ mod tests {
         app.set_capture_clock(CaptureClock::Pinned { samples: 1 });
         app.apply_lighting(&lighting, config.profile_config())
             .unwrap();
-        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let vehicle = crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb");
         app.load_tiles(&[vehicle.to_string_lossy().into_owned()])
             .unwrap();
         let mut spec = test_camera("cam", 320, 192);
@@ -9754,14 +9755,13 @@ mod tests {
     #[ignore = "focused GPU integration test"]
     fn reconfigure_between_looks_keeps_rendering() {
         use crate::render_config::{Preset, RenderConfig};
-        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let showcase = RenderConfig::preset(Preset::Showcase);
         let mut app =
             SceneApp::new_with_profile_config(&Lighting::default(), showcase.profile_config())
                 .unwrap();
         app.apply_render_config(&showcase).unwrap();
-        app.load_tiles(&[repo
-            .join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb")
+        app.load_tiles(&[crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb")
             .to_string_lossy()
             .into_owned()])
             .unwrap();
@@ -9789,8 +9789,8 @@ mod tests {
     #[ignore = "focused GPU integration test"]
     fn a_car_in_shadow_is_darker_than_in_sun() {
         use crate::render_config::{Preset, RenderConfig};
-        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let vehicle = crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb");
         let (w, h) = (256usize, 160usize);
         let elev: f32 = 40.0;
         let lighting = Lighting {
@@ -9983,7 +9983,6 @@ mod tests {
     #[ignore = "focused GPU integration test"]
     fn a_wet_road_reflects_in_screen_space() {
         use crate::render_config::{Preset, RenderConfig};
-        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let lighting = Lighting {
             atmosphere: true,
             sun_elev_deg: 25.0,
@@ -9997,8 +9996,8 @@ mod tests {
             let mut app =
                 SceneApp::new_with_profile_config(&lighting, config.profile_config()).unwrap();
             app.apply_render_config(&config).unwrap();
-            app.load_tiles(&[repo
-                .join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb")
+            app.load_tiles(&[crate::test_packs::pack("vehicles-carla")
+                .join("models/vehicle_sedan_lincoln_mkz_2020.glb")
                 .to_string_lossy()
                 .into_owned()])
                 .unwrap();
@@ -10082,8 +10081,8 @@ mod tests {
     #[ignore = "focused GPU integration test"]
     fn a_glossy_car_in_canopy_shade_darkens_like_the_road() {
         use crate::render_config::{Preset, RenderConfig};
-        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let vehicle = repo.join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let vehicle = crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb");
         let (w, h) = (320usize, 180usize);
         let elev: f32 = 55.0;
         let lighting = Lighting {
@@ -10253,10 +10252,9 @@ mod tests {
     #[test]
     #[ignore = "focused GPU integration test"]
     fn a_device_error_fails_the_next_wait_with_its_cause() {
-        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let mut app = SceneApp::new(&Lighting::default()).unwrap();
-        app.load_tiles(&[repo
-            .join("catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb")
+        app.load_tiles(&[crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb")
             .to_string_lossy()
             .into_owned()])
             .unwrap();
@@ -10331,8 +10329,8 @@ mod tests {
     #[ignore = "focused GPU integration test"]
     fn camera_model_exposure_does_not_depend_on_the_previous_frame() {
         use crate::render_config::{Preset, RenderConfig};
-        let vehicle = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../catalog/vehicles-carla/models/vehicle_sedan_lincoln_mkz_2020.glb");
+        let vehicle = crate::test_packs::pack("vehicles-carla")
+            .join("models/vehicle_sedan_lincoln_mkz_2020.glb");
         let config = RenderConfig::preset(Preset::Training);
         let lighting = Lighting {
             atmosphere: true,
@@ -10486,8 +10484,8 @@ mod tests {
     /// with a pinned clock (the golden configuration).
     fn rear_view_of(model: &str, tint: Option<[f32; 3]>) -> SceneApp {
         let mut app = training_pinned_scene();
-        let glb = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../catalog/vehicles-carla/models")
+        let glb = crate::test_packs::pack("vehicles-carla")
+            .join("models")
             .join(model);
         app.upsert_actor(
             "lead",

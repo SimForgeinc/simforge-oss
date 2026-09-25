@@ -1,0 +1,26 @@
+{
+  "schema": "simforge.asset-closures-lock/v1",
+  "origin": "https://da3tufozhdsvl.cloudfront.net",
+  "closures": {
+    "actors": {
+      "sha256": "218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f",
+      "bytes": 22971,
+      "members": 168,
+      "description": "The native actor closure every render binds (packages/render/src/native/actor-assets.ts PINNED_ACTOR_ASSETS_DIGEST): catalog-models.json keyed by catalog id, each entry carrying its own CC-BY attribution string."
+    },
+    "pedestrians-carla": {
+      "sha256": "fabfc5150b4afa96107bc1f6ca2bf179ab29bdd52aa19dd4f2b0ad13da227689",
+      "bytes": 17615,
+      "document": "pedestrians-carla/closure.json",
+      "members": 41,
+      "memberBytes": 678658917
+    },
+    "vehicles-carla": {
+      "sha256": "c9fc02bba3c5c52af52d10a6d2496b90da1749bdf7ef7ed449d243ec74b2dadf",
+      "bytes": 24661,
+      "document": "vehicles-carla/closure.json",
+      "members": 48,
+      "memberBytes": 391556253
+    }
+  }
+}

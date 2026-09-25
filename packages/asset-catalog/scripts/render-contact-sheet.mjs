@@ -12,7 +12,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { chromium } from 'playwright-core';
 
@@ -33,9 +33,10 @@ if (!existsSync(join(dist, 'index.html'))) {
 // --- serve (ES modules are blocked under file://)
 //
 // Entries that bind an authored model fetch it by its catalog URL
-// (`/catalog/<pack>/models/x.glb`), so the repository's packs are served
-// alongside the built bundle; a sheet that could not reach them would be a
-// sheet of procedural stand-ins.
+// (`/catalog/<pack>/models/x.glb`), so the packs are served alongside the
+// built bundle; a sheet that could not reach them would be a sheet of
+// procedural stand-ins. The packs are not in git: each is its pinned
+// content-addressed closure, fetched by digest before the server starts.
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -44,6 +45,9 @@ const MIME = {
   '.glb': 'model/gltf-binary',
 };
 const repoRoot = resolve(pkgRoot, '..', '..');
+const { pullPinned } = await import(pathToFileURL(join(repoRoot, 'scripts', 'actor-assets', 'closures.mjs')).href);
+const packRoots = new Map();
+for (const pack of ['vehicles-carla', 'pedestrians-carla']) packRoots.set(pack, await pullPinned(pack));
 const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
   const rel = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, '');
@@ -51,8 +55,9 @@ const server = createServer((req, res) => {
     res.writeHead(204).end();
     return;
   }
-  const root = rel.startsWith('/catalog/') ? repoRoot : dist;
-  const file = join(root, rel === '/' ? 'index.html' : rel);
+  const pack = /^\/catalog\/([^/]+)\/(models\/.+)$/u.exec(rel);
+  const root = pack ? packRoots.get(pack[1]) ?? dist : dist;
+  const file = pack && packRoots.has(pack[1]) ? join(root, pack[2]) : join(root, rel === '/' ? 'index.html' : rel);
   if (!file.startsWith(root) || !existsSync(file)) {
     res.writeHead(404).end('not found');
     return;

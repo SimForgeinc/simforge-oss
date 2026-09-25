@@ -33,6 +33,8 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { pinnedDirSync } from '../../scripts/actor-assets/closures.mjs';
+
 export const A3D = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(A3D, '..', '..');
 export const GENERATED_ASSETS = process.env.SIMFORGE_GENERATED_ASSETS ?? path.join(A3D, 'generated-assets.json');
@@ -48,6 +50,21 @@ const GALLERY_DIR = path.join(ROOT, 'dev-assets/gallery-assets');
 const NORMALIZER = path.join(A3D, 'normalize-glb.mjs');
 
 const readJson = (p) => JSON.parse(fs.readFileSync(p, 'utf8'));
+
+/**
+ * The CARLA packs are not in git: each is a content-addressed closure,
+ * materialized by `node scripts/actor-assets/closures.mjs pull <pack>` (an
+ * unmaterialized pack throws, naming that command). Their sidecars bind
+ * pack-relative paths (`models/x.glb`); a repository path of the older form
+ * `catalog/<pack>/models/x.glb` resolves into the same pack.
+ */
+function carlaGlb(glbPath) {
+  return path.join(pinnedDirSync('vehicles-carla'), glbPath);
+}
+function repoGlb(glbPath) {
+  const pack = /^catalog\/([^/]+)\/(models\/.+)$/u.exec(glbPath);
+  return pack ? path.join(pinnedDirSync(pack[1]), pack[2]) : path.resolve(ROOT, glbPath);
+}
 const sha256File = (p) => crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
 function run(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, cwd: ROOT, ...opts });
@@ -185,7 +202,8 @@ export function normalizeGlb(file, { dims, cls, out = file, yaw = null } = {}) {
 /** Absolute path of the renderer-facing GLB for an entry (derived for gallery, in place for generated). */
 function rendererGlb(e) {
   if (e.source === 'catalog-gallery') return path.join(MODELS_DIR, 'gallery', `${e.id}.glb`);
-  return path.resolve(ROOT, e.glbPath);
+  if (e.source === 'carla') return carlaGlb(e.glbPath);
+  return repoGlb(e.glbPath);
 }
 
 /** Per-gallery-id normalization overrides (facing flips found by QA): { "<id>": { "yaw": deg } }. */
@@ -244,7 +262,7 @@ export function rebuildModelsDir(lib) {
     const c = carla[e.id];
     if (c) {
       const m = c.model ?? c;
-      out[e.id] = { model: { glbPath: path.resolve(ROOT, m.glbPath), attribution: 'carla', source: 'carla' }, tintable: true, scaleToDims: false };
+      out[e.id] = { model: { glbPath: carlaGlb(m.glbPath), attribution: 'carla', source: 'carla' }, tintable: true, scaleToDims: false };
     } else if (String(e.render).startsWith('gallery') && out[`gallery.${e.id}`]) {
       out[e.id] = out[`gallery.${e.id}`];
     }
@@ -253,7 +271,7 @@ export function rebuildModelsDir(lib) {
   // Render-side overrides (engine ids whose stock mesh audits poorly -> better GLB).
   try {
     for (const [id, o] of Object.entries(readJson(path.join(A3D, 'model-overrides.json')))) {
-      out[id] = { model: { glbPath: path.resolve(ROOT, o.glbPath), attribution: o.attribution ?? 'override', source: 'override' },
+      out[id] = { model: { glbPath: repoGlb(o.glbPath), attribution: o.attribution ?? 'override', source: 'override' },
         tintable: o.tintable ?? false, scaleToDims: o.scaleToDims ?? false };
     }
   } catch { /* no overrides file */ }

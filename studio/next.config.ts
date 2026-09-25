@@ -20,6 +20,16 @@ linkStudioHost(host);
  * which is better than mounting a rewrite that 502s.
  */
 const twinHttpOrigin = process.env.SIMFORGE_TWIN_HTTP_ORIGIN?.trim();
+/**
+ * The content-addressed actor store (`/actor-assets/blobs/sha256/<aa>/<sha256>`):
+ * the catalog's model packs are fetched by digest from it (viewer
+ * `externalModelUrl`), never from this deployment. Proxied so the browser sees
+ * one origin. SIMFORGE_ACTOR_ASSETS_BASE_URL overrides the public CDN, the same
+ * variable the render workers read; a trailing `/actor-assets` is folded away.
+ */
+const actorAssetsOrigin = (process.env.SIMFORGE_ACTOR_ASSETS_BASE_URL?.trim() || "https://da3tufozhdsvl.cloudfront.net")
+  .replace(/\/+$/, "")
+  .replace(/\/actor-assets$/, "");
 const configuredDevOrigins = (process.env.SIMFORGE_ALLOWED_DEV_ORIGINS ?? "")
   .split(",")
   .map((origin) => origin.trim())
@@ -44,9 +54,10 @@ const nextConfig: NextConfig = {
     "/*": ["../renderer/target", "../renderer/target/**/*", "../native/target", "../native/target/**/*"],
   },
   async rewrites() {
-    return twinHttpOrigin
-      ? [{ source: "/streams/:path*", destination: `${twinHttpOrigin}/streams/:path*` }]
-      : [];
+    return [
+      { source: "/actor-assets/:path*", destination: `${actorAssetsOrigin}/actor-assets/:path*` },
+      ...(twinHttpOrigin ? [{ source: "/streams/:path*", destination: `${twinHttpOrigin}/streams/:path*` }] : []),
+    ];
   },
   // Other hosts that may load the dev server (a LAN or tailnet name, say)
   // come from SIMFORGE_ALLOWED_DEV_ORIGINS; none are baked in.

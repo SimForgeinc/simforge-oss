@@ -11,7 +11,7 @@
   },
   "actorAssets": {
     "schema": "simforge.actor-assets-closure/v1",
-    "digest": "18a0289bcce82ad0742b5d5d47cce5dc905397cd015fac22c509662afdf6d058",
+    "digest": "218209f5109d8a25d9967de1cca4b202555dc12f53289463aa40a6812d79854f",
     "baseUrl": "https://da3tufozhdsvl.cloudfront.net"
   },
   "packages": [

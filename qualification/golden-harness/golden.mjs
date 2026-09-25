@@ -41,7 +41,11 @@
  * - `job: {scene, rig, ticks, passes}` — the render job minus what the
  *   harness owns: `schema`, `scene.glbs` (the resolved `corpusFiles`),
  *   `sceneState`, `outDir`, and `observe` (set for `parity` scenes). String
- *   values may use `{repo}` (repository root) and `{corpus}` (corpus root).
+ *   values may use `{repo}` (repository root), `{corpus}` (corpus root) and
+ *   `{pack:<name>}`: the directory of a content-addressed closure pinned in
+ *   catalog/closures.lock.json (the CARLA model packs, whose bytes are not in
+ *   git), fetched by digest and verified before any render
+ *   (scripts/actor-assets/closures.mjs). An unavailable pack fails the run.
  * - `corpusRootEnv` / `corpusFiles` — the map GLBs (a `tiles/` subdirectory
  *   of the corpus root is used when present).
  * - `sceneState` — `{gz}`: a gzipped `simforge.scene-state.v1` document
@@ -77,6 +81,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
+import { pullPinned } from '../../scripts/actor-assets/closures.mjs';
 import { collectNativeHardware, lavapipeEnv } from './lib/fingerprint.mjs';
 import { idPassStats } from './lib/png.mjs';
 
@@ -174,10 +179,40 @@ function hashPasses(outDir, passes, scene) {
   return out;
 }
 
-/** `{repo}` / `{corpus}` in every string of a JSON value. */
+const PACK_TOKEN = /\{pack:([a-z0-9][a-z0-9-]*)\}/gu;
+/** `{pack:<name>}` -> materialized closure directory; filled by resolvePacks before any job is built. */
+const packDirs = new Map();
+
+/** Fetch (by digest, verified) every pinned closure the scenes name, before any job is built. */
+async function resolvePacks(sceneArg) {
+  const ids = sceneArg === undefined || sceneArg === 'all'
+    ? fs.readdirSync(SCENES_DIR).filter((f) => f.endsWith('.json')).map((f) => f.replace(/\.json$/, ''))
+    : [sceneArg];
+  const names = new Set();
+  for (const id of ids) {
+    const file = path.join(SCENES_DIR, `${id}.json`);
+    if (!fs.existsSync(file)) continue;
+    for (const [, name] of fs.readFileSync(file, 'utf8').matchAll(PACK_TOKEN)) names.add(name);
+  }
+  for (const name of [...names].sort()) {
+    if (packDirs.has(name)) continue;
+    try {
+      packDirs.set(name, await pullPinned(name));
+    } catch (e) {
+      fail(1, `model pack ${name} is unavailable: ${e.message}`);
+    }
+    console.log(`[golden-harness] pack ${name}: ${packDirs.get(name)}`);
+  }
+}
+
+/** `{repo}` / `{corpus}` / `{pack:<name>}` in every string of a JSON value. */
 function substitute(value, vars) {
   if (typeof value === 'string') {
-    return value.replaceAll('{repo}', vars.repo).replaceAll('{corpus}', vars.corpus);
+    return value.replaceAll('{repo}', vars.repo).replaceAll('{corpus}', vars.corpus).replace(PACK_TOKEN, (_, name) => {
+      const dir = packDirs.get(name);
+      if (!dir) fail(1, `{pack:${name}} was not resolved before the job was built`);
+      return dir;
+    });
   }
   if (Array.isArray(value)) return value.map((v) => substitute(v, vars));
   if (value && typeof value === 'object') {
@@ -697,6 +732,7 @@ function cmdPlan(args) {
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];
 try {
+  if (cmd === 'record' || cmd === 'verify' || cmd === 'plan') await resolvePacks(args._[1]);
   if (cmd === 'record') await cmdRecord(args);
   else if (cmd === 'verify') await cmdVerify(args);
   else if (cmd === 'plan') cmdPlan(args);

@@ -1,7 +1,8 @@
-import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { packClosure } from '../../../scripts/actor-assets/closures.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '../../../catalog/pedestrians-carla');
@@ -13,11 +14,14 @@ const { pedestrians } = JSON.parse(readFileSync(resolve(root, 'manifest.json'), 
 const { entries: sidecar } = JSON.parse(readFileSync(resolve(root, 'catalog-models.json'), 'utf8')) as {
   entries: Record<string, { model: { clipGroundOffsetM?: Record<string, number> } }>;
 };
+// Content hashes come from the pack's sealed closure: the models are not in git.
+const sealed = packClosure('pedestrians-carla');
 const bindings: string[] = [];
 const entries: string[] = [];
 for (const [blueprint, item] of Object.entries(pedestrians).sort(([a], [b]) => a.localeCompare(b))) {
   if (!item.clips.walk || !item.clips.idle) throw new Error(`${blueprint}: missing locomotion clips`);
-  const hash = createHash('sha256').update(readFileSync(resolve(root, item.file))).digest('hex');
+  const hash = sealed.members.get(item.file)?.sha256;
+  if (!hash) throw new Error(`${blueprint}: ${item.file} is not a member of the sealed pedestrians-carla closure; run scripts/actor-assets/seal-packs.mjs seal`);
   const lifts = sidecar[blueprint]?.model.clipGroundOffsetM;
   if (typeof lifts?.idle !== 'number' || typeof lifts.locomotion !== 'number') {
     throw new Error(`${blueprint}: catalog-models.json has no measured clipGroundOffsetM; run tools/ground.py and tools/finalize.py`);

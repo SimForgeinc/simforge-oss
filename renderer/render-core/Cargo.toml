@@ -64,3 +64,6 @@ gpu-interop = ["bevy/raw_vulkan_init", "wgpu/vulkan", "dep:ash", "dep:libc"]
 # Walker grounding test (tests/walker_grounding.rs) poses skins straight from
 # glTF, independent of Bevy; same crate version bevy_gltf already locks.
 gltf = { version = "1.4", default-features = false, features = ["utils", "names"] }
+# The CARLA model packs the tests render are content-addressed closures
+# fetched by digest (src/test_packs.rs); their bytes are not in git.
+simforge-assets = { path = "../../native/crates/simforge-assets" }

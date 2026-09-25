@@ -22,6 +22,9 @@ use gltf::animation::util::ReadOutputs;
 use gltf::animation::Interpolation;
 use render_core::vehicle_model::VehicleModelCatalog;
 
+#[path = "../src/test_packs.rs"]
+mod test_packs;
+
 const STANCE_TOLERANCE_M: f32 = 0.01;
 const GAIT_SPREAD_M: f32 = 0.06;
 /// Samples per clip (every keyframe up to this many, evenly strided beyond).
@@ -233,7 +236,7 @@ impl Walker {
 
 #[test]
 fn every_catalog_walker_stands_on_its_soles_across_idle_and_walk() {
-    let pack = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../catalog/pedestrians-carla");
+    let pack = test_packs::pack("pedestrians-carla");
     let catalog = VehicleModelCatalog::load(&pack).unwrap();
     let manifest: serde_json::Value =
         serde_json::from_slice(&std::fs::read(pack.join("manifest.json")).unwrap()).unwrap();

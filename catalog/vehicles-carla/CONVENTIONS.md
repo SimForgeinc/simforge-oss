@@ -3,6 +3,23 @@
 38 CC BY 4.0 vehicle GLBs converted from CARLA Simulator content. Machine-readable
 metadata lives in `manifest.json`; per-asset licensing in `ATTRIBUTION.json`.
 
+## Where the model bytes live
+
+The GLBs are not in git. This pack is one content-addressed closure
+(`simforge.actor-assets-closure/v1`): `closure.json` here lists every member
+(`models/*.glb`, `ATTRIBUTION.json`, `catalog-models.json`, `manifest.json`)
+by sha256 and size, and `../closures.lock.json` pins the document's own sha256.
+The bytes are served by digest from the public asset CDN
+(`<origin>/actor-assets/blobs/sha256/<aa>/<sha256>`), and `ATTRIBUTION.json`
+travels inside the closure with the models.
+
+- Fetch the pack (verified, cached): `node scripts/actor-assets/closures.mjs dir vehicles-carla`
+  prints the materialized directory (`simforge assets pull --closure <sha256>` installs the same closure).
+- After regenerating models (the tools write `models/`, which is gitignored) or
+  editing a travelling sidecar: `node scripts/actor-assets/seal-packs.mjs seal`,
+  then `publish` (needs write access to the public asset bucket), then commit
+  `closure.json` and the lock. The merge gate runs `seal-packs.mjs check`.
+
 ## Coordinate frame
 
 - **y-up, right-handed, meters.** `+X` = vehicle forward, `-Z` = vehicle left.

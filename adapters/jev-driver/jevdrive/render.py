@@ -7,6 +7,16 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[3]
+
+
+def model_pack(name):
+    """A CARLA model pack's directory: its content-addressed closure, fetched by
+    digest and verified (scripts/actor-assets/closures.mjs). The models are not
+    in git; an unavailable pack fails the render."""
+    out = subprocess.run(["node", str(REPO / "scripts/actor-assets/closures.mjs"), "dir", name],
+                         check=True, capture_output=True, text=True)
+    return out.stdout.strip()
 
 
 def main():
@@ -34,7 +44,7 @@ def main():
     command = [binary, "--scene-state", str(state), "--glbs", ",".join(selection["glbs"]), "--quality", "high",
                "--out-dir", str(frames), "--ticks", str(args.ticks or doc["tickCount"]),
                "--camera", "follow", "--chase-dist", "18", "--chase-height", "12", "--fov", "70",
-               "--width", "960", "--height", "540", "--vehicle-models", str(Path(__file__).resolve().parents[3] / "catalog/vehicles-carla")]
+               "--width", "960", "--height", "540", "--vehicle-models", model_pack("vehicles-carla")]
     (run / "render-command.json").write_text(json.dumps(command, indent=2))
     with (run / "render.log").open("w") as log:
         subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True)

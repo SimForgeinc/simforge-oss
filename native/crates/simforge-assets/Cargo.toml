@@ -1,0 +1,20 @@
+[package]
+name = "simforge-assets"
+description = "Content-addressed asset closures (simforge.actor-assets-closure/v1): fetch by digest, verify, cache, materialize. The library behind `simforge assets pull`."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "simforge_assets"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+sha2 = { workspace = true }
+ureq = { version = "3", default-features = false, features = ["rustls"] }
+
+[dev-dependencies]
+tempfile = "3"

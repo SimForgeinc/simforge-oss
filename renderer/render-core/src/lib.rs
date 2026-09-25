@@ -53,6 +53,8 @@ pub mod shared_shadows;
 pub mod signal_heads;
 pub mod sky_pass;
 pub mod sky_texture;
+#[cfg(test)]
+mod test_packs;
 pub mod veg;
 pub mod vehicle_lamps;
 pub mod vehicle_model;

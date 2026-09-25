@@ -53,6 +53,30 @@ let generation = 0;
 const defaultLoader: ExternalModelLoader = async (url) => new GLTFLoader().loadAsync(url);
 let loadExternalModel: ExternalModelLoader = defaultLoader;
 
+/**
+ * The repository's model packs (`/catalog/<pack>/models/*.glb`, the CARLA
+ * vehicles and pedestrians) are not served by path: their bytes live in the
+ * content-addressed actor store, so a pack binding is fetched by its
+ * `contentHash` from `<origin>/actor-assets/blobs/sha256/<aa>/<hash>`. The URL
+ * names the exact bytes the binding declares, so a cached copy can never be a
+ * different model. The default origin is this page's own: hosts rewrite
+ * `/actor-assets/*` to the public asset CDN (oss/studio/next.config.ts).
+ * Other bindings (the asset gallery's resolved downloads) keep their URL.
+ */
+const PACK_MODEL_URL = /^\/catalog\/[^/]+\/models\//u;
+let actorAssetsOrigin = '';
+
+export function setExternalModelAssetOrigin(origin: string): void {
+  actorAssetsOrigin = origin.replace(/\/+$/u, '').replace(/\/actor-assets$/u, '');
+}
+
+export function externalModelUrl(binding: Pick<ExternalGlbModelBinding, 'url' | 'contentHash'>): string {
+  if (!PACK_MODEL_URL.test(binding.url)) return binding.url;
+  const hash = binding.contentHash;
+  if (!/^[0-9a-f]{64}$/u.test(hash)) throw new Error(`pack model ${binding.url} has no sha256 contentHash`);
+  return `${actorAssetsOrigin}/actor-assets/blobs/sha256/${hash.slice(0, 2)}/${hash}`;
+}
+
 export function externalModelState(contentHash: string): ExternalModelState {
   return records.get(contentHash)?.state ?? 'idle';
 }
@@ -62,7 +86,7 @@ export function requestExternalModel(binding: ExternalModelBinding): void {
   if (records.has(binding.contentHash)) return;
   records.set(binding.contentHash, {
     state: 'loading',
-    url: binding.url,
+    url: externalModelUrl(binding),
     downgradeReason: `actor-model-loading: ${binding.url}; displaying a procedural placeholder until the GLB is ready`,
   });
   queue.push({ binding, generation });
@@ -121,7 +145,7 @@ function pumpQueue(): void {
 async function performLoad({ binding, generation: loadGeneration }: QueuedLoad): Promise<void> {
   let gltf: ExternalModelAsset;
   try {
-    gltf = await Promise.resolve().then(() => loadExternalModel(binding.url));
+    gltf = await Promise.resolve().then(() => loadExternalModel(externalModelUrl(binding)));
   } catch (error) {
     if (loadGeneration !== generation) return;
     reportModelFailure(binding, error);
@@ -152,8 +176,9 @@ async function performLoad({ binding, generation: loadGeneration }: QueuedLoad):
 
 function reportModelFailure(binding: ExternalGlbModelBinding, error: unknown): void {
   const reason = error instanceof Error ? error.message : String(error);
-  const downgradeReason = `actor-model-load-failed: ${binding.url}: ${reason}; displaying a procedural placeholder instead of the authored GLB`;
-  records.set(binding.contentHash, { state: 'failed', url: binding.url, downgradeReason });
+  const url = externalModelUrl(binding);
+  const downgradeReason = `actor-model-load-failed: ${binding.url} (${url}): ${reason}; displaying a procedural placeholder instead of the authored GLB`;
+  records.set(binding.contentHash, { state: 'failed', url, downgradeReason });
   console.error('[actor-model]', downgradeReason);
 }
 

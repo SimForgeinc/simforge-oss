@@ -93,7 +93,7 @@ def main(models_dir, out_dir):
 
     def centry(vid, note=None, scale=True):
         v = manifest['vehicles'][vid]
-        e = {'model': {'glbPath': f'catalog/vehicles-carla/models/{vid}.glb',
+        e = {'model': {'glbPath': f'models/{vid}.glb',
                        'attribution': attribution['assets'][vid]['attribution'],
                        'source': 'carla-0.10.0-ue5'},
              'tintable': v['tintable'], 'scaleToDims': scale}
@@ -127,7 +127,7 @@ def main(models_dir, out_dir):
             'vehicle.toyota_camry': centry('vehicle_sedan_lincoln_mkz', note='visual stand-in; tintable sedan'),
         },
         'extras': {
-            vid: {'model': {'glbPath': f'catalog/vehicles-carla/models/{vid}.glb',
+            vid: {'model': {'glbPath': f'models/{vid}.glb',
                             'attribution': attribution['assets'][vid]['attribution'],
                             'source': 'carla-0.10.0-ue5'},
                   'tintable': manifest['vehicles'][vid]['tintable'], 'note': note}

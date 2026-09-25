@@ -15,7 +15,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0015.glb",
+        "glbPath": "models/pedestrian_0015.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -37,7 +37,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0016.glb",
+        "glbPath": "models/pedestrian_0016.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -59,7 +59,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0017.glb",
+        "glbPath": "models/pedestrian_0017.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -81,7 +81,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0018.glb",
+        "glbPath": "models/pedestrian_0018.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -103,7 +103,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0019.glb",
+        "glbPath": "models/pedestrian_0019.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -125,7 +125,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0020.glb",
+        "glbPath": "models/pedestrian_0020.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -147,7 +147,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0021.glb",
+        "glbPath": "models/pedestrian_0021.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -169,7 +169,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0022.glb",
+        "glbPath": "models/pedestrian_0022.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -191,7 +191,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0023.glb",
+        "glbPath": "models/pedestrian_0023.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -213,7 +213,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0024.glb",
+        "glbPath": "models/pedestrian_0024.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -235,7 +235,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0025.glb",
+        "glbPath": "models/pedestrian_0025.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -257,7 +257,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0026.glb",
+        "glbPath": "models/pedestrian_0026.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -279,7 +279,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0027.glb",
+        "glbPath": "models/pedestrian_0027.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -301,7 +301,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0028.glb",
+        "glbPath": "models/pedestrian_0028.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -323,7 +323,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0029.glb",
+        "glbPath": "models/pedestrian_0029.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -345,7 +345,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0030.glb",
+        "glbPath": "models/pedestrian_0030.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -367,7 +367,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0031.glb",
+        "glbPath": "models/pedestrian_0031.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -389,7 +389,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0032.glb",
+        "glbPath": "models/pedestrian_0032.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -411,7 +411,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0033.glb",
+        "glbPath": "models/pedestrian_0033.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -433,7 +433,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0034.glb",
+        "glbPath": "models/pedestrian_0034.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -455,7 +455,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0035.glb",
+        "glbPath": "models/pedestrian_0035.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -477,7 +477,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0036.glb",
+        "glbPath": "models/pedestrian_0036.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -499,7 +499,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0037.glb",
+        "glbPath": "models/pedestrian_0037.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -521,7 +521,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0038.glb",
+        "glbPath": "models/pedestrian_0038.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -543,7 +543,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0039.glb",
+        "glbPath": "models/pedestrian_0039.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -565,7 +565,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0040.glb",
+        "glbPath": "models/pedestrian_0040.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -587,7 +587,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0041.glb",
+        "glbPath": "models/pedestrian_0041.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -609,7 +609,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0042.glb",
+        "glbPath": "models/pedestrian_0042.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -631,7 +631,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0043.glb",
+        "glbPath": "models/pedestrian_0043.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -653,7 +653,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0044.glb",
+        "glbPath": "models/pedestrian_0044.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -675,7 +675,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0045.glb",
+        "glbPath": "models/pedestrian_0045.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -697,7 +697,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0046.glb",
+        "glbPath": "models/pedestrian_0046.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -719,7 +719,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0047.glb",
+        "glbPath": "models/pedestrian_0047.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -741,7 +741,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0048.glb",
+        "glbPath": "models/pedestrian_0048.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -763,7 +763,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0049.glb",
+        "glbPath": "models/pedestrian_0049.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -785,7 +785,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0050.glb",
+        "glbPath": "models/pedestrian_0050.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -807,7 +807,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0051.glb",
+        "glbPath": "models/pedestrian_0051.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
@@ -829,7 +829,7 @@
           "idle": "idle",
           "locomotion": "walk"
         },
-        "glbPath": "catalog/pedestrians-carla/models/pedestrian_0052.glb",
+        "glbPath": "models/pedestrian_0052.glb",
         "source": "carla-0.10.0-ue5"
       },
       "scaleToDims": false,
