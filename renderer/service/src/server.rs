@@ -753,6 +753,10 @@ pub(crate) struct SceneEvidence {
     /// Low-beam vehicles past the projected-beam budget (their lamps glow,
     /// no beam is cast).
     beams_over_budget: std::collections::BTreeSet<String>,
+    /// Low-beam vehicles that got no projected beam because the adapter
+    /// cannot project the low-beam pattern
+    /// ([`render_core::engine::SceneApp::beam_pattern_supported`]).
+    beam_pattern_unsupported: std::collections::BTreeSet<String>,
     /// Lamp kind -> actors whose model could not draw it.
     unrendered_lights: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<String>>,
     /// Frames without lamp state for a vehicle (xosc-lowered legacy frames).
@@ -829,6 +833,15 @@ impl SceneEvidence {
                     render_core::actor_lights::PROJECTED_HEADLIGHT_LIMIT,
                     render_core::actor_lights::PROJECTED_HEADLIGHT_LIMIT,
                     list(self.beams_over_budget.iter().cloned())
+                ),
+            });
+        }
+        if !self.beam_pattern_unsupported.is_empty() {
+            out.push(SceneWarning {
+                code: "native_actor_beam_pattern_unsupported".into(),
+                message: format!(
+                    "this GPU adapter has no bindless texture arrays, so the low-beam photometric pattern (a spot-light texture) cannot be projected; {} glowed without a projected beam",
+                    list(self.beam_pattern_unsupported.iter().cloned())
                 ),
             });
         }
@@ -2239,12 +2252,25 @@ fn apply_frame_lamps(state: &mut ServiceState, frame: &SceneState) -> Result<(),
         })
         .collect();
     let lit = beam_priority(&candidates, &eyes);
+    // No beam at all rather than a beam without its pattern (the whole
+    // 45 deg cone at the peak intensity).
+    let pattern = state.app.beam_pattern_supported();
+    if !pattern {
+        state
+            .scene_evidence
+            .beam_pattern_unsupported
+            .extend(lit.iter().map(|id| id.to_string()));
+    }
     let beamed: std::collections::HashSet<String> = lit
         .iter()
-        .take(PROJECTED_HEADLIGHT_LIMIT)
+        .take(if pattern {
+            PROJECTED_HEADLIGHT_LIMIT
+        } else {
+            0
+        })
         .map(|id| id.to_string())
         .collect();
-    if lit.len() > PROJECTED_HEADLIGHT_LIMIT {
+    if pattern && lit.len() > PROJECTED_HEADLIGHT_LIMIT {
         state.scene_evidence.beams_over_budget.extend(
             lit[PROJECTED_HEADLIGHT_LIMIT..]
                 .iter()

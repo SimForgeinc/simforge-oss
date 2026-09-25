@@ -2740,6 +2740,9 @@ pub struct SceneApp {
     /// Light-texture handle carrying that transmittance onto the sun's
     /// surface lighting without touching the atmosphere solve.
     sun_cookie: Option<Handle<Image>>,
+    /// The low-beam photometric pattern (one light texture shared by every
+    /// projected beam), made with the first beam.
+    low_beam_pattern: Option<(Handle<Image>, f32)>,
     /// The celestial `LightProbe` cubemap spawned by the last relight, so
     /// it can be released when the next one replaces it.
     probe_cubemap: Option<Handle<Image>>,
@@ -3137,6 +3140,7 @@ impl SceneApp {
             sky_pass: None,
             cloud_beam_t: None,
             sun_cookie: None,
+            low_beam_pattern: None,
             probe_cubemap: None,
             env_gain: 1.0,
             shared_shadows: false,
@@ -4965,7 +4969,11 @@ impl SceneApp {
             let want_beam = lamps.beam && lamps.low_beam;
             match (want_beam, set.beam) {
                 (true, None) => {
+                    // The caller only asks for beams the adapter can
+                    // project ([`Self::beam_pattern_supported`]).
                     let (source, aim) = beam_pose(min, max);
+                    let (pattern, peak_cd) = self.low_beam_pattern();
+                    let cone = crate::vehicle_lamps::BEAM_CONE_DEG.to_radians();
                     let beam = self
                         .app
                         .world_mut()
@@ -4975,14 +4983,20 @@ impl SceneApp {
                                 color: lighting::kelvin_to_rgb(
                                     crate::vehicle_lamps::HEAD_LAMP_CCT_K,
                                 ),
-                                intensity: crate::vehicle_lamps::BEAM_LUMENS,
+                                // Bevy divides a spot light's intensity by
+                                // 4 pi to get candela; the texture scales
+                                // that peak down to the pattern.
+                                intensity: peak_cd * 4.0 * std::f32::consts::PI,
                                 range: crate::vehicle_lamps::BEAM_RANGE_M,
                                 radius: 0.05,
-                                inner_angle: crate::vehicle_lamps::BEAM_INNER_DEG.to_radians(),
-                                outer_angle: crate::vehicle_lamps::BEAM_OUTER_DEG.to_radians(),
+                                // The cone only bounds the texture; the
+                                // pattern is zero before its edge.
+                                inner_angle: cone * 0.98,
+                                outer_angle: cone,
                                 shadow_maps_enabled: false,
                                 ..default()
                             },
+                            bevy::light::SpotLightTexture { image: pattern },
                             Transform::from_translation(source).looking_at(aim, Vec3::Y),
                             ChildOf(set.model_root),
                         ))
@@ -5079,6 +5093,52 @@ impl SceneApp {
 
     /// Light an actor's lamps as the frame's timeline lamps ask. Returns
     /// which of them the model drew; the caller records the rest.
+    /// Whether this adapter can project the low-beam pattern: Bevy samples a
+    /// spot light's texture through the clustered-decal texture array, which
+    /// needs bindless texture arrays. Without it the texture is ignored and
+    /// the beam would light its whole 45 deg cone at the peak intensity, so
+    /// the caller draws no beam and reports it instead.
+    pub fn beam_pattern_supported(&self) -> bool {
+        let world = self.app.world();
+        match (
+            world.get_resource::<RenderDevice>(),
+            world.get_resource::<bevy::render::renderer::RenderAdapter>(),
+        ) {
+            (Some(device), Some(adapter)) => {
+                bevy::pbr::decal::clustered::clustered_decals_are_usable(device, adapter)
+            }
+            _ => false,
+        }
+    }
+
+    /// The shared low-beam light texture and its peak, candela.
+    fn low_beam_pattern(&mut self) -> (Handle<Image>, f32) {
+        if let Some((handle, peak)) = &self.low_beam_pattern {
+            return (handle.clone(), *peak);
+        }
+        let size = crate::vehicle_lamps::BEAM_PATTERN_TEXELS;
+        let (texels, peak) = crate::vehicle_lamps::low_beam_pattern(size);
+        let image = Image::new(
+            Extent3d {
+                width: size,
+                height: size,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            // R16Float: filterable, and fine enough for the dim spread.
+            texels,
+            TextureFormat::R16Float,
+            RenderAssetUsages::RENDER_WORLD,
+        );
+        let handle = self
+            .app
+            .world_mut()
+            .resource_mut::<Assets<Image>>()
+            .add(image);
+        self.low_beam_pattern = Some((handle.clone(), peak));
+        (handle, peak)
+    }
+
     pub fn set_actor_lamps(&mut self, actor_id: &str, lamps: VehicleLamps) -> Result<LampsDrawn> {
         let previous = self.actor_lamp_state.insert(actor_id.to_string(), lamps);
         if previous == Some(lamps) {
@@ -10624,6 +10684,12 @@ mod tests {
         let amber = |r: i32, g: i32, b: i32| r > 150 && g > 60 && g < r - 40 && b < g - 30;
         let red = |r: i32, g: i32, b: i32| r > 90 && r > 2 * g && r > 2 * b;
         let mut app = rear_view_of("vehicle_suv_nissan_patrol.glb", None);
+        // The low-beam pattern is a spot-light texture (bindless decal
+        // arrays); every adapter the renderer qualifies on has them.
+        assert!(
+            app.beam_pattern_supported(),
+            "adapter cannot project the low-beam pattern"
+        );
         {
             use crate::render_config::{Preset, RenderConfig};
             let lighting = Lighting {
