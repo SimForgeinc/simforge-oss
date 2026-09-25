@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "locations",
+  "get",
+  "junction/rd-62-at-rd-68",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "5b7e83d49291260afc68663d74a3119cf8b7f4cd62832e4d85a5b47d5463e06f"
+}

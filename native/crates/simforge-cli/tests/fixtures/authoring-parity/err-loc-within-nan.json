@@ -1,0 +1,20 @@
+{
+ "argv": [
+  "locations",
+  "find",
+  "--map",
+  "richmond-field-station",
+  "--near",
+  "junction/rd-0-at-rd-14",
+  "--within-m",
+  "far"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "bad_value",
+  "path": "--within-m",
+  "reason": "--within-m must be a number, got \"far\""
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

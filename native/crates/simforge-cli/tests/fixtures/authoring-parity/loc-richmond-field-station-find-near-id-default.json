@@ -1,0 +1,16 @@
+{
+ "argv": [
+  "locations",
+  "find",
+  "--map",
+  "richmond-field-station",
+  "--near",
+  "loc_0ee99078284e5f5483dc8d99",
+  "--type",
+  "crosswalk,junction_movement"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "25fd11ef57f93a5c349e242cb894e519683a52a5b5358e2343efe86e791d29f5"
+}

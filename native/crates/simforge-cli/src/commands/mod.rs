@@ -11,6 +11,7 @@ mod authoring_support;
 pub mod doctor;
 pub mod env;
 pub mod instantiate;
+pub mod locations;
 pub mod maps;
 pub mod package;
 pub mod render;
@@ -78,6 +79,9 @@ pub enum Command {
     /// Template skeletons and tier-1 validation.
     #[command(subcommand)]
     Template(template::TemplateCommand),
+    /// Query an installed map's location catalog: handles, never road ids.
+    #[command(subcommand)]
+    Locations(locations::LocationsCommand),
 }
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
@@ -94,6 +98,7 @@ pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
         Command::Sites(cmd) => sites::run(cmd, ctx),
         Command::Instantiate(args) => instantiate::run(args, ctx),
         Command::Template(cmd) => template::run(cmd, ctx),
+        Command::Locations(cmd) => locations::run(cmd, ctx),
     }
 }
 

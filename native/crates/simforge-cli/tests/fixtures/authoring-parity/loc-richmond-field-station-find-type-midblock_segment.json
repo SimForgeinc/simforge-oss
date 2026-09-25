@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "locations",
+  "find",
+  "--map",
+  "richmond-field-station",
+  "--type",
+  "midblock_segment"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "2109463437a1d7cb258a7ba5c436105c8b5c8737a036235f2b91f8146939b21d"
+}
