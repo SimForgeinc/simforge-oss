@@ -1,0 +1,21 @@
+{
+ "argv": [
+  "variation",
+  "fork",
+  "examples/mechanisms/corridor/queue-tail.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "10aedd5e437cd43a",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 0,
+ "files": {
+  "v/instance.json": "768207d01018b227d5ccc8072f0df5049df458525c10149b850a2bda9a11af6e",
+  "v/trace.json.gz": "43e366c54e956afdac3af0ecdaf4fbb485136ddf6514575e117e8634e8989077",
+  "v/variation.json": "a64321346b2dd622b54cd92071dc0796d99669028af4141d5d3083444f8ba7dd"
+ },
+ "stderr": null,
+ "stdoutSha256": "6f05d46a100a6950b567d0866448220d281f2859a6de4ed82834f30d3039e5b7"
+}

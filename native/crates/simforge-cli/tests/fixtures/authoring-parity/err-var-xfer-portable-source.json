@@ -1,0 +1,35 @@
+{
+ "argv": [
+  "variation",
+  "transfer",
+  "examples/ltap-opposing.template.json",
+  "--source-map",
+  "richmond-field-station",
+  "--target-map",
+  "richmond-field-station",
+  "--site",
+  "x",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "variation_lift_failed",
+  "detail": {
+   "issues": [
+    {
+     "code": "reference_role_missing",
+     "dependency": "choose a scene_absolute reference actor",
+     "message": "reference role \"ego\" is already portable, not scene_absolute",
+     "path": "roles",
+     "retryable": true,
+     "severity": "error"
+    }
+   ]
+  },
+  "path": "examples/ltap-opposing.template.json",
+  "reason": "source scenario could not be lifted into a portable representation"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

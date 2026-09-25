@@ -9,6 +9,7 @@
 //! catalog, batch planning and evidence checks). Errors are the compiler's
 //! structured `{code, path?, reason, detail?}` with `findings` selecting exit 2.
 
+pub mod engine;
 pub mod instance;
 pub mod jsfmt;
 pub mod json;
@@ -19,5 +20,6 @@ pub mod sites;
 pub mod template;
 pub mod template_new;
 pub mod validate;
+pub mod variation;
 
 pub use simforge_compiler::CompileError;

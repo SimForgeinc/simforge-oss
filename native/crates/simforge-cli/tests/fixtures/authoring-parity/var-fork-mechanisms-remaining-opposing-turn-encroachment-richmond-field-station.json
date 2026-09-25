@@ -1,0 +1,21 @@
+{
+ "argv": [
+  "variation",
+  "fork",
+  "examples/mechanisms/remaining/opposing-turn-encroachment.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "063587b39afd7a71",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 0,
+ "files": {
+  "v/instance.json": "a81982d1b8ff15a569c3f0e5aaf5053995a2450f3273ddc47989f33cc5b18b85",
+  "v/trace.json.gz": "7da4213eb6f8cbd4fab91d476f9b7f864b69aa2f44cc214f74308a93ff26c63e",
+  "v/variation.json": "435084c4227f84b4a5b3d6bd5fe7716a0b389e64e891b9c79245130364345b9a"
+ },
+ "stderr": null,
+ "stdoutSha256": "aee6037c26c3c15a46bf61525e77d0532d29002ec2e080765cc60c21afc4a96e"
+}

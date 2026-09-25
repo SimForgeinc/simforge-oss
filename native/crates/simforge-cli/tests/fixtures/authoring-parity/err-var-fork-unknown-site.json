@@ -1,0 +1,44 @@
+{
+ "argv": [
+  "variation",
+  "fork",
+  "examples/ltap-opposing.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "0000000000000000",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "unknown_site",
+  "detail": {
+   "known": [
+    "3dd7bb59d80de7ee"
+   ],
+   "rejected": [
+    "17309579068e5b2f",
+    "1f5bab604109abdb",
+    "229927bae90553f2",
+    "23b963d8ec39589b",
+    "42f689d13a39270e",
+    "4f3a7c5582ce744e",
+    "50c110d6c4d9ab2c",
+    "592bd1df5d5de718",
+    "70b741fe3ac1a64e",
+    "7129931aeaff6136",
+    "87679dfe270ca0a2",
+    "89e8e40998ba72b1",
+    "b7ad5b6e5f0cbbdd",
+    "c73d04006261d046",
+    "d12a54318e53d4c4",
+    "ff5c2508526ee389"
+   ]
+  },
+  "path": "--site",
+  "reason": "site \"0000000000000000\" was not produced on richmond-field-station"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}
