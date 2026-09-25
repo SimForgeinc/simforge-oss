@@ -77,6 +77,10 @@ fn simforge(home: &Path) -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_simforge"));
     cmd.env_remove("SIMFORGE_ACTOR_ASSETS_ROOT")
         .env_remove("SIMFORGE_ACTOR_ASSETS_BASE_URL")
+        .env_remove("SIMFORGE_ACTOR_ASSETS_CACHE_DIR")
+        .env_remove("SIMFORGE_CACHE_DIR")
+        .env_remove("XDG_CACHE_HOME")
+        .env_remove("SIMFORGE_SKY_ASSETS")
         .env_remove("XDG_DATA_HOME")
         .env("HOME", home);
     cmd
@@ -176,6 +180,8 @@ fn pulls_verifies_and_installs_the_render_layout_then_reuses_everything() {
         .args([
             "assets",
             "pull",
+            "--only",
+            "actors",
             "--closure",
             &digest,
             "--base-url",
@@ -233,7 +239,7 @@ fn pulls_verifies_and_installs_the_render_layout_then_reuses_everything() {
 
     // Re-pull over HTTP, root from the environment: nothing downloaded.
     let (code, out, err) = run(simforge(tmp.path())
-        .args(["assets", "pull", "--closure", &digest])
+        .args(["assets", "pull", "--only", "actors", "--closure", &digest])
         .env(
             "SIMFORGE_ACTOR_ASSETS_BASE_URL",
             http_origin(origin.clone()),
@@ -257,6 +263,8 @@ fn pulls_verifies_and_installs_the_render_layout_then_reuses_everything() {
         .args([
             "assets",
             "pull",
+            "--only",
+            "actors",
             "--closure",
             &digest,
             "--base-url",
@@ -279,6 +287,8 @@ fn over_http_from_a_fresh_root() {
     let (code, out, err) = run(simforge(tmp.path()).args([
         "assets",
         "pull",
+        "--only",
+        "actors",
         "--closure",
         &digest,
         "--base-url",
@@ -311,6 +321,8 @@ fn a_tampered_blob_is_exit_2_and_installs_nothing() {
             .args([
                 "assets",
                 "pull",
+                "--only",
+                "actors",
                 "--closure",
                 &digest,
                 "--base-url",
@@ -349,6 +361,8 @@ fn a_document_that_does_not_hash_to_its_digest_is_exit_2() {
         .args([
             "assets",
             "pull",
+            "--only",
+            "actors",
             "--closure",
             &wrong,
             "--base-url",
@@ -372,6 +386,8 @@ fn an_unknown_digest_or_bad_arguments_are_exit_1() {
         let (code, _, err) = run(simforge(tmp.path()).args([
             "assets",
             "pull",
+            "--only",
+            "actors",
             "--closure",
             &unknown,
             "--base-url",
@@ -380,16 +396,30 @@ fn an_unknown_digest_or_bad_arguments_are_exit_1() {
         assert_eq!(code, 1);
         assert_eq!(err["code"], "unknown_closure", "{err}");
     }
-    let (code, _, err) =
-        run(simforge(tmp.path()).args(["assets", "pull", "--closure", "218209f5"]));
+    let (code, _, err) = run(simforge(tmp.path()).args([
+        "assets",
+        "pull",
+        "--only",
+        "actors",
+        "--closure",
+        "218209f5",
+    ]));
     assert_eq!((code, err["code"].as_str()), (1, Some("bad_value")));
-    let (code, _, err) =
-        run(simforge(tmp.path()).args(["assets", "pull", "--base-url", "s3://bucket"]));
+    let (code, _, err) = run(simforge(tmp.path()).args([
+        "assets",
+        "pull",
+        "--only",
+        "actors",
+        "--base-url",
+        "s3://bucket",
+    ]));
     assert_eq!((code, err["code"].as_str()), (1, Some("bad_value")));
     // Unreachable origin: could not run.
     let (code, _, err) = run(simforge(tmp.path()).args([
         "assets",
         "pull",
+        "--only",
+        "actors",
         "--closure",
         &unknown,
         "--base-url",
@@ -415,6 +445,8 @@ fn missing_attribution_is_refused() {
         .args([
             "assets",
             "pull",
+            "--only",
+            "actors",
             "--closure",
             &digest,
             "--base-url",
@@ -447,6 +479,8 @@ fn missing_attribution_is_refused() {
         .args([
             "assets",
             "pull",
+            "--only",
+            "actors",
             "--closure",
             &digest,
             "--base-url",
@@ -487,6 +521,8 @@ fn a_pack_closure_is_attributed_by_its_attribution_member() {
         .args([
             "assets",
             "pull",
+            "--only",
+            "actors",
             "--closure",
             &digest,
             "--base-url",
@@ -510,7 +546,89 @@ fn a_pack_closure_is_attributed_by_its_attribution_member() {
 #[test]
 fn help_lists_the_command_as_available() {
     let tmp = tempfile::tempdir().unwrap();
-    let (code, doc, _) = run(simforge(tmp.path()).args(["assets", "pull", "--help"]));
+    let (code, doc, _) =
+        run(simforge(tmp.path()).args(["assets", "pull", "--only", "actors", "--help"]));
     assert_eq!(code, 0);
     assert_eq!(doc["status"], "available");
+}
+
+#[test]
+fn the_sky_closure_fails_loudly_when_unavailable_or_mismatched() {
+    let tmp = tempfile::tempdir().unwrap();
+    // An origin without the pinned sky closure: could not run (exit 1).
+    let empty = tmp.path().join("empty-store");
+    std::fs::create_dir_all(&empty).unwrap();
+    let (code, out, err) = run(simforge(tmp.path()).args([
+        "assets",
+        "pull",
+        "--only",
+        "sky",
+        "--base-url",
+        &format!("file://{}", empty.display()),
+    ]));
+    assert_eq!(code, 1, "{out}");
+    assert_eq!(err["code"], "sky_unavailable", "{err}");
+    assert_eq!(
+        err["detail"]["closure"],
+        "ab249b8edb14254a212097f9b6793d050348155575c6b9b83368ab680d3b525b"
+    );
+
+    // An origin serving other bytes under the pinned digest: a finding (exit 2).
+    let bad = tmp.path().join("bad-store");
+    let closures = bad.join("closures");
+    std::fs::create_dir_all(&closures).unwrap();
+    std::fs::write(
+        closures.join("ab249b8edb14254a212097f9b6793d050348155575c6b9b83368ab680d3b525b.json"),
+        "{\"not\":\"the pinned sky closure\"}",
+    )
+    .unwrap();
+    let (code, _, err) = run(simforge(tmp.path()).args([
+        "assets",
+        "pull",
+        "--only",
+        "sky",
+        "--base-url",
+        &format!("file://{}", bad.display()),
+    ]));
+    assert_eq!(code, 2, "{err}");
+    assert_eq!(err["code"], "sky_mismatch", "{err}");
+
+    // --closure names the actor closure only.
+    let (code, _, err) = run(simforge(tmp.path()).args([
+        "assets",
+        "pull",
+        "--only",
+        "sky",
+        "--closure",
+        "793ec86ceda7734f1f5f7c0b260a396c11c970a471ab4418987e4d531f33daa4",
+    ]));
+    assert_eq!(
+        (code, err["code"].as_str()),
+        (1, Some("conflicting_arguments"))
+    );
+}
+
+#[test]
+#[ignore = "pulls the ~300 MB sky closure from the public CDN"]
+fn the_public_sky_closure_installs_and_the_renderer_resolves_it() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (code, out, err) = run(simforge(tmp.path()).args(["assets", "pull", "--only", "sky"]));
+    assert_eq!(code, 0, "{err}");
+    assert_eq!(out["sky"]["status"], "installed");
+    assert_eq!(out["sky"]["renderUses"]["dir"], out["sky"]["directory"]);
+    // doctor now finds the plates in the cache, with no SIMFORGE_SKY_ASSETS.
+    let (_, doc, _) = run(simforge(tmp.path()).args(["doctor", "--offline"]));
+    let sky = doc["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["id"] == "sky")
+        .unwrap()
+        .clone();
+    assert_eq!(sky["status"], "ok", "{sky}");
+    assert_eq!(sky["detail"]["closure"]["state"], "materialized");
+    // A second pull downloads nothing.
+    let (code, out, _) = run(simforge(tmp.path()).args(["assets", "pull", "--only", "sky"]));
+    assert_eq!(code, 0);
+    assert_eq!(out["sky"]["downloaded"]["count"], 0);
 }

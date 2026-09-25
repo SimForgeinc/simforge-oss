@@ -28,7 +28,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 
-use clap::{Args, Subcommand};
+use clap::{Args, Subcommand, ValueEnum};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
@@ -60,7 +60,10 @@ pub enum AssetsCommand {
 
 #[derive(Debug, Args)]
 pub struct PullArgs {
-    /// The closure digest (sha256). Default: the closure this build is pinned to.
+    /// Pull only this closure. Default: both the actor closure and the sky plates.
+    #[arg(long, value_enum)]
+    pub only: Option<Only>,
+    /// The actor closure digest (sha256). Default: the closure this build is pinned to.
     #[arg(long, value_name = "SHA256")]
     pub closure: Option<String>,
     /// Asset store base URL (https:// or file://). Default: SIMFORGE_ACTOR_ASSETS_BASE_URL, then the public store.
@@ -72,6 +75,15 @@ pub struct PullArgs {
     /// Seconds to wait for a connection or for a response to start.
     #[arg(long, value_name = "SECONDS", default_value_t = 60)]
     pub timeout: u64,
+}
+
+/// Which closure `assets pull` fetches.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum Only {
+    /// The actor closure (vehicle, walker and prop models) with its attribution.
+    Actors,
+    /// The renderer's sky plates (`simforge_assets::PINNED_SKY_CLOSURE`).
+    Sky,
 }
 
 pub fn run(command: AssetsCommand, _ctx: &Ctx) -> CmdResult {
@@ -489,7 +501,98 @@ impl Drop for Staging {
     }
 }
 
-fn pull(args: PullArgs) -> CmdResult {
+pub fn pull(args: PullArgs) -> CmdResult {
+    if args.timeout == 0 {
+        return Err(
+            CliError::new("bad_value", "--timeout must be at least 1 second")
+                .with_path("--timeout"),
+        );
+    }
+    if args.only == Some(Only::Sky) && args.closure.is_some() {
+        return Err(CliError::new(
+            "conflicting_arguments",
+            "--closure names the actor closure; it does not apply with --only sky",
+        )
+        .with_path("--closure"));
+    }
+    let base = base_url(args.base_url.as_deref());
+    let mut out = match args.only {
+        Some(Only::Sky) => json!({
+            "schema": "simforge.assets-pull/v1",
+            "baseUrl": { "value": base.value, "source": base.source },
+            "actors": { "status": "skipped", "reason": "--only sky" },
+        }),
+        _ => pull_actors(&args)?,
+    };
+    out["sky"] = match args.only {
+        Some(Only::Actors) => json!({ "status": "skipped", "reason": "--only actors" }),
+        _ => pull_sky(&base)?,
+    };
+    Ok(Outcome::ok(out))
+}
+
+/// The sky plates closure (`simforge_assets::PINNED_SKY_CLOSURE`), fetched by
+/// digest into the asset cache the renderer resolves its plates from
+/// (`render_core::sky_pass::SkyAssetPaths`), every member verified, and the
+/// plates re-verified against their pinned SOURCES.json.
+pub fn pull_sky(base: &Resolved<String>) -> Result<Value, CliError> {
+    let pin = simforge_assets::Identity::from(simforge_assets::PINNED_SKY_CLOSURE);
+    let store = simforge_assets::Store::new(&base.value, simforge_assets::cache_root_from_env());
+    let mut fetched = 0usize;
+    let mut fetched_bytes = 0u64;
+    let materialized = store
+        .materialize(&pin, &mut |progress| {
+            let simforge_assets::Progress::Member {
+                identity,
+                fetched: now,
+                ..
+            } = progress;
+            if now {
+                fetched += 1;
+                fetched_bytes += identity.bytes;
+            }
+        })
+        .map_err(|e| sky_error(e, &pin.sha256))?;
+    // What a render resolves now (an explicit SIMFORGE_SKY_ASSETS or runtime
+    // root outranks the cache, and is reported as such); the plates it picks
+    // are verified against their pinned SOURCES.json either way.
+    let render_uses = match render_core::sky_pass::SkyAssetPaths::resolve() {
+        Ok(paths) => json!({ "dir": paths.dir }),
+        Err(e) => {
+            return Err(CliError::findings("sky_invalid", format!("{e:#}"))
+                .with_path(materialized.directory.display().to_string()))
+        }
+    };
+    Ok(json!({
+        "status": "installed",
+        "closure": { "digest": pin.sha256, "bytes": pin.bytes },
+        "directory": materialized.directory,
+        "cache": store.cache_dir(),
+        "members": materialized.closure.members.len(),
+        "bytes": materialized.closure.total_member_bytes(),
+        "downloaded": { "count": fetched, "bytes": fetched_bytes },
+        "renderUses": render_uses,
+    }))
+}
+
+/// A sky closure failure in the contract: unreachable is "could not run"
+/// (exit 1), bytes that do not verify are findings (exit 2).
+pub fn sky_error(error: simforge_assets::Error, digest: &str) -> CliError {
+    let (code, findings) = match &error {
+        simforge_assets::Error::Unavailable { .. } => ("sky_unavailable", false),
+        simforge_assets::Error::Mismatch { .. } => ("sky_mismatch", true),
+        simforge_assets::Error::Invalid(_) => ("sky_invalid", true),
+        simforge_assets::Error::Io { .. } => ("write_failed", false),
+    };
+    let e = if findings {
+        CliError::findings(code, error.to_string())
+    } else {
+        CliError::new(code, error.to_string())
+    };
+    e.with_detail(json!({ "closure": digest }))
+}
+
+fn pull_actors(args: &PullArgs) -> Result<Value, CliError> {
     if args.timeout == 0 {
         return Err(
             CliError::new("bad_value", "--timeout must be at least 1 second")
@@ -699,7 +802,7 @@ fn pull(args: PullArgs) -> CmdResult {
     let member_bytes: u64 = members.values().map(|m| m.bytes).sum();
     let mut attribution = attribution_summary;
     attribution["path"] = json!(attribution_path);
-    Ok(Outcome::ok(json!({
+    Ok(json!({
         "schema": "simforge.assets-pull/v1",
         "closure": {
             "digest": digest,
@@ -721,7 +824,7 @@ fn pull(args: PullArgs) -> CmdResult {
         },
         "attribution": attribution,
         "use": { "SIMFORGE_ACTOR_ASSETS_ROOT": root.value },
-    })))
+    }))
 }
 
 #[cfg(test)]

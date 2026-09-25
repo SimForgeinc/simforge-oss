@@ -405,6 +405,49 @@ impl Registry {
         }
     }
 
+    /// `name@version` of the release in this registry whose version record
+    /// names `release_digest` (when given) or whose canonical closure digest
+    /// is `closure_digest` (index, then each map's versions.json).
+    pub fn find_release(
+        &self,
+        release_digest: Option<&str>,
+        closure_digest: &str,
+        name_hint: &str,
+    ) -> Result<Option<String>, CliError> {
+        let index = self.index()?;
+        let mut names: Vec<String> = index
+            .as_object()
+            .map(|o| o.keys().cloned().collect())
+            .unwrap_or_default();
+        names.sort_by_key(|n| n != name_hint);
+        for name in names {
+            if !is_map_name(&name) {
+                continue;
+            }
+            let records = self
+                .get_json_optional(&format!("maps/{name}/versions.json"))?
+                .unwrap_or_else(|| json!([]));
+            for record in records.as_array().into_iter().flatten() {
+                let by_release =
+                    release_digest.is_some_and(|d| record["releaseDigest"].as_str() == Some(d));
+                let by_closure = record["closureDigest"].as_str() == Some(closure_digest);
+                if by_release || (release_digest.is_none() && by_closure) {
+                    if let Some(version) = record["version"].as_str() {
+                        return Ok(Some(format!("{name}@{version}")));
+                    }
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// The registry's `index.json` (`{}` when it has none).
+    pub fn index(&self) -> Result<Value, CliError> {
+        Ok(self
+            .get_json_optional("index.json")?
+            .unwrap_or_else(|| json!({})))
+    }
+
     fn get_json_optional(&self, key: &str) -> Result<Option<Value>, CliError> {
         let Some(bytes) = self.get_optional(key)? else {
             return Ok(None);

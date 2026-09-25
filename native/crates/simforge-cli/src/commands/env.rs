@@ -307,7 +307,7 @@ fn serve(args: ServeArgs, _ctx: &Ctx) -> CmdResult {
             )?;
             hello_extra["map"]["drift"] = json!(drift);
             let xodr_text = scene_setup::xodr_text(&map)?;
-            let sky = scene_setup::sky_assets()?;
+            let (sky, _) = scene_setup::sky_assets()?;
             hello_extra["sky"] = json!(sky.dir);
             let derived = scene_setup::plan_derivatives(&closure, tier, false, &mut warnings)?;
             let profile = scene_setup::stage_textures(

@@ -5679,6 +5679,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "simforge-assets",
  "simforge-authoring",
  "simforge-bindings-common",
  "simforge-compiler",

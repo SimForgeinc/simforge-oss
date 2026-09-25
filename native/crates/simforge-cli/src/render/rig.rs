@@ -781,6 +781,59 @@ pub fn sensor_rigs(
     Ok((lidars, radars))
 }
 
+/// The rig `simforge render` mounts when no `--rig` is given: one front RGB
+/// camera on the scenario's first actor. Hosted scenarios name no `ego`, so
+/// the host is the first authored actor in the timeline (actors are sorted by
+/// id), else the first actor. Returns the rig and the choice, for the result.
+pub fn default_rig(
+    timeline: &simforge_core::trace::timeline::RenderTimeline,
+) -> Result<(Value, Value), CliError> {
+    use simforge_core::trace::ActorOrigin;
+    let (actor, rule) = match timeline
+        .actors
+        .iter()
+        .find(|a| a.origin == ActorOrigin::Authored)
+    {
+        Some(a) => (a, "the first authored actor by id"),
+        None => match timeline.actors.first() {
+            Some(a) => (
+                a,
+                "the first actor by id (the scenario has no authored actor)",
+            ),
+            None => {
+                return Err(CliError::findings(
+                    "render_rig_invalid",
+                    "no --rig and the timeline has no actor to mount the default rig on",
+                )
+                .with_path("--rig"))
+            }
+        },
+    };
+    let rig = json!({
+        "schema": "simforge.render-rig/v1",
+        "sources": [{
+            "actorId": actor.id,
+            "sensorId": "front-camera",
+            "sensorLabel": "Front camera",
+            "outputName": format!("{}-front-camera-rgb", actor.id),
+            "modality": "rgb",
+            "transform": {
+                "position": { "x": 1.6, "y": 1.45, "z": 0 },
+                "rotation": { "yawRad": 0, "pitchRad": 0, "rollRad": 0 }
+            },
+            "attributes": { "width": 1280, "height": 720, "fps": 20, "horizontalFovDeg": 90, "nearM": 0.05, "farM": 1000 }
+        }],
+        "video": { "width": 1280, "height": 720, "fps": 20, "container": "mp4", "codec": "h264", "quality": "standard" }
+    });
+    let choice = json!({
+        "actorId": actor.id,
+        "catalogId": actor.catalog_id,
+        "rule": rule,
+        "rig": rig,
+    });
+    Ok((rig, choice))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

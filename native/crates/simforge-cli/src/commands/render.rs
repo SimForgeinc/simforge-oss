@@ -107,8 +107,10 @@ pub struct RenderArgs {
     #[arg(long, value_enum)]
     pub preset: Preset,
     /// The sensor rig (`simforge.render-rig/v1`: the hosted render's sources, sensorHosts, clip and video).
+    /// Default: one front RGB camera (1280x720, 20 fps, 90 degree FOV) on the scenario's first actor
+    /// (the first authored actor by id, else the first actor), recorded in render.json and results.json.
     #[arg(long, value_name = "RIG.JSON")]
-    pub rig: PathBuf,
+    pub rig: Option<PathBuf>,
     /// Output directory (created; must be empty if it exists).
     #[arg(long, value_name = "DIR")]
     pub out: PathBuf,
@@ -299,17 +301,34 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
     stage("map", &mut mark);
 
     // 3. The rig, schedules, lowering, camera schedule.
-    let rig_json: Value = serde_json::from_slice(&std::fs::read(&args.rig).map_err(|e| {
-        CliError::new(
-            "missing_file",
-            format!("cannot read --rig {}: {e}", args.rig.display()),
-        )
-        .with_path("--rig")
-    })?)
-    .map_err(|e| {
-        CliError::findings("render_rig_invalid", format!("--rig is not JSON: {e}"))
-            .with_path("--rig")
-    })?;
+    let (rig_json, rig_default) = match &args.rig {
+        Some(path) => {
+            let rig_json: Value = serde_json::from_slice(&std::fs::read(path).map_err(|e| {
+                CliError::new(
+                    "missing_file",
+                    format!("cannot read --rig {}: {e}", path.display()),
+                )
+                .with_path("--rig")
+            })?)
+            .map_err(|e| {
+                CliError::findings("render_rig_invalid", format!("--rig is not JSON: {e}"))
+                    .with_path("--rig")
+            })?;
+            (rig_json, None)
+        }
+        None => {
+            let (rig_json, choice) = rig::default_rig(timeline)?;
+            warnings.push(
+                "render_rig_default",
+                format!(
+                    "no --rig: the default front camera is mounted on actor {} ({})",
+                    choice["actorId"].as_str().unwrap_or(""),
+                    choice["rule"].as_str().unwrap_or("")
+                ),
+            );
+            (rig_json, Some(choice))
+        }
+    };
     let rig = Rig::parse(&rig_json)?;
     rig::assert_native_sources_supported(&rig.sources)?;
     rig::assert_native_radar_budgets(&rig.sources)?;
@@ -374,7 +393,7 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
 
     // The sky plates are verified before any staging or GPU work: a render without them
     // fails in the renderer after minutes of setup otherwise.
-    let sky = scene_setup::sky_assets()?;
+    let (sky, sky_fetch) = scene_setup::sky_assets()?;
     // 4. Derivatives and the staged texture tier.
     let derived = scene_setup::plan_derivatives(&closure, tier, true, &mut warnings)?;
     let frame_pixels = scene_setup::frame_pixels(
@@ -536,7 +555,12 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
     let job_path = job_dir.join("render-job.json");
     write_json(&job_path, &job)?;
     stage("jobSpec", &mut mark);
-    let output = job_runner::run_job(&job_path, &out, &args.sets)?;
+    let mut output = job_runner::run_job(&job_path, &out, &args.sets)?;
+    // A default rig is the CLI's choice, not the renderer's: record it with the results.
+    if let Some(choice) = &rig_default {
+        output.results["rig"] = json!({ "source": "default", "default": choice });
+        write_json(&output.results_path, &output.results)?;
+    }
     stage("render", &mut mark);
 
     // 9. Parity.
@@ -574,7 +598,7 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
         "textures": tier.as_str(),
         "renderConfig": output.results["renderConfig"],
         "softwareAdapter": std::env::var("SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER").as_deref() == Ok("1"),
-        "sky": sky.dir,
+        "sky": { "dir": sky.dir, "fetched": sky_fetch.as_ref().map(|f| json!({ "closure": f["sky"]["closure"], "downloaded": f["sky"]["downloaded"] })) },
         "timeline": {
             "timelineSha256": built.sha256,
             "timelineKey": timeline.identity.timeline_key,
@@ -584,6 +608,8 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
         "map": { "dir": map.dir, "release": map.release, "releaseDigest": map.release_digest, "xodrSha256": map.xodr_sha256, "drift": map_drift },
         "actorAssets": assets.evidence(),
         "rig": {
+            "source": if rig_default.is_some() { "default" } else { "file" },
+            "default": rig_default,
             "sources": rig.sources.iter().map(|s| json!({ "outputName": s.output_name(), "modality": s.modality() })).collect::<Vec<_>>(),
             "sensorHostsDerived": hosts_derived,
             "clip": { "startSeconds": clip.start_seconds, "endSeconds": clip.end_seconds },

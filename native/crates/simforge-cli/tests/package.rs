@@ -3,10 +3,11 @@
 //! simforge-package crate): every valid package verifies to its id, every
 //! hostile one is refused with its code and rule, through the CLI contract.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use serde_json::Value;
+use serde_json::{json, Value};
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../fixtures/scenario-package")
@@ -17,7 +18,25 @@ fn simforge(home: &Path) -> Command {
     cmd.env_remove("SIMFORGE_MAPS_CACHE_ROOT")
         .env_remove("SIMFORGE_ACTOR_ASSETS_ROOT")
         .env_remove("XDG_DATA_HOME")
+        .env_remove("XDG_CACHE_HOME")
+        .env_remove("SIMFORGE_CACHE_DIR")
+        .env_remove("SIMFORGE_ACTOR_ASSETS_CACHE_DIR")
+        .env_remove("SIMFORGE_NATIVE_RUNTIME_ROOT")
+        .env_remove("SIMFORGE_MAPS_REGISTRY_URL")
+        .env_remove("SIMFORGE_MAPS_REGISTRY_TOKEN")
+        // No network: the sky prefetch finds no store (and says so).
+        .env(
+            "SIMFORGE_ACTOR_ASSETS_BASE_URL",
+            format!("file://{}/no-store", home.display()),
+        )
         .env("HOME", home);
+    // No sky plates, explicitly: an empty SIMFORGE_SKY_ASSETS is the selected
+    // directory, so the lookup never falls through to the source checkout's
+    // assets/sky (plates materialised there by goldens or a build would
+    // otherwise report the sky as installed).
+    let no_sky = home.join("no-sky");
+    std::fs::create_dir_all(&no_sky).unwrap();
+    cmd.env("SIMFORGE_SKY_ASSETS", no_sky);
     cmd
 }
 
@@ -128,11 +147,11 @@ fn inspect_reads_the_manifest_without_verifying_members() {
 }
 
 #[test]
-fn import_unpacks_a_workspace_and_reports_what_is_missing_locally() {
+fn offline_import_unpacks_and_reports_what_is_missing() {
     let home = tempfile::tempdir().unwrap();
     let ws = home.path().join("ws");
     let (code, doc, err) = run(simforge(home.path())
-        .args(["package", "import"])
+        .args(["package", "import", "--offline"])
         .arg(fixtures().join("valid/full.scenario.zip"))
         .arg("--into")
         .arg(&ws));
@@ -149,10 +168,48 @@ fn import_unpacks_a_workspace_and_reports_what_is_missing_locally() {
     }
     // The full form carries its blobs.
     assert!(ws.join("blobs/sha256").is_dir());
-    // Nothing is installed in this empty home: both are reported, never fetched.
-    assert_eq!(doc["local"]["map"]["native"], Value::Null);
-    assert_eq!(doc["local"]["actorClosure"]["installed"], false);
-    assert_eq!(doc["next"].as_array().unwrap().len(), 2);
+    assert_eq!(doc["resolved"]["offline"], true);
+    // A full package installs its map from its own blobs, offline: the
+    // native and semantic profiles of the canonical closure, and the web
+    // members it embeds (the static colliders simulate reads).
+    assert_eq!(
+        doc["resolved"]["map"]["state"], "installed-from-package",
+        "{}",
+        doc["resolved"]
+    );
+    let maps = std::path::PathBuf::from(doc["resolved"]["map"]["mapsRoot"].as_str().unwrap());
+    assert!(maps
+        .join(".corpus/richmond-field-station/master.gltf")
+        .is_file());
+    assert!(maps
+        .join("map-bundles/richmond-field-station/3d/variants/static-colliders-v2.json")
+        .is_file());
+    assert!(!maps
+        .join("map-bundles/richmond-field-station/3d/tiles/road.glb")
+        .exists());
+    assert_eq!(doc["resolved"]["actorClosure"]["state"], "skipped");
+    assert_eq!(doc["resolved"]["sky"]["state"], "skipped");
+    assert_eq!(doc["next"].as_array().unwrap().len(), 2, "{}", doc["next"]);
+    // No staging directory is left beside the workspace.
+    let leftovers: Vec<_> = std::fs::read_dir(home.path())
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_name().to_string_lossy().contains("importing"))
+        .collect();
+    assert!(leftovers.is_empty());
+
+    // Installed now: a second import finds it.
+    let (code, doc2, err) = run(simforge(home.path())
+        .args(["package", "import", "--offline"])
+        .arg(fixtures().join("valid/full.scenario.zip"))
+        .arg("--into")
+        .arg(home.path().join("ws-again")));
+    assert_eq!(code, 0, "{err}");
+    assert_eq!(
+        doc2["resolved"]["map"]["state"], "installed",
+        "{}",
+        doc2["resolved"]
+    );
 
     // The workspace is readable by the workspace commands.
     let (code, doc, err) = run(simforge(home.path())
@@ -163,7 +220,7 @@ fn import_unpacks_a_workspace_and_reports_what_is_missing_locally() {
 
     // A second import into the same directory is refused.
     let (code, _, err) = run(simforge(home.path())
-        .args(["package", "import"])
+        .args(["package", "import", "--offline"])
         .arg(fixtures().join("valid/full.scenario.zip"))
         .arg("--into")
         .arg(&ws));
@@ -175,12 +232,304 @@ fn import_unpacks_a_workspace_and_reports_what_is_missing_locally() {
     // A refused package leaves nothing behind.
     let bad = home.path().join("bad");
     let (code, _, _) = run(simforge(home.path())
-        .args(["package", "import"])
+        .args(["package", "import", "--offline"])
         .arg(fixtures().join("invalid/member-digest.scenario.zip"))
         .arg("--into")
         .arg(&bad));
     assert_eq!(code, 2);
-    assert!(!bad.join("manifest.json").exists());
+    assert!(!bad.exists());
+}
+
+const MAP: &str = "richmond-field-station";
+
+fn write(path: &Path, bytes: &[u8]) {
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, bytes).unwrap();
+}
+
+fn blob_rel(sha: &str) -> String {
+    format!("blobs/sha256/{}/{sha}", &sha[..2])
+}
+
+/// The web tile the fixture's web closure lists and a full package does not
+/// embed (`simforge-package` tests/support: `Case::fixture`).
+const WEB_TILE: &[u8] = b"glTF\x02\x00\x00\x00synthetic fixture web tile";
+
+/// A file:// map registry publishing one release (`MAP@v7`) whose canonical
+/// and web closures are the given documents, every blob stored by digest.
+fn registry(
+    root: &Path,
+    canonical: &[u8],
+    web: Option<&[u8]>,
+    blobs: &BTreeMap<String, Vec<u8>>,
+) -> String {
+    use simforge_cli::registry::sha256_hex;
+    for (sha, bytes) in blobs {
+        write(&root.join(blob_rel(sha)), bytes);
+    }
+    let base = format!("maps/{MAP}/v7");
+    write(&root.join(format!("{base}/closure.json")), canonical);
+    let closure_digest = sha256_hex(canonical);
+    let mut release = json!({
+        "schema": "simforge.map-release.v1", "name": MAP, "version": "v7", "visibility": "public",
+        "createdAt": "2026-09-25T00:00:00Z",
+        "canonical": { "key": format!("{base}/closure.json"), "digest": closure_digest },
+    });
+    if let Some(web) = web {
+        write(&root.join(format!("{base}/derived/web-package.json")), web);
+        release["web"] =
+            json!({ "key": format!("{base}/derived/web-package.json"), "digest": sha256_hex(web) });
+    }
+    let release_bytes = simforge_cli::registry::canonical_json(&release);
+    write(
+        &root.join(format!("{base}/release.json")),
+        release_bytes.as_bytes(),
+    );
+    write(
+        &root.join(format!("maps/{MAP}/versions.json")),
+        json!([{ "version": "v7", "closureDigest": closure_digest, "releaseDigest": sha256_hex(release_bytes.as_bytes()), "createdAt": "2026-09-25T00:00:00Z" }]).to_string().as_bytes(),
+    );
+    write(
+        &root.join("index.json"),
+        json!({ MAP: { "latest": "v7", "versions": ["v7"], "summary": { "label": MAP } } })
+            .to_string()
+            .as_bytes(),
+    );
+    format!("file://{}", root.display())
+}
+
+/// The fixture release as the registry would serve it: the package's
+/// canonical and web closure documents (byte for byte) and every blob they
+/// name (the full package's embedded blobs plus the web tile it leaves out).
+struct Release {
+    canonical: Vec<u8>,
+    web: Vec<u8>,
+    blobs: BTreeMap<String, Vec<u8>>,
+}
+
+fn fixture_release(home: &Path) -> Release {
+    let ws = home.join("probe");
+    let (code, _, err) = run(simforge(home)
+        .args(["package", "import", "--offline", "--cache-root"])
+        .arg(home.join("probe-maps"))
+        .arg(fixtures().join("valid/full.scenario.zip"))
+        .arg("--into")
+        .arg(&ws));
+    assert_eq!(code, 0, "{err}");
+    let canonical = std::fs::read(ws.join("map/closure.json")).unwrap();
+    let web = std::fs::read(ws.join("map/web-closure.json")).unwrap();
+    let mut blobs = BTreeMap::new();
+    for doc in [&canonical, &web] {
+        let closure: Value = serde_json::from_slice(doc).unwrap();
+        for m in closure["members"].as_object().unwrap().values() {
+            let sha = m["sha256"].as_str().unwrap().to_owned();
+            if let Ok(bytes) = std::fs::read(ws.join(blob_rel(&sha))) {
+                blobs.insert(sha, bytes);
+            }
+        }
+    }
+    blobs.insert(
+        simforge_cli::registry::sha256_hex(WEB_TILE),
+        WEB_TILE.to_vec(),
+    );
+    Release {
+        canonical,
+        web,
+        blobs,
+    }
+}
+
+/// The fixture's actor closure installed in `root` (sizes only: the full
+/// package does not embed every model, and import checks sizes).
+fn install_actor_closure(home: &Path, root: &Path) {
+    let ws = home.join("probe");
+    let doc = std::fs::read(ws.join("actors/closure.json")).unwrap();
+    let closure: Value = serde_json::from_slice(&doc).unwrap();
+    let digest = simforge_cli::registry::sha256_hex(&doc);
+    write(&root.join(format!("closures/{digest}.json")), &doc);
+    for m in closure["members"].as_object().unwrap().values() {
+        let sha = m["sha256"].as_str().unwrap();
+        let bytes = std::fs::read(ws.join(blob_rel(sha)))
+            .unwrap_or_else(|_| vec![0u8; m["bytes"].as_u64().unwrap() as usize]);
+        write(&root.join(blob_rel(sha)), &bytes);
+    }
+}
+
+fn import(home: &Path, package: &str, ws: &Path, extra: &[&str]) -> (i32, Value, Value) {
+    run(simforge(home)
+        .args(["package", "import"])
+        .arg(fixtures().join(package))
+        .arg("--into")
+        .arg(ws)
+        .args(["--cache-root"])
+        .arg(home.join("maps"))
+        .args(["--assets-root"])
+        .arg(home.join("actor-assets"))
+        .args(extra))
+}
+
+#[test]
+fn a_thin_package_pulls_the_registry_release_its_closures_name() {
+    let home = tempfile::tempdir().unwrap();
+    let release = fixture_release(home.path());
+    let url = registry(
+        &home.path().join("registry"),
+        &release.canonical,
+        Some(&release.web),
+        &release.blobs,
+    );
+    install_actor_closure(home.path(), &home.path().join("actor-assets"));
+
+    let ws = home.path().join("ws");
+    let (code, doc, err) = import(
+        home.path(),
+        "valid/thin.scenario.zip",
+        &ws,
+        &["--registry", &url],
+    );
+    assert_eq!(code, 0, "{err}");
+    let map = &doc["resolved"]["map"];
+    assert_eq!(map["state"], "pulled", "{}", doc["resolved"]);
+    assert_eq!(map["release"], format!("{MAP}@v7"));
+    assert_eq!(doc["resolved"]["actorClosure"]["state"], "installed");
+    // No sky store in the test: said, with the command that fetches it.
+    assert_eq!(
+        doc["resolved"]["sky"]["state"], "unavailable",
+        "{}",
+        doc["resolved"]["sky"]
+    );
+    assert_eq!(doc["next"].as_array().unwrap().len(), 1);
+    let maps = home.path().join("maps");
+    assert!(maps.join(format!(".corpus/{MAP}/master.gltf")).is_file());
+    assert!(maps
+        .join(format!("map-bundles/{MAP}/3d/tiles/road.glb"))
+        .is_file());
+    assert!(ws.join("manifest.json").is_file());
+
+    // Installed now: a second import resolves locally, even offline.
+    let ws2 = home.path().join("ws2");
+    let (code, doc, err) = import(home.path(), "valid/thin.scenario.zip", &ws2, &["--offline"]);
+    assert_eq!(code, 0, "{err}");
+    assert_eq!(doc["resolved"]["map"]["state"], "installed");
+    assert_eq!(
+        doc["resolved"]["map"]["installed"]["release"],
+        format!("{MAP}@v7")
+    );
+}
+
+#[test]
+fn a_map_no_public_store_carries_is_package_closure_unavailable() {
+    let home = tempfile::tempdir().unwrap();
+    // A registry whose only release is another map: the package's is private.
+    let mut other = BTreeMap::new();
+    let xodr = b"<OpenDRIVE/>".to_vec();
+    let sha = simforge_cli::registry::sha256_hex(&xodr);
+    other.insert(sha.clone(), xodr.clone());
+    let canonical = simforge_cli::registry::canonical_json(&json!({
+        "schema": "map-closure.v1", "kind": "canonical", "metadata": { "master": true },
+        "members": { "map.xodr": { "sha256": sha, "bytes": xodr.len() } },
+    }));
+    let url = registry(
+        &home.path().join("registry"),
+        canonical.as_bytes(),
+        None,
+        &other,
+    );
+    let empty_assets = home.path().join("empty-assets");
+    std::fs::create_dir_all(&empty_assets).unwrap();
+    let ws = home.path().join("ws");
+    let (code, doc, err) = import(
+        home.path(),
+        "valid/thin.scenario.zip",
+        &ws,
+        &[
+            "--registry",
+            &url,
+            "--assets-base-url",
+            &format!("file://{}", empty_assets.display()),
+        ],
+    );
+    assert_eq!(code, 2, "{doc}");
+    assert_eq!(err["code"], "package_closure_unavailable", "{err}");
+    let missing = err["detail"]["missing"].as_array().unwrap();
+    // The map fails the import before the actor closure is downloaded.
+    assert_eq!(missing.len(), 1, "{err}");
+    let map = &missing[0];
+    assert_eq!(map["closure"], "map");
+    assert_eq!(map["detail"]["state"], "unavailable");
+    // Every canonical member and the web members the CLI reads, by digest.
+    assert_eq!(map["detail"]["missing"]["count"].as_u64(), Some(7), "{err}");
+    assert!(err["reason"]
+        .as_str()
+        .unwrap()
+        .contains("re-export the full package"));
+    // Nothing is left behind.
+    assert!(!ws.exists());
+}
+
+#[test]
+fn a_release_with_another_web_closure_is_not_substituted() {
+    let home = tempfile::tempdir().unwrap();
+    let release = fixture_release(home.path());
+    // The same canonical closure, published with another web closure: not the
+    // package's release (its colliders or verdicts may differ).
+    let mut web: Value = serde_json::from_slice(&release.web).unwrap();
+    web["members"]
+        .as_object_mut()
+        .unwrap()
+        .remove("3d/tiles/road.glb");
+    let web = simforge_cli::registry::canonical_json(&web);
+    let url = registry(
+        &home.path().join("registry"),
+        &release.canonical,
+        Some(web.as_bytes()),
+        &release.blobs,
+    );
+    install_actor_closure(home.path(), &home.path().join("actor-assets"));
+    let ws = home.path().join("ws");
+    let (code, _, err) = import(
+        home.path(),
+        "valid/thin.scenario.zip",
+        &ws,
+        &["--registry", &url],
+    );
+    assert_eq!(code, 2);
+    assert_eq!(err["code"], "package_closure_unavailable", "{err}");
+    assert_eq!(err["detail"]["missing"][0]["closure"], "map");
+    assert!(!ws.exists());
+}
+
+#[test]
+fn an_actor_closure_no_store_carries_is_package_closure_unavailable() {
+    let home = tempfile::tempdir().unwrap();
+    let release = fixture_release(home.path());
+    let url = registry(
+        &home.path().join("registry"),
+        &release.canonical,
+        Some(&release.web),
+        &release.blobs,
+    );
+    let empty_assets = home.path().join("empty-assets");
+    std::fs::create_dir_all(&empty_assets).unwrap();
+    let ws = home.path().join("ws");
+    let (code, _, err) = import(
+        home.path(),
+        "valid/thin.scenario.zip",
+        &ws,
+        &[
+            "--registry",
+            &url,
+            "--assets-base-url",
+            &format!("file://{}", empty_assets.display()),
+        ],
+    );
+    assert_eq!(code, 2);
+    assert_eq!(err["code"], "package_closure_unavailable", "{err}");
+    let missing = err["detail"]["missing"].as_array().unwrap();
+    assert_eq!(missing.len(), 1, "{err}");
+    assert_eq!(missing[0]["closure"], "actors");
+    assert_eq!(missing[0]["detail"]["state"], "unavailable");
+    assert!(!ws.exists());
 }
 
 #[test]
@@ -197,13 +546,13 @@ fn the_release_smoke_package_verifies_and_imports() {
     assert_eq!(doc["packageId"], meta["packageId"]);
     let ws = home.path().join("smoke");
     let (code, doc, err) = run(simforge(home.path())
-        .args(["package", "import"])
+        .args(["package", "import", "--offline"])
         .arg(&smoke)
         .arg("--into")
         .arg(&ws));
     assert_eq!(code, 0, "{err}");
     assert_eq!(
-        doc["local"]["actorClosure"]["digest"],
+        doc["resolved"]["actorClosure"]["digest"],
         meta["actors"]["closureDigest"]
     );
 }
