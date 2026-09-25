@@ -1,0 +1,21 @@
+{
+ "argv": [
+  "validate",
+  "examples/edge-cases/02-police-roadside-stop/scenario.instance.json"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "unknown_map",
+  "detail": {
+   "devAssets": "<MAPS>",
+   "hint": "install it with `simforge maps pull yale-street@<version>`",
+   "known": [
+    "richmond-field-station"
+   ]
+  },
+  "path": "--map",
+  "reason": "no installed map \"yale-street\""
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}
