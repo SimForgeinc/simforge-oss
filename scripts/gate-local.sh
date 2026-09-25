@@ -178,6 +178,7 @@ cleanup() { # the sandbox, and on the host any step still running (each is its o
   return 0; }
 bg_names=(); declare -A bg_detail bg_pid bg_t0 bg_status bg_end
 trap cleanup EXIT
+trap "exit 143" TERM INT HUP
 if test "$SANDBOX" = required; then
   defs_src="${GATE_SANDBOX_DEFS:?GATE_SANDBOX=required needs GATE_SANDBOX_DEFS (Dockerfile, proxy.Dockerfile, squid.conf, allowlist)}"
   docker info >/dev/null 2>&1 || die "GATE_SANDBOX=required but docker is not usable"
