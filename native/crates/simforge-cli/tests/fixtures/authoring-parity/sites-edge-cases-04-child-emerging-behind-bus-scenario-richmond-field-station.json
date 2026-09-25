@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/edge-cases/04-child-emerging-behind-bus/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "865065e97bf89274cd3bc1fe538cd61c3bfc0d8d55583a5a09476325a29c1e2a"
+}

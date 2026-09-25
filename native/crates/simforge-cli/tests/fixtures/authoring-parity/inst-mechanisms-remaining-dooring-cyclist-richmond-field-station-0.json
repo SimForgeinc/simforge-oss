@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/remaining/dooring-cyclist.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "06f37aaffde02ce7",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "role_unbound",
+  "detail": {
+   "notes": [
+    "this map index carries no parking-zone layer"
+   ],
+   "status": "failed"
+  },
+  "path": "roles.parked-car",
+  "reason": "required role \"parked-car\" did not bind at this site"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/parking-transit/delivery-double-park.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "4c65691c806d6d0d7412754649c9eb17172f7c435ef6ea37f0c309b9f3b2d647"
+}

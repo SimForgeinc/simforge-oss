@@ -1,0 +1,18 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/remaining/red-light-late-entry.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "17630f3f79c11d25",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 0,
+ "files": {
+  "instance.json": "587bd14c4b4406de04aa2047a8aa511785c9719ab4832d237ed2f19cde4825db"
+ },
+ "stderr": null,
+ "stdoutSha256": "ea353983dea963686fedc4825094cb4d80b9e9b673c6af1860823259d021cb5e"
+}

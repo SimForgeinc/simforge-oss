@@ -1,0 +1,793 @@
+# `@simforge-oss/cli` — `simforge`
+
+`simforge` is the canonical command. The shorter `sf` executable remains
+available as a compatibility alias for existing automation.
+
+Layer 4 of `docs/agent-authoring-architecture.md`: the surface an LLM agent
+drives the whole stack through. Query a map's semantics, author a template
+against the published JSON Schemas, match it onto concrete sites, sample it into
+thousands of instances, simulate, filter, triage.
+
+Every compile, match, simulation and evaluation this command performs executes
+in the **native runtime**: the `@simforge-oss/native-runtime` N-API addon for
+in-process commands (`instantiate`, `simulate`, `validate`, `evaluate`, `debug`,
+`batch`, `catalog batch`) and the `simforge-runner` binary for durable jobs
+(`job …`, `worker …`, `cas …`, `runtime show`). This package holds no
+simulator, materialiser or evaluator of its own; it parses arguments, moves
+documents between files and the runtime, and formats results.
+
+```bash
+node packages/cli/bin/simforge.js sites match examples/ltap-opposing.template.json --all-maps --pretty
+node packages/cli/bin/simforge.js batch examples/ltap-opposing.template.json --all-maps --draws 5 --out out/
+```
+
+## The contract
+
+| | |
+|---|---|
+| **stdout** | the result, as JSON. `--pretty` renders the *same object* for humans. |
+| **stderr** | `{code, path?, reason, detail?}` — one JSON line, always. |
+| **exit 0** | ok |
+| **exit 1** | the command could not run (bad flag, missing map, unreadable file) |
+| **exit 2** | it ran and found something wrong with the *input*: schema issues, no matching site, an infeasible cell, a rejected trace |
+
+That 1-vs-2 split is the whole reason an unattended repair loop works: `1` means
+"you called me wrong", `2` means "your document is wrong, here is where".
+
+## Commands
+
+```
+simforge maps list
+simforge maps pull        <name[@version]> [--registry URL --cache-root DIR]
+simforge maps build       <source-dir> --name ID --work-dir DIR
+                       [--glb FILE --xodr FILE --source-manifest FILE --reuse-master DIR]
+simforge maps ingest      <source-dir> --name ID --registry URL --work-dir DIR
+                       [--glb FILE --xodr FILE --source-manifest FILE --target private|public]
+                       [--master-dir DIR --web-dir DIR]
+simforge maps promote     <name@version> --from URL --destination-registry URL --to public
+simforge locations find    --map <id> [--type --subtype --tags --affordances
+                                   --facts k=v,k2>=v2 --near <handle>
+                                   --within-m N --limit N --diversity-m N]
+simforge locations get     <handleOrId> --map <id> [--describe]
+simforge locations resolve --map <id> "<free text>"
+simforge template validate <file> [--map <id> [--site <siteId>]]
+simforge sites match       <template.json> --map <id> | --maps a,b | --all-maps
+                       [--min-score --max-sites --rejected]
+simforge instantiate       <template.json> --map <id> --site <siteId>
+                       [--seed <hex> | --draw K] [--out file]
+simforge simulate          <instance.json> [--trace out.trace.json.gz]
+simforge debug             <template|instance.json>
+                       [--map ID --site ID --draw K --seed S]
+                       [--provider native|sumo --ambient-count N]
+                       [--duration S --sample S --out DIR]
+                       [--compare prior-report.json]
+                       [--fail-on-collision --fail-on-road-departure
+                        --fail-on-fallback --fail-on-never-fired]
+simforge traffic sumo      <template|instance.json>
+                       [--preset P --seed S --max-actors N --duration S]
+                       [--repeat N --out DIR --signal-authority simforge|netconvert]
+simforge validate          <instance|template> [--tier 1|2 --map --site --draw]
+simforge evaluate          <trace> [--filter critical|negative-control|all]
+                       [--trivial-ttc S --reject-collisions]
+simforge evidence verify   <instance.json> <trace.json.gz>
+simforge export            <instance.json> --format xosc-1.4|xosc-1.3-esmini|osc-2.2 --out <file>
+                       [--road-file map.xodr --route-sample-m 20]
+simforge catalog create    --out <catalog.json> [--namespace ID --evidence-root DIR]
+simforge catalog verify    <catalog.json> [--evidence-root DIR --require-evidence]
+simforge catalog batch     <catalog.json> [--ledger FILE --slots a,b --map ID]
+                               [--allow-collisions]
+                       [--mechanisms a,b --attempts N --concurrency N --force]
+simforge batch             <template.json> --maps a,b,c --draws N --out dir/
+                       [--concurrency N --min-score --max-sites --force --no-trace]
+simforge schemas           [--name template|anchor|interactions] [--content]
+simforge runtime show
+simforge job submit        <manifest.json>            # simforge.native-job/v1
+simforge job start         <jobId> [--detach --restart]
+simforge job run           <jobId> [--restart]
+simforge job status|artifacts|cancel|attach <jobId>
+simforge job list
+simforge worker reconcile|capacity
+simforge cas ingest <path> | cas verify <sha256>
+```
+
+### Remote worker
+
+Run the same CPU/render worker used by `simforge daemon` against any HTTP(S)
+host, including a host reachable over Tailscale:
+
+```bash
+simforge worker --host http://127.0.0.1:5199 --token "$SIMFORGE_RENDER_WORKER_TOKEN"
+simforge worker --host https://host.tailnet.example --token "$WORKER_TOKEN" \
+  --id gpu-box-1 --capabilities native-render,browser-render --data-root /tmp/simforge-worker
+```
+
+`--host` must be an HTTP(S) origin and `--token` is mandatory. The worker
+probes its installed engines and sends that set with every lease request;
+`--capabilities` only narrows the automatic probe (`native-render`,
+`browser-render`, `carla-render`, `compile`, and `model-run` are accepted).
+`--data-root` is scratch space for claim inputs and outputs, not a host
+database or asset root.
+## Local Alpamayo driving
+
+`drive` runs the pinned local Alpamayo 1.5 policy against the fixed-step
+native simulation and Bevy renderer. Each rendered camera history is sent to
+the model; its trajectory is anchored to the current ego pose and converted
+into a pure-pursuit action before the next simulation step.
+
+```bash
+simforge drive examples/edge-cases/01-construction-chicane-reversing-truck/scenario.instance.json \
+  --map richmond-field-station --policy alpamayo --duration 10 \
+  --camera-profile alpamayo-2cam --quant nf4 \
+  --out run/alpamayo-drive
+```
+
+The command reads native map tiles from
+`$SIMFORGE_MAPS_CACHE_ROOT/.corpus/<map>/3d/tiles` (or the default
+`~/.local/share/simforge/maps/.corpus/...`). Pull the complete map first with
+`simforge maps pull <map>@<version>`; `--native-world` accepts a prepared tile
+directory or master GLB. Build the renderer with
+`cargo build --release --manifest-path renderer/Cargo.toml -p
+simforge-render` (the command runs `simforge-render serve`). Alpamayo setup requires the pinned inference checkout
+and model cache; run `adapters/alpamayo/scripts/setup.sh` before using the
+default auto-started model service.
+
+The output directory contains `alpamayo-drive.mp4` with the Bevy camera view,
+predicted-plan inset, reasoning text and deadline status, plus
+`alpamayo-drive.json` with model latency, deadline verdict, pose, cross-track
+error, applied action and renderer/model handshake telemetry. Use
+`--no-start-model` or `--no-start-renderer` when a service is already running.
+Manual and scripted driving paths remain available through the existing
+simulation commands.
+
+The `job`, `worker`, `cas` and `runtime` groups are forwarded verbatim (plus
+`--pretty`/`--root`) to the native runner binary, located through
+`$SIMFORGE_RUNNER_BIN`, then `<install root>/bin/simforge-runner[.exe]` where
+the install root is `$SIMFORGE_NATIVE_RUNTIME_ROOT` or the OS data directory
+(`${XDG_DATA_HOME:-~/.local/share}/simforge/native-runtime` on Linux,
+`~/Library/Application Support/simforge/native-runtime` on macOS,
+`%LOCALAPPDATA%\simforge\native-runtime` on Windows; installed by
+`node scripts/native-runtime/fetch-runtime.mjs` + `install-runtime.mjs <archive>`,
+which fetch the pinned published archive and verify its digest and binding ABI
+rather than building it),
+then `PATH`. The runner's stdout/stderr/exit-code contract is identical to this
+one. A durable compile-and-simulate is one `simforge.compile/v1` job (template
+input, `params.mapId/site/drawIndex/seed`) followed by one `simforge.simulate/v1`
+job whose `scenario.input` is the published instance artifact by content digest.
+
+Writable jobs, CAS and worker state are separate from that installation:
+`--root`, then `$SIMFORGE_NATIVE_RUNTIME_STATE_ROOT`, then
+`${XDG_STATE_HOME:-~/.local/state}/simforge/native-runtime`. `runtime show`
+only inspects the installation and does not create worker state.
+
+Only `richmond-field-station` may be promoted publicly. The default read
+registry is the public CloudFront registry; licensed maps need an explicitly
+authorized private registry. Publishing to `s3://simforge-maps-public` enforces
+the same restriction even when `--target private` is supplied.
+
+Builds require Linux `flock`, KTX-Software, an HDR sky and persistent disk.
+`map-source.json` uses schema `simforge.map-source.v1` and selects `name`, `glb`,
+optional `xodr`, `sky`, and `donorMasters`; manifest paths are relative to the
+manifest. Command-line source selections override their manifest counterparts.
+Directories with multiple possible scene or XODR inputs are rejected.
+Publication accepts only a complete native master plus browser tier and writes
+the immutable release descriptor before making the version visible. A retry
+resumes the same release instead of minting another version.
+
+## Headless scenario debugging
+
+`debug` is the single command intended for an agent investigating an editor
+scenario. It accepts either a concrete instance or a v2 template. Map-bound
+Studio templates infer their pinned map and compile without site matching;
+portable templates use `--map` and optional `--site` (otherwise the
+highest-ranked executable site). Both paths then run the exact native engine
+used by Studio playback.
+
+```bash
+# Full JSON report on stdout (every native tick by default).
+node packages/cli/bin/simforge.js debug \
+  examples/edge-cases/05-ambulance-gridlocked-intersection/instance.baseline.json
+
+# Agent-friendly artifact directory, sampled at 10 Hz, with strict gates.
+node packages/cli/bin/simforge.js debug scenario.json \
+  --sample 0.1 --out /tmp/scenario-debug \
+  --fail-on-road-departure --fail-on-fallback --fail-on-never-fired
+
+# Run packaged SUMO-Wasm ambient traffic alongside the canonical authored run.
+SCEN_DEV_ASSETS=/absolute/path/to/dev-assets \
+node packages/cli/bin/simforge.js debug scenario.json \
+  --provider sumo --ambient-count 32 --sample 0.05 --out /tmp/sumo-debug
+
+# Deterministic regression comparison. Exit 2 if path deltas exceed tolerance.
+node packages/cli/bin/simforge.js debug scenario.json \
+  --sample 0.1 --compare /tmp/scenario-debug/report.json \
+  --position-tolerance-m 0.001 --speed-tolerance-mps 0.001
+```
+
+Without `--out`, stdout is the complete stored scenario-debug/v1 wire report.
+With `--out`, stdout is a concise JSON summary and the directory
+contains:
+
+- `report.json` — complete paths, actions, diagnostics, metrics and acceptance;
+- `summary.json` — compact repair-loop input;
+- `paths.json` — scene-frame native and SUMO time series plus signal phases;
+- `input.json` — the exact concrete input that ran (including CLI duration override);
+- `compiled-instance.json` — the materializer's provenance-bearing instance before runtime overrides;
+- `trace.json.gz` — the canonical engine trace.
+
+Native actor samples include position, heading, speed, derived acceleration,
+lane/road identity, route distance, presence and dynamic telemetry. Diagnostics
+include engine issues, route coverage, backend provenance/fallbacks, collisions,
+crashes, road departures, rejected lane changes, never-fired triggers and
+preemptions. Actions carry their firing/release events. Required template
+invariants and selected strict gates determine exit status.
+
+SUMO is intentionally fail-closed. `--provider sumo` and `traffic sumo`
+require the pinned
+`dev-assets/sumo-runtime/{sumo.mjs,sumo.wasm,runtime-manifest.json}` (or
+`$SIMFORGE_SUMO_RUNTIME_DIR`) and the selected map's
+`derived/sumo/sumo-network-manifest.json`. Missing assets produce an actionable
+`sumo_unavailable` error rather than silently changing providers.
+
+Both run the worker SUMO step (`docs/engineering/sumo-worker-traffic.md`):
+- the authored actors are simulated with ambient traffic off;
+- SUMO then runs one-way at the 0.02 s trace grid, with its traffic lights
+  rewritten from the SimForge signal book;
+- its vehicles are merged into the trace.
+
+`traffic sumo` prints:
+- the traffic key and digests;
+- the signal-book agreement;
+- a red-light audit against the rendered heads.
+
+`--repeat N` fails unless every run is byte-identical. `--out DIR` writes the
+materialized traffic, the merged and authored traces, the diagnostics and
+`sumo-step-input.json`, which can be replayed on any host that has only the
+runtime. `--signal-authority netconvert` keeps the derivative's own programs,
+for audits only.
+
+## ASAM interchange
+
+`simforge export` targets the current official releases: ASAM OpenSCENARIO XML
+1.4.0 (`.xosc`) and ASAM OpenSCENARIO DSL 2.2.0 (`.osc`). It exports the
+**concrete instance**, after matching, parameter sampling and arrival solving.
+Every lane/follow/polyline route is resolved through the instance map graph and
+sampled into world-coordinate waypoints, so an exported file never mistakes
+SimForge' lane-local `rsl:s` for OpenDRIVE road `s`.
+
+`xosc-1.3-esmini` is a separate compatibility target for a pinned external
+esmini runner. It is authored as OpenSCENARIO XML 1.3.1 and never relabels the
+native 1.4 artifact. The runnable-bundle API validates it with the pinned
+official 1.3.1 XSD, resolves the complete immutable OpenDRIVE file server-side
+from `mapId + sha256`, and packages the canonical trace and explicit capability
+and provenance reports. Its deterministic-trajectory profile claims motion
+parity only; lowered presentation cues remain visible in the capability report.
+
+Both profiles export vehicle/pedestrian dimensions, initial world pose and
+speed, resolved paths, static occluder geometry, clip duration and absolute
+speed changes. The CLI's XML 1.4 path uses deterministic trajectory replay: it
+runs the concrete instance, emits absolute-time `FollowTrajectoryAction`
+vertices (including signed reverse speed), replays standard lights and vehicle
+component animations at their observed firing times, and schedules physical
+signal-head states from the trace. Motion-rule, route, speed and lane-change
+interactions are embodied in that trace instead of being delegated to
+simulator-specific controllers. Simulation/arrival errors, incomplete signal
+tracks, unsupported entity spawning, and state without an exact XML carrier
+reject the export.
+
+The library also exposes an action-oriented XML profile for consumers that need
+editable controller actions. It supports relative speed targets, relative
+left/right lane changes, dynamic route replacement, add/delete entity actions,
+`at`/`after` triggers, a documented subset of `when` conditions, and looping
+traffic-signal controllers. In that profile, a signal program is exported only when its
+`mapBinding.controllerHeadGroups` closes the ordered physical OpenDRIVE
+controller-stage membership to the bound head ids. One logical scenario
+program may emit several `TrafficSignalController` elements, each named with
+its physical OpenDRIVE controller-group ID and containing only that group's
+head ids as `TrafficSignalState` entries. No self-reference is synthesized;
+phase conditions reference the first ordered physical controller in the bound
+program. The complete controller/head closure is retained in header
+properties. Controller offsets are represented by rotating (and, when
+necessary, splitting) the phase cycle. A
+persistent SimForge signal override is rejected in the action profile
+because an XML phase action does not have the same semantics. DSL 2.2 supports statically resolvable `at`/`after`
+schedules, linear speed transitions, time-constrained lane changes, gaps and
+metre lane offsets.
+
+The ASAM timeline starts at the beginning of the instance warm-up. Therefore an
+engine trigger at `t` is exported at `t + warmupSeconds`, and the ASAM stop time
+is `warmupSeconds + clipSeconds`. The recorded SimForge `t=0` remains the
+same physical instant instead of silently dropping pre-roll behavior.
+
+When the input is a materialized instance file, replay-key fields and its input
+hash are carried into XML `FileHeader/Properties` or DSL header comments. A bare
+`SimScenarioInput` has no manifest, so an exporter cannot reconstruct template,
+site, matcher, solver, draw or seed provenance from that file alone.
+
+The command never silently substitutes a different behavior. Unsupported
+controller rules, dynamics, conditions, deadlines, entity lifecycle, signal
+bindings, fixed props, static road controls, or action forms produce exit 2 with
+`{code:"asam_export_unsupported", detail:{issues:[{code,path,reason}]}}`.
+SimForge-only metric subjects and occlusion-evaluation pairs are reported as
+warnings; their physical actors and occluders are still exported.
+
+The default referenced road file is `<mapId>.xodr`. Use `--road-file` to write
+the path used by the target simulator. XML tests fetch [ASAM's official 1.4.0
+schema archive](https://publications.pages.asam.net/standards/ASAM_OpenSCENARIO/ASAM_OpenSCENARIO_XML/v1.4.0/_attachments/generated/ASAM_OpenSCENARIO_v1.4.0_Schema.zip)
+and require SHA-256
+`efbb2da3432ef8bb9f87daa9d710fb20a2ad65276bc386d28885a5fe9511a39c`;
+the extracted `OpenSCENARIO.xsd` must hash to
+`949fe2bcebd1f3fdb941a2cc56641482737ab48e3c5b0eed0ee5294b2355c0e9`.
+`ASAM_OPENSCENARIO_14_XSD` may point to a local copy, but it must have that same
+XSD digest. To update the pin, obtain a newly versioned official ASAM
+deliverable, review its model/schema changes and exporter mappings, update both
+digests and fixtures, and rerun all semantic rejection and XSD tests.
+
+DSL 2.2 output is gated by a deterministic parser for the exact concrete
+grammar profile emitted by this package. The test pins ASAM's official 2.2.0
+`grammar.ebnf` at SHA-256
+`77acf08e7a8a9f424358452d4f955e4dcd15636468aba7b18ba644ce9edc619b`
+and verifies that the implemented subset is drawn from its import, scenario,
+constraint, composition, invocation, modifier and wait productions. A second
+pin checks the official 2.2 domain-model library archive at SHA-256
+`b18ee980a48b9e71db8612b846f04be10dfba4cbb82944a48806078721879fa3`
+and audits every actor category and action/modifier symbol emitted. This is a
+syntax/profile guarantee, not a claim that the repository implements the full
+DSL type system or a general-purpose compiler. XML 1.4 remains the interchange
+path with full official XSD validation.
+
+`locations` is the model's spatial awareness: it never sees a road id, it
+queries by semantics and receives **handles**, road anchors and
+`matchedReasons`. Everything below the handle is carried through for the layers
+that need it.
+
+## The materializer
+
+`simforge instantiate` composes the packages below it; the join itself
+(`simforge-compiler::materialize`) is native and reached through
+`@simforge-oss/compiler/node`'s `compileTemplate`. The layers are each
+deliberately incomplete: the matcher does the *structural* pass and stops, the
+engine takes a *fully resolved* document and refuses anything less.
+
+```
+1. PARAMS    paramSeed = sha256(templateId|paramsVersion|siteId|drawIndex)
+             → xoshiro128**, one forked stream per declaration, so inserting a
+               parameter does not resample the ones declared after it
+2. FRAME     the site's AnchorFrame reference path is rebuilt as an engine
+             Route — that is what turns a frame `s` into a world point
+3. ROLES     each FeatureBinding becomes a concrete actor. Its route comes from
+             the binding's lane chain; its spawn comes from *projecting the
+             frame point onto that route*, never from re-adding lane lengths
+4. TIMELINE  v2 interactions → engine interactions, verb by verb. `set rules.*`
+             and `route(polyline)` at `t ≤ 0` fold into the actor's initial
+             state, because a thing that happens at spawn *is* spawn state
+5. ARRIVAL   every `conflicting_gate` role with `arriveAtConflict`, and every
+             timeline `arrival` trigger, is back-solved by the engine's
+             bisection and baked into the instance
+6. GUARDS    `checkFeasibility` — runway, decel budget, spawn overlap, route
+             connectivity — reported as structured findings
+```
+
+### Why projection, not arithmetic
+
+A role's pose is `(k, s)` in the anchor frame. Adding up lane lengths until `s`
+is consumed is wrong for every role that is not on the reference lane: `k = +1`
+and opposing lanes have their own arc-length origins, and two packages measuring
+the same polyline disagree in the sixth decimal. So the frame `s` becomes a
+**world point** on the reference route, and that point is projected onto the
+actor's own route. The packages only have to agree about geometry, never about
+bookkeeping.
+
+### Two places the materializer checks the matcher's work
+
+- **Upstream coverage.** The matcher builds a role's lane chain from the
+  *statically* evaluated `dsM`, which is `0` whenever the spawn is a
+  site-dependent expression like `-(0.8 * lane.speedLimitKph / 3.6) * 8`. Using
+  that chain would spawn the ego *past* the junction it was supposed to
+  approach. So the chain is extended upstream until the target point projects
+  into the route's interior rather than onto an endpoint.
+- **Downstream runway.** The matcher stops walking at its own 150 m run-up
+  constant. A 16-second clip at 51 kph covers 227 m. The chain is extended
+  forward until it covers the clip, because the materializer is the only layer
+  that knows both the clip length and the actor's speed.
+
+### Traffic-light materialization
+
+On signalized sites with OpenDRIVE controller data, SimForge binds the
+physical map head ids, junction controller sequences and concrete gate
+movements into engine `signalPrograms`. Stop lines retain their junction
+connecting-lane filter, so a protected turn head cannot govern an unrelated
+movement on the same approach. Authored signal conditions resolve either a
+physical head handle or a junction feature plus `ego|opposing|left|right`
+approach.
+
+The checked-in maps do not contain authoritative phase-duration timing files.
+Generated cycles are therefore marked `mapBinding.timingSource =
+"synthetic-default"`; the ids and movement bindings are real, the durations are
+not presented as field truth. Maps with no dynamic heads/controllers emit an
+empty `signalPrograms` list, with no invented fallback signals.
+
+## Replay keys
+
+Every instance carries the key that reproduces it:
+
+```json
+{ "templateId": "ltap-opposing", "templateVersion": 2, "templateDigest": "…",
+  "mapId": "yale-street", "topologyDigest": "…", "siteId": "…",
+  "matcherVersion": "…", "solverVersion": "…", "paramSeed": "…", "drawIndex": 0 }
+```
+
+`simforge batch` resumes on all of it, not just the seed: a cached verdict from an
+older matcher or an older engine is exactly the stale answer a resumable batch
+exists to prevent.
+
+## Deterministic installed-map catalog
+
+`simforge catalog create` reserves exactly **100 identities on each selected
+installed map** before expensive generation begins. By default it uses every
+complete map bundle under the configured dev-assets root; `--map <id>` or
+`--maps a,b` selects a subset, and `--dev-assets <root>` selects another
+installed-map inventory. Every slot carries the map catalog revision and
+topology digest, template source/digest and archetype category, a
+coordinate-derived SHA-256 seed, status, and reserved
+instance/trace/result/frame/video/inspection paths. The output has no clock
+field: identical templates, selected map order, and map provenance produce
+byte-identical JSON.
+
+`simforge catalog verify` validates the catalog's own declared map inventory:
+map names must be unique safe slugs, `maps[]` must contain each declaration
+exactly once, and each declared map must own exactly 100 unique ordinals. It
+also rejects changed seeds or identities, duplicate identities or seeds,
+provenance drift, unsafe evidence paths, and a stale catalog digest. Installing
+additional maps does not invalidate an existing catalog. `authored` slots do
+not pretend evidence exists. Advancing status makes evidence mandatory
+(`generated` requires an instance, `simulated` also trace/result, `rendered`
+also frame/video/render manifest, and `visually-accepted` also a written
+inspection). `--require-evidence` checks every reserved evidence path.
+
+## Batch
+
+Sites × draws, per-cell seeds, a worker-thread pool (the engine is synchronous
+CPU work, so an async pool in one thread would run it strictly serially), and a
+sorted summary that does not depend on which worker finished first.
+
+```
+out/
+  batch-summary.json
+  <mapId>/<siteId>/draw-000.instance.json
+                   draw-000.trace.json.gz
+                   draw-000.result.json
+```
+
+`catalog batch` is the lifecycle-aware companion for a generated catalog. It
+writes a checkpointed execution ledger, uses each reservation seed for attempt
+zero, records deterministic bounded draws, and advances a slot only after its
+reserved artifacts exist. Unsupported authored mechanisms, template-backed
+slots without an exact persisted catalog-location/matcher-site join, and
+operational variants not actually applied by the materializer/engine, and
+template/map combinations with no executable site are structured findings
+(exit 2), never simulated counts. `SIGINT`/`SIGTERM` stop new dispatch; rerunning
+the same command validates accepted artifact hashes and resumes the ledger.
+Collision-free execution is a hard eligibility rule by default and is recorded
+in every result; `--allow-collisions` is the explicit opt-out for mechanisms
+whose authored outcome intentionally includes contact.
+
+For a cancellable campaign, invoke the CLI process directly so `SIGINT` and
+`SIGTERM` reach its checkpoint handler instead of stopping a package-manager
+wrapper first:
+
+```bash
+node packages/cli/bin/simforge.js catalog batch \
+  catalog/simforge-oss.catalog.json \
+  --ledger catalog/catalog-execution-ledger.json \
+  --attempts 3 --concurrency 4 --filter all --pretty
+```
+
+The handler stops new dispatch, removes any uncommitted interrupted work, moves
+in-flight slots back to `pending`, writes ledger status `cancelled`, and exits
+with validation-findings status. Re-running the identical direct command
+reconciles a ledger left by a hard process loss: stale `running` records become
+`pending`, completed evidence is hash-checked, and the interrupted attempt
+number and deterministic seed are retried rather than consumed.
+
+## Map masters and render-worker map inputs
+
+A published map version is one **master** closure plus one **web** closure.
+The master is `master.gltf` + `geometry.bin` (every accessor byte of the
+RoadRunner/Unreal export, verbatim) + `images/<sha256>.png` (the authored
+rasters) + `images/<sha256>.ktx2` (their UASTC encodes, referenced through
+`KHR_texture_basisu`) + the road sidecars (`map.xodr`, `topology-index.json.gz`,
+`lane-polygons.geojson.gz`, `signals.geojson.gz`, `derived/*`) + `env/sky.hdr`
++ `master-report.json`. The web closure is `3d/manifest.json`, `3d/tiles/*.glb`
+(100 m meshopt cells with `EXT_mesh_gpu_instancing`) and the KTX2 images the
+cells reference.
+
+`simforge maps build <export-dir> --name <slug> --work-dir <dir>` builds both
+stages (content-addressed and cached under `<dir>/master/<key>/content` and
+`<dir>/web/<key>/content`); `simforge maps ingest` runs the same stages and
+publishes them. `simforge maps pull <name>@<version>` materializes, through a
+local blob cache (`--blob-cache-root`, hardlinked into every layout):
+
+- `.corpus/<name>` (`--native-corpus-root`): the master without its PNGs -
+  what the Bevy renderer loads; `nativeWorkerInputs` lists every member with
+  its verified `sha256`/`sizeBytes`, `map.tile.000000` for `master.gltf` and
+  `map.resource.<sha256(relativePath)>` for each resource;
+- `map-bundles/<name>` (`--browser-root`): the web closure;
+- `dev-assets/<name>` (`--dev-assets-root`): the sidecars alone, or the whole
+  master including PNGs with `--archive`.
+
+Versions published before the master format (tiled canonical closures) are
+refused by `pull`; re-ingest them.
+
+Studio scenarios follow the newest installed publication of their canonical
+source map (`sourceMapId` / `mapSourceMapId`), not an obsolete version id.
+The authored `mapVersionId` remains geometry provenance, and frozen revisions
+remain immutable. Forward resolution requires equal OpenDRIVE SHA-256 digests:
+rebuilding the browser assets cannot orphan a scenario or move its anchors.
+If OpenDRIVE differs (or its authored digest is unavailable), opening or freezing
+refuses with `scenario_map_geometry_drift` and requires remapping from the old
+OpenDRIVE to the new. This deliberately fails closed even for potentially benign
+OpenDRIVE changes; road/lane ids alone do not prove unchanged geometry.
+An entirely missing source map instead reports `scenario_map_absent`.
+Labels and installation directory names are never substitutes for canonical
+source identity. Scenario JSON exports carry that identity and geometry digest
+so an import can follow the same rule.
+The catalog normally publishes one current version per source. If a caller
+supplies multiple candidates for a source, `scenario_map_ambiguous` refuses
+selection by array order rather than pretending the map is absent.
+
+## Local Studio and SimCloud operations
+
+Every verb below talks to the running local host over loopback with the
+control token from `host.json`, unless `SIMFORGE_API_BASE_URL` names another
+host (see "Rendering against a dev or cloud host"); the CLI never stores or
+prints credentials. Output is JSON; add `--pretty` for humans. No host running
+and no `SIMFORGE_API_BASE_URL` → `host_unavailable`.
+
+```bash
+simforge daemon [--port 5199] [--data-root ~/.simforge/cloud] [--no-worker] [--dev]
+simforge host status | stop | open [--next /dashboard/scenario]
+
+simforge scenario list [--dataset <id>] | show <documentId>
+simforge render --help
+simforge render submit --scenario <documentId> --engine native|browser|carla --seconds <n> \
+  [--start 0] [--fps 20] [--resolution 1280x720] [--quality preview|standard|high|cinematic] \
+  [--sensors actorId:sensorId,...] [--environment noon|dusk|night|dawn|...] [--priority <-100..100>]
+simforge render submit --revision <revisionId> --execution-package <id> --engine carla \
+  --render-spec <render-spec.json> [--idempotency-key <key>] [--priority <-100..100>]
+simforge render list [--scenario <documentId>] [--revision <id>] [--job-mode <mode>] [--limit 50]
+simforge render status <jobId> | wait <jobId> [--timeout 3600] | cancel <jobId> \
+  | download <jobId> [--out <dir>]
+
+simforge cloud status | connect --provider google|github [--cloud-origin <url>] | sign-out | organizations
+simforge cloud sign-in --email <address> [--password-stdin]
+simforge cloud sign-up --email <address> --name <full name> [--password-stdin]
+simforge cloud verify-email --code <6 digits> | resend-code
+simforge cloud forgot-password --email <address>
+simforge cloud reset-password --email <address> --code <6 digits> [--password-stdin]
+simforge cloud delete-account --yes [--password-stdin]
+simforge cloud datasets|artifacts --org <id>
+simforge cloud dataset-import|dataset-publish|artifact-import|artifact-upload --org <id> --dataset|--artifact <id>
+simforge cloud eval capabilities | list | status <jobId> | wait <jobId> [--timeout 1800] | artifacts <jobId> [--out <dir>]
+simforge cloud eval submit --job <renderJobId> --family <family> [--quant bf16] [--seed 1] [--samples 4] \
+  [--ego-speed 0] [--camera-height 1.5] [--fov 90] [--prediction-hz 1] [--dry-run]
+```
+
+`simforge daemon` is the local host: migrations and seed, the API server, the
+render worker, one supervisor, `host.json` in the data root. The desktop shell
+execs the same command and only adds a window.
+
+The group lives and dies together. Every child the supervisor starts - the
+Next server, its own forked server process, the CPU worker - carries a
+parent-death watch, so killing or losing the supervisor cannot leave a server
+behind holding the port, the data-root lock and (under `--dev`) gigabytes of
+memory. A start refused because another host already owns the data root names
+that host - `pid`, `port`, `baseUrl`, `startedAt` - instead of failing on a
+bare `EADDRINUSE` or a PGlite lock error. `host stop` reports
+`stopped: true` only once the port is free as well as the supervisor gone; a
+supervisor that died leaving a server behind reports
+`{"stopped": false, "reason": "orphaned_server", "port": ...}`.
+
+### Serving the GUI from another machine
+
+The daemon binds where `HOSTNAME` says (default `127.0.0.1`), and the access
+gate never treated loopback as authorization, so one host can serve a GUI
+running elsewhere - daemon, database, map cache, render worker and GPU on one
+box, the window on a laptop:
+
+```bash
+# On the host machine. Set the Cloud origin explicitly: unset, it defaults to
+# production (connection.ts:33) and every SimCloud call the GUI makes goes there.
+SIMFORGE_CLOUD_ORIGIN=https://staging.simforge.ai \
+HOSTNAME=0.0.0.0 simforge daemon --port 5421
+jq -r .controlToken ~/.simforge/cloud/host.json   # the per-start control token
+
+# On the GUI machine. The desktop shell becomes a guest: it starts,
+# supervises and stops nothing, and quitting leaves the host running.
+SIMFORGE_REMOTE_HOST=http://100.64.0.10:5421 \
+SIMFORGE_REMOTE_HOST_TOKEN=<that control token> \
+SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1 simforge-studio
+```
+
+The control token, and the session cookie derived from it, are full access to
+the host and cross the network in cleartext over plain HTTP, so the link must
+be private: a WireGuard/Tailscale tailnet (the `100.x` address above is a
+Tailscale one) or a TLS terminator in front of the daemon. The shell refuses a
+non-loopback `http://` target unless `SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1`
+acknowledges the tailnet. `simforge host open` still refuses a non-loopback
+bootstrap URL, because it opens a browser on the host machine itself.
+
+Features that assumed the host's filesystem is the GUI machine's - the map
+cache folder picker and "Move cache", "Open Cache Folder", "Open data folder" -
+are refused in this mode with a message naming the host, instead of pointing
+the host at a path that exists only on the GUI machine. The full inventory and
+the deployment requirements are in `docs/engineering/remote-studio-host.md`.
+
+`render submit` has two shapes, and both end in one `POST
+/api/simforge/render-jobs` with a `ScenarioRenderIntentSubmission`
+(`jobsProtocol.submitRenderIntent`). `--scenario` freezes the draft the way the
+Studio wizard does (reuse a succeeded export of the current draft, else build
+revision evidence from the saved browser simulation and wait for the
+OpenSCENARIO export), then submits; `submit && wait && download --out` is the
+whole agent loop. Two limits are deliberate: a draft with no saved simulation
+fails with `simulation_preview_missing` (open it in Studio once so the browser
+engine simulates it), and a draft whose ambient traffic runs through SUMO fails
+with `sumo_evidence_unsupported` (only the Studio session drives the SUMO
+bridge).
+
+`--revision <id> --execution-package <id> --render-spec <file>` is the same
+submission without the freeze: an already frozen revision, its execution
+package, and the sensor rig as a `render-spec/v3` document passed through
+byte-for-byte. The submission's fields are exactly the wire contract's —
+`schema`, `engine`, `revisionId`, `executionPackageId`, `renderSpec`,
+`idempotencyKey`, optional `priority` — and the immutable intent id is minted
+by the host, so it is never sent. A rig the host refuses comes back as the
+host's own error code, not a CLI opinion.
+
+`render status` joins the job row to its detail row, so one call reports state,
+progress, the worker's last published stage and every attempt.
+`render download` is the only caller of `[jobId]/downloads`, the only route
+that mints artifact URLs: it prints them (with their TTL) or, with `--out`,
+streams the bytes.
+
+### Rendering against a dev or cloud host
+
+`SIMFORGE_API_BASE_URL` is the only difference between rendering on the dev
+host on this machine and rendering on a remote SimCloud host — the command, its
+flags, the request bodies and the decoded responses are identical:
+
+```bash
+# The dev host on this machine (the default: unset, `host.json` answers).
+simforge render submit --scenario uscn_... --engine carla --seconds 20
+
+# The same invocation against a dev host elsewhere.
+SIMFORGE_API_BASE_URL=http://100.64.0.10:5421 \
+SIMFORGE_REMOTE_HOST_TOKEN=<that host's control token> \
+SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1 \
+  simforge render submit --scenario uscn_... --engine carla --seconds 20
+```
+
+`SIMFORGE_REMOTE_HOST` is accepted as the same thing, so a shell already
+configured for the desktop shell's remote mode needs no second variable. Plain
+HTTP to a non-loopback address is refused unless
+`SIMFORGE_REMOTE_HOST_ALLOW_PLAINTEXT=1` acknowledges that the bearer token
+crosses the network in the clear. An explicit `--data-root` always means this
+machine's local host, and is never overridden by the environment.
+
+`cloud eval submit` uploads each rendered camera whose sensor id is a dataset
+camera name (`camera_front_wide_120fov`, ...) as a `video` input at its
+Alpamayo slot and runs an exploratory, unscored open-loop prediction.
+`--family` accepts only families whose camera contract takes uploaded views; a
+render missing a required slot is refused (`rig_incompatible`) rather than
+scored partially. The tenant comes from `--org <id>`; see "Which organization a
+scoped verb acts in" below, because a password sign-in leaves no active one.
+
+### Signing in to SimCloud without a browser
+
+The account verbs are the whole email+password surface, so a headless machine
+never needs the desktop app or `connect --provider` (which does open a system
+browser). They post to the running host, which is the only credential owner:
+the session is stored in the OS vault by the host, and the CLI neither reads,
+writes nor prints it. Each verb prints the resulting connection status -
+`{"state":"connected"|"disconnected"|"expired"|...}` - so a script can assert
+on `state`.
+
+**A password is never an argv flag** (argv is readable by every process on the
+machine and lands in shell history). `--password <value>` is refused. The three
+accepted sources, in the order they are tried:
+
+1. `SIMFORGE_CLOUD_PASSWORD` in the environment.
+2. `--password-stdin`, which reads exactly one line from stdin.
+3. an interactive prompt with echo disabled, when stdin is a TTY.
+
+With none of the three available the command exits non-zero with
+`password_required` rather than waiting on a line that will never arrive.
+
+```bash
+# Sign in on a headless box, password piped in.
+printf '%s\n' "$PASSWORD" | simforge cloud sign-in --email me@example.com --password-stdin
+simforge cloud status --pretty            # state: connected
+
+# Or from the environment (CI):
+SIMFORGE_CLOUD_PASSWORD=... simforge cloud sign-in --email me@example.com
+
+# New account: sign-up signs this computer in immediately and emails a code;
+# the account stays email-unverified until the code is presented.
+simforge cloud sign-up --email me@example.com --name 'Ada Lovelace' --password-stdin < pw.txt
+simforge cloud resend-code                # if the first email did not arrive
+simforge cloud verify-email --code 123456
+
+# Forgotten password: request the code, then reset with the new password.
+# reset-password revokes every session of the account, this one included.
+simforge cloud forgot-password --email me@example.com
+simforge cloud reset-password --email me@example.com --code 123456 --password-stdin < newpw.txt
+
+# Irreversible. Deletes the cloud account and closes any organization it is the only
+# member of; nothing on this computer is removed. Needs --yes as well as the password.
+SIMFORGE_CLOUD_PASSWORD=... simforge cloud delete-account --yes
+
+simforge cloud sign-out                   # revokes upstream, clears the local vault entry
+```
+
+Errors are the Cloud's own: `invalid_credentials`, `email_unverified`,
+`invalid_code`, `code_expired`, `weak_password`, `throttled`, `email_taken`,
+each as a structured error on stderr with exit code 1. `forgot-password`
+always answers `{"ok":true}` - the Cloud does not reveal whether an address has
+an account.
+
+### Which organization a scoped verb acts in
+
+Signing in does **not** select a tenant: a desktop password grant returns a
+session whose active organization is null, and nothing sets it (the Cloud's
+desktop surface exposes no organization id to choose from yet). So `status`
+shows no active organization, and every tenant-scoped verb needs `--org <id>`
+explicitly:
+
+```bash
+simforge cloud organizations --pretty     # the tenants this account belongs to
+simforge cloud datasets --org <id>
+simforge cloud dataset-publish --org <id> --dataset <local> --remote-dataset <remote>
+simforge cloud eval capabilities --org <id>
+```
+
+The id from `organizations` is the value the Cloud accepts, and it is carried
+opaquely - today it is a workspace row id naming the tenant, which is why a
+refusal reads `workspace_forbidden` and why some payloads still answer with a
+`workspaceId` field. That is tracked as the platform half of
+`docs/engineering/local-cloud-boundary.md` §8 step 2; nothing in the CLI needs
+to change when it lands.
+
+## Current execution boundaries
+
+Stated plainly, because they bound what a number from `simforge` means:
+
+- **Physical signal timing is explicit about provenance.** OpenDRIVE controller,
+  stage, and head membership are map-bound. Where the map has no authoritative
+  phase durations or initial state, the materializer records the deterministic
+  cycle as `synthetic-default`; it never presents that timing as map-authored.
+  XML 1.4 action export supports these programs, while DSL 2.2 export rejects
+  signal-program inputs instead of silently losing them.
+- **Catalog variants are executable.** The reserved operational variant is
+  applied during materialization and closed against the slot identity. A batch
+  refuses a template-backed slot whose materialized variant differs.
+- **Props carry executable semantics.** Catalog behavior determines visibility
+  occlusion and collision geometry, with per-prop overrides where authored.
+  `targetRevealToConflictS` remains an asserted/reportable target rather than a
+  free placement solver.
+- **Prop footprints come from `@simforge-oss/asset-catalog`.** The native
+  compiler resolves the same metadata when it materialises; there is no
+  mirrored dimension table in this package.
+- **`route(turn|toFeature|acquire)` is dropped with a note.** Topology is fixed
+  by the role binding's lane chain at instantiation time, so the timeline entry
+  would be a no-op restatement.
+
+## Tests
+
+```bash
+pnpm --filter @simforge-oss/cli test
+```
+
+Every test exercises the native addon (`pnpm --filter @simforge-oss/native-runtime
+build:node`). The map-bound and CLI smoke tests additionally read `dev-assets/`,
+which is gitignored, and `skipIf` themselves on a clean checkout. Matcher,
+parameter-seeding and invariant semantics are tested in the Rust crates that own
+them.

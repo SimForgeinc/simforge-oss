@@ -1,0 +1,18 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/school-workzone/worker-intrusion.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "0bada0d736a00a12",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 0,
+ "files": {
+  "instance.json": "b9383ea649cca493b07f5b3d77de91f448c309ddebe23359d47b6e350888b2c4"
+ },
+ "stderr": null,
+ "stdoutSha256": "7c16a539938cc8a5898679a01c663175202da1eb0519963a063d8a8b241e2396"
+}

@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/edge-cases/12-fire-engine-gridlock-escape/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "01408fe5d1cbddd7d265d9f1faea7b531c200cf4336af77c36146b3fee98d7d1"
+}

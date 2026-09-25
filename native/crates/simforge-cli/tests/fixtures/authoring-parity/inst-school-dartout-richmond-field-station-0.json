@@ -1,0 +1,25 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/school-dartout.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "0516b2776ae9307d",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "actor_catalog_class_mismatch",
+  "detail": {
+   "actorClass": "static_object",
+   "catalogId": "prop.playground_ball",
+   "roleId": "ball"
+  },
+  "path": "roles.ball.actor.catalogId",
+  "reason": "role \"ball\": catalog id \"prop.playground_ball\" does not exist; an unresolved id silently materialises as a default model"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

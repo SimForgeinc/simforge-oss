@@ -1,0 +1,18 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/cpnco-dartout.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "03e2f4973dfd01f6",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 0,
+ "files": {
+  "instance.json": "1bb32f9e10707a25513cf34696f666fd5b3612ccd1d9f1e0c47456231a9459b1"
+ },
+ "stderr": null,
+ "stdoutSha256": "e27b85f3db6139436e79d33b881ad237f57c484b5dc3ae319bcac069b49c7552"
+}

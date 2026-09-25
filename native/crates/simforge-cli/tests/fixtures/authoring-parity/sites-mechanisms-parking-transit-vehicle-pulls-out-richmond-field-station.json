@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/parking-transit/vehicle-pulls-out.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "dab3f117947e1126f0284744038f2650e92153d7c063466537f612c6e0a03a5e"
+}

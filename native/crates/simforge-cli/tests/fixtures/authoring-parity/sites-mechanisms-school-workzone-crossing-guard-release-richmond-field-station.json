@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/school-workzone/crossing-guard-release.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "3cfc618b21817bffd472e0150fa1f7d1cc5361895e1ab30f14b00db510d1ab5d"
+}

@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/cpnco-parked-row.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "3de068787124e22217ba3feabee4d3c76f3c1df9d7202a473f3f173bb3e9b794"
+}

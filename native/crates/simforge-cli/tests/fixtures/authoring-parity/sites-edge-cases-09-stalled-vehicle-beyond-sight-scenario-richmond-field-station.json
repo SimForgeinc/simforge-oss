@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/edge-cases/09-stalled-vehicle-beyond-sight/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "546dda3775ce29d2abc563913cbd765464b113533db9426a6d84adf3c4e3094c"
+}

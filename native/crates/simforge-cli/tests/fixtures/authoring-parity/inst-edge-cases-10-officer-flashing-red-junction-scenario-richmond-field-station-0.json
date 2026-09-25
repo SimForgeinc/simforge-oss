@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/edge-cases/10-officer-flashing-red-junction/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "0d9cf0550581c7a4",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "role_unbound",
+  "detail": {
+   "notes": [
+    "feature \"controlled-crosswalk\" did not bind to a crossing"
+   ],
+   "status": "failed"
+  },
+  "path": "roles.pedestrian-group",
+  "reason": "required role \"pedestrian-group\" did not bind at this site"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/edge-cases/09-stalled-vehicle-beyond-sight/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "2f500dbe731a7f29",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "role_unbound",
+  "detail": {
+   "notes": [
+    "s=-48 m is outside the reference path"
+   ],
+   "status": "failed"
+  },
+  "path": "roles.focus-vehicle",
+  "reason": "required role \"focus-vehicle\" did not bind at this site"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

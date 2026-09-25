@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/corridor/cutout-reveals-stopped.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "26da7eee8c4c8bba",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "role_unbound",
+  "detail": {
+   "notes": [
+    "requires same local segment as ego; resolved seg_d71dd095469927b6 vs seg_58e5754d08ad1c2c"
+   ],
+   "status": "failed"
+  },
+  "path": "roles.lead-cutout",
+  "reason": "required role \"lead-cutout\" did not bind at this site"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

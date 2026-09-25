@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "packages/cli/package.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "template_invalid",
+  "detail": {
+   "issues": [
+    {
+     "code": "invalid_value",
+     "message": "not a scenario document: scenarioVersion must be a non-negative integer",
+     "path": "scenarioVersion"
+    }
+   ]
+  },
+  "path": "packages/cli/package.json",
+  "reason": "the document is not a valid v2 scenario template"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

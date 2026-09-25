@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/remaining/slow-vulnerable-lead.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "060d3e7a052a812b",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "role_unbound",
+  "detail": {
+   "notes": [
+    "requires same road section as ego; resolved 17:0 vs 343:0"
+   ],
+   "status": "failed"
+  },
+  "path": "roles.oncoming-constraint",
+  "reason": "required role \"oncoming-constraint\" did not bind at this site"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}
