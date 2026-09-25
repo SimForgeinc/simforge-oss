@@ -22,6 +22,7 @@ pub mod maps;
 pub mod metrics;
 pub mod paths;
 pub mod readers;
+pub mod simulate;
 pub mod sites;
 pub mod template;
 pub mod validation;
