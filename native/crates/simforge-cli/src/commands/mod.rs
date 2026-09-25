@@ -8,6 +8,7 @@ use crate::contract::{CliError, CmdResult, Ctx};
 
 pub mod assets;
 mod authoring_support;
+pub mod batch;
 pub mod doctor;
 pub mod env;
 pub mod instantiate;
@@ -86,6 +87,8 @@ pub enum Command {
     /// Child variations of a template: fork a portable one, transfer a map-bound one.
     #[command(subcommand)]
     Variation(variation::VariationCommand),
+    /// Sites x draws matrix of a template: instantiate -> simulate -> evaluate per cell, resumable.
+    Batch(batch::BatchArgs),
 }
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
@@ -104,6 +107,7 @@ pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
         Command::Template(cmd) => template::run(cmd, ctx),
         Command::Locations(cmd) => locations::run(cmd, ctx),
         Command::Variation(cmd) => variation::run(cmd, ctx),
+        Command::Batch(args) => batch::run(args, ctx),
     }
 }
 

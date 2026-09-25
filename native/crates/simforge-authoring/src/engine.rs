@@ -32,8 +32,12 @@ pub fn simulate(input: &SimScenarioInput, map: &MapAsset) -> Result<SimResult, C
     let scenario = Scenario::parse(&bytes).map_err(engine_error)?;
     let mut options = map.graph().run_options(None).map_err(engine_error)?;
     options.capture_trace = true;
-    simforge_core::engine::run_simulation(scenario.input().clone(), options)
-        .map_err(|e| engine_error(BindingError::from(e)))
+    simforge_core::engine::run_simulation(scenario.input().clone(), options).map_err(|e| {
+        // The engine refused the run (spawn overlap, unroutable actor, ...):
+        // its message and the guard issues that caused it.
+        CompileError::new("engine_error", e.to_string())
+            .detail_entry("issues", serde_json::json!(e.issues))
+    })
 }
 
 /// `parseTrace(trace)`: the trace document read back through the trace
