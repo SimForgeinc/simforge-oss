@@ -9,10 +9,15 @@
 //! catalog, batch planning and evidence checks). Errors are the compiler's
 //! structured `{code, path?, reason, detail?}` with `findings` selecting exit 2.
 
+pub mod batch;
 pub mod engine;
+pub mod evaluate;
+pub mod evidence;
 pub mod instance;
 pub mod json;
+pub mod jsvalue;
 pub mod maps;
+pub mod metrics;
 pub mod paths;
 pub mod sites;
 pub mod template;
