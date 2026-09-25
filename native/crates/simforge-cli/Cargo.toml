@@ -38,6 +38,8 @@ regex = "1"
 include_dir = "0.7"
 # Decodes the render job's RGB frames (lossless RGBA8 PNG) for the video encoder.
 png = "0.18"
+# Content-addressed asset closures by digest (the sky plates; track X).
+simforge-assets = { path = "../simforge-assets" }
 # The engine: traces, the render timeline and its sampler.
 simforge-core = { path = "../simforge-core" }
 # The Python SDK's episode glue (EnvSession, action row, observation layout,

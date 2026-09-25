@@ -254,23 +254,48 @@ fn gpu_check() -> Check {
 
 // ------------------------------------------------------------------ sky plates
 
-/// The renderer's sky plates (NASA star map and moon, pinned by
-/// `SOURCES.json`), resolved and verified exactly as a render resolves them.
+/// The renderer's sky plates: the pinned sky closure's state in the asset
+/// cache (`simforge assets pull` materializes it by digest), and the plates a
+/// render would use, resolved and verified exactly as a render resolves them
+/// (an explicit `SIMFORGE_SKY_ASSETS` outranks the cache).
 fn sky_check() -> Check {
+    let pin = simforge_assets::Identity::from(simforge_assets::PINNED_SKY_CLOSURE);
+    let store = simforge_assets::Store::from_env(None);
+    let closure = match store.materialized(&pin) {
+        Ok(Some(m)) => json!({ "digest": pin.sha256, "state": "materialized", "dir": m.directory }),
+        Ok(None) => json!({ "digest": pin.sha256, "state": "absent", "cache": store.cache_dir() }),
+        Err(e) => {
+            json!({ "digest": pin.sha256, "state": "invalid", "cache": store.cache_dir(), "error": e.to_string() })
+        }
+    };
+    let fix = "run `simforge assets pull --only sky` (fetches the pinned sky closure by digest), or set SIMFORGE_SKY_ASSETS to a directory holding SOURCES.json and the .skytex plates";
+    if closure["state"] == "invalid" {
+        return Check::new(
+            "sky",
+            Status::Fail,
+            format!(
+                "the cached sky closure {} does not verify",
+                &pin.sha256[..12]
+            ),
+            json!({ "closure": closure }),
+        )
+        .fix(fix);
+    }
     match render_core::sky_pass::SkyAssetPaths::resolve() {
         Ok(paths) => Check::new(
             "sky",
             Status::Ok,
             format!("sky plates verified in {}", paths.dir.display()),
-            json!({ "dir": paths.dir, "star": paths.star, "moon": paths.moon }),
+            json!({ "dir": paths.dir, "star": paths.star, "moon": paths.moon, "closure": closure,
+                    "override": std::env::var("SIMFORGE_SKY_ASSETS").ok() }),
         ),
         Err(error) => Check::new(
             "sky",
             Status::Fail,
             format!("{error:#}"),
-            json!({ "env": std::env::var("SIMFORGE_SKY_ASSETS").ok() }),
+            json!({ "closure": closure, "override": std::env::var("SIMFORGE_SKY_ASSETS").ok() }),
         )
-        .fix("renders need the two pinned sky plates: set SIMFORGE_SKY_ASSETS to a directory holding SOURCES.json and the .skytex plates"),
+        .fix(fix),
     }
 }
 

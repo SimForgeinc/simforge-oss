@@ -424,7 +424,7 @@ pub fn map_drift(ws: &Workspace, closure: &MapClosure) -> Result<Option<Value>, 
 pub fn sky_assets() -> Result<render_core::sky_pass::SkyAssetPaths, CliError> {
     render_core::sky_pass::SkyAssetPaths::resolve().map_err(|e| {
         CliError::new("sky_assets_missing", format!("{e:#}")).with_detail(json!({
-            "hint": "set SIMFORGE_SKY_ASSETS to a directory holding SOURCES.json and the two .skytex plates (`simforge doctor` checks it)",
+            "hint": "run `simforge assets pull --only sky` (the pinned sky closure, by digest), or set SIMFORGE_SKY_ASSETS to a directory holding SOURCES.json and the two .skytex plates; `simforge doctor` checks it",
         }))
     })
 }

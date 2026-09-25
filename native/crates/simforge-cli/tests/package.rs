@@ -3,10 +3,11 @@
 //! simforge-package crate): every valid package verifies to its id, every
 //! hostile one is refused with its code and rule, through the CLI contract.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use serde_json::Value;
+use serde_json::{json, Value};
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../fixtures/scenario-package")
@@ -128,11 +129,11 @@ fn inspect_reads_the_manifest_without_verifying_members() {
 }
 
 #[test]
-fn import_unpacks_a_workspace_and_reports_what_is_missing_locally() {
+fn offline_import_unpacks_and_reports_what_is_missing() {
     let home = tempfile::tempdir().unwrap();
     let ws = home.path().join("ws");
     let (code, doc, err) = run(simforge(home.path())
-        .args(["package", "import"])
+        .args(["package", "import", "--offline"])
         .arg(fixtures().join("valid/full.scenario.zip"))
         .arg("--into")
         .arg(&ws));
@@ -149,10 +150,17 @@ fn import_unpacks_a_workspace_and_reports_what_is_missing_locally() {
     }
     // The full form carries its blobs.
     assert!(ws.join("blobs/sha256").is_dir());
-    // Nothing is installed in this empty home: both are reported, never fetched.
-    assert_eq!(doc["local"]["map"]["native"], Value::Null);
-    assert_eq!(doc["local"]["actorClosure"]["installed"], false);
+    assert_eq!(doc["resolved"]["offline"], true);
+    assert_eq!(doc["resolved"]["map"]["state"], "skipped");
+    assert_eq!(doc["resolved"]["actorClosure"]["state"], "skipped");
     assert_eq!(doc["next"].as_array().unwrap().len(), 2);
+    // No staging directory is left beside the workspace.
+    let leftovers: Vec<_> = std::fs::read_dir(home.path())
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_name().to_string_lossy().contains("importing"))
+        .collect();
+    assert!(leftovers.is_empty());
 
     // The workspace is readable by the workspace commands.
     let (code, doc, err) = run(simforge(home.path())
@@ -163,7 +171,7 @@ fn import_unpacks_a_workspace_and_reports_what_is_missing_locally() {
 
     // A second import into the same directory is refused.
     let (code, _, err) = run(simforge(home.path())
-        .args(["package", "import"])
+        .args(["package", "import", "--offline"])
         .arg(fixtures().join("valid/full.scenario.zip"))
         .arg("--into")
         .arg(&ws));
@@ -175,12 +183,224 @@ fn import_unpacks_a_workspace_and_reports_what_is_missing_locally() {
     // A refused package leaves nothing behind.
     let bad = home.path().join("bad");
     let (code, _, _) = run(simforge(home.path())
-        .args(["package", "import"])
+        .args(["package", "import", "--offline"])
         .arg(fixtures().join("invalid/member-digest.scenario.zip"))
         .arg("--into")
         .arg(&bad));
     assert_eq!(code, 2);
-    assert!(!bad.join("manifest.json").exists());
+    assert!(!bad.exists());
+}
+
+const MAP: &str = "richmond-field-station";
+
+fn write(path: &Path, bytes: &[u8]) {
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, bytes).unwrap();
+}
+
+fn blob_rel(sha: &str) -> String {
+    format!("blobs/sha256/{}/{sha}", &sha[..2])
+}
+
+/// A file:// map registry publishing one release of `MAP` whose canonical
+/// closure is `files` (path to bytes), every blob stored by digest.
+fn registry(root: &Path, files: &BTreeMap<String, Vec<u8>>) -> String {
+    use simforge_cli::registry::{canonical_json, sha256_hex};
+    let mut members = serde_json::Map::new();
+    for (path, bytes) in files {
+        let sha = sha256_hex(bytes);
+        write(&root.join(blob_rel(&sha)), bytes);
+        members.insert(path.clone(), json!({ "sha256": sha, "bytes": bytes.len() }));
+    }
+    let closure = json!({ "schema": "map-closure.v1", "kind": "canonical", "metadata": { "master": true }, "members": members });
+    let key = format!("maps/{MAP}/v7/closure.json");
+    write(&root.join(&key), canonical_json(&closure).as_bytes());
+    let closure_digest = sha256_hex(canonical_json(&closure).as_bytes());
+    let release = json!({
+        "schema": "simforge.map-release.v1", "name": MAP, "version": "v7", "visibility": "public",
+        "createdAt": "2026-09-25T00:00:00Z", "canonical": { "key": key, "digest": closure_digest },
+    });
+    write(
+        &root.join(format!("maps/{MAP}/v7/release.json")),
+        canonical_json(&release).as_bytes(),
+    );
+    let release_digest = sha256_hex(canonical_json(&release).as_bytes());
+    write(
+        &root.join(format!("maps/{MAP}/versions.json")),
+        json!([{ "version": "v7", "closureDigest": closure_digest, "releaseDigest": release_digest, "createdAt": "2026-09-25T00:00:00Z" }]).to_string().as_bytes(),
+    );
+    write(
+        &root.join("index.json"),
+        json!({ MAP: { "latest": "v7", "versions": ["v7"], "summary": { "label": MAP } } })
+            .to_string()
+            .as_bytes(),
+    );
+    format!("file://{}", root.display())
+}
+
+/// The full fixture's embedded map members (path to bytes), from an offline import.
+fn package_map_files(home: &Path) -> BTreeMap<String, Vec<u8>> {
+    let ws = home.join("probe");
+    let (code, _, err) = run(simforge(home)
+        .args(["package", "import", "--offline"])
+        .arg(fixtures().join("valid/full.scenario.zip"))
+        .arg("--into")
+        .arg(&ws));
+    assert_eq!(code, 0, "{err}");
+    let closure: Value =
+        serde_json::from_slice(&std::fs::read(ws.join("map/closure.json")).unwrap()).unwrap();
+    let mut out = BTreeMap::new();
+    for m in closure["members"].as_array().unwrap() {
+        let sha = m["sha256"].as_str().unwrap();
+        if let Ok(bytes) = std::fs::read(ws.join(blob_rel(sha))) {
+            out.insert(m["relativePath"].as_str().unwrap().to_owned(), bytes);
+        }
+    }
+    assert!(out.contains_key("map.xodr"));
+    out
+}
+
+/// The fixture's actor closure installed in `root` (sizes only: the full
+/// package does not embed every model, and import checks sizes).
+fn install_actor_closure(home: &Path, root: &Path) {
+    let ws = home.join("probe");
+    let doc = std::fs::read(ws.join("actors/closure.json")).unwrap();
+    let closure: Value = serde_json::from_slice(&doc).unwrap();
+    let digest = simforge_cli::registry::sha256_hex(&doc);
+    write(&root.join(format!("closures/{digest}.json")), &doc);
+    for m in closure["members"].as_object().unwrap().values() {
+        let sha = m["sha256"].as_str().unwrap();
+        let bytes = std::fs::read(ws.join(blob_rel(sha)))
+            .unwrap_or_else(|_| vec![0u8; m["bytes"].as_u64().unwrap() as usize]);
+        write(&root.join(blob_rel(sha)), &bytes);
+    }
+}
+
+fn import(home: &Path, package: &str, ws: &Path, extra: &[&str]) -> (i32, Value, Value) {
+    run(simforge(home)
+        .args(["package", "import"])
+        .arg(fixtures().join(package))
+        .arg("--into")
+        .arg(ws)
+        .args(["--cache-root"])
+        .arg(home.join("maps"))
+        .args(["--assets-root"])
+        .arg(home.join("actor-assets"))
+        .args(extra))
+}
+
+#[test]
+fn import_resolves_the_map_by_digest_from_a_registry_release_that_matches() {
+    let home = tempfile::tempdir().unwrap();
+    let mut files = package_map_files(home.path());
+    // The native master the renderer needs, which a browser closure lacks.
+    files.insert(
+        "master.gltf".into(),
+        br#"{"asset":{"version":"2.0"}}"#.to_vec(),
+    );
+    files.insert("geometry.bin".into(), vec![7u8; 64]);
+    let url = registry(&home.path().join("registry"), &files);
+    install_actor_closure(home.path(), &home.path().join("actor-assets"));
+
+    let ws = home.path().join("ws");
+    let (code, doc, err) = import(
+        home.path(),
+        "valid/full.scenario.zip",
+        &ws,
+        &["--registry", &url],
+    );
+    assert_eq!(code, 0, "{err}");
+    assert_eq!(
+        doc["resolved"]["map"]["state"], "pulled",
+        "{}",
+        doc["resolved"]
+    );
+    assert_eq!(doc["resolved"]["map"]["release"], format!("{MAP}@v7"));
+    assert_eq!(doc["resolved"]["actorClosure"]["state"], "installed");
+    assert!(doc["next"].as_array().unwrap().is_empty());
+    let native = home.path().join(format!("maps/.corpus/{MAP}"));
+    assert!(native.join("master.gltf").is_file());
+    assert!(native.join(".map-release.json").is_file());
+    assert!(ws.join("manifest.json").is_file());
+
+    // Now installed: a second import resolves locally, even offline.
+    let ws2 = home.path().join("ws2");
+    let (code, doc, err) = import(home.path(), "valid/full.scenario.zip", &ws2, &["--offline"]);
+    assert_eq!(code, 0, "{err}");
+    assert_eq!(doc["resolved"]["map"]["state"], "installed");
+}
+
+#[test]
+fn a_map_no_public_store_carries_is_package_closure_unavailable() {
+    let home = tempfile::tempdir().unwrap();
+    // A registry whose only release has another OpenDRIVE: a private map.
+    let other = BTreeMap::from([
+        ("map.xodr".to_owned(), b"<OpenDRIVE/>".to_vec()),
+        ("master.gltf".to_owned(), b"{}".to_vec()),
+    ]);
+    let url = registry(&home.path().join("registry"), &other);
+    let empty_assets = home.path().join("empty-assets");
+    std::fs::create_dir_all(&empty_assets).unwrap();
+    let ws = home.path().join("ws");
+    let (code, doc, err) = import(
+        home.path(),
+        "valid/thin.scenario.zip",
+        &ws,
+        &[
+            "--registry",
+            &url,
+            "--assets-base-url",
+            &format!("file://{}", empty_assets.display()),
+        ],
+    );
+    assert_eq!(code, 2, "{doc}");
+    assert_eq!(err["code"], "package_closure_unavailable", "{err}");
+    let missing = err["detail"]["missing"].as_array().unwrap();
+    // The map fails the import before the actor closure is downloaded.
+    assert_eq!(missing.len(), 1, "{err}");
+    let map = &missing[0];
+    assert_eq!(map["closure"], "map");
+    assert_eq!(map["detail"]["state"], "unavailable");
+    assert!(map["detail"]["missing"]["count"].as_u64().unwrap() >= 1);
+    assert!(err["reason"]
+        .as_str()
+        .unwrap()
+        .contains("re-export the full package"));
+    // Nothing is left behind.
+    assert!(!ws.exists());
+}
+
+#[test]
+fn a_public_release_that_differs_from_the_package_is_not_substituted() {
+    let home = tempfile::tempdir().unwrap();
+    let mut files = package_map_files(home.path());
+    files.insert("master.gltf".into(), b"{}".to_vec());
+    // Same OpenDRIVE, but a shared member with other bytes: another release.
+    let key = files
+        .keys()
+        .find(|k| k.as_str() != "map.xodr" && k.as_str() != "master.gltf")
+        .unwrap()
+        .clone();
+    files.insert(key.clone(), b"different bytes".to_vec());
+    let url = registry(&home.path().join("registry"), &files);
+    install_actor_closure(home.path(), &home.path().join("actor-assets"));
+    let ws = home.path().join("ws");
+    let (code, _, err) = import(
+        home.path(),
+        "valid/full.scenario.zip",
+        &ws,
+        &["--registry", &url],
+    );
+    assert_eq!(code, 2);
+    assert_eq!(err["code"], "package_closure_unavailable");
+    let map = &err["detail"]["missing"][0]["detail"];
+    assert_eq!(map["candidates"][0]["release"], format!("{MAP}@v7"));
+    assert_eq!(map["candidates"][0]["differing"][0]["path"], key.as_str());
+    assert!(err["detail"]["hint"]
+        .as_str()
+        .unwrap()
+        .contains("differ from the package's map"));
+    assert!(!ws.exists());
 }
 
 #[test]
@@ -197,13 +417,39 @@ fn the_release_smoke_package_verifies_and_imports() {
     assert_eq!(doc["packageId"], meta["packageId"]);
     let ws = home.path().join("smoke");
     let (code, doc, err) = run(simforge(home.path())
-        .args(["package", "import"])
+        .args(["package", "import", "--offline"])
         .arg(&smoke)
         .arg("--into")
         .arg(&ws));
     assert_eq!(code, 0, "{err}");
     assert_eq!(
-        doc["local"]["actorClosure"]["digest"],
+        doc["resolved"]["actorClosure"]["digest"],
         meta["actors"]["closureDigest"]
     );
+}
+
+#[test]
+fn an_actor_closure_no_store_carries_is_package_closure_unavailable() {
+    let home = tempfile::tempdir().unwrap();
+    let mut files = package_map_files(home.path());
+    files.insert("master.gltf".into(), b"{}".to_vec());
+    let url = registry(&home.path().join("registry"), &files);
+    let empty_assets = home.path().join("empty-assets");
+    std::fs::create_dir_all(&empty_assets).unwrap();
+    let ws = home.path().join("ws");
+    let (code, _, err) = import(
+        home.path(),
+        "valid/full.scenario.zip",
+        &ws,
+        &[
+            "--registry",
+            &url,
+            "--assets-base-url",
+            &format!("file://{}", empty_assets.display()),
+        ],
+    );
+    assert_eq!(code, 2, "{err}");
+    assert_eq!(err["code"], "package_closure_unavailable");
+    assert_eq!(err["detail"]["missing"][0]["closure"], "actors");
+    assert!(!ws.exists());
 }

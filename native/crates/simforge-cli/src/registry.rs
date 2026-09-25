@@ -405,6 +405,13 @@ impl Registry {
         }
     }
 
+    /// The registry's `index.json` (`{}` when it has none).
+    pub fn index(&self) -> Result<Value, CliError> {
+        Ok(self
+            .get_json_optional("index.json")?
+            .unwrap_or_else(|| json!({})))
+    }
+
     fn get_json_optional(&self, key: &str) -> Result<Option<Value>, CliError> {
         let Some(bytes) = self.get_optional(key)? else {
             return Ok(None);
