@@ -60,6 +60,9 @@ if test "${1:-}" = --step; then
       # The PyO3 extension crate links libpython only as a test binary; its
       # behaviour is covered by the gym's pytest (built by maturin, abi3).
       excl=(); test "$ws" = native && excl=(--workspace --exclude simforge-bindings-python)
+      if test "$ws" = native/crates/simforge-timeline-python; then
+        echo "nextest: skipped (a PyO3 wheel crate; adapters/timeline's pytest exercises it)"; exit 0
+      fi
       cd "$ws" && exec cargo nextest run --no-fail-fast --no-tests=pass "${excl[@]}" ;;
     python)
       rc=0
@@ -192,7 +195,7 @@ skip_step() { record_step "$1" skip 0 "" "$2"; }
 
 ok=true
 run_step boundary "cargo metadata + uv + no TS" -- boundary || ok=false
-engine='^(native/Cargo\.(toml|lock)|native/crates/simforge-(core|compiler|session|bindings-common|bindings-python|package)/|fixtures/|examples/|contracts/|rust-toolchain\.toml)'
+engine='^(native/Cargo\.(toml|lock)|native/crates/simforge-(core|compiler|session|bindings-common|bindings-python|timeline-python|package)/|fixtures/|examples/|contracts/|rust-toolchain\.toml)'
 declare -A ws_when=(
   [native]="$engine"
   [renderer]='^(renderer/|native/crates/simforge-(core|compiler|session|package|cli)/|native/Cargo\.lock|fixtures/|catalog/|rust-toolchain\.toml)'
