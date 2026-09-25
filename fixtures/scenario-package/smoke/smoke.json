@@ -9,14 +9,14 @@
   "form": "thin",
   "map": {
     "blobOrigin": "https://da3tufozhdsvl.cloudfront.net/blobs/sha256/<aa>/<sha256>",
-    "browserClosureSha256": "f08173b844b41b34e12e44fabafaaface1672174fb6be0352def8330b8bb5d03",
-    "mapVersionId": "usmap_caa8ecb111be3a4ab63513d773e7e62f",
-    "nativeClosureSha256": "164d419617d9efea06aed90e5d8b33f52d64259eacd35a7ee3a18d013335abb9",
-    "registryReleaseDigest": "818c2b8a80f6706f8647b2eda1a2bb75b910cbaa7a0c23f62d34d89141206e13",
-    "registryVersion": 11
+    "canonicalClosureSha256": "dbd2411b05ed0570e0c5822e6de570f6a724899f03d4f46f66e88e3c0a2e7d82",
+    "registry": "https://da3tufozhdsvl.cloudfront.net",
+    "registryReleaseDigest": "a19b6e5273e340f7fe42e6d4ac0e966835d428bfac32d5e716a28f9dd6a6cf8e",
+    "release": "richmond-field-station@v2",
+    "webClosureSha256": "52ab5deae1d5383af260e1e2c774fa0ca6e4c5b73faf73a28258f046c898a4c9"
   },
   "package": "richmond-public.scenario.zip",
-  "packageId": "1e2b5146613adf4fc22c2f0b23b7913c9afd152021226a20b629988136c93159",
+  "packageId": "8c86d40f84eed38a034720348dd68095a324966dec004a2b55e4d6ab92466ac8",
   "placeholders": [
     "document.json (archive-corpus rc73-doc-child-reveal, not this trace's scenario)",
     "simulation/resolution.json.gz",

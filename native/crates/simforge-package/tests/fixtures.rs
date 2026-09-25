@@ -92,7 +92,8 @@ impl Parts {
                 "simulation/resolution.json.gz" => {
                     m["simulation"]["resolutionSha256"] = json!(digest)
                 }
-                "map/closure.json" => m["map"]["browserClosureSha256"] = json!(digest),
+                "map/closure.json" => m["map"]["canonicalClosureSha256"] = json!(digest),
+                "map/web-closure.json" => m["map"]["webClosureSha256"] = json!(digest),
                 "actors/closure.json" => m["catalog"]["actorClosureDigest"] = json!(digest),
                 "catalog/entries.json" => m["catalog"]["catalogSha256"] = json!(digest),
                 "export/scenario.xosc" => m["executionPackage"]["xoscSha256"] = json!(digest),
@@ -184,7 +185,7 @@ fn generate() -> Vec<Fixture> {
             file: "valid/full.scenario.zip".into(),
             bytes: full,
             expect: Expect::Valid(Form::Full),
-            note: "the same revision, full: every non-texture map blob and the reachable actor blobs (same packageId as thin)",
+            note: "the same revision, full: every canonical map blob, the web-only members the CLI reads, and the reachable actor blobs (same packageId as thin)",
         },
         Fixture {
             file: "valid/thin-minimal.scenario.zip".into(),
@@ -542,10 +543,10 @@ fn generate() -> Vec<Fixture> {
     );
     bad(
         "manifest-digest-field",
-        manifest(&|m| m["map"]["browserClosureSha256"] = json!(sha(b"x"))),
+        manifest(&|m| m["map"]["canonicalClosureSha256"] = json!(sha(b"x"))),
         M,
         "member_digest_field",
-        "map.browserClosureSha256 is not the map/closure.json member digest",
+        "map.canonicalClosureSha256 is not the map/closure.json member digest",
     );
     bad(
         "manifest-required-role",
@@ -761,6 +762,61 @@ fn generate() -> Vec<Fixture> {
         "the actor closure has no catalog-models.json",
     );
 
+    // Map closures (spec section 8.1, rule 5): the registry release's documents.
+    bad(
+        "map-closure-not-master",
+        content(&|p| {
+            let mut v = json_member(p, "map/closure.json");
+            v.as_object_mut().unwrap().remove("metadata");
+            p.set("map/closure.json", canonical_bytes(&v));
+        }),
+        CL,
+        "map_closure_schema",
+        "a canonical closure that predates the native master format",
+    );
+    bad(
+        "map-closure-kind",
+        content(&|p| {
+            let web = p.member("map/web-closure.json").to_vec();
+            p.set("map/closure.json", web);
+        }),
+        CL,
+        "map_closure_schema",
+        "the web closure where the canonical closure belongs",
+    );
+    bad(
+        "closure-path-conflict",
+        content(&|p| {
+            let mut v = json_member(p, "map/web-closure.json");
+            v["members"]["map.xodr"]["sha256"] = json!(sha(b"another OpenDRIVE"));
+            p.set("map/web-closure.json", canonical_bytes(&v));
+        }),
+        CL,
+        "closure_path_conflict",
+        "map.xodr names different bytes in the canonical and the web closure",
+    );
+    bad(
+        "form-missing-web-member",
+        {
+            let case = Case::fixture();
+            let mut blobs: Vec<(String, Vec<u8>)> = case
+                .map_files
+                .values()
+                .chain([
+                    &case.actor_blobs["catalog-models.json"],
+                    &case.actor_blobs["models/hazard.cardboard_box/model.glb"],
+                ])
+                .map(|b| (blob_path(&sha(b)), b.clone()))
+                .collect();
+            blobs.sort();
+            blobs.dedup();
+            base.assemble(&blobs)
+        },
+        "package_form_incomplete",
+        "blob_missing",
+        "every canonical blob embedded, but not the static colliders the CLI reads from the web closure",
+    );
+
     // Ground (spec section 8.1, rule 10), on trace v5 sources.
     bad(
         "ground-required",
@@ -930,8 +986,8 @@ fn thin_and_full_share_one_package_id() {
     assert_eq!(thin.manifest_bytes, full.manifest_bytes);
     assert_eq!(thin.form, Form::Thin);
     assert_eq!(full.form, Form::Full);
-    assert_eq!(full.content.embedded_texture_members, 0);
-    assert_eq!(full.content.texture_members, 1);
+    assert_eq!(full.content.map_members, 5);
+    assert_eq!(full.content.cli_web_members, 2);
 }
 
 #[test]

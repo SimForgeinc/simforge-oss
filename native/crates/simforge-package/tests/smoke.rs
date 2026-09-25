@@ -1,20 +1,22 @@
 //! The release smoke package: `fixtures/scenario-package/smoke/richmond-public.scenario.zip`.
 //!
-//! A thin package whose closures resolve from the PUBLIC registry: its
-//! `map/closure.json` is the published Richmond Field Station browser asset
-//! set (registry version 11, closure `f08173b8…`), every member of which is
-//! served by digest from the public blob origin, and its actor closure is the
-//! pinned public `793ec86c… (attributed: per-member licences)`. The motion is a real archived trace
+//! A thin package whose closures resolve from the PUBLIC stores: its
+//! `map/closure.json` and `map/web-closure.json` are the public registry's
+//! Richmond Field Station release (`richmond-field-station@v2`) canonical and
+//! web closures, byte for byte as the registry serves them (every member is
+//! served by digest from the public blob origin), and its actor closure is the
+//! pinned public, attributed `793ec86c…`. The motion is a real archived trace
 //! (`rc72-engine070-richmond-commit`: one ambulance, 20 s) with a timeline
-//! derived under the current sampler from the public OpenDRIVE and topology.
-//! The document and resolution record are fixture placeholders: the smoke
-//! covers import, timeline and render, not re-simulation.
+//! derived under the current sampler from the release's OpenDRIVE and
+//! topology. The document and resolution record are fixture placeholders: the
+//! smoke covers import, timeline and render, not re-simulation.
 //!
 //! The render expectation is the golden-harness scene `package-smoke-richmond`
 //! (its frames are recorded on lavapipe like every golden; until recorded the
 //! scene is explicitly `unrecorded`, which fails loudly).
 //!
-//! Regenerate (needs the public members, fetched by digest; see fixtures/scenario-package/README.md):
+//! Regenerate (needs the public documents and members, fetched by digest; see
+//! fixtures/scenario-package/README.md):
 //! `SIMFORGE_SMOKE_INPUTS=<dir> cargo test -p simforge-package --test smoke -- --ignored`
 
 mod support;
@@ -25,52 +27,20 @@ use std::path::PathBuf;
 use serde_json::{json, Value};
 use simforge_core::trace::timeline::{build_render_timeline, HeightField, SAMPLER_VERSION};
 use simforge_core::trace::SimTrace;
-use simforge_package::closure::ActorClosure;
+use simforge_package::closure::{pin_closure_sha256, ActorClosure, MapClosure};
 use simforge_package::{verify_bytes, Form, PackageBuilder, ReceiptInput, VerifyOptions};
 use support::*;
 
 const TRACE_ID: &str = "rc72-engine070-richmond-commit";
 const DOCUMENT_ID: &str = "rc73-doc-child-reveal";
-const PUBLIC_BROWSER_CLOSURE: &str =
-    "f08173b844b41b34e12e44fabafaaface1672174fb6be0352def8330b8bb5d03";
+const REGISTRY: &str = "https://da3tufozhdsvl.cloudfront.net";
+const RELEASE: &str = "richmond-field-station@v2";
 const PUBLIC_ACTOR_CLOSURE: &str =
     "793ec86ceda7734f1f5f7c0b260a396c11c970a471ab4418987e4d531f33daa4";
-const PUBLIC_MAP_VERSION: &str = "usmap_caa8ecb111be3a4ab63513d773e7e62f";
 const GOLDEN_SCENE: &str = "package-smoke-richmond";
 
 fn smoke_dir() -> PathBuf {
     fixtures_root().join("scenario-package/smoke")
-}
-
-/// `closure.ts` `role()` + `required`, over the published plan's `[path, sha, bytes, mediaType?]` rows.
-fn browser_closure(plan: &Value) -> Vec<u8> {
-    let mut rows: Vec<&Value> = plan["assets"].as_array().unwrap().iter().collect();
-    rows.sort_by(|a, b| a[0].as_str().cmp(&b[0].as_str()));
-    let members: Vec<Value> = rows
-        .iter()
-        .map(|r| {
-            let path = r[0].as_str().unwrap();
-            let collider = path.split('/').any(|s| {
-                s == "collider"
-                    || s == "colliders"
-                    || s == "static-collider"
-                    || s.starts_with("collider.")
-                    || s.starts_with("colliders.")
-                    || s.starts_with("static-collider.")
-            });
-            json!({
-                "relativePath": path,
-                "sha256": r[1],
-                "byteLength": r[2],
-                "mediaType": r.get(3).cloned().unwrap_or(json!("application/octet-stream")),
-                "role": map_role(path),
-                "required": !collider,
-            })
-        })
-        .collect();
-    canonical_bytes(
-        &json!({ "contractVersion": "uniscenario.browser-asset-set/v1", "members": members }),
-    )
 }
 
 #[test]
@@ -79,28 +49,29 @@ fn generate_smoke_package() {
     let inputs =
         PathBuf::from(std::env::var("SIMFORGE_SMOKE_INPUTS").expect("SIMFORGE_SMOKE_INPUTS"));
     let input = |p: &str| std::fs::read(inputs.join(p)).unwrap_or_else(|e| panic!("{p}: {e}"));
-    let plan: Value = serde_json::from_slice(&input("browser-plan.json")).unwrap();
-    let descriptor: Value = serde_json::from_slice(&input("descriptor.json")).unwrap();
-    let map_closure = browser_closure(&plan);
+    let release_bytes = input("release.json");
+    let release: Value = serde_json::from_slice(&release_bytes).unwrap();
+    let canonical_bytes_ = input("canonical-closure.json");
+    let web_bytes = input("web-closure.json");
+    // Exactly the registry's documents: canonical JSON with the release's digests.
+    assert_eq!(canonicalize(&canonical_bytes_), canonical_bytes_);
+    assert_eq!(canonicalize(&web_bytes), web_bytes);
     assert_eq!(
-        sha(&map_closure),
-        PUBLIC_BROWSER_CLOSURE,
-        "the published listing no longer reproduces"
+        sha(&canonical_bytes_),
+        release["canonical"]["digest"].as_str().unwrap()
     );
-    let listed: BTreeMap<String, String> = plan["assets"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|r| {
-            (
-                r[0].as_str().unwrap().to_owned(),
-                r[1].as_str().unwrap().to_owned(),
-            )
-        })
-        .collect();
+    assert_eq!(sha(&web_bytes), release["web"]["digest"].as_str().unwrap());
+    let release_digest = sha(&canonicalize(&release_bytes));
+    let canonical = MapClosure::parse(&canonical_bytes_, "canonical", "map/closure.json").unwrap();
+    let web = MapClosure::parse(&web_bytes, "web", "map/web-closure.json").unwrap();
     let member = |p: &str| {
         let bytes = input(&format!("map/{p}"));
-        assert_eq!(sha(&bytes), listed[p], "{p} is not the published member");
+        let listed = canonical.member(p).or_else(|| web.member(p)).unwrap();
+        assert_eq!(
+            sha(&bytes),
+            listed.sha256,
+            "{p} is not the published member"
+        );
         bytes
     };
     let xodr = member("map.xodr");
@@ -109,7 +80,7 @@ fn generate_smoke_package() {
     assert_eq!(sha(&actors_closure), PUBLIC_ACTOR_CLOSURE);
     let catalog_models = input("catalog-models.json");
 
-    // The archived trace and a current-sampler timeline on the public height source.
+    // The archived trace and a current-sampler timeline on the release's height source.
     let corpus: Value = serde_json::from_slice(&read("archive-corpus/corpus.json")).unwrap();
     let entry = corpus["entries"]
         .as_array()
@@ -175,28 +146,12 @@ fn generate_smoke_package() {
         .iter()
         .map(|id| json!({ "id": id }))
         .collect::<Vec<_>>()));
-    let rows = plan["assets"].as_array().unwrap();
-    let mut pin_files = BTreeMap::new();
-    for r in rows {
-        pin_files.insert(
-            r[0].as_str().unwrap().to_owned(),
-            r[1].as_str().unwrap().to_owned(),
-        );
-    }
-    let pin = {
-        let mut text = String::new();
-        for (p, h) in &pin_files {
-            if simforge_package::closure::is_simulation_member(p) {
-                text.push_str(&format!("{p} {h}\n"));
-            }
-        }
-        sha(text.as_bytes())
-    };
+    let (name, version) = RELEASE.split_once('@').unwrap();
     let draft = json!({
         "schema": "simforge.scenario-package/v1",
         "producer": { "app": "simforge-fixtures", "appVersion": "0.2.0", "minCli": "0.2.0" },
         "scenario": {
-            "title": "Smoke: ambulance on Richmond Field Station (public release 11)",
+            "title": "Smoke: ambulance on Richmond Field Station (public registry v2)",
             "documentSchema": "simforge.scenario.v2",
             "scenarioVersion": 2,
             "contentSha256": sha(&document),
@@ -236,17 +191,19 @@ fn generate_smoke_package() {
         }],
         "executionPackage": null,
         "map": {
-            "mapVersionId": PUBLIC_MAP_VERSION,
-            "sourceMapId": "richmond-field-station",
-            "label": descriptor["label"],
+            "mapVersionId": format!("{name}-{version}"),
+            "sourceMapId": name,
+            "label": "Richmond Field Station",
             "xodrSha256": sha(&xodr),
             "coordinateSystemSha256": String::from_utf8(input("coordinate-system-sha256.txt")).unwrap().trim(),
             "mapClosureDigest": String::from_utf8(input("map-closure-digest.txt")).unwrap().trim(),
-            "pinClosureSha256": pin,
-            "browserClosureSha256": PUBLIC_BROWSER_CLOSURE,
+            "pinClosureSha256": pin_closure_sha256(&canonical, Some(&web)),
+            "canonicalClosureSha256": sha(&canonical_bytes_),
+            "webClosureSha256": sha(&web_bytes),
+            "registryReleaseDigest": release_digest,
             "heightSourceDigest": tl.identity.height_field_digest,
             "groundDigest": null,
-            "closure": { "memberCount": rows.len(), "bytes": rows.iter().map(|r| r[2].as_u64().unwrap()).sum::<u64>() }
+            "closure": { "memberCount": canonical.members.len(), "bytes": canonical.total_bytes() }
         },
         "catalog": {
             "assetCatalogVersionId": null,
@@ -270,11 +227,13 @@ fn generate_smoke_package() {
         timeline.clone(),
     )
     .unwrap();
-    b.member("map/closure.json", map_closure).unwrap();
+    b.member("map/closure.json", canonical_bytes_.clone())
+        .unwrap();
+    b.member("map/web-closure.json", web_bytes.clone()).unwrap();
     b.member("actors/closure.json", actors_closure).unwrap();
     b.member("catalog/entries.json", catalog_entries).unwrap();
     b.receipt(ReceiptInput {
-        exported_at: "2026-09-24T00:00:00Z".into(),
+        exported_at: "2026-09-25T00:00:00Z".into(),
         exporter_release: "0.2.0-fixture".into(),
         texture_tier: None,
     });
@@ -289,17 +248,17 @@ fn generate_smoke_package() {
         "form": "thin",
         "readerCli": CLI,
         "map": {
-            "mapVersionId": PUBLIC_MAP_VERSION,
-            "registryVersion": descriptor["registryVersion"],
-            "registryReleaseDigest": descriptor["registryReleaseDigest"],
-            "browserClosureSha256": PUBLIC_BROWSER_CLOSURE,
-            "nativeClosureSha256": descriptor["canonicalDigest"],
-            "blobOrigin": "https://da3tufozhdsvl.cloudfront.net/blobs/sha256/<aa>/<sha256>"
+            "release": RELEASE,
+            "registry": REGISTRY,
+            "registryReleaseDigest": release_digest,
+            "canonicalClosureSha256": sha(&canonical_bytes_),
+            "webClosureSha256": sha(&web_bytes),
+            "blobOrigin": format!("{REGISTRY}/blobs/sha256/<aa>/<sha256>")
         },
         "actors": {
             "closureDigest": PUBLIC_ACTOR_CLOSURE,
-            "closureUrl": format!("https://da3tufozhdsvl.cloudfront.net/actor-assets/closures/{PUBLIC_ACTOR_CLOSURE}.json"),
-            "catalogIds": catalog_ids_of(&outcome.manifest),
+            "closureUrl": format!("{REGISTRY}/actor-assets/closures/{PUBLIC_ACTOR_CLOSURE}.json"),
+            "catalogIds": outcome.manifest.catalog.catalog_ids,
         },
         "timeline": {
             "timelineSha256": tl.sha256().unwrap(),
@@ -319,10 +278,6 @@ fn generate_smoke_package() {
     std::fs::write(dir.join("smoke.json"), text).unwrap();
 }
 
-fn catalog_ids_of(m: &simforge_package::Manifest) -> Vec<String> {
-    m.catalog.catalog_ids.clone()
-}
-
 #[test]
 fn the_smoke_package_verifies_and_names_public_closures() {
     let dir = smoke_dir();
@@ -333,8 +288,18 @@ fn the_smoke_package_verifies_and_names_public_closures() {
     assert_eq!(v.package_id(), meta["packageId"].as_str().unwrap());
     assert_eq!(v.form(), Form::Thin);
     let m = v.manifest();
-    assert_eq!(m.map.browser_closure_sha256, PUBLIC_BROWSER_CLOSURE);
-    assert_eq!(m.map.map_version_id, PUBLIC_MAP_VERSION);
+    assert_eq!(
+        m.map.canonical_closure_sha256,
+        meta["map"]["canonicalClosureSha256"].as_str().unwrap()
+    );
+    assert_eq!(
+        m.map.web_closure_sha256.as_deref(),
+        meta["map"]["webClosureSha256"].as_str()
+    );
+    assert_eq!(
+        m.map.registry_release_digest.as_deref(),
+        meta["map"]["registryReleaseDigest"].as_str()
+    );
     assert_eq!(m.catalog.actor_closure_digest, PUBLIC_ACTOR_CLOSURE);
     // The timeline is under the reader's current sampler: renderable as is.
     assert!(

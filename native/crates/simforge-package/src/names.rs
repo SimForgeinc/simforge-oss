@@ -27,7 +27,7 @@ pub fn blob_digest(name: &str) -> Option<&str> {
 }
 
 /// The section 10 allowlist:
-/// `^(manifest\.json|receipt\.json|document\.json|simulation/[a-z-]+\.json(\.gz)?|timeline/[0-9a-f]{64}\.json|(map|actors)/closure\.json|catalog/entries\.json|export/scenario\.xosc|render/pin\.json|blobs/sha256/[0-9a-f]{2}/[0-9a-f]{64})$`
+/// `^(manifest\.json|receipt\.json|document\.json|simulation/[a-z-]+\.json(\.gz)?|timeline/[0-9a-f]{64}\.json|(map|actors)/closure\.json|map/web-closure\.json|catalog/entries\.json|export/scenario\.xosc|render/pin\.json|blobs/sha256/[0-9a-f]{2}/[0-9a-f]{64})$`
 /// It rejects absolute paths, `..`, backslashes, drive letters, NUL and
 /// non-ASCII by construction.
 pub fn is_allowed_name(name: &str) -> bool {
@@ -36,6 +36,7 @@ pub fn is_allowed_name(name: &str) -> bool {
         | RECEIPT_PATH
         | "document.json"
         | "map/closure.json"
+        | "map/web-closure.json"
         | "actors/closure.json"
         | "catalog/entries.json"
         | "export/scenario.xosc"
@@ -67,6 +68,7 @@ pub enum Role {
     Traffic,
     Timeline,
     MapClosure,
+    MapWebClosure,
     ActorClosure,
     Catalog,
     Xosc,
@@ -75,13 +77,14 @@ pub enum Role {
 
 impl Role {
     /// Container order of section 3.2 (the declaration order).
-    pub const ORDER: [Role; 10] = [
+    pub const ORDER: [Role; 11] = [
         Role::Document,
         Role::Trace,
         Role::Resolution,
         Role::Traffic,
         Role::Timeline,
         Role::MapClosure,
+        Role::MapWebClosure,
         Role::ActorClosure,
         Role::Catalog,
         Role::Xosc,
@@ -95,6 +98,7 @@ impl Role {
             "simulation/resolution.json.gz" => Role::Resolution,
             "simulation/materialized-traffic.json" => Role::Traffic,
             "map/closure.json" => Role::MapClosure,
+            "map/web-closure.json" => Role::MapWebClosure,
             "actors/closure.json" => Role::ActorClosure,
             "catalog/entries.json" => Role::Catalog,
             "export/scenario.xosc" => Role::Xosc,
@@ -114,6 +118,7 @@ impl Role {
             Role::Traffic => "traffic",
             Role::Timeline => "timeline",
             Role::MapClosure => "map-closure",
+            Role::MapWebClosure => "map-web-closure",
             Role::ActorClosure => "actor-closure",
             Role::Catalog => "catalog",
             Role::Xosc => "xosc",
@@ -128,7 +133,7 @@ impl Role {
             Role::Resolution => "application/vnd.simforge.sim-resolution+json+gzip",
             Role::Traffic => "application/vnd.uniscenarios.materialized-traffic+json",
             Role::Timeline => "application/vnd.simforge.render-timeline+json",
-            Role::MapClosure => "application/vnd.simforge.browser-asset-set+json",
+            Role::MapClosure | Role::MapWebClosure => "application/vnd.simforge.map-closure+json",
             Role::ActorClosure => "application/vnd.simforge.actor-assets-closure+json",
             Role::Catalog => "application/json",
             Role::Xosc => "application/xml",

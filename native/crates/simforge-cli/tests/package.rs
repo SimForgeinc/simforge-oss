@@ -94,10 +94,16 @@ fn inspect_reads_the_manifest_without_verifying_members() {
         .arg(fixtures().join("valid/thin.scenario.zip")));
     assert_eq!(code, 0, "{err}");
     assert_eq!(doc["verified"], false);
-    assert_eq!(
-        doc["packageId"],
-        "df647f6e1f59caaf83c4b7ce8fd9076a9ca6e3eb7af228e080f134f6a6a6f1c0"
-    );
+    let expectations: Value =
+        serde_json::from_slice(&std::fs::read(fixtures().join("expectations.json")).unwrap())
+            .unwrap();
+    let thin = expectations["fixtures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["file"] == "valid/thin.scenario.zip")
+        .unwrap();
+    assert_eq!(doc["packageId"], thin["packageId"]);
     assert!(doc["members"].as_array().unwrap().len() >= 6);
     assert!(doc["producer"]["minCli"].is_string());
     assert!(doc["map"]["xodrSha256"].is_string());
