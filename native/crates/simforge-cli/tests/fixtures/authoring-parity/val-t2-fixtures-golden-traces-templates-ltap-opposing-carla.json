@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "validate",
+  "fixtures/golden-traces/templates/ltap-opposing.carla.template.json",
+  "--tier",
+  "2",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "573e86d8e74e4016f5cd9479dd7fd85a97591e9b32041e5985e1846589a86e42"
+}
