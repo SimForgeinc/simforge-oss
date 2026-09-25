@@ -28,7 +28,8 @@ SKY = RENDERER / "render-core" / "assets" / "sky"
 SOURCES = SKY / "SOURCES.json"
 SRC = RENDERER / "assets-src"
 CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "simforge" / "sky-src"
-PRODUCTS = CACHE.parent / "sky-products"  # verified products, shared by every checkout
+# Verified products, shared by every checkout (read-only is fine when they match).
+PRODUCTS = Path(os.environ.get("SIMFORGE_SKY_PRODUCTS", CACHE.parent / "sky-products"))
 
 
 def sha256(path: Path) -> str:

@@ -153,7 +153,7 @@ if test "$SANDBOX" = required; then
   # Object stores this clone borrows from (git alternates) are mounted read-only too.
   while IFS= read -r alt; do test -d "$alt" && mounts+=(-v "$alt:$alt:ro"); done < <(cat "$common/objects/info/alternates" 2>/dev/null)
   test -d "$maps/.corpus" && mounts+=(-v "$maps/.corpus:/maps/.corpus:ro")
-  test -d "$sky" && mounts+=(-v "$sky:/cache/xdg/simforge/sky-products:ro")
+  test -d "$sky" && mounts+=(-v "$sky:/sky-products:ro")
   proxy=http://gate-proxy:8888; sproxy=https://gate-proxy:8443
   container="gate-$run_id"
   docker run -d --name "$container" --network gate-internal \
@@ -162,7 +162,7 @@ if test "$SANDBOX" = required; then
     -e NO_PROXY="localhost,127.0.0.1,gate-proxy" -e no_proxy="localhost,127.0.0.1,gate-proxy" \
     -e NODE_EXTRA_CA_CERTS=/gate/proxy.crt -e SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt -e NODE_USE_ENV_PROXY=1 \
     -e CARGO_HTTP_PROXY="$proxy" -e GIT_PROXY_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt -e UV_NATIVE_TLS=1 \
-    -e UV_CACHE_DIR=/cache/uv -e XDG_CACHE_HOME=/cache/xdg -e SIMFORGE_MAPS_CACHE_ROOT=/maps -e CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}" \
+    -e UV_CACHE_DIR=/cache/uv -e XDG_CACHE_HOME=/cache/xdg -e SIMFORGE_MAPS_CACHE_ROOT=/maps -e SIMFORGE_SKY_PRODUCTS=/sky-products -e CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}" \
     -e GATE_BASE="$base" -e GATE_STEP_OUT=/cache/step-out \
     "$gate_tag" sleep infinity >/dev/null || die "could not start the sandbox"
   # The sandbox's own clone (objects shared read-only with the host clone), the
