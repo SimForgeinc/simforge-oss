@@ -1145,6 +1145,8 @@ mod signal_ref_tests {
         assert!(
             matches!(feature, RefJson::Feature { feature_id, approach } if feature_id == "junction:4" && approach == "subject")
         );
-        assert!(serde_json::from_str::<RefJson>(r#"{"feature_id":"x","approach":"left"}"#).is_err());
+        assert!(
+            serde_json::from_str::<RefJson>(r#"{"feature_id":"x","approach":"left"}"#).is_err()
+        );
     }
 }
