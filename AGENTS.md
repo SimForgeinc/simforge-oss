@@ -46,8 +46,9 @@ Node with no dependencies; the CLI replaces both (`simforge assets pull`, golden
 ## Checks
 
 ```sh
-scripts/gate-local.sh      # the merge gate: boundary, rustfmt/clippy on touched files,
-                           # cargo nextest, pytest of affected packages, lavapipe goldens
+scripts/gate-local.sh      # the merge gate: boundary, then at once: rustfmt/clippy on touched
+                           # files + cargo nextest, pytest of affected packages, lavapipe goldens
+                           # (a scene whose content key already passed is skipped)
 cargo nextest run --workspace --exclude simforge-bindings-python --exclude simforge-timeline-python   # one workspace
 cd adapters/gym && uv run --with pytest python -m pytest -q
 qualification/golden-harness/ci-local.sh verify   # needs mesa-vulkan-drivers + map corpora

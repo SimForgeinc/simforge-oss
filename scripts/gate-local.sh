@@ -5,7 +5,10 @@
 #
 #   scripts/gate-local.sh            gate HEAD of this checkout
 #
-# Steps (the first failure stops the gate; affected = changed since the base):
+# Steps (affected = changed since the base). boundary runs first; rust, python and
+# goldens are independent and run at the same time (goldens is the long one, so it
+# never waits behind the others; its scheduler leaves memory for them). The first
+# failure stops the gate: the other steps are cancelled and recorded as such.
 #   boundary   scripts/check-boundary.sh (no TypeScript; cargo metadata proves
 #              no path dependency leaves the checkout; uv/maturin paths inside)
 #   rust:<ws>  per Cargo workspace: rustfmt and clippy on the files this change
@@ -14,6 +17,11 @@
 #   python     pytest for every affected Python package (uv, locked toolchain)
 #   goldens    lavapipe render goldens (qualification/golden-harness), when the
 #              renderer, the engine core, the harness or its fixtures changed
+#              (a scene whose input key a merge-service PASS recorded in
+#              $GATE_HOME/goldens-pass.jsonl is skipped). GOLDENS_FULL=1 always
+#              runs the step and renders every scene: the nightly run on main
+#              (platform scripts/merge-queue/sdk-goldens-nightly.sh), which also
+#              refills the ledger and invalidates it when red.
 #
 # The base is the merge base of HEAD and origin/main, or HEAD^1 when HEAD is
 # already on main. No skip flags. The tree must be clean.
@@ -26,6 +34,9 @@
 # proxy.Dockerfile, squid.conf and allowlist.
 #   GATE_SANDBOX=off       (default) on the host: your own code on your machine
 #   GATE_SANDBOX=required  the merge service: never run PR code on the host
+# The sandbox gets SANDBOX_CPUS (12) and SANDBOX_MEMORY (40g): two lavapipe scenes
+# (up to ~14 GB each) beside the Rust and Python steps; the goldens scheduler
+# starts a scene only when the cgroup and the host have room for it.
 # Map corpora (GATE_SANDBOX_MAPS, default the local map cache) and verified sky
 # plates (GATE_SANDBOX_SKY) are mounted read-only. The record says which mode ran.
 # `scripts/gate-local.sh --step <name> [args]` runs one step (what the sandbox
@@ -74,6 +85,8 @@ if test "${1:-}" = --step; then
       done
       exit $rc ;;
     goldens)
+      # Keys of the scenes this run renders and PASSes; the outer gate records them.
+      export GOLDEN_KEYS_OUT="$out/goldens-keys.jsonl"; rm -f "$GOLDEN_KEYS_OUT"
       maps="${SIMFORGE_MAPS_CACHE_ROOT:-$HOME/.local/share/simforge/maps}"
       export SIMFORGE_CORPUS_RICHMOND="${SIMFORGE_CORPUS_RICHMOND:-$maps/.corpus/richmond-field-station}"
       export SIMFORGE_CORPUS_YALE="${SIMFORGE_CORPUS_YALE:-$maps/.corpus/yale-street}"
@@ -118,6 +131,21 @@ touched() { grep -Eq "$1" <<<"$changed"; }
 if command -v sccache >/dev/null; then export RUSTC_WRAPPER=sccache; fi
 export CARGO_TERM_COLOR=never CI=true
 
+key_file="$GATE_HOME/.gate-key"
+test -s "$key_file" || (umask 077 && head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' >"$key_file")
+# The goldens skip ledger: lines the merge service appended after a sandboxed PASS,
+# each HMAC'd with this machine's gate key. Only lines that verify reach the step,
+# as "<key> <sha>" (the step never sees the ledger or the key).
+ledger="$GATE_HOME/goldens-pass.jsonl"; ledger_view="$run_dir/goldens-ledger.txt"; : >"$ledger_view"
+if test "${GOLDENS_FULL:-0}" != 1 && test -s "$ledger"; then
+  gkey="$(cat "$key_file")"
+  while IFS= read -r line; do
+    body="$(jq -c 'del(.hmac)' <<<"$line" 2>/dev/null)" || continue
+    want="$(jq -r '.hmac // empty' <<<"$line")"
+    test -n "$want" && test "$(printf '%s' "$body" | openssl dgst -sha256 -hmac "$gkey" -r | cut -d' ' -f1)" = "$want" || continue
+    jq -r 'select(.key|test("^[0-9a-f]{64}$")) | "\(.key) \(.sha)"' <<<"$body"
+  done <"$ledger" >"$ledger_view"
+fi
 steps_json="[]"; failing=""
 record_step() { steps_json="$(jq -c --arg n "$1" --arg s "$2" --argjson t "$3" --arg l "$4" --arg d "$5" '. + [{name:$n,status:$s,seconds:$t,log:$l,detail:$d}]' <<<"$steps_json")"; printf '  %-4s  %-22s %5ss  %s\n' "$(tr a-z A-Z <<<"$2")" "$1" "$3" "$5"; }
 SANDBOX="${GATE_SANDBOX:-off}"
@@ -148,7 +176,7 @@ if test "$SANDBOX" = required; then
   common="$(cd "$(git rev-parse --git-common-dir)" && pwd)"
   maps="${GATE_SANDBOX_MAPS:-${SIMFORGE_MAPS_CACHE_ROOT:-$HOME/.local/share/simforge/maps}}"
   sky="${GATE_SANDBOX_SKY:-${XDG_CACHE_HOME:-$HOME/.cache}/simforge/sky-products}"
-  mounts=(-v "$sbx:/cache" -v "$common:$common:ro" -v "$script_path:/gate/gate-local.sh:ro" -v "$defs/proxy.crt:/gate/proxy.crt:ro" -v "$defs/ca-bundle.crt:/etc/ssl/certs/ca-certificates.crt:ro")
+  mounts=(-v "$sbx:/cache" -v "$common:$common:ro" -v "$script_path:/gate/gate-local.sh:ro" -v "$ledger_view:/gate/goldens-ledger.txt:ro" -v "$defs/proxy.crt:/gate/proxy.crt:ro" -v "$defs/ca-bundle.crt:/etc/ssl/certs/ca-certificates.crt:ro")
   # Object stores this clone borrows from (git alternates) are mounted read-only too.
   while IFS= read -r alt; do test -d "$alt" && mounts+=(-v "$alt:$alt:ro"); done < <(cat "$common/objects/info/alternates" 2>/dev/null)
   test -d "$maps/.corpus" && mounts+=(-v "$maps/.corpus:/maps/.corpus:ro")
@@ -156,13 +184,13 @@ if test "$SANDBOX" = required; then
   proxy=http://gate-proxy:8888; sproxy=https://gate-proxy:8443
   container="gate-$run_id"
   docker run -d --name "$container" --network gate-internal \
-    --cpus "${SANDBOX_CPUS:-12}" --memory "${SANDBOX_MEMORY:-32g}" --pids-limit 8192 --security-opt no-new-privileges "${mounts[@]}" \
+    --cpus "${SANDBOX_CPUS:-12}" --memory "${SANDBOX_MEMORY:-40g}" --pids-limit 8192 --security-opt no-new-privileges "${mounts[@]}" \
     -e HTTP_PROXY="$proxy" -e http_proxy="$proxy" -e HTTPS_PROXY="$proxy" -e https_proxy="$sproxy" \
     -e NO_PROXY="localhost,127.0.0.1,gate-proxy" -e no_proxy="localhost,127.0.0.1,gate-proxy" \
     -e NODE_EXTRA_CA_CERTS=/gate/proxy.crt -e SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt -e NODE_USE_ENV_PROXY=1 \
     -e CARGO_HTTP_PROXY="$proxy" -e GIT_PROXY_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt -e UV_NATIVE_TLS=1 \
-    -e UV_CACHE_DIR=/cache/uv -e XDG_CACHE_HOME=/cache/xdg -e SIMFORGE_MAPS_CACHE_ROOT=/maps -e SIMFORGE_SKY_PRODUCTS=/sky-products -e CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}" \
-    -e GATE_BASE="$base" -e GATE_STEP_OUT=/cache/step-out \
+    -e UV_CACHE_DIR=/cache/uv -e XDG_CACHE_HOME=/cache/xdg -e SIMFORGE_MAPS_CACHE_ROOT=/maps -e SIMFORGE_SKY_PRODUCTS=/sky-products -e CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-${SANDBOX_CPUS:-12}}" \
+    -e GATE_BASE="$base" -e GATE_STEP_OUT=/cache/step-out -e GOLDEN_PASS_LEDGER=/gate/goldens-ledger.txt -e GOLDENS_FULL="${GOLDENS_FULL:-0}" \
     "$gate_tag" sleep infinity >/dev/null || die "could not start the sandbox"
   # The sandbox's own clone (objects shared read-only with the host clone), the
   # pinned toolchain and cargo-nextest; git and cargo run inside, never on the host.
@@ -179,42 +207,93 @@ elif test "$SANDBOX" != off; then
   die "GATE_SANDBOX must be off or required, not $SANDBOX"
 fi
 
-run_step() { # name detail -- step args...
-  local name="$1" detail="$2"; shift 3
-  local log="$run_dir/${name//[:\/]/-}.log" t0 status; t0=$(date +%s)
+exec_step() { # log -- step args...: run one step (sandboxed or on the host), its exit status
+  local log="$1"; shift 2
   if test -n "$container"; then docker exec -w /cache/src "$container" bash /gate/gate-local.sh --step "$@" >"$log" 2>&1
-  else ( export GATE_BASE="$base" GATE_STEP_OUT="$run_dir/step-out"; bash "$script_path" --step "$@" ) >"$log" 2>&1; fi
-  status=$?; local dt=$(( $(date +%s) - t0 ))
-  if test $status -eq 0; then record_step "$name" pass "$dt" "$log" "$detail"; return 0; fi
-  record_step "$name" fail "$dt" "$log" "$detail (exit $status)"; tail -n 60 "$log" | sed 's/^/      | /'; echo "      \\ full log: $log"; failing="$name"; return 1; }
+  else ( export GATE_BASE="$base" GATE_STEP_OUT="$run_dir/step-out" GOLDEN_PASS_LEDGER="$ledger_view"; exec setsid bash "$script_path" --step "$@" ) >"$log" 2>&1; fi
+}
+step_log() { echo "$run_dir/${1//[:\/]/-}.log"; }
+finish_step() { # name detail status seconds
+  local log; log="$(step_log "$1")"
+  if test "$3" -eq 0; then record_step "$1" pass "$4" "$log" "$2"; return 0; fi
+  record_step "$1" fail "$4" "$log" "$2 (exit $3)"; tail -n 60 "$log" | sed 's/^/      | /'; echo "      \\ full log: $log"; failing="$1"; return 1; }
+run_step() { # name detail -- step args...
+  local name="$1" detail="$2" t0 status; shift 3; t0=$(date +%s)
+  exec_step "$(step_log "$name")" -- "$@"; status=$?
+  finish_step "$name" "$detail" "$status" $(( $(date +%s) - t0 )); }
 skip_step() { record_step "$1" skip 0 "" "$2"; }
+# Concurrent steps: start_step launches one in the background; wait_steps records
+# them in launch order. The first failure cancels the rest (the sandbox container
+# is removed; on the host each step is its own process group).
+bg_names=(); declare -A bg_detail bg_pid bg_t0 bg_status bg_end
+start_step() { # name detail -- step args...
+  local name="$1" detail="$2"; shift 3
+  bg_names+=("$name"); bg_detail[$name]="$detail"; bg_t0[$name]=$(date +%s)
+  exec_step "$(step_log "$name")" -- "$@" &
+  bg_pid[$name]=$!
+}
+wait_steps() {
+  local left=${#bg_names[@]} pid status name n cancelled=false
+  while test "$left" -gt 0; do
+    wait -n -p pid; status=$?
+    for n in "${bg_names[@]}"; do test "${bg_pid[$n]}" = "$pid" && name="$n"; done
+    bg_status[$name]=$status; bg_end[$name]=$(date +%s); left=$(( left - 1 ))
+    if test "$status" -ne 0 && ! $cancelled; then
+      cancelled=true
+      if test -n "$container"; then docker rm -f "$container" >/dev/null 2>&1; container=""
+      else for n in "${bg_names[@]}"; do test -z "${bg_status[$n]:-}" && kill -TERM -- "-$(pgrep -P "${bg_pid[$n]}" | head -1)" 2>/dev/null; done; fi
+      # the cancelled steps' own exits follow; they are recorded as cancelled below
+      for n in "${bg_names[@]}"; do test -z "${bg_status[$n]:-}" && bg_status[$n]=cancelled-by-$name; done
+    fi
+  done
+  local ok=0
+  for n in "${bg_names[@]}"; do
+    case "${bg_status[$n]}" in
+      cancelled-by-*) record_step "$n" cancelled $(( ${bg_end[$n]:-$(date +%s)} - bg_t0[$n] )) "$(step_log "$n")" "${bg_detail[$n]} (${bg_status[$n]#cancelled-by-} failed first)" ;;
+      *) finish_step "$n" "${bg_detail[$n]}" "${bg_status[$n]}" $(( bg_end[$n] - bg_t0[$n] )) || { test "$ok" -ne 0 || ok=1; } ;;
+    esac
+  done
+  return $ok
+}
 
 ok=true
 run_step boundary "cargo metadata + uv + no TS" -- boundary || ok=false
 engine='^(Cargo\.(toml|lock)|native/crates/simforge-(core|compiler|session|bindings-common|bindings-python|timeline-python|package)/|fixtures/|examples/|contracts/|rust-toolchain\.toml)'
 if $ok; then
+  # goldens first: it is the longest, and its scheduler sizes itself around the others.
+  if test "${GOLDENS_FULL:-0}" = 1; then
+    start_step goldens "lavapipe, verify all (GOLDENS_FULL: no skips)" -- goldens
+  elif touched '^(Cargo\.(toml|lock)|renderer/|native/crates/simforge-core/|qualification/golden-harness/|catalog/|rust-toolchain\.toml)'; then
+    start_step goldens "lavapipe, verify all" -- goldens
+  else skip_step goldens "renderer/engine not affected"; fi
   if touched '^(Cargo\.(toml|lock)|native/|renderer/|fixtures/|examples/|contracts/|catalog/|skills/|rust-toolchain\.toml)'; then
-    run_step rust "fmt+clippy ratchet, nextest (workspace)" -- rust || ok=false
+    start_step rust "fmt+clippy ratchet, nextest (workspace)" -- rust
   else skip_step rust "no Rust input changed"; fi
-fi
-if $ok; then
   py=()
   for d in $(git ls-files -- '*pyproject.toml' | xargs -n1 dirname | sort -u); do
     test -d "$d/tests" || continue
     if touched "^$d/" || { touched "$engine" && grep -Eq 'maturin|simforge-oss-gym|simforge-oss-timeline' "$d/pyproject.toml"; }; then py+=("$d"); fi
   done
-  if test ${#py[@]} -gt 0; then run_step python "${py[*]}" -- python "${py[@]}" || ok=false
+  if test ${#py[@]} -gt 0; then start_step python "${py[*]}" -- python "${py[@]}"
   else skip_step python "no Python package affected"; fi
-fi
-if $ok; then
-  if touched '^(Cargo\.(toml|lock)|renderer/|native/crates/simforge-core/|qualification/golden-harness/|catalog/|rust-toolchain\.toml)'; then
-    run_step goldens "lavapipe, verify all" -- goldens || ok=false
-  else skip_step goldens "renderer/engine not affected"; fi
+  wait_steps || ok=false
 fi
 
 finished=$(date +%s); result=$($ok && echo pass || echo fail)
-key_file="$GATE_HOME/.gate-key"
-test -s "$key_file" || (umask 077 && head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' >"$key_file")
+# A sandboxed (merge service) PASS records the keys of the scenes it rendered, so a
+# later change that leaves a scene's inputs unchanged skips it. Contributor runs
+# (no sandbox) never write the ledger.
+if $ok && test "$SANDBOX" = required && jq -e '.[] | select(.name == "goldens" and .status == "pass")' <<<"$steps_json" >/dev/null; then
+  keys_out="$sbx/step-out/goldens-keys.jsonl"
+  if test -s "$keys_out"; then
+    gkey="$(cat "$key_file")"
+    jq -c 'select((.sceneId|test("^[a-z0-9][a-z0-9-]*$")) and (.key|test("^[0-9a-f]{64}$"))) | {sceneId, key}' "$keys_out" 2>/dev/null |
+    while IFS= read -r k; do
+      body="$(jq -c --arg sha "$sha" --arg id "$run_id" --arg at "$(date -u +%FT%TZ)" '{v:1} + . + {sha:$sha, run:$id, at:$at}' <<<"$k")"
+      printf '%s\n' "$(jq -c --arg h "$(printf '%s' "$body" | openssl dgst -sha256 -hmac "$gkey" -r | cut -d' ' -f1)" '. + {hmac:$h}' <<<"$body")"
+    done >>"$ledger"
+  fi
+fi
 prev="$(tail -n 1 "$GATE_HOME/records.jsonl" 2>/dev/null | sha256sum | cut -d' ' -f1)"
 body="$(jq -cn --arg sha "$sha" --arg base "$base" --arg tree "$(git rev-parse 'HEAD^{tree}')" --arg repo "simforge-sdk" --arg sandbox "$SANDBOX" \
   --arg result "$result" --arg failing "$failing" --arg host "$(hostname)" --arg user "$(id -un)" \

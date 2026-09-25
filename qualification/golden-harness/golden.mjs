@@ -81,7 +81,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
-import { pullPinned } from '../../scripts/actor-assets/closures.mjs';
+import { canonicalJson, lockedClosure, pullPinned, readLock } from '../../scripts/actor-assets/closures.mjs';
 import { collectNativeHardware, lavapipeEnv } from './lib/fingerprint.mjs';
 import { idPassStats } from './lib/png.mjs';
 
@@ -732,14 +732,120 @@ function cmdPlan(args) {
   if (missingCorpus > 0) console.log(`[golden-harness] plan: ${missingCorpus} corpus file(s) missing (--allow-missing-corpus)`);
 }
 
+// ---------------------------------------------------------------------------
+// Input keys: the gate skips a scene whose key a trusted PASS already recorded.
+
+/** Every file under `dir` (sorted), hashed; for the harness's own sources. */
+function hashTree(dir, skip = () => false) {
+  const out = {};
+  const walk = (d) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const p = path.join(d, e.name);
+      if (skip(path.relative(dir, p))) continue;
+      if (e.isDirectory()) walk(p);
+      else if (e.isFile()) out[path.relative(repoRoot, p)] = sha256File(p);
+    }
+  };
+  walk(dir);
+  return out;
+}
+
+/** The sky plate directory the renderer will select (sky_pass.rs `select_dir`, the explicit cases). */
+function skyDir() {
+  if (process.env.SIMFORGE_SKY_ASSETS) return process.env.SIMFORGE_SKY_ASSETS;
+  if (process.env.SIMFORGE_NATIVE_RUNTIME_ROOT) return path.join(process.env.SIMFORGE_NATIVE_RUNTIME_ROOT, 'share/sky');
+  return path.join(repoRoot, 'renderer/render-core/assets/sky');
+}
+
+/**
+ * The input key of one scene's verify: sha256 over the canonical JSON of
+ * everything the render and its comparison read. The built binaries (not their
+ * sources: release builds are deterministic), the job with machine paths
+ * normalised, the content of every file the job names (corpus tiles, scene
+ * state, actor models), the pinned closure digests, the sky pins (the renderer
+ * verifies the plates against SOURCES.json), the parity timeline, the golden
+ * record for this adapter fingerprint, the lavapipe identity and environment,
+ * and the harness sources. null (never skip) for an unrecorded scene or when a
+ * gate the key cannot see is on (GOLDEN_FRAME_BUDGET, GOLDEN_PARITY_CMD).
+ */
+async function sceneKey(args, sceneId, hardware) {
+  const scene = applyOverrides(loadScene(sceneId), args.overrides);
+  if (scene.recording === 'unrecorded') return { sceneId, key: null, reason: 'unrecorded' };
+  for (const env of ['GOLDEN_FRAME_BUDGET', 'GOLDEN_PARITY_CMD']) {
+    if (process.env[env]) return { sceneId, key: null, reason: `${env} is set` };
+  }
+  const gp = goldenPath(hardware, sceneId);
+  if (!fs.existsSync(gp)) return { sceneId, key: null, reason: `no golden for ${hardware.gpuFingerprint}` };
+  const { glbs, corpusRoot } = resolvePaths(scene);
+  const binPath = resolveBinary(args);
+  const outDir = path.join(ARTIFACTS_DIR, 'key', sceneId, sceneId);
+  const invocation = buildInvocation(scene, glbs, corpusRoot, outDir);
+  const files = {};
+  const packs = {};
+  const lock = readLock();
+  const normalise = (value) => {
+    if (typeof value === 'string') {
+      for (const [name, dir] of packDirs) {
+        if (value === dir || value.startsWith(`${dir}/`)) {
+          packs[name] = lockedClosure(name, lock).sha256;
+          return `{pack:${name}}${value.slice(dir.length)}`;
+        }
+      }
+      if (path.isAbsolute(value) && fs.existsSync(value) && fs.statSync(value).isFile()) {
+        const label = value.startsWith(`${outDir}`) ? `{out}${value.slice(outDir.length)}`
+          : value.startsWith(`${corpusRoot}/`) ? `{corpus}${value.slice(corpusRoot.length)}`
+          : value.startsWith(`${repoRoot}/`) ? `{repo}${value.slice(repoRoot.length)}` : value;
+        files[label] = sha256File(value);
+        return label;
+      }
+      return value.replaceAll(outDir, '{out}').replaceAll(corpusRoot, '{corpus}').replaceAll(repoRoot, '{repo}');
+    }
+    if (Array.isArray(value)) return value.map(normalise);
+    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, normalise(v)]));
+    return value;
+  };
+  const job = normalise(invocation.job);
+  const sky = skyDir();
+  const parts = {
+    v: 1,
+    sceneId,
+    job,
+    files,
+    packs,
+    binaries: {
+      'simforge-render': sha256File(binPath),
+      ...(scene.parity ? { 'render-parity': sha256File(path.join(repoRoot, 'target/release/examples/render-parity')) } : {}),
+    },
+    parityTimeline: scene.parity ? sha256File(path.join(repoRoot, scene.parity.timeline)) : null,
+    scene: { expectedPasses: scene.expectedPasses, passPaths: scene.passPaths, idPass: scene.idPass ?? null, parity: scene.parity ?? null },
+    golden: sha256File(gp),
+    adapter: { gpuFingerprint: hardware.gpuFingerprint, ...hardware.host.adapter, env: lavapipeEnv(hardware.host.adapter.icd) },
+    sky: { dir: sky === path.join(repoRoot, 'renderer/render-core/assets/sky') ? '{repo-sky}' : sky, sources: sha256File(path.join(sky, 'SOURCES.json')) },
+    harness: hashTree(HARNESS, (rel) => /^(goldens|scenes|fixtures)(\/|$)/u.test(rel) || rel.endsWith('.md')),
+  };
+  fs.rmSync(path.join(ARTIFACTS_DIR, 'key', sceneId), { recursive: true, force: true });
+  return { sceneId, key: createHash('sha256').update(canonicalJson(parts)).digest('hex') };
+}
+
+/** `key <scene|all>`: one JSON line per scene, {sceneId, key} (key null: never skip). */
+async function cmdKey(args) {
+  const all = args._[1] === undefined || args._[1] === 'all';
+  const sceneIds = all
+    ? fs.readdirSync(SCENES_DIR).filter((f) => f.endsWith('.json')).map((f) => f.replace(/\.json$/, ''))
+    : [args._[1]];
+  const hardware = await collectNativeHardware();
+  for (const id of sceneIds) console.log(JSON.stringify(await sceneKey(args, id, hardware)));
+}
+
 const args = parseArgs(process.argv.slice(2));
 const cmd = args._[0];
 try {
-  if (cmd === 'record' || cmd === 'verify' || cmd === 'plan') await resolvePacks(args._[1]);
+  if (cmd === 'record' || cmd === 'verify' || cmd === 'plan' || cmd === 'key') await resolvePacks(args._[1]);
   if (cmd === 'record') await cmdRecord(args);
   else if (cmd === 'verify') await cmdVerify(args);
   else if (cmd === 'plan') cmdPlan(args);
-  else fail(1, 'usage: golden.mjs <record|verify|plan> <scene|all> [--set dotted.path=value] [--bin path] [--allow-missing-corpus]');
+  else if (cmd === 'key') await cmdKey(args);
+  else fail(1, 'usage: golden.mjs <record|verify|plan|key> <scene|all> [--set dotted.path=value] [--bin path] [--allow-missing-corpus]');
 } catch (e) {
   if (e instanceof GateFailure) { console.error(`[golden-harness] ERROR: ${e.message}`); process.exit(e.exitCode); }
   throw e;
