@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "examples/edge-cases/01-construction-chicane-reversing-truck/scenario.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "de100bf8db95ceaf5d37db3bd4bfce67bde1c6b812680b7fd7daca8b6d7a57ea"
+}

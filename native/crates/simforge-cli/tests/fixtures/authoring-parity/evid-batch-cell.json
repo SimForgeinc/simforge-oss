@@ -1,0 +1,31 @@
+{
+ "argv": [
+  "evidence",
+  "verify",
+  "{OUT}/b/richmond-field-station/3dd7bb59d80de7ee/draw-000.instance.json",
+  "{OUT}/b/richmond-field-station/3dd7bb59d80de7ee/draw-000.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {
+  "b/batch-summary.json": "4a62ba31b118296c1ac745fdcca704ec6e6750c32e2dd6bee838c4d9c830e22a",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.instance.json": "4c7afc2d2f4c7f9d3814763e011cf9632047a702079012b8b50af5ad441c52c0",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.result.json": "c2a3da4841c2dd26dc22925bdd21bba455ac2e2c2e78fbd70a7ee3f965ff37e7",
+  "b/richmond-field-station/3dd7bb59d80de7ee/draw-000.trace.json.gz": "3bd775d09279621cc6d183b1ea6752b6bab0e7baf914d32668b5f2b46bde64a1"
+ },
+ "pre": [
+  [
+   "batch",
+   "examples/ltap-opposing.template.json",
+   "--map",
+   "richmond-field-station",
+   "--max-sites",
+   "1",
+   "--concurrency",
+   "1",
+   "--out",
+   "{OUT}/b"
+  ]
+ ],
+ "stderr": null,
+ "stdoutSha256": "c42d6c859aae0b53adbff229a3dc3bff3238c2e6a1720fcd8bc5d691124eac5f"
+}

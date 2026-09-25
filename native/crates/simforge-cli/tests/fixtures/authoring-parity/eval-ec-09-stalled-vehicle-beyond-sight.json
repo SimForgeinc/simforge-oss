@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "examples/edge-cases/09-stalled-vehicle-beyond-sight/scenario.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "27fdcde6ea30ed91159b160834c90b4e90c7f97f14722d476b7f25220d6cc1fb"
+}

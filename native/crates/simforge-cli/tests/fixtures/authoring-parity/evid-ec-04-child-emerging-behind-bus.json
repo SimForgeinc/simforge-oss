@@ -1,0 +1,12 @@
+{
+ "argv": [
+  "evidence",
+  "verify",
+  "examples/edge-cases/04-child-emerging-behind-bus/scenario.instance.json",
+  "examples/edge-cases/04-child-emerging-behind-bus/scenario.trace.json.gz"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "2d78118752cfff998bfb3b3521f186fed4084001e028a4310ce9855ebce9ea35"
+}

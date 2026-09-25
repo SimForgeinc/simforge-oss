@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "evaluate",
+  "fixtures/archive-corpus/traces/rc45-preview-v2-engine060.trace.json.gz"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "invalid_trace",
+  "path": "fixtures/archive-corpus/traces/rc45-preview-v2-engine060.trace.json.gz",
+  "reason": "trace: trace JSON: missing field `header`"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

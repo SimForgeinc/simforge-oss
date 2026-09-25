@@ -1,0 +1,12 @@
+{
+ "argv": [
+  "evidence",
+  "verify",
+  "examples/edge-cases/05-cyclist-occlusion-conflict/scenario.instance.json",
+  "examples/edge-cases/05-cyclist-occlusion-conflict/scenario.trace.json.gz"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "d54e05bcc26c3c950131d3edcfe3a13c263c0d8a6adee362c9c6678d98f04b38"
+}
