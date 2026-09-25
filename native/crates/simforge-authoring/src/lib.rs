@@ -11,9 +11,12 @@
 
 pub mod instance;
 pub mod json;
+pub mod jsfmt;
 pub mod maps;
 pub mod paths;
 pub mod sites;
 pub mod template;
+pub mod template_new;
+pub mod validate;
 
 pub use simforge_compiler::CompileError;

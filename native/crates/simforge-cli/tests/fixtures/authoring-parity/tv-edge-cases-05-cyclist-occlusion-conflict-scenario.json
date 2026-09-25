@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/05-cyclist-occlusion-conflict/scenario.template.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "7f19e17d28046d2ebdf1f86055e6bf8c148267eba48e861520bf6d02264b6ada"
+}

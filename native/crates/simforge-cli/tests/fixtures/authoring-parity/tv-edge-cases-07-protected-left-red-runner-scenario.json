@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/07-protected-left-red-runner/scenario.template.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "30bb5b58a569640b06437afd85545950d1b3b0681f2a1c567337cc73bcd7a694"
+}

@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/corridor/cut-in-brake.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "19dd2865c45b939373120b6390b0a4e62a0f435a673c7ea59108268efd7b592b"
+}

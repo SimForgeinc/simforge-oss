@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/11-double-threat-crosswalk/scenario.template.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "9a3b71ab3edaff96d05a83712d5f06fc7ddaafb539c53a6900c12a19f028edd9"
+}

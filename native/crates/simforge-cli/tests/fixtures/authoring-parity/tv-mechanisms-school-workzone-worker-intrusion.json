@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/school-workzone/worker-intrusion.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "77e4a1660054227c3d92a27a6d576a1e44d4c5e3edff25bf9ddc9db35ae01f74"
+}

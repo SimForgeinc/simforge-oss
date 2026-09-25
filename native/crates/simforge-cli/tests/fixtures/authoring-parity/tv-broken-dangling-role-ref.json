@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "packages/cli/parity/fixtures/broken-templates/dangling-role-ref.template.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "593ee36d28230579667f88dcfe53cdb291a1bad6180ab12dda3577c87df60f91"
+}

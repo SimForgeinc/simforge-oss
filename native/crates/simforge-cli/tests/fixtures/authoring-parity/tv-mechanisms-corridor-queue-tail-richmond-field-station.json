@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/corridor/queue-tail.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "8d59f9f57862e19b5dd986b72d6cdeae92fbd31ebc172c734aa5f3d052c84861"
+}

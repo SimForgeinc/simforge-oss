@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/multiple-threat.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "e56a1040c064b02cbed0a5eee5d44d332cc6b52ec385bf64f130f5823edd231f"
+}

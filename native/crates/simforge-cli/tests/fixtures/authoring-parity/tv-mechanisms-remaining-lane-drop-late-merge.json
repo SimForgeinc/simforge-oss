@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/remaining/lane-drop-late-merge.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "d55b056208adf6fd0a10d405846afd343ed225731a322d362efbb06585525f4f"
+}

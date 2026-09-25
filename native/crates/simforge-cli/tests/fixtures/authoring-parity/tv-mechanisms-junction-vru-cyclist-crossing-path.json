@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/junction-vru/cyclist-crossing-path.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "cf66653204008bfd7e34072f300372aac728b49f10d838813830c3fe79e0bf3b"
+}

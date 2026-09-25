@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/parking-transit/driveway-emergence.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "03150996a6cb856d75146f726c5a31bf812b5c7b8bc745ac1bfba6b443d9276b"
+}

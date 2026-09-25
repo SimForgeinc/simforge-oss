@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/school-dartout.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "8316c7247dfdd9fff6062cbfb39ff9dfbfea507060bff8d795067c0d7fc8f784"
+}

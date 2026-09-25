@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "packages/cli/parity/fixtures/broken-templates/missing-dynamics.template.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "2767bfb5ab07274c673618cbbf29c05c137ce72f7870d43a5cd6f8b5670bfe49"
+}

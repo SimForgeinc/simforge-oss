@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/bus-stop-emergence.template.json",
+  "--site",
+  "ignored"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "ee51133fa5e2ecac1292e69e786ae4d1b645025fba56d3020f1f27390e6fa9b9"
+}

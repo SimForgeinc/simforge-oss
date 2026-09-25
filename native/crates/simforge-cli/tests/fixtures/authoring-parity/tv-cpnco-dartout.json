@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/cpnco-dartout.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "f3c6a49927f81a1693a01949cc1abda03731574791a0d9ab2c234507232ef846"
+}
