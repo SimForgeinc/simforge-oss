@@ -10,6 +10,7 @@
 //! structured `{code, path?, reason, detail?}` with `findings` selecting exit 2.
 
 pub mod batch;
+pub mod catalog;
 pub mod engine;
 pub mod evaluate;
 pub mod evidence;
