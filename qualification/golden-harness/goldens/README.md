@@ -9,7 +9,7 @@ goldens/<gpuFingerprint>/<scene>.json
   are recorded and verified on Mesa lavapipe, never on a GPU: NVIDIA drivers
   are not run-to-run byte-stable for this renderer.
   Current entry: `c398eadcadbd2754` = llvmpipe (LLVM 20.1.2, 256 bits), Mesa
-  25.2.8-0ubuntu0.24.04.2, Intel Core Ultra 9 285K (the 5080 box's CPU).
+  25.2.8-0ubuntu0.24.04.2, Intel Core Ultra 9 285K.
 - One file per scene; full evidence manifest (schema
   `simforge-oss.render-determinism-manifest.v1`, extensions in
   `docs/engineering/native-golden-ci.md`). Gates read `passHashes`.
@@ -41,32 +41,37 @@ gpu fingerprint × renderer binary (`rendererPath.sha256`) × render config
 ## Current status
 
 Recorded 2026-09-23 on lavapipe (`c398eadcadbd2754`) with `simforge-render`
-(perf/gpu-deep: dash-cam camera model with the calibrated defaults, canopy sky
-occlusion, CPU-ordered draws under the pinned clock), each scene rendered twice
-at record time with identical pass hashes and verified by a third render. The
-yale-05 fixtures name the wrong-way rider's class `cyclist` (the scene-state
-vocabulary). The yale-frame0 and yale-pronto scenes render the
-yale-street master (same world frame as the retired spike and WSB1 tiles,
-which no longer exist). The GPU-keyed tables recorded with the retired
-binaries are deleted (git history keeps them).
+(dash-cam camera model with the calibrated defaults, canopy sky occlusion,
+CPU-ordered draws under the pinned clock), each scene rendered twice at record
+time with identical pass hashes and verified by a third render. The yale-05
+fixtures name the wrong-way rider's class `cyclist` (the scene-state
+vocabulary). The yale-frame0 and yale-pronto scenes render the yale-street
+master. `package-smoke-richmond` is `recording: "unrecorded"` until its first
+lavapipe record.
 
 The timeline scenes' fixtures were regenerated on 2026-09-23 from their
 source traces (edge cases 05/06, engine 0.7.0; trace `inputHash`
-`1ebb3cb0…` / `7defd6a3…`) with today's timeline builder on the maps' xodr
-elevation (`simforge render timeline <trace> --map <map>`, no ground
-derivative in those map versions), then `simforge render scene-state
-<timeline> --fps 24 --end 6`. They carry `contactOrigin`, `wheelSpinRad`,
-`bodyAttitude` and `wheelDropM`, so the two-wheelers render with their posed
-riders and `simforge render parity` reads the timelines. The job writes
-`observed-frames.jsonl` (`observe`), which the parity gate grades.
+`1ebb3cb0…` / `7defd6a3…`): a render timeline built on the maps' xodr
+elevation (no ground derivative in those map versions; today
+`simforge timeline build --trace <trace> --map-dir <map> --height xodr`),
+sampled into a scene-state document at 24 fps over 0 to 6 s. They carry
+`contactOrigin`, `wheelSpinRad`, `bodyAttitude` and `wheelDropM`, so the
+two-wheelers render with their posed riders, and the timelines are committed
+beside them for the parity gate. The job writes `observed-frames.jsonl`
+(`observe`), which the `render-parity` grader checks against the timeline.
 
 ## Re-record
 
 ```sh
-cargo build --release -p simforge-render
+# every scene (builds the renderer, then records and verifies):
 SIMFORGE_CORPUS_RICHMOND=<richmond corpus root> SIMFORGE_CORPUS_YALE=<yale corpus root> \
-SCEN_SENSOR_CORPUS_WSB1=<WSB1 decoded yale corpus> SCEN_SENSOR_CORPUS=<spike corpus> \
-  node qualification/golden-harness/golden.mjs plan all
+  qualification/golden-harness/ci-local.sh record
+
+# one scene:
+cargo build --release -p simforge-render
 node qualification/golden-harness/golden.mjs record <scene>
 node qualification/golden-harness/golden.mjs verify all
 ```
+
+A corpus root is a map's native install, `<maps cache>/.corpus/<map>`
+(`simforge maps pull <map>`).

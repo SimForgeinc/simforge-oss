@@ -1,4 +1,4 @@
-# @simforge-oss/alpamayo-runtime
+# simforge-alpamayo
 
 Locally runnable inference services for **all three Alpamayo generations**,
 behind one wire and one engine interface:
@@ -11,8 +11,8 @@ behind one wire and one engine interface:
 
 Every pin — weights revision, upstream code commit, sidecar repos — is
 declared once in [`src/simforge_alpamayo/families.py`](./src/simforge_alpamayo/families.py)
-and mirrored with per-file digests in `packages/model-store/models.lock.json`.
-`tests/test_families.py` fails if the two disagree, so the product can never
+and summarised in [`manifest.json`](./manifest.json).
+`tests/test_families.py` fails if the two disagree, so the summary can never
 describe one checkpoint while the installer materializes another.
 
 No weights, caches or environments live in this repository. Installs go to
@@ -32,7 +32,7 @@ point: a second process would load another 22–72 GB of weights.
   multi-camera frames are tens of megabytes per step and shared-memory
   bundles never cross HTTP.
 - **HTTP facade** (`--http`) — open loop. `POST /invoke`, `POST /text`,
-  `GET /healthz`. Exists so the existing `http-json` model-run executor works
+  `GET /healthz`. Exists so an `http-json` model-run client works
   without learning MessagePack.
 - **In-process batch** (`simforge_alpamayo.batch`) — a cloud worker that
   wants no HTTP hop at all.
@@ -42,19 +42,8 @@ cannot disagree about validation, refusal codes or provenance.
 
 ## Install
 
-The product path, with digest verification, resumable downloads and the
-licence/token flow:
-
-```bash
-simforge models list                                  # catalog + what this machine can run
-simforge models preflight --family alpamayo-1.5       # hardware/driver/disk verdict
-simforge models install alpamayo-1.5 --quant nf4 --accept-license --wait
-simforge models verify alpamayo-1.5 --deep            # re-hash every shard
-simforge models uninstall alpamayo-1.5
-```
-
-The development path (vendored upstream checkout + venv, no digest
-verification):
+Vendored upstream checkout plus a per-family venv. Verify the installed
+bytes afterwards with `simforge_alpamayo.preflight --expect-digest` (below):
 
 ```bash
 scripts/setup.sh --family alpamayo-1.5            # sidecars only
@@ -62,8 +51,7 @@ scripts/setup.sh --family alpamayo-1.5 --weights  # + ~22 GB of weights
 ```
 
 `nvidia/Cosmos-Reason2-8B` (Alpamayo 1.5's config/tokenizer sidecar) is
-`gated: auto`, so it needs `hf auth login` for the development path or a
-token in the OS credential vault for the product path. In a container image
+`gated: auto`, so it needs `hf auth login`. In a container image
 those few files are materialized at build time through a **BuildKit secret
 mount** (`RUN --mount=type=secret,id=hf_token`) and never a build-arg or
 `ENV`, because a build-arg is preserved in the image history and would hand
@@ -166,9 +154,9 @@ architectures, and calibration would need the gated driving dataset. Alpamayo
 resizing) so a policy runner can import it without an inference environment.
 
 - `BundleObservationBridge.for_profile("alpamayo-2cam" | "alpamayo-4cam" |
-  "alpamayo-6cam" | "alpamayo-6cam-vqa")` mirrors the authored sensor-rig
-  presets in `packages/scenario/src/schema/v2/sensor-rigs.ts`; preset sensor
-  ids ARE the dataset camera names, mapped through `ALPAMAYO_CAMERA_INDEX`.
+  "alpamayo-6cam" | "alpamayo-6cam-vqa")` mirrors the authored `alpamayo-*`
+  sensor-rig presets; preset sensor ids ARE the dataset camera names, mapped
+  through `ALPAMAYO_CAMERA_INDEX`.
 - `push_bundle(bundle)` ingests one tick zero-copy up to the single
   unavoidable RGBA→RGB pack; `observation(ego_history_xyz)` assembles the
   rolling 4-frame window with cameras emitted camera-index ascending.
@@ -195,7 +183,7 @@ ends up claiming a model runs on hardware it cannot run on. Exit codes:
 ## Tests and benchmarks
 
 ```bash
-python3 -m pytest adapters/alpamayo/tests/          # 52 tests, no GPU, no network
+cd adapters/alpamayo && uv run --with pytest python -m pytest -q   # no GPU, no network
 ```
 
 `tests/test_families.py` pins the three pin sources against each other;
@@ -226,9 +214,9 @@ against the upstream bytes).
 cards state "ready for non-commercial use; commercial licensing available
 upon request" while their LICENSE blob is OpenMDW-1.1; the Alpamayo 2 Super
 card omits that sentence. Which text controls has **not** been decided here.
-Commercial hosting requires a recorded human/legal review. The application
-shows both texts verbatim, `commercialUseReviewRequired` is surfaced per
-family, and no code asserts a resolution.
+Commercial hosting requires a recorded human/legal review. Each family
+descriptor records the conflict as `card_commercial_conflict`, so a consumer
+can show both texts verbatim, and no code asserts a resolution.
 
 ## Evidence classes, and why they are a field
 

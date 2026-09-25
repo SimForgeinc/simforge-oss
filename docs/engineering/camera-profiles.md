@@ -40,29 +40,28 @@ calibrated against real automotive front-camera footage (internal dataset; resul
 contributors). Held-out score 1.83, against 2.10 for `automotive`.
 
 **Fit set.** 23 KartaView photos of the Easterbrook and San Ramon P1 maps.
-They were chosen by the CEO comparison's own selection rule (on-lane,
-daylight, clear, flat projection, 60 m farthest-point sampling). Every CEO
-comparison photo was held out: each fit photo is at least 60 m from every CEO
-photo.
+They were chosen by the reference comparison's own selection rule (on-lane,
+daylight, clear, flat projection, 60 m farthest-point sampling). Every
+comparison photo was held out: each fit photo is at least 60 m from every
+comparison photo.
 
 - Devices: mostly Waylens (andy88), plus joeybab3's and lemba's cameras.
-- Poses and render jobs come from the comparison's own `pose.py` and
-  `make_jobs.py`, with the Waylens FOV fixed at the comparison's pick (95°).
+- Poses and render jobs come from the comparison's own tooling, with the
+  Waylens FOV fixed at the comparison's pick (95°).
 
 **Search.**
 
-- The engine's pre-exposure HDR frames go through the offline camera model
-  (`dashcam-ref/tools/isp.py`, a port of `camera_model`).
+- The engine's pre-exposure HDR frames go through an offline port of
+  `camera_model`.
 - Each frame is scored against its photo with the comparison's metric code
-  (`score.py`: refpool-normalised metric distances, calibration group
-  weights).
+  (refpool-normalised metric distances, calibration group weights).
 - TPE over the eight keys, with `lens.vignette` capped at 0.8. Stronger
   vignettes scored better only by printing black corners, and that optimum
   was fragile under rounding.
 - The values are the median of the 20 best trials, rounded; rounding them
   leaves the score unchanged.
 
-**Held out: the CEO comparison's 8 scored locations, never searched.**
+**Held out: the reference comparison's 8 scored locations, never searched.**
 
 Real `simforge-render` output at each location's scored FOV, scored with the
 comparison's metric code and an openly licensed segmenter (EoMT):

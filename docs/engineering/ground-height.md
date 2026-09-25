@@ -1,7 +1,7 @@
 # Ground height: one surface for every body
 
-Status: accepted 2026-09-22. This replaces the `xodr-elevation/v1` height
-source of the render timeline (docs/engineering/render-timeline.md §4).
+This replaces the `xodr-elevation/v1` height source of the render timeline
+(docs/engineering/render-timeline.md §4).
 
 ## The rule
 
@@ -41,8 +41,7 @@ surfaces. Most of it sits in junction connecting roads. On Belmont it
 covers whole roads (road 116: the XODR climbs from 2.78 m to 2.99 m while
 the rendered asphalt is flat at 2.09 m).
 
-`pnpm maps:ground` prints the per-road list for each map, and
-`ground-report.json` records it.
+Each map's `ground-report.json` records the per-road list.
 
 ## The derivative (`derived/ground/`)
 
@@ -52,11 +51,11 @@ the rendered asphalt is flat at 2.09 m).
 | `ground-manifest.json` | `simforge.map-ground.v1`: buildKey, builder fingerprint, source digests (master, buffers, xodr), `status`, `warnings`, and the mesh digest. |
 | `ground-report.json` | OpenDRIVE validation: coverage, \|dz\| quantiles, flagged roads with their worst sample, holes. |
 
-**Producer.** There is one producer,
-`@simforge-oss/map-pipeline` `buildGroundDerivative`. The master stage runs
-it by default (`SIMFORGE_MAP_GROUND=skip` opts out), and `pnpm maps:ground`
-runs it for installed maps. `GROUND_FINGERPRINT` is folded into the master
-stage key.
+**Producer.** There is one producer: the map ingest pipeline, which builds
+the derivative when it builds the map master (the pipeline is not part of
+this repository; maps arrive with it through `simforge maps pull`). The
+builder fingerprint is recorded in `ground-manifest.json` and folded into the
+map build key.
 
 **Surface.** The surface is the upward-facing triangles of the asset-layer
 meshes `Roads_{Road,Bridge,Gutter,Sidewalk,Uncategorized,Curb,Marking}`,
@@ -88,17 +87,16 @@ the authored normals, or from the winding when a mesh has no normals.
   storey.
 
 All three are deterministic `f64` arithmetic over integer-millimetre
-vertices. The TypeScript mirror in `packages/map-pipeline/src/ground/query.ts`
-exists only for the ingest report.
+vertices (`native/crates/simforge-core/src/map/ground.rs`).
 
 ## Consumers
 
 | consumer | z / pitch / roll | notes |
 |---|---|---|
-| engine (native, WASM, Python) | `engine::contact` on `GroundSurface` every tick | `RunOptions.ground`; `MapAsset.attach_ground` / `MapBundle.attachGround(bytes)`; trace v5 `contact` + `header.groundDigest`; the map closure digest includes the ground |
-| render timeline | copied from the trace, or derived with the same solver for older traces | `ground-contact/v1`, `contactOrigin`; `buildRenderTimeline({ground})`, WASM `RenderTimeline.buildOnGround`, Python `build_timeline(ground_mesh=)` |
+| engine (native, Python) | `engine::contact` on `GroundSurface` every tick | `RunOptions.ground`; `MapAsset.attach_ground`; trace v5 `contact` + `header.groundDigest`; the map closure digest includes the ground |
+| render timeline | copied from the trace, or derived with the same solver for older traces | `ground-contact/v1`, `contactOrigin`; `build_render_timeline` with `HeightField::Ground`, Python `build_timeline(ground_mesh=)`, `simforge timeline build` |
 | Bevy | the timeline pose; body attitude on the `body` node, `wheelDropM` on `wheel_*`. An actor with no authored height (xosc-lowered or editor frames) is placed on `GroundSurface` itself (scene X = x, Y = z, Z = -y): off the surface is `native_ground_height_unavailable`, two stacked decks `native_ground_height_ambiguous` | scene spec `groundMesh`; `hello.ground` reports `ground-mesh` + sha256 (the render engine and hifi preview refuse a mismatch) or `legacy-mesh-field`, which is recorded as the `native_ground_legacy_field` warning; the atmosphere anchors on `GroundSurface::median_z` |
-| editor, drive mode | the engine's contact (session snapshots carry `contact`; the drive's truth frames carry `actors[].contact`) | map descriptor `ground` (member + ingest status); a body with no known height is held back and listed (`placingActorIds`), never drawn at 0 |
+| live clients (world sessions, drive mode, editors) | the engine's contact (truth frames carry `actors[].contact`, docs/truth-stream-wire.md) | a body with no known height is held back, never drawn at 0 |
 | CARLA | the timeline pose | unchanged path |
 
 Map versions published before the ground derivative keep simulating without
@@ -115,8 +113,8 @@ height, so on San Ramon P1 a sedan crossing junction 5249 under a signal
 head hanging from a mast arm (`Signal_3Light_Post01`, node 999) was
 crash-disabled by it.
 
-- **Ingest** (`@simforge-oss/maps` `buildStaticColliderArtifact`, given the
-  map's ground surface): every collider carries `vertical: {minY, maxY}` in
+- **Ingest** (the static-collider build at map ingest, given the map's
+  ground surface): every collider carries `vertical: {minY, maxY}` in
   the scene frame (y up), the ground mesh's datum. A fixture is dropped as
   overhead (`statistics.rejectedOverhead`) when, at every sample of its
   footprint (1 m grid), each ground surface there lies either above its top (a
@@ -143,17 +141,3 @@ crash-disabled by it.
 
 A map version whose collider artifact moves to v2 is a new map version: the
 artifact is a simulation member (`SIMULATION_MAP_MEMBERS`).
-
-## Rollout
-
-1. Derivative, Rust surface, ingest gates, the Richmond fixture: done.
-2. Engine contact, trace v5, ENGINE_SEM_VER 0.11.0, goldens: done.
-3. Timeline sampler/2 with the body-node split, two-wheeler lean and
-   `wheelSpinRad`: done.
-4. Bindings, TS closure loading, `SIMULATION_MAP_MEMBERS`, Bevy
-   articulation: done. Editor and drive-mode presentation of engine contact
-   and removal of the viewer's `?? 0` height paths: next.
-5. New map versions carrying `derived/ground` (with the refitted XODRs) on
-   dev; a render contact gate: done in code (`render_contact_gate_failed`),
-   the Bevy service places on the same surface (`groundMesh`). Map versions
-   are next.

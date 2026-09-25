@@ -1,15 +1,16 @@
 # simforge.scene-state.v1 — scene description contract
 
-Status: v1 frozen 2026-08-22 (WSB2); version tag `simforge.scene-state.v1` (the bare `scene-state.v1` tag is no longer emitted or accepted). One schema for both ingestion modes:
+Status: v1 frozen; version tag `simforge.scene-state.v1` (the bare `scene-state.v1` tag is no longer emitted or accepted). One schema for both ingestion modes:
 **trace playback** (`trace.json.gz` → per-tick transforms, dataset
-generation) and **live** (msgpack scene-diff stream from the env-server,
-closed loop). Wire formats: JSON (files, hashing) and msgpack (streams); the
-field names are identical in both.
+generation) and **live** (per-tick frames from a world session, closed
+loop). Wire formats: JSON (files, hashing) and msgpack (streams, e.g. the
+[truth stream](../truth-stream-wire.md)); the field names are identical in
+both.
 
-- Public entry point: `@simforge-oss/engine/scene-state`
-- Schema: `packages/engine/src/scene-state/schema.ts`
-- Emitter trace → document: `packages/engine/src/scene-state/emit.ts`
-- Rust consumer types: `renderer/render-core/src/scene_state.rs`
+- Schema and emitters: `native/crates/simforge-core/src/trace/scene_state.rs`
+  (`emit_scene_state` for a finished trace, `SceneStateStream` per tick for
+  live mode)
+- Renderer consumer types: `renderer/render-core/src/scene_state.rs`
 
 ## Document
 
@@ -19,7 +20,7 @@ field names are identical in both.
 | `mapId` | string | e.g. `yale-street` |
 | `frame` | `"scene-yup"` | y-up scene frame |
 | `dt` / `tickHz` / `tickCount` | number | playback cadence |
-| `weather` | `{preset: clear\|fog\|rain\|night, fogDensity, rainIntensity, wetness}` | drives the WSB4 weather ladder |
+| `weather` | `{preset: clear\|fog\|rain\|night, fogDensity, rainIntensity, wetness}` | drives the renderer's weather ladder |
 | `timeOfDay` | number | hours [0, 24) |
 | `profile` | `sensor \| cinematic` | render profile intent (default `sensor`) |
 | `groundY` | number \| null | road-surface elevation hint when known |
@@ -30,8 +31,8 @@ field names are identical in both.
 
 `{id, catalogId, actorClass, dims?, color?}` — `catalogId` is a prop-catalog
 entry (`vehicle.sedan`, `pedestrian.adult`, …). Traces tag actors with
-`catalog:<id>`; untagged actors fall back to deterministic class defaults so
-browser and native bind identical geometry.
+`catalog:<id>`; untagged actors get deterministic class defaults
+(`catalog_id_for`) so every renderer binds identical geometry.
 
 ## Frame / actor tick record
 
@@ -46,25 +47,21 @@ browser and native bind identical geometry.
 }]}
 ```
 
-### Acceleration (added 2026-08-22, V1 TruthStream)
+### Acceleration
 
 `acceleration` is an **additive optional** field; the schema remains
-`simforge.scene-state.v1`. Provenance is emitter-declared:
-
-- **Trace playback** (`emitSceneState`): backward finite difference of the
-  velocity channel over one `dt`, so it carries the centripetal term when a
-  body turns. First samples and fresh spawns report `[0, 0, 0]` — zero, not
-  unknown — and despawn records keep their last computed value.
-- **Live stream** (env-server truth-stream): the engine's planned
-  longitudinal acceleration (`SessionActorSnapshot.accelMps2`) projected onto
-  the actor heading.
+`simforge.scene-state.v1`. Both emitters (trace playback and the live
+`SceneStateStream`) compute it as the backward finite difference of the
+velocity channel over one `dt`, so it carries the centripetal term when a
+body turns. First samples and fresh spawns report `[0, 0, 0]` (zero, not
+unknown), and a re-entering body never inherits velocity history.
 
 Consumers MUST tolerate its absence on older documents; emitters that can
 compute it include it on every record.
 
 ### Frame conventions
 
-Frame conventions (from `packages/engine/src/frames.ts`):
+Frame conventions (`to_scene_xz` in `native/crates/simforge-core/src/math.rs`):
 `scene = (x_local, height, −y_local)`; headings are numerically identical.
 Velocity is the engine's integrated forward-speed × heading vector, **not** a
 finite difference, so motion-vector ground truth matches solver state.

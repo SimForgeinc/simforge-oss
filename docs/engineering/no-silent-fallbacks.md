@@ -9,52 +9,41 @@ case does exactly one of these:
    field involved. These errors are never retryable: a different worker would
    fail the same way.
 2. **Substitute explicitly**, only where the substitution is genuine product
-   behaviour. The job input must request it (`RenderIntentV1.allowSubstitutions`),
-   and the engine must record every substitution it makes in its manifest
-   (`substitutions`, gated by `CONTROL_FEATURE_RENDER_SUBSTITUTIONS`). The UI
-   and the job result then show it. Absent the request, the job fails.
+   behaviour. The job input must request it (the render intent's
+   `allowSubstitutions`), and the engine must record every substitution it
+   makes in its manifest (`substitutions`, negotiated by the
+   `render-evidence.substitutions` control feature). The job result then
+   carries it. Absent the request, the job fails.
 
-Preview-only paths (the editor's local preview, the browser engine's
-`browser-preview` purpose) may degrade, but only when the degradation is
+Interactive preview paths may degrade, but only when the degradation is
 visibly labelled.
 
 ## Mechanics
 
-- TypeScript: throw `RenderInputError(code, message)` from
-  `@simforge-oss/render`. The render worker reports its code as
-  `render.<code>`, non-retryable.
 - The native service (`renderer/service`) prefixes policy errors with
-  `[native_<code>] `. The TypeScript service client turns that prefix back into
-  a `RenderInputError`.
+  `[native_<code>] `. A host maps that prefix to its own coded error (the
+  hosted render worker reports `render.<code>`, non-retryable).
 - CARLA (`adapters/carla-exec`) raises its contract error with a `carla_*` code.
-- New manifest fields follow the `CONTROL_FEATURE_*` rule in
-  `packages/render/src/worker-control.ts`: a new constant, listed by control
-  planes that parse it, and written only when the lease lists it.
+- The `simforge` CLI reports the same codes in its JSON result and exits
+  non-zero.
+- New manifest fields follow the control-feature rule: a named feature
+  constant (for example `CONTROL_FEATURE_RENDER_SUBSTITUTIONS =
+  "render-evidence.substitutions"` in
+  `adapters/carla-exec/simforge_oss_carla_exec/runtime/policy.py`), written
+  only when the job's control features list it.
 
-## Guard
+## Review convention
 
-`scripts/ci/no-silent-fallbacks.mjs` (run by `pnpm verify:no-silent-fallbacks`
-and in CI) scans `renderer/`, `packages/render/src` and
-`adapters/carla-exec/simforge_oss_carla_exec` for fallback constructs:
-- `unwrap_or*`, `.ok()`, `let _ =` and `Err(_) =>` in Rust;
-- `?? <literal>`, `|| <literal>`, `catch {}` and `.catch(() => ...)` in TypeScript;
-- `except ...: pass`, `.get(key, default)` and `or <literal>` in Python;
-- the words fallback, placeholder and proxy.
+A deliberate fallback construct (`unwrap_or*`, `.ok()`, `let _ =`,
+`Err(_) =>` in Rust; `except ...: pass`, `.get(key, default)`,
+`or <literal>` in Python) carries a `fallback-ok: <reason>` comment on its line
+or the line above, so a reviewer reads the reason in the diff. The CARLA cases
+are pinned by `adapters/carla-exec/tests/test_no_silent_fallbacks.py`.
 
-A hit passes in one of two ways. It can carry a `fallback-ok: <reason>` comment
-on its line or the line above; a reviewer reads the reason in the diff. Or it
-can be counted in `scripts/no-silent-fallbacks.baseline.json`, the burn-down of
-pre-policy hits per file and rule, where every entry has a justification. Counts
-must match exactly, so a new unjustified hit fails and so does a count left
-above what remains. `--write-baseline` lowers counts; raising one needs
-`--reason`.
+## Findings
 
-## Findings and treatment
-
-See the table at the end of this file. It is maintained with the code: a row is
-added or updated whenever a fallback is removed or made explicit.
-
-## Findings table (2026-09 sweep)
+The tables below are maintained with the code: a row is added or updated
+whenever a fallback is removed or made explicit.
 
 "Fail" means the job fails with the given code. "Explicit" means the
 substitution happens only when requested, and is then recorded. "Benign" is
@@ -105,27 +94,11 @@ explained in the row. Unless a path says otherwise, Rust paths are under
 | `render-core/src/playback.rs` (scen-play; removed, scene-state playback is now `simforge-render job --job`) | Missing models → primitives; generic pedestrians hash-substituted; missing GLB → primitive | `--allow-primitive-actors` / `--allow-pedestrian-substitution` required (logged); missing GLB fails. Golden scenes pass the catalogs explicitly | golden harness |
 | `sensors/src/capture.rs` (sensor-capture; removed with the binary) | Proxy actors everywhere, fixed lighting | Benign for the product: a qualification harness whose help text states it uses proxy actors. Listed in the guard baseline as a harness | — |
 
-### TypeScript render path (native, browser, SUMO, CLI, Studio)
-
-| Location | Before | Now |
-|---|---|---|
-| `packages/render/src/native/actor-assets.ts` | Unauthored actors skipped the model check; kind defaults differed from the shared table; walk clips unchecked; malformed catalog entries skipped | Fail `native_actor_model_missing`, `native_actor_default_mismatch`, `native_actor_animation_missing`, `native_actor_catalog_invalid` |
-| `native/lowering.ts` | Unknown kinds → sedan / `prop` | Fail `native_actor_kind_unmapped` (total, pinned table) |
-| `packages/engine/src/ambient/sumo*.ts` | Every SUMO vehicle a sedan; ped/cyclist shares ignored | Per-class vTypes from `vehicleMix`; unsupported shares fail `sumo_road_user_share_unsupported`; coupling v3 |
-| `studio/worker/simulate.ts`, `sim-result-store.ts`, `render-intent-store.ts`, `native/engine.ts` | A timeline build failure fell back to xosc re-lowering | Fail `render_timeline_build_failed` / `native_render_timeline_missing` (CARLA: `carla_render_timeline_missing`). The xosc replay stays as an explicit mode for revisions without a stored trace: `RenderIntentV1.motionSource: 'original-xosc'`, recorded as scene source `openscenario-legacy` and accepted only when requested |
-| `native/engine.ts` | Parity silently skipped; free capture clock; ffmpeg from bare PATH; codec/quality ignored; one near/far for all cameras (lidar forced 0.05; each camera now renders with its own planes); roll dropped (now rendered); asymmetric lidar FOV emulated by pitch; frames unchecked | Fail `native_render_parity_unavailable`, `native_capture_clock_unsupported`, `native_encoder_missing`, `native_video_*_unsupported`, `native_lidar_asymmetric_fov_unsupported`, `native_frame_*`. Encoder recorded (`native-evidence.encoder`) |
-| `native/sensor-video.ts` | NaN / malformed PLY and CSV plotted or dropped | Fail `native_sensor_payload_invalid` |
-| `native/lighting.ts` | Palo Alto site for every map; authored sun overwritten; snow/sleet → overcast; sunWarmth ignored | Site from the map's OpenDRIVE geoReference or fail `native_lighting_site_unknown`; other cases fail |
-| `scenario/.../editor-environment-policy.ts`, `render-spec-builders.ts`, `cli/commands/render*.ts` | `.catch(undefined)` and clamped extensions; CLI overrode authored capture; uncapturable sensors dropped | Strict render-side parser (`render_environment_extension_invalid`); override only when requested; `unsupported_sensor` |
-| `native/evidence.ts` | A declared timeline without scene source/parity was accepted; archives unchecked | Required and matched |
-| `web/capture.ts` (browser preview) | Unloaded actor models captured as placeholders | Waits, or fails `render_actor_model_unavailable`; the preview label is shown |
-| `builtin-engines.ts` | CARLA refusals were generic retryable failures; control features not passed | Exit 3 → coded `RenderInputError`; `--control-features` passed |
-
 ### CARLA
 
 | Location | Before | Now |
 |---|---|---|
-| `runtime/backend.py`, `local.py`, SimCloud `Dockerfile.rtx3080` | Generated-XODR world labelled exact (env switch on in the image) | Fail `carla_map_not_cooked`; switch removed and refused |
+| `runtime/backend.py`, `local.py` | Generated-XODR world labelled exact (an env switch) | Fail `carla_map_not_cooked`; switch removed and refused |
 | `runtime/backend.py` | Cooked maps ignored requested sun and time of day | Fail `carla_environment_unsupported_on_cooked_map` unless the request equals the registered baked environment (registry empty: see open decisions) |
 | `runtime/backend.py`, `runtime/executor.py` | Unspawnable actors dropped; props ungraded | Fail `carla_actor_spawn_refused`; the gate expects all actors |
 | `runtime/executor.py`, `runtime/backend.py` | Nearest-body substitution, MKZ→Impala alias, alphabetical pick without dims | Fail `carla_blueprint_unavailable` unless `allowSubstitutions: ['carla-actor-body']`; recorded |
@@ -134,21 +107,11 @@ explained in the row. Unless a path says otherwise, Rust paths are under
 | `runtime/materialized_traffic.py` | z=0, obstacle → sedan | Fail `carla_ambient_traffic_unsupported` |
 | `runtime/timeline.py`, `runtime/compiler.py`, `local.py`, `runtime/sensor_video.py`, `runtime/replay.py` | Doors reported but not rendered; kind/pose defaults; fps/size/quality ignored; preferred capability enabled physics; env z offsets; truncated videos | See the `carla-exec` commit: each fails with a `carla_*` code or is recorded |
 
-### Control plane and worker
-
-| Location | Before | Now |
-|---|---|---|
-| `studio/app/lib/studio-shared/render-evidence-policy.ts`, `scenario-render-control.ts`, `render-worker-control-store.ts`, SimCloud migration `20260922200000` | Dropped/nudged actors, substituted bodies, approximate or generated maps, inexact environments, physics validation and ungraded native parity were all accepted as `succeeded` | Refused with `render.<code>`, non-retryable; required evidence fields enforced when negotiated |
-| `services/render-worker/src/worker.ts`, `studio/worker/native-render.ts` | Engine warnings dropped on completion | Delivered and persisted; the local native lane fails on degraded output |
-| `studio/worker/index.ts`, detail store, `RenderTheater` | Policy codes collapsed into generic codes | Codes, messages and substitutions shown with the job |
-
 ### Open decisions (not silently resolved)
 
 - **CARLA cooked-map lighting.** The baked-environment registry is empty, so every cooked-map CARLA render fails until either each map's baked sun is measured, or a `carla-cooked-map-lighting` substitution kind is added (explicit and recorded).
 - **Walker animation in CARLA.** Moving walkers probably fail `carla_walker_animation_inactive` until trace replay drives the animation. Confirm with `pose-smoke` on a CARLA box.
 - **CARLA bodies.** 37 generated-body ids and 17 unavailable road-user ids, plus 9 semantic-substitute props, now need `allowSubstitutions: ['carla-actor-body']`. Nothing sets it yet (no UI).
-- **SUMO pedestrian and cyclist shares.** The City preset (6% / 2%) fails on SUMO until the shares are zeroed or SUMO generates road users.
-- **Native renders without a timeline.** Old revisions fail unless the request sets `motionSource: 'original-xosc'`, the labelled legacy replay; the playability work wires that request.
 - **Moving animals.** They fail `native_actor_animation_missing` until the closure has animal clips.
-- **Rust kind→catalog default table** (`native/crates/simforge-core/src/trace/scene_state.rs`). Van, scooter, robot, drone and animal default to a sedan, so those unauthored actors fail `native_actor_default_mismatch`. Fixing it moves timelines and needs an ENGINE_SEM_VER bump (WS-A).
-- **Service features.** Lidar upper/lower FOV and per-camera clip planes are not implemented in the service, so requests that need them fail in the TypeScript layer.
+- **Rust kind→catalog default table** (`native/crates/simforge-core/src/trace/scene_state.rs`). Van, scooter, robot, drone and animal default to a sedan, so those unauthored actors fail `native_actor_default_mismatch`. Fixing it moves timelines and needs an ENGINE_SEM_VER bump.
+- **Service features.** Lidar upper/lower FOV and per-camera clip planes are not implemented in the service, so requests that need them are refused with a coded error.

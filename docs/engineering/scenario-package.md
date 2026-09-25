@@ -1,12 +1,10 @@
 # Scenario Package (`simforge.scenario-package/v1`)
 
-Status: proposed 2026-09-22 (playability phase 2); container, manifest and
-verifier **implemented** 2026-09-24 in the `simforge-package` Rust crate
-(SDK split track P), with the thin/full dedupe rules and the `producer`
-field resolved in section 8.1 and section 4.3. Builds on phase 1: replay by
-default (`motionSource`), timelines keyed by `timelineKey`, the trace
-upgrader chain, exact map resolution on JSON import, and the archive corpus.
-This page does not re-specify any of those.
+Implemented by the `simforge-package` Rust crate: container, manifest,
+canonical encoding, strict reader, writer and verifier. It relies on the trace
+upgrader chain, render timelines keyed by `timelineKey`
+(`render-timeline.md`) and the archive corpus (`fixtures/archive-corpus/`),
+and does not re-specify them.
 
 A Scenario Package is the one self-contained, verifiable form of an authored
 scenario revision: the document, the motion it was simulated to, and every
@@ -18,11 +16,9 @@ installation or another one.
 | Manifest types, canonical encoding, strict ZIP reader and writer, verifier | `native/crates/simforge-package` (Rust; the one implementation) |
 | JSON Schema | `contracts/scenario-package/manifest.v1.schema.json`, `receipt.v1.schema.json` |
 | Fixtures | `fixtures/scenario-package/` (valid packages and one hostile package per rule, with `expectations.json`) |
-| Node (hosted exporter) | `simforge-bindings-node` `scenarioPackage*` functions, wrapped by `@simforge-oss/native-runtime` (`writeScenarioPackage`, `verifyScenarioPackage`, ...): byte-identical to the CLI's containers |
+| Hosted exporter | The hosted app writes the same container through its own binding of the crate, so its packages are byte-identical to what the crate writes |
 | CLI | `simforge package inspect \| verify \| import` (Rust `simforge` CLI, over the crate) |
-| Studio routes (proposed) | `POST /api/simforge/revisions/:id/package` (export), `POST /api/simforge/packages` (import) |
-| Tables (proposed) | `simforge.scenario_packages`, new `origin` values on `sim_results` / `revision_simulations` |
-| Tests | the crate's `tests/` (fixtures, archive-corpus round trips, schema agreement), `native-runtime` `scenario-package.test.ts` (binding byte identity); later `fixtures/archive-corpus/<release>/packages/` |
+| Tests | the crate's `tests/` and the CLI's `tests/package.rs` (section 11) |
 
 ## 1. What a package promises
 
@@ -227,22 +223,22 @@ contract string where it has one (for example `simforge.sim-resolution/v1`).
 | `schema` | const | `simforge.scenario-package/v1`. The manifest version. |
 | `producer.app` | `^[a-z][a-z0-9-]{0,63}$` | The writing application (`simcloud`, `simforge-cli`, ...). Display only. |
 | `producer.appVersion` | semver | The writing application's version. Display only. |
-| `producer.minCli` | semver | The oldest `simforge` CLI that reads this package. A reader whose version is lower refuses it (`package_version_unsupported`, dimension `cli`, section 5.4). The hosted exporter takes it from a table the release agent bumps only when a contract changes (PLAN section 4.2). |
+| `producer.minCli` | semver | The oldest `simforge` CLI that reads this package. A reader whose version is lower refuses it (`package_version_unsupported`, dimension `cli`, section 5.4). A producer raises it only when a contract the reader needs changes. |
 | `scenario.title` | string ≤ 200 | Display only. Plain text, never interpreted. |
 | `scenario.documentSchema`, `scenarioVersion` | string, int | Document contract (`SCENARIO_TEMPLATE_VERSION`, now 2). Drives the document upgrader chain. |
 | `scenario.contentSha256` | sha256 | `canonicalJsonSha256(content)`, the revision's `content_sha256`. |
 | `scenario.simContentSha256` | sha256 | `simContentHash(content)` (`simforge.sim-content/v1`). |
 | `scenario.origin.*` | optional | Source document and revision ids, revision number and commit time. Provenance only. Never looked up on another installation. |
 | `engine.engineSemVer` | semver | `ENGINE_SEM_VER` that produced the trace. Shown to the user. **Not** a skew gate (section 5.4). |
-| `engine.solverVersion`, `pipelineRevision` | string, int | As in `sim_results.solver_ver` and `SIMULATION_PIPELINE_REVISION`. |
-| `engine.build` | object | From `sim_results.engine_build`: exactly the recorded ones of `engineVersion`, `abiVersion`, `buildDigest`, `addonSha256`, `sourceRevision` (absent when not recorded; any other key is refused). Provenance only. |
+| `engine.solverVersion`, `pipelineRevision` | string, int | The producing host's solver version and simulation pipeline revision, as it recorded them. |
+| `engine.build` | object | The engine build the producer recorded for the trace: exactly the recorded ones of `engineVersion`, `abiVersion`, `buildDigest`, `addonSha256`, `sourceRevision` (absent when not recorded; any other key is refused). Provenance only. |
 | `engine.release` | string | The SimForge stack version (`0.1.0-rc.N` or stable) that produced the trace. |
-| `simulation.simKey` | sha256 | `simforge.sim-key/v1`. Reused as the memo key on import (section 5.3). |
-| `simulation.traceFormat`, `traceSchema` | int, string | `header.traceVersion` and `sim_results.trace_schema`. Drives the trace upgrader chain. |
+| `simulation.simKey` | sha256 | `simforge.sim-key/v1`. Reused as the memo key on import (section 5.2). |
+| `simulation.traceFormat`, `traceSchema` | int, string | `header.traceVersion` and the trace schema id. Drives the trace upgrader chain. |
 | `simulation.traceSha256` | sha256 | Canonical trace identity (never the gzip bytes). |
 | `simulation.traceGzipSha256` | sha256 | sha256 of the stored `.trace.json.gz` bytes, the member digest. |
 | `simulation.authoredTraceSha256` | sha256 | Differs from `traceSha256` only for SUMO documents. |
-| `simulation.resolvedInputDigest`, `resolutionSha256` | sha256 | As stored in `sim_results`. |
+| `simulation.resolvedInputDigest`, `resolutionSha256` | sha256 | The resolved input's digest and the resolution record's sha256, as the producer stored them. |
 | `simulation.trafficProvider`, `trafficStepKey`, `trafficSha256`, `sumo` | | `sumo` is `{networkSha256, runtimeVersion, wasmSha256}` or null. |
 | `simulation.groundDigest` | sha256 \| null | Trace v5 ground-contact source digest (`header.groundDigest`, the sha256 of the ground mesh). Null before trace format 5. From format 5: required, and equal to the mesh's sha256, when `map/closure.json` lists `derived/ground/ground-mesh.bin`; null when it does not (section 8.1, rule 10). |
 | `simulation.producerKind` | enum | `inline`, `runner`, `cli`, `editor`. The raw `producer` string is **not** exported, because it contains host names. |
@@ -250,9 +246,9 @@ contract string where it has one (for example `simforge.sim-resolution/v1`).
 | `executionPackage` | object \| null | Contract and xosc digest when `export/scenario.xosc` is present. |
 | `map.mapVersionId` | string | The exact map version. The first lookup key on import. |
 | `map.sourceMapId`, `label` | string | Display, and ranking of transfer offers. **Never used to bind.** |
-| `map.xodrSha256`, `coordinateSystemSha256` | sha256 | Must equal the trace header's `engineGraphDigest` and the map version row. |
-| `map.mapClosureDigest` | sha256 | `simforge.map-closure/v1` (native `MapBundle.closureDigest`), key material in `simKey`. |
-| `map.pinClosureSha256` | sha256 | `simforge.map-pin-closure/v1` over the simulation members (document-pinning.md). |
+| `map.xodrSha256`, `coordinateSystemSha256` | sha256 | Must equal the trace header's `engineGraphDigest` and the bound map version. |
+| `map.mapClosureDigest` | sha256 | `simforge.map-closure/v1` (`MapBundle::closure_digest` in `simforge-compiler`), key material in `simKey`. |
+| `map.pinClosureSha256` | sha256 | `simforge.map-pin-closure/v1` over the simulation members of both closures (`simforge-package/src/closure.rs`). |
 | `map.canonicalClosureSha256` | sha256 | sha256 of `map/closure.json`: the registry release's canonical closure digest (`closureDigest` in the registry). The canonical closure lists the native render assets (`master.gltf`, `geometry.bin`) and every derivative built into it (ground, geometry LOD, luminaires, road decals, texture density, texture tiers, SUMO). |
 | `map.webClosureSha256` | sha256 \| null | sha256 of `map/web-closure.json`, the release's web closure; null when the release has none. |
 | `map.registryReleaseDigest` | sha256 \| null | The registry release document (`simforge.map-release.v1`) these closures belong to, when the map version came from a registry (hosted native asset sets record it). Import looks the release up by this digest first. |
@@ -304,8 +300,15 @@ open container ─► structural checks (section 10) ─► read manifest.json �
      ─► decode: document (upgraders), trace (upgraders), timeline(s)
      ─► cross-check digests (trace header ↔ manifest ↔ timeline identity ↔ map)
      ─► resolve map (5.2) and actors (5.2)
-     ─► one transaction: dedupe blobs into content stores, write rows (their foreign keys make the blobs reachable)
+     ─► bind: the CLI unpacks into a workspace directory; a host dedupes blobs into its content stores
+        and records the binding in one transaction
 ```
+
+`simforge package verify` runs every check up to the cross-checks and hashes
+every member and blob. `simforge package import <package> --into <dir>` runs
+them, unpacks the members into a workspace, and reports what a render or
+re-simulation still needs locally: the map by its OpenDRIVE digest and the
+actor closure by its digest.
 
 - **Staging.** Members stream into a per-import staging area keyed by
   digest. Nothing reaches a content store until every check has passed.
@@ -322,32 +325,25 @@ open container ─► structural checks (section 10) ─► read manifest.json �
     the packaged sampler. It must reproduce `timelineSha256`.
   - When the reader's `ENGINE_SEM_VER` equals `engine.engineSemVer`,
     re-simulate. The result must reproduce `traceSha256`. A mismatch is
-    recorded as a determinism violation (`sim_verification_events`). The
-    binding stays on the package trace.
+    a determinism violation; the binding stays on the package trace.
+    `simforge simulate <workspace>` is this check for an imported workspace
+    (`deterministicMatch`, finding `determinism_violation`).
 
 ### 5.2 Binding
 
-Import creates a new document and its first revision in the target
-workspace. Importing into an existing document as a new revision is an open
-question (section 13).
+A host that imports into its own store binds a new document revision to the
+package's own trace, timelines and digests. Storage keys derive from verified
+digests only, and every row it writes references the digests the revision now
+depends on (section 7).
 
-| Record | Written as |
-|---|---|
-| `document` / `revision` | `content` from `document.json` (after upgraders); `map_version_id`, `map_closure_sha256 = pinClosureSha256`, `asset_catalog_version_id` from the resolved map and catalog. `revisions.imported_package_id = packageId`. |
-| `sim_results` | New row with `origin = 'import'` (new column; default `'simulated'`). `sim_key` and every digest come from the package. `producer = 'import:<packageId>'`. Object keys are derived from verified digests only. |
-| `revision_simulations` | `(revision, engine.engineSemVer, simKey, origin = 'import')`. Phase-1 replay picks it as the revision's original result. |
-| timelines (phase-1 table) | One row per packaged timeline, keyed by `timelineKey`. A timeline under the reader's sampler is derived on demand from the stored trace, as phase 1 does for any sampler bump. |
-| `scenario_packages` | `(package_id, workspace_id, direction = 'import', manifest jsonb, form, receipt jsonb, created_by, created_at)`. |
-| Reachability | The new rows reference every digest the revision now depends on (section 7); nothing else is written for retention. |
-
-**Memo conflicts.** Suppose the workspace already holds `sim_key` with the
-same `trace_sha256`: the rows dedupe and the revision binds the existing row.
-Suppose it holds `sim_key` with a **different** trace: that is a determinism
-violation between installations. The import still succeeds, and the package
-trace is stored under
+**Memo conflicts.** Suppose the host already holds `simKey` with the
+same `traceSha256`: the binding dedupes onto the existing result. Suppose it
+holds `simKey` with a **different** trace: that is a determinism violation
+between installations. The import still succeeds, and the package trace is
+stored under
 `simKey' = H("simforge.sim-key-import/v1", simKey, traceSha256)`. The conflict
-is recorded, and the revision binds `simKey'`. The existing memo row is never
-replaced.
+is recorded, and the revision binds `simKey'`. The existing memo entry is
+never replaced.
 
 **Map resolution.** It is exact, and never by name:
 
@@ -357,11 +353,10 @@ replaced.
    - Same id, different content: fail with `package_map_conflict`. Never bind.
 2. **By content.** Look for another local map version with identical
    `xodrSha256`, `coordinateSystemSha256` and `pinClosureSha256`. This covers
-   the same publication installed under another id, for example local Studio
-   against SimCloud.
-   - Bind it, and record `bound_by = 'closure-digest'`.
+   the same publication installed under another id on another installation.
+   - Bind it, and record that it was bound by closure digest.
    - Only simulation members decide this. Render-only members (tiers, tiles)
-     may differ, and the UI says so.
+     may differ, and the importer says so.
 3. **Full form.** Install the embedded canonical closure (and the web-only
    members it carries) as the map release, exactly as `maps pull`
    materialises a registry release. Keep `mapVersionId` when the id is free,
@@ -371,14 +366,11 @@ replaced.
    `canonicalClosureSha256`), or fetch the closure members by digest from
    this installation's configured content origins (section 7).
 5. **Otherwise fail** with `package_map_missing`. The error names the map
-   (label, `mapVersionId`, `xodrSha256` prefix) and offers:
-   - **"Transfer to map version X"**, for each local map version of the same
-     `sourceMapId`, newest first. This runs the existing transfer flow: a new
-     revision, re-simulated on X, shown with a motion diff against the package
-     trace. The package's own revision is **not** created (it cannot play).
-   - **"Import the full package instead"**, when the package is thin.
-   - **"Install map version …"**, when the host's map catalog lists that
-     version id or closure digest as downloadable.
+   (label, `mapVersionId`, `xodrSha256` prefix). A host may offer to import
+   the full package instead, to install the map version, or to transfer the
+   document to another version of the same `sourceMapId` (a new,
+   re-simulated revision; the package's own revision is not created, because
+   it cannot play).
 
 **Actor resolution.** The actor closure must be available by
 `actorClosureDigest`, from a full package's blobs, the installation's actor
@@ -394,7 +386,7 @@ closure by digest.
 - It never re-binds a map by label, source id or "newest compatible
   publication".
 - It never re-simulates to create the binding. Deep verify is only a check.
-- It never rewrites stored bytes. Upgraders run in memory (phase 1). The
+- It never rewrites stored bytes. Upgraders run in memory. The
   stored trace and timelines are the package's bytes.
 - It never fetches a URL named by the package. Packages contain no URLs.
 - It never trusts `receipt.json`, `scenario.origin` or `provenance` for any
@@ -409,9 +401,9 @@ package, the message lists every dimension that is ahead.
 |---|---|---|
 | Manifest `schema` | Manifest upgrader chain (`vN → vN+1`, pure) | Refuse |
 | `scenarioVersion` | Document upgrader chain (today `migrate-v2`) | Refuse |
-| `traceFormat` | Trace upgrader chain (phase 1: v1/v3/v4, then v5) | Refuse |
+| `traceFormat` | Trace upgrader chain (v1/v3/v4, then v5) | Refuse |
 | Timeline `version` | Timeline upgrader or re-derivation from the trace | Refuse |
-| `samplerVersion` | Keep the packaged timeline as evidence. Derive the reader's sampler timeline from the trace (phase 1) | Refuse (open question 3) |
+| `samplerVersion` | Keep the packaged timeline as evidence. Derive the reader's sampler timeline from the trace | Refuse (open question 1) |
 | `executionPackage.contract` | Informational; the xosc is not a render input | Ignore the xosc member and warn |
 | `engineSemVer` | **Not a gate.** Replay needs no engine | **Not a gate** |
 | `groundDigest` present, reader pre-v5 | n/a | Refused through `traceFormat` |
@@ -421,7 +413,7 @@ Two more dimensions come first, before any member is read:
 | Dimension | Rule |
 |---|---|
 | `manifest` | A manifest whose `schema` is `simforge.scenario-package/v<N>` with N > 1 is refused as `package_version_unsupported`, not as a schema error, and the message still names the producer and `minCli` when the newer manifest carries them. |
-| `cli` | `producer.minCli` greater than the reading CLI's version is refused. (This is PLAN section 4.2's `package_reader_too_old`, expressed as one dimension of the one skew code.) A producer re-checking its own output passes no CLI version; the report then says `cliCheck: "not-evaluated"`. |
+| `cli` | `producer.minCli` greater than the reading CLI's version is refused. A producer re-checking its own output passes no CLI version; the report then says `cliCheck: "not-evaluated"`. |
 
 The refusal text is: *"This package was made by simcloud 0.3.0 and needs
 simforge 0.3.0 or later; this is simforge 0.2.0. Ahead of this reader:
@@ -430,7 +422,7 @@ to read it."* The error code is `package_version_unsupported`, with
 `{dimension, found, supported}` per entry, every dimension that is ahead
 listed.
 
-The archive corpus (section 11) is what makes "older → upgraders" a
+The archive corpus (`fixtures/archive-corpus/`, section 11) is what makes "older → upgraders" a
 guarantee rather than a hope.
 
 ## 6. Reproduce exactly
@@ -455,9 +447,9 @@ also a digest-covered member):
 
 **Requirements:**
 
-- Export offers the mode only for a revision with a succeeded render job
-  whose `imageDigest` is retained (R6, section 7). The pin is copied from that job
-  and is never assembled by hand.
+- A producer writes the pin only for a succeeded render job whose
+  `imageDigest` it retains (section 7). The pin is copied from that job and
+  is never assembled by hand.
 - Import records the pin. A render in this mode:
   - runs on exactly `imageDigest` / `runtimeVersion`;
   - is scheduled only on a worker whose `gpuModel` equals `gpu.model`;
@@ -470,38 +462,49 @@ also a digest-covered member):
 - The CARLA exact-map rule stays in force. A CARLA pin whose image lacks the
   cooked map for `xodrSha256` fails. `allow-approximate` is never implied by a
   pin.
-- A pinned image is itself a retention reference (R6). Without immutable,
-  non-expiring image retention this mode must not be offered.
+- A pinned image is itself a retention reference (section 7). Without
+  immutable, non-expiring image retention this mode must not be offered.
 
 ## 7. Retention requirements (what the thin form relies on)
 
-A thin package is only as good as the stores behind it. These are
-requirements on every installation that exports thin packages. A host that
-cannot meet them offers the full form only.
+A thin package is only as good as the stores behind it. An installation that
+exports thin packages must guarantee, for as long as a package may be
+imported:
 
-| # | Requirement |
-|---|---|
-| R1 | Reachability is computed from the rows that reference content, not kept in a separate counter table (counts drift): revisions, `revision_simulations`, `revision_active_simulation`, `sim_results`, `sim_timelines`, render jobs, map versions (retired included) and their asset sets, and package records. Every one of those rows is written in the transaction that creates the thing it references. |
-| R2 | Every deletion path computes reachability and refuses referenced digests: map `prune --gc`, map-asset edits that drop artifacts, the render-upload cleanup queue, the dataset and export cleanup jobs, and any future GC. A refusal is an error with the referrers listed. It is never skipped silently. |
-| R3 | Deleting a workspace, document or revision removes **its refs** only. Bytes are collected by a GC that deletes a digest only when nothing reaches it across all workspaces and it has been unreachable for at least 30 days. |
-| R4 | Content-addressed stores (traces, resolutions, timelines, map blobs, actor blobs) are write-once at the storage layer. Either Object Lock in governance mode (new buckets) or a bucket policy that denies `DeleteObject` and `DeleteObjectVersion` to every principal except the GC role. Noncurrent-version expiry must not apply to them. |
-| R5 | Map re-exports create a new map version and never modify a referenced one. Environment migrations copy map version rows and closure bytes exactly and never use `--map-by-name`. |
-| R6 | Renderer images referenced by a render job or a `render` pin are kept in repositories with immutable tags and no expiry policy, and are addressable by digest. Local installs keep pinned runtime tarballs in the runtime store under the same ref rule. |
-| R7 | Package containers stored server-side (cached full zips) are disposable caches. They are never the source of truth, may expire, and are rebuilt from the content stores on demand. |
-| R8 | The actor-assets closure a package references must be resolvable by digest from every installation that accepts thin packages from this one. Today that means publishing the pinned closure document and its blobs to the public actor origin. |
+- **Reachability from references.** Every digest a revision, simulation
+  result, timeline, render job, map version or package record references is
+  reachable, and reachability is computed from those references, not from a
+  separate counter.
+- **No deletion of referenced bytes.** Every deletion path refuses a
+  referenced digest with an error that lists the referrers; deleting a
+  workspace, document or revision removes its references only, and a garbage
+  collector deletes a digest only after it has been unreachable for a grace
+  period.
+- **Write-once content stores** for traces, resolutions, timelines, map
+  blobs and actor blobs.
+- **Immutable map versions.** A re-export creates a new map version and never
+  modifies a referenced one.
+- **Renderer images by digest.** Images referenced by a render job or a
+  `render` pin are kept with immutable tags and no expiry.
+- **Public actor closure.** The actor-assets closure a package references is
+  resolvable by digest from every installation that accepts thin packages
+  from this one, which today means the public actor origin.
 
-Content origins for thin import are configured per installation
-(`SIMFORGE_PACKAGE_ORIGINS`: an ordered list of the local content stores and
-upstream stores the installation is entitled to read). Members are
-requested by digest only, and the list never comes from the package.
+Cached package containers are disposable: they are never the source of truth
+and are rebuilt from the content stores on demand. A host that cannot meet
+these requirements offers the full form only.
+
+Content origins for thin import are configured per installation (an ordered
+list of the content stores the installation is entitled to read). Members
+are requested by digest only, and the list never comes from the package.
 
 ## 8. Thin vs full
 
 | | Thin | Full |
 |---|---|---|
 | Contains | Manifest, document, trace, resolution, timeline(s), closure listings, catalog, optional xosc | Thin + `blobs/` for every member of the canonical closure (the native render assets and their derivatives, texture tiers included), the web-only members the CLI reads, and the actor blobs reachable from `catalogIds` |
-| Plays | Where the map version (by id or closure digest) and the actor closure are available (R1–R8) | Anywhere, offline, including another installation |
-| Built | Synchronously in the request (< 1 s) | As a background export job, with progress; streamed from the content stores |
+| Plays | Where the map version (by id or closure digest) and the actor closure are available (section 7) | Anywhere, offline, including another installation |
+| Built | In well under a second | Streamed from the content stores; minutes for large maps |
 
 **Measured sizes** (dev data, September 2026; installed bundles):
 
@@ -519,8 +522,6 @@ requested by digest only, and the list never comes from the package.
 | **Full package, 256-uastc tier** | **≈ 250 MB** | 120 MB (El Camino) – 1 GB (San Ramon phase 1) |
 
 ### 8.1 Forms and dedupe (resolved 2026-09-24)
-
-These rules close open question 1 and the container half of open question 2.
 
 1. **One id.** The form is a property of the container, never of the
    manifest. Thin and full exports of one revision have byte-identical
@@ -540,9 +541,9 @@ These rules close open question 1 and the container half of open question 2.
    (`package_closure_invalid`, `closure_size_conflict`). The writer dedupes
    blobs it is given twice. Role members (`document.json`, timelines, ...)
    are never deduplicated against blobs: they are always present by path.
-5. **The full set** (revised 2026-09-25: the map closure is the registry
-   release's CANONICAL closure, not the browser asset set, which has no
-   native master and could not render on the CLI):
+5. **The full set.** The map closure is the registry release's canonical
+   closure, not the browser asset set, which has no native master and could
+   not render on the CLI:
    - every member of `map/closure.json`, the canonical closure: the native
      render assets (`master.gltf`, `geometry.bin`) and every derivative
      built into it (ground, geometry LOD, luminaires, road decals, texture
@@ -588,8 +589,7 @@ These rules close open question 1 and the container half of open question 2.
     sha256; when it does not list one, `groundDigest` must be null.
     `simulation.groundDigest` must also equal the trace header's
     (`trace_ground`). Violations are `package_identity_mismatch`, rule
-    `ground_digest`. (Resolved 2026-09-25 for Export for CLI; before, format
-    5 always required the digest.)
+    `ground_digest`.
 11. **Withheld and licensed actor models.** An actor closure may carry a
     per-member `licenses` table (every key a member, every record naming a
     `license`) and its `catalog-models.json` a `withheld` table. A full
@@ -598,85 +598,35 @@ These rules close open question 1 and the container half of open question 2.
     as procedural.
 **Default: thin.** It is small enough to attach to an issue or an email, and
 it is complete as a record: every digest needed to prove what played is
-inside it. It also plays on this installation for as long as R1–R8 hold,
-which is what the retention work guarantees. Full is the explicit choice for
-another installation, offline use, or archiving outside SimForge. The dialog
-shows the size of each form before download.
+inside it. It also plays on the exporting installation for as long as the
+section 7 requirements hold. Full is the explicit choice for another
+installation, offline use (the CLI), or archiving outside SimForge.
 
-## 9. Studio UI
+## 9. Refusal codes
 
-**Export**
+Every refusal from the crate carries a stable `code` and the exact `rule`
+that failed (for example `package_container_invalid` / `duplicate_name`);
+the fixture corpus (`fixtures/scenario-package/`) pins one hostile package to
+each code and rule. The CLI reports both, exiting 1 for `package_io_error`
+(could not run) and 2 for every other code (a finding about the package).
 
-- Where:
-  - the scenario row menu: **"Export package…"**, which exports the latest
-    revision;
-  - the revision history panel: the same item per revision.
-- "Download JSON" stays, relabelled **"Download document (JSON)"**. Its
-  tooltip says it holds the document only.
-- A draft with uncommitted changes shows "Commit a revision to export a
-  package". Packages are revision-only.
-- The dialog shows:
-  - title, revision number and commit time;
-  - **"Motion from engine 0.9.0, simulated 21 Sep 2026 (trace format 4,
-    sampler 1)"**. If the revision's render used a re-simulated result, a
-    note says which result the package holds: always the original result
-    when one exists (phase 1 `motionSource`);
-  - the map (label, short version id, closure digest prefix) and the actor
-    count;
-  - the form choice with live sizes: **Thin, 1.2 MB** ("plays where map El
-    Camino Road @ ab12cd… is installed") and **Full, 318 MB** (map 212 MB,
-    actors 96 MB, textures 256-uastc). For full, a texture tier selector,
-    defaulting to the tier this installation's viewer uses;
-  - **"Pin renderer for exact reproduction"**: enabled only when a retained
-    pinned render exists; shows the renderer, image digest prefix and GPU
-    model;
-  - optionally, "Include author name".
-- Full export runs as a job. The dialog shows progress and a download link
-  when done. The link expires; the package id does not.
+| Code | Meaning |
+|---|---|
+| `package_container_invalid` | Not a valid scenario package container (section 10); the first violation is named |
+| `package_manifest_not_canonical` / `package_manifest_invalid` | The manifest is not canonical JSON, or does not match the schema |
+| `package_digest_mismatch` | A member does not match its recorded size or sha256 |
+| `package_identity_mismatch` | Two digests that must agree do not: trace header, timeline identity, map, resolution record |
+| `package_member_invalid` | A member does not decode as its role |
+| `package_closure_invalid` | A closure listing is malformed or contradicts itself |
+| `package_form_incomplete` | A full package is missing a blob of the full set (section 8.1) |
+| `package_version_unsupported` | The package is ahead of this reader on some dimension (section 5.4) |
+| `package_too_large` / `package_limit_exceeded` | A limit was hit; the message names the limit and its value |
+| `package_argument_invalid` / `package_io_error` | Writer argument and I/O errors |
 
-**Import**
-
-- The existing "Import Scenario JSON" button becomes **"Import scenario…"**
-  and accepts `.json` (documents, phase 1 rules) and `.scenario.zip`.
-- Verification runs with visible progress ("Verifying 9,412 members…").
-- A summary card follows before anything is written:
-  - title, `pkg_…` id, and the source (installation kind, export time, from
-    the receipt, labelled as unverified);
-  - **"Motion from engine 0.9.0. This installation runs 0.10.0. The
-    original motion will be replayed. Re-simulating is a separate, explicit
-    action."**
-  - map status: *Bound to installed version* / *Bound by identical content*
-    (render assets may differ) / *Will be installed from package (212 MB)* /
-    *Missing* (error state);
-  - actors: available or missing;
-  - reproduce-exactly pin, if any, and whether this installation can honour
-    it;
-  - an **Import** button, which creates the document and opens it.
-
-**Error states** (each with a copyable detail block, per the studio style
-guide):
-
-Every refusal carries a stable `code` (below) and the exact `rule` that
-failed (for example `package_container_invalid` / `duplicate_name`); the
-fixture corpus pins one hostile package to each code and rule. Codes added
-by the implementation: `package_identity_mismatch` (two digests that must
-agree do not: trace header, timeline identity, map, resolution record),
-`package_member_invalid` (a member does not decode as its role),
-`package_closure_invalid` (a closure listing is malformed or contradicts
-itself), `package_form_incomplete` (section 8.1), and, for writers,
-`package_argument_invalid` and `package_io_error`.
-
-| Code | User sees | Offered action |
-|---|---|---|
-| `package_container_invalid` | "This file is not a valid SimForge scenario package." + first violation | none |
-| `package_manifest_not_canonical` / `_invalid` | "The package manifest is malformed." | none |
-| `package_digest_mismatch` | "The package is damaged: `<path>` does not match its recorded hash." | Re-download |
-| `package_version_unsupported` | Section 5.4 text, per dimension | "Update SimForge" link |
-| `package_map_missing` | "Map El Camino Road (version …, OpenDRIVE ab12…) is not available here." | Transfer to map version X · Import full package · Install map version |
-| `package_map_conflict` | "A different map already uses version id …; the package was not bound." | Import full package (installs under a new id) |
-| `package_actor_assets_missing` | "Actor models `sedan-generic`, … are not available here." | Import full package |
-| `package_too_large` / `package_limit_exceeded` | Which limit was hit, and the host's value | none |
-| `render_pin_unavailable` (at render time) | "The pinned renderer (image sha256:…, RTX 4090) is not available." | Render with the current renderer (a new, unpinned job, labelled) |
+A host that binds packages into its own store adds the binding refusals:
+`package_map_missing` and `package_map_conflict` (section 5.2),
+`package_actor_assets_missing` (actor models named by `catalogIds` are not
+available), and, at render time, `render_pin_unavailable` (section 6).
 
 ## 10. Security
 
@@ -728,8 +678,6 @@ file with the central directory immediately before them.
 | `manifest.json` | 1 MiB |
 | Any single non-blob member | 256 MiB |
 | DEFLATE ratio per entry | ≤ 200:1 (for entries over 1 MiB; smaller entries cannot be bombs) |
-| Total inflated bytes | ≤ 1.05 × declared total |
-| Concurrent imports per workspace | 2 |
 
 **Manifest handling:**
 
@@ -740,79 +688,42 @@ file with the central directory immediately before them.
   `mapVersionId` and catalog ids are used only as parameterised lookup
   values.
 - Titles and labels render as plain text.
-- The document goes through `parseTemplate` (strict), and the trace and
-  timeline through their own validating readers. Both run in the import
-  worker with memory and time caps.
+- The document must be canonical and carry the manifest's
+  `scenarioVersion`; an importer that authors from it parses it strictly
+  (`simforge_compiler::parse_template`). The trace and timeline go through
+  their own validating readers. A host runs these with memory and time caps.
 - No member is executed or evaluated. The xosc is stored as bytes only.
-- Imports are authorised like document creation in the target workspace.
-  Thin-form fetches use the importing user's entitlements to the configured
-  origins, never the package's claims.
+- A host authorises an import like document creation in the target
+  workspace. Thin-form fetches use the importing user's entitlements to the
+  configured origins, never the package's claims.
 
 **Signatures (later, optional):** a detached `signatures/<keyid>.sig` member
 over `packageId`, outside the identity like the receipt. It is verified
 against keys the installation trusts. An unsigned package is still valid:
 integrity comes from the digests, and a signature only adds authenticity.
-The scheme is open question 7.
+The scheme is open question 2.
 
 **Privacy:** packages carry no workspace ids, user ids, emails, host names,
-bucket names, object keys or presigned URLs. The exporter asserts this with a
-denylist test over the manifest, the receipt and the resolution record.
+bucket names, object keys or presigned URLs. An exporter must check this over
+the manifest, the receipt and the resolution record.
 
-## 11. Test plan
+## 11. Tests
 
 | Test | What it proves | Where |
 |---|---|---|
-| Manifest canonical round trip | `parse → canonicalJson → sha256` is stable. The TS and Rust canonical encoders agree on manifest vectors | `packages/scenario/src/package/__tests__/manifest.test.ts`; add vectors to `fixtures/canonical-json/` |
-| Container determinism | Two exports of one revision are byte-identical within one release. Both forms have the same `packageId` | `package-writer.test.ts` |
-| Strict reader corpus | One hostile fixture per section 10 rule (zip-slip, symlink, duplicate, overlap, header mismatch, bomb, ZIP64 lie, trailing data, non-canonical manifest, wrong blob name). Each is refused with its code | `fixtures/package-hostile/` + `package-reader.test.ts` |
-| Round trip, thin | Export → import into a fresh workspace on the same host. The revision binds the same `traceSha256` / `timelineSha256`, `motionSource = original`, the render timeline is identical, and no simulation request is created | `studio/app/lib/scenario/__tests__/scenario-package.test.ts` |
-| Round trip, full | Export full → import into an empty installation, which installs the map version and actors. Bevy pose parity against the package timeline is ≤ 1e-3 m / 0.05° | same + `simforge render parity` in the native CI lane |
-| Map resolution matrix | By id; by content under a different id; id conflict; missing (thin) with transfer offers; full install under a new id. Never by name | scenario-package.test.ts |
-| Skew | A synthetic package one version ahead on each dimension is refused with the right message. Older manifests, documents, traces and timelines upgrade | `package-skew.test.ts` |
-| Memo conflict | Same `simKey` with a different trace → `simKey'` binding, violation recorded, original row untouched | scenario-package.test.ts |
-| Retention | Every cleanup path in R2 refuses a digest referenced by an imported package. GC deletes only unreachable digests after the grace period | `retention-reachability.test.ts` |
-| **Archive corpus packages** | Each release appends `fixtures/archive-corpus/<release>/packages/*.scenario.zip`: thin packages plus one full package on the committed Richmond closure, with a stored pose ledger. Every later release must import every one of them, verify all hashes, upgrade, and reproduce the pose ledger within Bevy tolerance | the phase-1 archive corpus job; append-only (a new CI check refuses edits or deletions under past releases) |
-| Cross-installation | OSS local Studio exports thin + full → SimCloud dev imports, and the reverse. Asserts identical `traceSha256`, `timelineSha256` and sampled poses. Thin succeeds only when the other side has the map by closure digest, and otherwise fails with `package_map_missing` | real-stack suite (`docs/engineering/real-stack-test-suite.md`), nightly |
-| Reproduce exactly | A pinned render on the same GPU model reproduces the source frame digests. A different GPU is refused by the scheduler | per-GPU golden lane |
-| Privacy denylist | No host name, bucket, object key, email or user/workspace id in any exported metadata member | `package-privacy.test.ts` |
+| Fixture corpus | The committed fixtures regenerate byte for byte (the writer is deterministic); every valid fixture verifies; every hostile fixture (one per section 10 rule and each refusal code) is refused with its `code` and `rule`; thin and full forms share one `packageId`. Regenerate with `SIMFORGE_UPDATE_PACKAGE_FIXTURES=1 cargo test -p simforge-package --test fixtures` | `native/crates/simforge-package/tests/fixtures.rs`, `fixtures/scenario-package/` (`expectations.json`) |
+| Round trips | Every archive-corpus trace and document, packaged thin and full on the committed Richmond closure, is written, read back and verified; the writer refuses what the reader would | `tests/round_trip.rs` |
+| Schema agreement | `contracts/scenario-package/*.schema.json` agree with the typed reader | `tests/schema.rs` |
+| Release smoke | The thin release smoke package names the public Richmond release and actor closure, and verifies | `tests/smoke.rs`, `fixtures/scenario-package/smoke/` |
+| CLI | `simforge package inspect \| verify \| import` exit codes and reports | `native/crates/simforge-cli/tests/package.rs` |
+| Replay | A workspace laid out as an import writes it re-simulates to its packaged trace under the same engine | `native/crates/simforge-cli/tests/simulate.rs` |
+| Render | The release smoke package has a lavapipe golden scene (`package-smoke-richmond`), gated once recorded | `qualification/golden-harness/` |
 
-## 12. Staged plan
+## 12. Open questions
 
-| Stage | Scope | Effort | Depends on (phase 1) |
-|---|---|---|---|
-| **A. Thin export** | Manifest schema + canonical encoder + verifier (`@simforge-oss/scenario/package`), ZIP writer, export route, `simforge package export\|inspect\|verify`, the "Export package…" dialog (thin only), `scenario_packages` table | 3–4 days | `motionSource` / original-result lookup; timelines keyed by `timelineKey` |
-| **B. Import (thin)** | Strict ZIP reader, staging + verification pipeline, skew rules, map/actor resolution (id, content, missing + transfer offer), `origin = 'import'` rows, memo-conflict rule, import summary UI, error states, `simforge package import` | 4–6 days | trace upgrader chain (v1/v3/v4, v5 when it lands); exact map resolution on JSON import; archive corpus harness |
-| **C. Full form** | Blob embedding (simulation members, render geometry, one tier, actor subset), background export job with progress, map-version install from a package, partial-tier asset sets, actor-closure subset delivery to the native renderer, cross-installation test | 6–8 days | B; R8 (actor closure on the public origin) |
-| **D. Reproduce exactly** | `render/pin.json`, pin capture from a succeeded job, pinned scheduling by image digest + GPU model, pinned-mode labels, frame-digest comparison | 3–4 days + infra | R6 (immutable image repos, pushed native worker images, immutable CARLA tags) |
-| **E. Retention hardening** | reachability from references, refusal in every R2 path, reachability GC with grace, write-once stores (Object Lock on new content-addressed buckets and copy-over, or deny-delete policies), fix of the export-prefix expiry, migration tooling without `--map-by-name` | 5–7 days + infra | none. **Start in parallel with A.** Thin packages should not be advertised as durable until E is done |
-
-Total: about 4–5 engineer-weeks plus infrastructure changes. Archive-corpus
-packages start with stage B and grow every release.
-
-## 13. Open questions
-
-1. ~~**One id for thin and full.**~~ Resolved: one id; the form is a
-   container property (section 8.1).
-2. ~~**Texture tiers in full packages.**~~ Resolved by section 8.1 rule 5:
-   a full package embeds the canonical closure, whose texture tiers are the
-   ones the map release built.
-3. **Newer sampler.** Refuse (as specified), or accept and render with a
+1. **Newer sampler.** Refuse (as specified), or accept and render with a
    timeline the reader derives from the trace with its own sampler? Poses x,
    y and heading are identical either way; z, pitch, roll and lights may
    differ.
-4. **Import target.** Always a new document, or also "add as a new revision
-   of document D" when `scenario.origin` matches a local document?
-5. **Cross-installation thin.** May local Studio fetch thin members from
-   SimCloud with the user's credentials (SimCloud as a configured origin), or
-   is thin strictly same-installation and full the only cross-installation
-   form?
-6. **Legacy revisions** whose only result is a lazy re-simulation (no
-   original result). Export them labelled "motion re-simulated under 0.x", or
-   refuse?
-7. **Signatures.** Which scheme, when we add them: keyless signing tied to a
+2. **Signatures.** Which scheme, when we add them: keyless signing tied to a
    workspace identity, or a per-installation Ed25519 key?
-8. **Object Lock vs deny-delete policy.** Object Lock needs new buckets and a
-   copy of every content-addressed object. A deny-delete policy works in
-   place but is weaker (an administrator can lift it). Which one?
-9. **Author name.** Off by default (as proposed), or on by default for
-   SimCloud workspaces?

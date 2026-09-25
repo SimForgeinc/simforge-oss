@@ -13,9 +13,11 @@ Each committed engine tick is one frame:
         4 bytes                    payloadBytes
 ```
 
-`payloadBytes` counts only the MessagePack payload. A transport may split or coalesce these bytes arbitrarily. `TruthStreamClient.push(chunk)` incrementally reconstructs frames. A payload larger than 64 MiB is rejected by the client helper. There is no JSON envelope, operation discriminator, sequence wrapper, or server-side pixel payload.
+`payloadBytes` counts only the MessagePack payload (named fields, `rmp_serde::to_vec_named`). The engine owns the bytes: `TruthSubscriber::drain_framed` in `native/crates/simforge-bindings-common/src/runtime/world.rs` (Python: `TruthSubscription.drain_frames()`) returns complete framed messages, and hosts forward them without re-encoding. A transport may split or coalesce these bytes arbitrarily; a client reassembles frames from the length prefix. There is no JSON envelope, operation discriminator, sequence wrapper, or server-side pixel payload.
 
 ## Frozen `TruthFrame` schema
+
+Rust source: `TruthFrame` in `native/crates/simforge-session/src/world.rs`. Shape (camelCase on the wire):
 
 ```ts
 interface TruthFrame {
@@ -42,10 +44,10 @@ No field is optional except the two additive per-actor records: `telemetry` (abs
 
 | Field | Meaning |
 | --- | --- |
-| `tick` | Authoritative engine tick index. It includes engine warm-up in the same way as `EngineTickObservation.tickIndex`; a subscription does not renumber it. |
+| `tick` | Authoritative engine tick index. It includes engine warm-up in the same way as the engine's tick observation index; a subscription does not renumber it. |
 | `timeSec` | Authoritative simulation time in seconds for `tick`, quantized to six decimal places. No wall-clock value is emitted. |
 | `scene` | One unmodified `simforge.scene-state.v1` `SceneFrame`: `{tick, t, actors}`. `scene.tick === tick` and `scene.t === timeSec`. |
-| `signals` | Full `signalSnapshotAt(t)` projection for every signal program, ordered by `signalId`. It includes physical head/controller/junction identity, phase, timing source, phase boundaries, remaining ticks, next phase, cycle length, and any failure state. |
+| `signals` | Full signal-snapshot projection at `t` for every signal program, ordered by `signalId`. It includes physical head/controller/junction identity, phase, timing source, phase boundaries, remaining ticks, next phase, cycle length, and any failure state. |
 | `actors` | Per-record static identity/dimensions plus acceleration. Entries have the same actor-id order and membership as `scene.actors`. |
 
 ### Scene frame
@@ -90,12 +92,8 @@ A subscription starts with the next committed tick; it does not replay history. 
 
 ## Backpressure
 
-`WorldSession.subscribeTruth({capacity})` and `WorldRegistry.subscribeTruth(worldId, clientId, {capacity})` return a pull-based `TruthSubscription`. The default capacity is 256 complete frames. Capacity is a positive integer and is fixed for the subscription.
+`WorldSession::subscribe_truth(capacity)` (Python: `SimForgeWorld.subscribe(capacity)`) returns a pull-based `TruthSubscription`. The default capacity is 256 complete frames. Capacity is a positive integer and is fixed for the subscription.
 
-The engine tick path never calls consumer code and never waits for transport I/O. It only enqueues the already encoded immutable byte array. When a queue is full, enqueue discards the **oldest** pending frame and increments that subscription's cumulative drop counter. `subscription.stats()` returns exactly:
+The engine tick path never calls consumer code and never waits for transport I/O. It only enqueues the already built immutable frame (shared, never copied per subscriber). When a queue is full, enqueue discards the **oldest** pending frame and increments that subscription's cumulative drop counter. `subscription.stats()` returns exactly `{ queued, dropped }` (`TruthSubscriptionStats`).
 
-```ts
-{ queued: number, dropped: number }
-```
-
-`dropped` never decreases during the subscription. `read()` removes one oldest complete framed message or returns `null`; `drain()` removes all queued messages in tick order. The drop counter is subscription-local and deliberately is not added to `TruthFrame`, preserving byte identity across concurrent subscribers. A transport adapter must expose or monitor this counter as its explicit loss accounting; it must not stall world advancement to recover a dropped frame.
+`dropped` never decreases during the subscription. `read()` removes the oldest complete frame or returns `None`; draining removes all queued frames in tick order. The drop counter is subscription-local and deliberately is not added to `TruthFrame`, preserving byte identity across concurrent subscribers. A transport adapter must expose or monitor this counter as its explicit loss accounting; it must not stall world advancement to recover a dropped frame.

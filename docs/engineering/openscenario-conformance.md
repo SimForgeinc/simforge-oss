@@ -1,12 +1,12 @@
 # OpenSCENARIO conformance
 
-**Status.** September 2026, `ENGINE_SEM_VER` 0.10.0. Target standard: **ASAM OpenSCENARIO XML 1.4.0** (spec dated 2026-05-08, published 19 May 2026), the latest 1.x release.
+**Target standard.** **ASAM OpenSCENARIO XML 1.4.0** (spec dated 2026-05-08, published 19 May 2026), the latest 1.x release.
 
 **Scope.** SimForge **exports** OpenSCENARIO. It does not import it: import was removed, because a placement-only importer could not honour the format.
 
 **The question this answers.** The standard is loose, and there is no reference implementation, so how do we know SimForge's OpenSCENARIO behaviour is correct?
 
-**The answer.** Correctness is measured against a *spec-derived oracle*, one case at a time, with the ASAM clause cited:
+**The answer.** Correctness is judged against a *spec-derived oracle*, one case at a time, with the ASAM clause cited:
 - The oracle's expected values are computed by hand from the clause text: speed and lateral profiles from the `DynamicsShape` definitions, and the discrete tick at which each condition becomes true.
 - No other implementation's opinion enters those values.
 - esmini is recorded per case as **agrees**, **disagrees** or **unsupported**. That is evidence, not a reference.
@@ -14,91 +14,40 @@
 
 Conformance means conformance to the published [SimForge OSC profile](#the-simforge-osc-profile). Anything outside the profile is refused loudly.
 
-## Where OpenSCENARIO lives in SimForge
+## Where OpenSCENARIO lives in the SDK
 
 | Surface | Code | Status |
 |---|---|---|
-| Our execution semantics | The engine's `SimScenarioInput` interactions (`packages/engine/src/schema/input.ts`), executed by `native/crates/simforge-core/src/engine/{triggers,interactions,controllers,motion,dynamics}.rs`. Studio documents reach them through `simforge-compiler` (`materialize/builder.rs`). | Live. **This is what the conformance suite tests.** |
-| XML 1.4 export, `trajectory-replay` profile | `packages/openscenario/src/export/xml-1.4.ts`. Called by `compileExecutionPackage` (`packages/compiler/src/execution-package.ts`), the Studio browser worker and `simforge export`. | Live. It is the only shipped profile. It bakes our trace into timed `Polyline` trajectories. Round trip checked (below). |
-| XML 1.4 export, `actions` profile | Same file, `executionMode: 'actions'`. | Tests only. No product path uses it. It is the semantic mapping this suite measures. |
-| XML "1.3 esmini" export | `export/xml-1.3-esmini.ts`: a textual lowering of the 1.4 output. | CLI `--format xosc-1.3-esmini` only. |
-| DSL 2.2 export | `export/dsl-2.2.ts` | CLI `--format osc-2.2` only. `at`/`after` triggers only. |
-| Import | – | **Removed.** Documents an older importer created are repaired once. See F-01. |
-| CARLA | `adapters/carla-exec/.../runtime/compiler.py` compiles only our own 1.4 trajectory-replay files into a 50 Hz plan. With a render timeline present, the timeline wins. | Live. No storyboard semantics. No ScenarioRunner anywhere. |
-| Native renderer | `packages/render/src/native/lowering.ts` | Legacy fallback when no render timeline is present. |
-| esmini lane | `packages/openscenario/src/esmini/*`, `trace-diff/*`. SimCloud `openscenario_validate` job. | The Render panel offers the esmini card only when the host lists the `openscenario_validate` job family. SimCloud does not list it, because no worker serves it in dev or staging. |
+| Our execution semantics | The engine's `SimScenarioInput` interactions, executed by `native/crates/simforge-core/src/engine/{triggers,interactions,controllers,motion,dynamics}.rs`. Authored documents reach them through `simforge-compiler` (`materialize/builder.rs`). | Live. **This is what conformance measures.** |
+| XML 1.4 export, `trajectory-replay` profile | `native/crates/simforge-authoring/src/export/xml.rs`, `simforge export <instance> --format xosc-1.4`. | Live. It is the only shipped XML profile. It bakes our trace into timed `Polyline` trajectories. Round trip checked (below). |
+| XML "1.3 esmini" export | Same module: a structural lowering of the 1.4 output. | `simforge export --format xosc-1.3-esmini`. |
+| DSL 2.2 export | `export/dsl.rs`, checked by `dsl_syntax.rs` | `simforge export --format osc-2.2`. `at`/`after` triggers only. |
+| Import | – | **Removed.** See F-01. |
+| CARLA | `adapters/carla-exec/simforge_oss_carla_exec/runtime/compiler.py` compiles only our own 1.4 trajectory-replay files into a 50 Hz plan. With a render timeline present, the timeline wins. `fixtures/openscenario-conformance/` is its runtime corpus. | Live. No storyboard semantics. No ScenarioRunner anywhere. |
 
-## The conformance suite
+The export commands are locked by the CLI's parity goldens
+(`native/crates/simforge-cli/tests/authoring_parity.rs`, the `export-*` cases).
 
-### Layout
+## Conformance evidence
 
-```
-fixtures/osc-conformance/
-  cases/<id>.case.json        one feature per case: scenario, spec oracle, recorded verdicts
-  xosc/<id>.xosc              our XML 1.4 actions export of each engine case (golden; kept current)
-  probes/<id>.xosc            hand-written files for constructs SimForge cannot express (esmini evidence)
-  probes/catalogs/            catalog used by probe-catalog-vehicle
-  */osc-conformance-straight.xodr   generated 600 m straight road (lanes 1, -1, -2, -3; 3.5 m)
-packages/cli/src/tools/osc-conformance/   oracle, runner, esmini driver and log/CSV readers, report
-packages/cli/scripts/osc-conformance.ts   CLI entry point
-packages/cli/src/__tests__/osc-conformance.test.ts   unit tests + the primary suite in vitest
-packages/cli/src/__tests__/compiled-when-deadline.test.ts   compiled Studio `when` deadline (F-03)
-packages/engine/src/__tests__/storyboard-protocol.test.ts   protocol/property tests (below)
-```
+The oracle suite behind the decisions and findings below is not part of this
+repository. It checks, per case:
 
-### What each case checks
+1. **Ours vs spec (primary).** **Engine cases** (36) are authored in `SimScenarioInput`, the vocabulary our semantics live in. The engine runs at dt = 0.02 s. Each actor's pose and speed series, and each interaction's start and end, are compared to the oracle.
+2. **esmini vs spec (evidence).** For engine cases, esmini runs an `actions`-profile export of the case. **Probes** (11) are hand-written files for OSC constructs SimForge does not express: priority skip/parallel/override, maximumExecutionCount, falling edges, condition delay, parameters, LanePosition, catalogs, a 1.0 file, and a linear lane change. For these, esmini is the only execution and is recorded against the oracle. A disagreement on an engine case is either an export bug or an esmini deviation.
+3. **Round trip (exporter check).** esmini replays our **trajectory-replay** export (the shipped profile) and must reproduce our own trace to within 1 cm and 0.1°. It runs in esmini's `segment` polyline mode: esmini 3.6.0 predates the 1.4 `Interpolation` element, and its default ("corner") averages vertex headings.
 
-1. **Ours vs spec (primary).**
-   - **Engine cases** (`kind: engine`, 36) are authored in `SimScenarioInput`, the vocabulary our semantics live in. The engine runs at dt = 0.02 s. Each actor's pose and speed series, and each interaction's start and end, are compared to the oracle.
-   - This check needs no simulator. It runs in vitest on every CI run.
-2. **esmini vs spec (evidence).**
-   - For engine cases, esmini runs our actions export of the case.
-   - **Probes** (`kind: xosc`, 11) are hand-written files for OSC constructs SimForge does not express: priority skip/parallel/override, maximumExecutionCount, falling edges, condition delay, parameters, LanePosition, catalogs, a 1.0 file, and a linear lane change. For these, esmini is the only execution and is recorded against the oracle.
-   - A disagreement on an engine case is either an export bug or an esmini deviation. The case's `esminiNote` says which.
-3. **Round trip (exporter check).**
-   - esmini replays our **trajectory-replay** export (the shipped profile) and must reproduce our own trace to within 1 cm and 0.1°.
-   - It runs in esmini's `segment` polyline mode. esmini 3.6.0 predates the 1.4 `Interpolation` element, and its default ("corner") averages vertex headings.
+Tolerances default to 0.25 m, 0.25 m/s, 1° and 0.021 s (one tick); a case may override them.
 
-A case fails CI when any observed verdict differs from the recorded one. Fixing a deviation therefore also fails the suite, which forces the recorded expectation (and this document) to be updated with it.
-
-Tolerances default to 0.25 m, 0.25 m/s, 1° and 0.021 s (one tick). A case may override them, and `compareUntilS` limits motion comparison (for example, up to a collision).
-
-### Results (0.10.0, esmini 3.6.0)
-
-| | Count |
+| Result (engine 0.10.0, esmini 3.6.0) | Count |
 |---|---|
 | Engine cases conforming to the oracle | **34 / 36** |
 | Engine cases deviating by documented decision | 2 (`default-controller-*`, D-14) |
 | Round trip of the shipped trajectory export | 36 / 36 within 1 cm / 0.1° |
 | esmini agrees with the oracle | 39 / 45 cases (all 6 disagreements are esmini's own readings, F-19) |
 
-### Running it
-
-```
-# primary suite only (no esmini needed): part of the CLI package tests
-pnpm --filter @simforge-oss/cli exec vitest run src/__tests__/osc-conformance.test.ts
-
-# full run incl. esmini cross-check and round trip (skips esmini parts if absent)
-node packages/openscenario/scripts-esmini/fetch-pinned-esmini.mjs   # installs pinned esmini 3.6.0 under .tools/
-pnpm osc-conformance:verify -- --markdown report.md --json report.json
-SIMFORGE_ESMINI_BIN=/path/to/esmini pnpm osc-conformance:verify -- --case trigger-ttc --keep
-
-# after an intentional exporter change
-pnpm osc-conformance:update-xosc
-```
-
-The whole suite takes about 5 s (47 cases, 81 esmini runs).
-
-### Adding a case
-
-1. Pick one feature.
-2. Write the OSC-level scenario on the straight road.
-3. Derive the expected numbers by hand from the clause text, and put the derivation in `oracle.derivation` so a reviewer can redo it:
-   - speeds and lateral offsets use the `DynamicsShape` functions in `oracle.ts`;
-   - events start at the first 20 ms tick where the condition is true.
-4. Cite the clauses.
-5. Reference a decision ID wherever the spec is silent.
-6. Record `expect.ours` / `expect.esmini` from the first run *after* you have explained every difference.
+Every later engine change that moves a trace bumps `ENGINE_SEM_VER` and is
+locked by the golden-trace corpus (docs/engineering/engine-semver.md).
 
 ## The SimForge OSC profile
 
@@ -109,7 +58,7 @@ The whole suite takes about 5 s (47 cases, 81 esmini runs).
 - Appearance, signal and delete events fire at their `SimulationTime`.
 - Round trip: 1 cm / 0.1°.
 
-**Semantic: `actions`.** These are exactly the constructs the engine executes, as the suite pins them.
+**Semantic: `actions`.** These are exactly the constructs the engine executes, as the oracle suite pins them. The mapping is the semantic reference; the SDK's exporter ships only `trajectory-replay` for XML.
 
 | Construct | Profile rule |
 |---|---|
@@ -164,9 +113,9 @@ These are the places where ASAM 1.4.0 is silent, ambiguous or self-contradictory
 
 | ID | Severity | Finding | Evidence (case) | Status |
 |---|---|---|---|---|
-| F-01 | High | The removed importer mirrored every actor north↔south: it set scene `z = +y_osc`, while the scene frame is `z = −y_osc`. Documents it created are repaired once, on the author's confirmation in the editor or by `studio/scripts/fix-mirrored-openscenario-imports.ts` (`fixMirroredOpenScenarioImport`, `@simforge-oss/scenario`). None exist on dev or staging. | – | fixed (import removed) |
-| F-02 | High | Speed and gap interactions never completed, so `after end` chains on them never fired. Longitudinal preemption did not end the preempted interaction. | `trigger-after-end`, `storyboard-protocol.test.ts` | fixed (0.10.0) |
-| F-03 | High | `when … ifNever: 'fire'` never fired in compiled Studio documents: the compiler turned `byLatest` into a clip window end whose gate skipped first. | `compiled-when-deadline.test.ts`, `trigger-ifnever-fire` | fixed (0.10.0) |
+| F-01 | High | The removed importer mirrored every actor north↔south: it set scene `z = +y_osc`, while the scene frame is `z = −y_osc`. Documents it created were repaired. | – | fixed (import removed) |
+| F-02 | High | Speed and gap interactions never completed, so `after end` chains on them never fired. Longitudinal preemption did not end the preempted interaction. | `trigger-after-end` | fixed (0.10.0) |
+| F-03 | High | `when … ifNever: 'fire'` never fired in compiled documents: the compiler turned `byLatest` into a clip window end whose gate skipped first. | `trigger-ifnever-fire` | fixed (0.10.0) |
 | F-04 | Medium | Distance measures. The actions export labelled the engine's body-gap measures reference-point distances (`freespace="false"`), 4.8 m / about 1 s off. Euclidean triggers used circumscribed circles. Both are now true footprint separation (OSC freespace). | `trigger-distance-*`, `trigger-ttc`, `trigger-headway`, `condition-*` | fixed |
 | F-05 | Medium | Speed tracking overshot: a linear 20→10 m/s ramp at 4 m/s² dipped to 8.1 m/s, and `stop` ignored its shape. Prescribed profiles are now exact (D-21), including completion. The cornering envelope no longer converges a stop to rest on its own. | `speed-*`, `same-axis-supersede`, `trigger-standstill` | fixed (0.10.0) |
 | F-06 | Medium | `step` dynamics ran as physical ramps (10.9 m off); now instantaneous. | `speed-step`, `lane-offset-step` | fixed (0.10.0) |
@@ -176,10 +125,10 @@ These are the places where ASAM 1.4.0 is silent, ambiguous or self-contradictory
 | F-10 | High (export) | Actions-profile storyboard mapping bugs, all fixed: (a) rising edges for level `when`; (b) one Maneuver with `overwrite` stopped cross-axis events; (c) `after start` exported as `completeState`; (d) conditions not gated during the warm-up; (e) deprecated `overwrite`. | export tests, `trigger-edge-true-at-start`, `condition-group-and`, `parallel-axes-speed-and-light`, `trigger-after-start` | fixed |
 | F-15 | Low | `exist` showed in the trigger-tick sample, and the trajectory export scheduled the delete at the first absent tick. Both now follow D-01. | `delete-entity` (round trip) | fixed (0.10.0) |
 | F-16 | Low | Exported vehicle geometry put the front axle beyond the bumper. Axles now sit at ±0.29·l around the footprint-centre reference point. | export tests, ASAM checkers | fixed |
-| F-17 | Medium (process) | Nothing verified OSC semantics before this suite. The SimCloud esmini lane was offered while no worker served it. The certification page claimed "ASAM OpenSCENARIO XML: Available today". Now: this suite runs in CI, the esmini card is gated by the host's job families, and the claim reads "Exports ASAM OpenSCENARIO XML 1.4.0 (trajectory replay)". | – | fixed |
+| F-17 | Medium (process) | Nothing verified OSC semantics before the oracle suite, and the product claimed more than export. The claim now reads "Exports ASAM OpenSCENARIO XML 1.4.0 (trajectory replay)". | – | fixed |
 | F-18 | Low | Version handling was lenient (a `revMajor≠1` import was translated; the 1.3 lowering was a blind regex). Import is gone; the 1.3 lowering refuses anything but one 1.4 header; the OSC-shaped schema pins `revMajor` 1. | – | fixed |
 | F-19 | Info (esmini) | esmini 3.6.0 defects the suite found: TTC is true on its first check; a RelativeTargetSpeed that references the acting entity runs away; `skip` defers rather than consumes the execution (D-16); it reads speed over distance differently (D-02) and standstill as exactly 0 (D-08); it aborts on the 1.4 `<Interpolation/>`. | `trigger-ttc`, `speed-relative-*`, `probe-priority-skip`, `speed-linear-distance`, `trigger-standstill` | documented |
-| F-20 | Info | Same-tick order is interaction-id order: the engine sorts interactions by id. It also changes the input hash relative to a TS-parsed input, so the trajectory exporter must be given the engine's executed input. The production compiler does this. | round-trip harness | documented |
+| F-20 | Info | Same-tick order is interaction-id order: the engine sorts interactions by id. It also changes the input hash relative to the authored input, so the trajectory exporter must be given the engine's executed input. `simforge export` simulates the instance and exports what the engine executed. | round-trip harness | documented |
 
 The import findings F-11 to F-14 (placement-only import, dropped catalogs, dropped Lane/Road positions, parameter errors) were closed by removing import.
 
@@ -193,14 +142,11 @@ The import findings F-11 to F-14 (placement-only import, dropped catalogs, dropp
 - It implements the standard up to 1.3. On 1.4 files it reports the new `Motion` and `Interpolation` elements as unknown.
 - Otherwise our exports pass.
 
-**CI gating.** Until either tool supports 1.4, gate CI on:
-1. `xmllint` against the pinned 1.4.0 XSD (already done for execution packages);
-2. the RA checker with Motion/Interpolation allowlisted;
-3. the QC bundle with the 1.4 XSD registered.
+Until either tool supports 1.4, validate exports with `xmllint` against the 1.4.0 XSD, the RA checker with Motion/Interpolation allowlisted, or the QC bundle with the 1.4 XSD registered.
 
-## Protocol tests
+## Interaction lifecycle
 
-`packages/engine/src/__tests__/storyboard-protocol.test.ts` covers the interaction lifecycle. It uses 40 seeded random storyboards plus targeted cases, and checks:
+The engine's interaction lifecycle guarantees (established with seeded random storyboards plus targeted cases):
 - at most one start per interaction, never both fired and skipped (maximumExecutionCount 1);
 - at most one terminal end, never an end before the start;
 - nothing evaluated during the warm-up;

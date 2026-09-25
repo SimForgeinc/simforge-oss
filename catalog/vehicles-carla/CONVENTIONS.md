@@ -16,9 +16,9 @@ travels inside the closure with the models.
 - Fetch the pack (verified, cached): `node scripts/actor-assets/closures.mjs dir vehicles-carla`
   prints the materialized directory (`simforge assets pull --closure <sha256>` installs the same closure).
 - After regenerating models (the tools write `models/`, which is gitignored) or
-  editing a travelling sidecar: `node scripts/actor-assets/seal-packs.mjs seal`,
-  then `publish` (needs write access to the public asset bucket), then commit
-  `closure.json` and the lock. The merge gate runs `seal-packs.mjs check`.
+  editing a travelling sidecar, a maintainer with write access to the public
+  asset store reseals and publishes the closure; commit the new `closure.json`
+  and the lock entry with it.
 
 ## Coordinate frame
 
@@ -73,16 +73,17 @@ Material **names** are the contract:
 - PNG only (render-core image features: `png`, `hdr`, `ktx2`; no WebP).
 - Body/livery diffuse ≤ 2048², detail/normal/ORM ≤ 1024².
 - Normal maps converted from UE (DirectX, −Y green) to glTF (OpenGL, +Y green).
-- KTX2/UASTC migration is a possible follow-up; PNGs were chosen so the files
-  load in both Bevy (`render-core`) and three.js today with zero extensions.
+- PNGs load in Bevy (`render-core`) and in browser glTF loaders with zero
+  extensions.
 
 ## Scale caveat
 
 The models preserve CARLA's authored proportions, not necessarily its original
 triangle topology. A few CARLA models are larger than their real-world
 counterparts (e.g. the Fuso Rosa bus and the 2021 Mini). `manifest.json` carries
-per-model `dims_lwh_m`. The browser uniformly fits the longest authored actor
-axis; the native sidecar sets `scaleToDims: true`. This preserves proportions
+per-model `dims_lwh_m`. With `scaleToDims: true` (the native sidecar) the
+renderer uniformly scales the model so its length matches the actor's catalog
+length. This preserves proportions
 and the authored vehicle length, rather than stretching each axis independently.
 Width and height can therefore differ from the catalog box.
 
@@ -101,9 +102,10 @@ The other 26 files identify `simforge-carla-vehicle-pipeline` as their generator
 
 ## Canonical model assignments
 
-`packages/asset-catalog/scripts/generate-vehicle-models.ts` owns the editorial
-assignments and generates the browser bindings, this pack's `catalog-models.json`,
-and the Rust manifest fallback table. Run it with `--check` to reject drift.
+The editorial assignments are generated together with the hosted asset
+catalog: its generator writes this pack's `catalog-models.json` and the Rust
+fallback table `renderer/render-core/src/vehicle_assignments.generated.rs`.
+Both are checked in; neither is edited by hand.
 The bicycle uses the upright Gazelle silhouette; the shuttle uses the Sprinter
 instead of shrinking a Fuso bus to minibus length; the Camry uses the rigged
 Impala sedan rather than duplicating the Lincoln used for the generic sedan.
