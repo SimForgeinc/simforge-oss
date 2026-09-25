@@ -1,0 +1,21 @@
+{
+ "argv": [
+  "variation",
+  "fork",
+  "examples/mechanisms/corridor/lead-hard-brake.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "0f851b8eaf029864",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 0,
+ "files": {
+  "v/instance.json": "0aad489fd78cf5c9cfb9dfc0695f0901e67b6fab41adfa36bb092ac073e1d15a",
+  "v/trace.json.gz": "f815b6d686d7483fb381a7bb0501d7ba02fa0abc2b0f5bd5af48b4ff6d1d2929",
+  "v/variation.json": "e05ef4a7968c6d3a583b161bf8be916571f3b3fe3e3ca5f44838e9a82d1d331b"
+ },
+ "stderr": null,
+ "stdoutSha256": "4815647f8ff61b8b47d31dd94d1679fb09ebe0920830242ecd2f45167a6edbde"
+}

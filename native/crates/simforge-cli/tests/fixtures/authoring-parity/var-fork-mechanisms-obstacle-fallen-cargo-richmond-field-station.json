@@ -1,0 +1,21 @@
+{
+ "argv": [
+  "variation",
+  "fork",
+  "examples/mechanisms/obstacle/fallen-cargo.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "0846d502df38a22c",
+  "--out",
+  "{OUT}/v"
+ ],
+ "exit": 0,
+ "files": {
+  "v/instance.json": "3f410d9dd3bd0b0b3a5f1e0dfa9b4f5c4f888f722ce7af6ebafd81818c838289",
+  "v/trace.json.gz": "00f454e66d2e19f3a1607cf0aee67e89aacdd003892917e98a96d540a8d409a6",
+  "v/variation.json": "7a5bf949e53ea1e7b6d470e2fa0a746767c5b379fde3d323462cc1f7e2ac37c1"
+ },
+ "stderr": null,
+ "stdoutSha256": "dad8f1634536274dc236a2ad1e914ece3e8990bea6a04977407d9b496047dad9"
+}
