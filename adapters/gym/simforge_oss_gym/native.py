@@ -18,7 +18,7 @@ except ImportError as error:  # pragma: no cover - installation failure path
     ) from error
 
 #: Binding ABI this package is written against; a mismatched extension is refused.
-ABI_VERSION = 2
+ABI_VERSION = 3
 if getattr(_native, "ABI_VERSION", None) != ABI_VERSION:
     raise ImportError(
         f"simforge_oss_gym._native has binding ABI {getattr(_native, 'ABI_VERSION', None)!r} but this package requires "

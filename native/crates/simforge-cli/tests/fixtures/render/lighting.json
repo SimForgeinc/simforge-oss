@@ -1,0 +1,239 @@
+{
+ "provenance": "packages/render/src/native/lighting.ts via tsx",
+ "sites": {
+  "richmond": {
+   "latitudeDeg": 37.9150891287087,
+   "longitudeDeg": -122.333308830857,
+   "utcOffsetHours": -7,
+   "timeZone": "America/Los_Angeles (PDT)"
+  },
+  "garching": {
+   "latitudeDeg": 48.2554688997943,
+   "longitudeDeg": 11.6522926105154,
+   "utcOffsetHours": 2,
+   "timeZone": "Europe/Berlin (CEST)"
+  }
+ },
+ "environments": [
+  {
+   "weather": "cloudy",
+   "timeOfDay": "dusk",
+   "surfacePatches": []
+  },
+  {
+   "weather": "clear",
+   "timeOfDay": "noon",
+   "surfacePatches": []
+  },
+  {
+   "weather": "heavy_rain",
+   "timeOfDay": "night",
+   "surfacePatches": []
+  },
+  {
+   "weather": "fog_light",
+   "timeOfDay": "morning",
+   "surfacePatches": [],
+   "extensions": {
+    "org.simforge.sceneTime.v1": {
+     "minutes": 1187.4
+    }
+   }
+  },
+  {
+   "weather": "wet_road",
+   "timeOfDay": "afternoon",
+   "surfacePatches": [],
+   "extensions": {
+    "org.simforge.lighting.v1": {
+     "scaleRevision": 2,
+     "exposure": 1.37,
+     "sun": 0.85,
+     "sky": 2.2,
+     "haze": 0.33,
+     "visibilityM": 777
+    }
+   }
+  },
+  {
+   "weather": "overcast",
+   "timeOfDay": "dawn",
+   "surfacePatches": [],
+   "extensions": {
+    "org.simforge.sceneTime.v1": {
+     "minutes": 1439.9
+    }
+   }
+  }
+ ],
+ "cases": [
+  {
+   "site": "richmond",
+   "environment": 0,
+   "cloudFixedStepS": null,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.45,\"ev100_bias\":0,\"haze\":0.03,\"night\":{\"cloud_base_m\":1200,\"cloud_density\":1,\"cloud_fixed_step_s\":0.03333333333333333,\"cloud_quality\":\"scalable\",\"cloud_top_m\":2800,\"cloud_type\":0.85,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":37.9150891287087,\"limiting_magnitude\":6.5,\"longitude_deg\":-122.333308830857,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":173,\"utc_minutes\":60,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":260.721,\"sun_elev_deg\":27.669,\"sun_scale\":1,\"turbidity\":2.8,\"visibility_m\":20000,\"weather\":\"cloudy\",\"wetness\":0}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"cloudy\",\"sceneMinutes\":1080,\"site\":{\"latitudeDeg\":37.9150891287087,\"longitudeDeg\":-122.333308830857,\"timeZone\":\"America/Los_Angeles (PDT)\",\"utcOffsetHours\":-7},\"sunSource\":\"solar-model\",\"weather\":\"cloudy\"}"
+  },
+  {
+   "site": "richmond",
+   "environment": 0,
+   "cloudFixedStepS": 0.041666666666666664,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.45,\"ev100_bias\":0,\"haze\":0.03,\"night\":{\"cloud_base_m\":1200,\"cloud_density\":1,\"cloud_fixed_step_s\":0.041666666666666664,\"cloud_quality\":\"scalable\",\"cloud_top_m\":2800,\"cloud_type\":0.85,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":37.9150891287087,\"limiting_magnitude\":6.5,\"longitude_deg\":-122.333308830857,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":173,\"utc_minutes\":60,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":260.721,\"sun_elev_deg\":27.669,\"sun_scale\":1,\"turbidity\":2.8,\"visibility_m\":20000,\"weather\":\"cloudy\",\"wetness\":0}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"cloudy\",\"sceneMinutes\":1080,\"site\":{\"latitudeDeg\":37.9150891287087,\"longitudeDeg\":-122.333308830857,\"timeZone\":\"America/Los_Angeles (PDT)\",\"utcOffsetHours\":-7},\"sunSource\":\"solar-model\",\"weather\":\"cloudy\"}"
+  },
+  {
+   "site": "richmond",
+   "environment": 1,
+   "cloudFixedStepS": null,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0,\"ev100_bias\":0,\"haze\":0,\"night\":{\"cloud_base_m\":1200,\"cloud_density\":1,\"cloud_fixed_step_s\":0.03333333333333333,\"cloud_quality\":\"scalable\",\"cloud_top_m\":2800,\"cloud_type\":0.85,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":37.9150891287087,\"limiting_magnitude\":6.5,\"longitude_deg\":-122.333308830857,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":1140,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":51.282,\"sun_elev_deg\":69.096,\"sun_scale\":1,\"turbidity\":2.4,\"visibility_m\":25000,\"weather\":\"clear\",\"wetness\":0}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"clear\",\"sceneMinutes\":720,\"site\":{\"latitudeDeg\":37.9150891287087,\"longitudeDeg\":-122.333308830857,\"timeZone\":\"America/Los_Angeles (PDT)\",\"utcOffsetHours\":-7},\"sunSource\":\"solar-model\",\"weather\":\"clear\"}"
+  },
+  {
+   "site": "richmond",
+   "environment": 1,
+   "cloudFixedStepS": 0.041666666666666664,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0,\"ev100_bias\":0,\"haze\":0,\"night\":{\"cloud_base_m\":1200,\"cloud_density\":1,\"cloud_fixed_step_s\":0.041666666666666664,\"cloud_quality\":\"scalable\",\"cloud_top_m\":2800,\"cloud_type\":0.85,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":37.9150891287087,\"limiting_magnitude\":6.5,\"longitude_deg\":-122.333308830857,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":1140,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":51.282,\"sun_elev_deg\":69.096,\"sun_scale\":1,\"turbidity\":2.4,\"visibility_m\":25000,\"weather\":\"clear\",\"wetness\":0}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"clear\",\"sceneMinutes\":720,\"site\":{\"latitudeDeg\":37.9150891287087,\"longitudeDeg\":-122.333308830857,\"timeZone\":\"America/Los_Angeles (PDT)\",\"utcOffsetHours\":-7},\"sunSource\":\"solar-model\",\"weather\":\"clear\"}"
+  },
+  {
+   "site": "richmond",
+   "environment": 2,
+   "cloudFixedStepS": null,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.9,\"ev100_bias\":0,\"haze\":0.1,\"night\":{\"cloud_base_m\":500,\"cloud_density\":1.8,\"cloud_fixed_step_s\":0.03333333333333333,\"cloud_quality\":\"scalable\",\"cloud_top_m\":2600,\"cloud_type\":0.3,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":37.9150891287087,\"limiting_magnitude\":6.5,\"longitude_deg\":-122.333308830857,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":420,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":161.914,\"sun_elev_deg\":-26.439,\"sun_scale\":1,\"turbidity\":2.6,\"visibility_m\":1500,\"weather\":\"rain\",\"wetness\":1}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"rain\",\"sceneMinutes\":0,\"site\":{\"latitudeDeg\":37.9150891287087,\"longitudeDeg\":-122.333308830857,\"timeZone\":\"America/Los_Angeles (PDT)\",\"utcOffsetHours\":-7},\"sunSource\":\"solar-model\",\"weather\":\"heavy_rain\"}"
+  },
+  {
+   "site": "richmond",
+   "environment": 2,
+   "cloudFixedStepS": 0.041666666666666664,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.9,\"ev100_bias\":0,\"haze\":0.1,\"night\":{\"cloud_base_m\":500,\"cloud_density\":1.8,\"cloud_fixed_step_s\":0.041666666666666664,\"cloud_quality\":\"scalable\",\"cloud_top_m\":2600,\"cloud_type\":0.3,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":37.9150891287087,\"limiting_magnitude\":6.5,\"longitude_deg\":-122.333308830857,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":420,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":161.914,\"sun_elev_deg\":-26.439,\"sun_scale\":1,\"turbidity\":2.6,\"visibility_m\":1500,\"weather\":\"rain\",\"wetness\":1}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"rain\",\"sceneMinutes\":0,\"site\":{\"latitudeDeg\":37.9150891287087,\"longitudeDeg\":-122.333308830857,\"timeZone\":\"America/Los_Angeles (PDT)\",\"utcOffsetHours\":-7},\"sunSource\":\"solar-model\",\"weather\":\"heavy_rain\"}"
+  },
+  {
+   "site": "richmond",
+   "environment": 3,
+   "cloudFixedStepS": null,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.6,\"ev100_bias\":0,\"haze\":0.2,\"night\":{\"cloud_base_m\":400,\"cloud_density\":1.4,\"cloud_fixed_step_s\":0.03333333333333333,\"cloud_quality\":\"scalable\",\"cloud_top_m\":1200,\"cloud_type\":0.1,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":37.9150891287087,\"limiting_magnitude\":6.5,\"longitude_deg\":-122.333308830857,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":173,\"utc_minutes\":167.4000000000001,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":245.969,\"sun_elev_deg\":7.428,\"sun_scale\":1,\"turbidity\":3,\"visibility_m\":600,\"weather\":\"fog\",\"wetness\":0.1}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"fog\",\"sceneMinutes\":1187.4,\"site\":{\"latitudeDeg\":37.9150891287087,\"longitudeDeg\":-122.333308830857,\"timeZone\":\"America/Los_Angeles (PDT)\",\"utcOffsetHours\":-7},\"sunSource\":\"solar-model\",\"weather\":\"fog_light\"}"
+  },
+  {
+   "site": "richmond",
+   "environment": 3,
+   "cloudFixedStepS": 0.041666666666666664,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.6,\"ev100_bias\":0,\"haze\":0.2,\"night\":{\"cloud_base_m\":400,\"cloud_density\":1.4,\"cloud_fixed_step_s\":0.041666666666666664,\"cloud_quality\":\"scalable\",\"cloud_top_m\":1200,\"cloud_type\":0.1,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":37.9150891287087,\"limiting_magnitude\":6.5,\"longitude_deg\":-122.333308830857,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":173,\"utc_minutes\":167.4000000000001,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":245.969,\"sun_elev_deg\":7.428,\"sun_scale\":1,\"turbidity\":3,\"visibility_m\":600,\"weather\":\"fog\",\"wetness\":0.1}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"fog\",\"sceneMinutes\":1187.4,\"site\":{\"latitudeDeg\":37.9150891287087,\"longitudeDeg\":-122.333308830857,\"timeZone\":\"America/Los_Angeles (PDT)\",\"utcOffsetHours\":-7},\"sunSource\":\"solar-model\",\"weather\":\"fog_light\"}"
+  },
+  {
+   "site": "richmond",
+   "environment": 4,
+   "cloudFixedStepS": null,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.95,\"ev100_bias\":-0.45417589318580215,\"haze\":0.33,\"night\":{\"cloud_base_m\":700,\"cloud_density\":1.4,\"cloud_fixed_step_s\":0.03333333333333333,\"cloud_quality\":\"scalable\",\"cloud_top_m\":1900,\"cloud_type\":0.15,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":37.9150891287087,\"limiting_magnitude\":6.5,\"longitude_deg\":-122.333308830857,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":1320,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":2.2,\"sun_azim_deg\":293.922,\"sun_elev_deg\":62.566,\"sun_scale\":0.85,\"turbidity\":3.2,\"visibility_m\":777,\"weather\":\"overcast\",\"wetness\":0.7}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{\"exposure\":1.37,\"haze\":0.33,\"sky\":2.2,\"sun\":0.85,\"visibilityM\":777},\"preset\":\"overcast\",\"sceneMinutes\":900,\"site\":{\"latitudeDeg\":37.9150891287087,\"longitudeDeg\":-122.333308830857,\"timeZone\":\"America/Los_Angeles (PDT)\",\"utcOffsetHours\":-7},\"sunSource\":\"solar-model\",\"weather\":\"wet_road\"}"
+  },
+  {
+   "site": "richmond",
+   "environment": 4,
+   "cloudFixedStepS": 0.041666666666666664,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.95,\"ev100_bias\":-0.45417589318580215,\"haze\":0.33,\"night\":{\"cloud_base_m\":700,\"cloud_density\":1.4,\"cloud_fixed_step_s\":0.041666666666666664,\"cloud_quality\":\"scalable\",\"cloud_top_m\":1900,\"cloud_type\":0.15,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":37.9150891287087,\"limiting_magnitude\":6.5,\"longitude_deg\":-122.333308830857,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":1320,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":2.2,\"sun_azim_deg\":293.922,\"sun_elev_deg\":62.566,\"sun_scale\":0.85,\"turbidity\":3.2,\"visibility_m\":777,\"weather\":\"overcast\",\"wetness\":0.7}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{\"exposure\":1.37,\"haze\":0.33,\"sky\":2.2,\"sun\":0.85,\"visibilityM\":777},\"preset\":\"overcast\",\"sceneMinutes\":900,\"site\":{\"latitudeDeg\":37.9150891287087,\"longitudeDeg\":-122.333308830857,\"timeZone\":\"America/Los_Angeles (PDT)\",\"utcOffsetHours\":-7},\"sunSource\":\"solar-model\",\"weather\":\"wet_road\"}"
+  },
+  {
+   "site": "richmond",
+   "environment": 5,
+   "cloudFixedStepS": null,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.95,\"ev100_bias\":0,\"haze\":0.1,\"night\":{\"cloud_base_m\":700,\"cloud_density\":1.4,\"cloud_fixed_step_s\":0.03333333333333333,\"cloud_quality\":\"scalable\",\"cloud_top_m\":1900,\"cloud_type\":0.15,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":37.9150891287087,\"limiting_magnitude\":6.5,\"longitude_deg\":-122.333308830857,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":173,\"utc_minutes\":419.9000000000001,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":198.163,\"sun_elev_deg\":-26.412,\"sun_scale\":1,\"turbidity\":3.2,\"visibility_m\":12000,\"weather\":\"overcast\",\"wetness\":0.05}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"overcast\",\"sceneMinutes\":1439.9,\"site\":{\"latitudeDeg\":37.9150891287087,\"longitudeDeg\":-122.333308830857,\"timeZone\":\"America/Los_Angeles (PDT)\",\"utcOffsetHours\":-7},\"sunSource\":\"solar-model\",\"weather\":\"overcast\"}"
+  },
+  {
+   "site": "richmond",
+   "environment": 5,
+   "cloudFixedStepS": 0.041666666666666664,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.95,\"ev100_bias\":0,\"haze\":0.1,\"night\":{\"cloud_base_m\":700,\"cloud_density\":1.4,\"cloud_fixed_step_s\":0.041666666666666664,\"cloud_quality\":\"scalable\",\"cloud_top_m\":1900,\"cloud_type\":0.15,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":37.9150891287087,\"limiting_magnitude\":6.5,\"longitude_deg\":-122.333308830857,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":173,\"utc_minutes\":419.9000000000001,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":198.163,\"sun_elev_deg\":-26.412,\"sun_scale\":1,\"turbidity\":3.2,\"visibility_m\":12000,\"weather\":\"overcast\",\"wetness\":0.05}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"overcast\",\"sceneMinutes\":1439.9,\"site\":{\"latitudeDeg\":37.9150891287087,\"longitudeDeg\":-122.333308830857,\"timeZone\":\"America/Los_Angeles (PDT)\",\"utcOffsetHours\":-7},\"sunSource\":\"solar-model\",\"weather\":\"overcast\"}"
+  },
+  {
+   "site": "garching",
+   "environment": 0,
+   "cloudFixedStepS": null,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.45,\"ev100_bias\":0,\"haze\":0.03,\"night\":{\"cloud_base_m\":1200,\"cloud_density\":1,\"cloud_fixed_step_s\":0.03333333333333333,\"cloud_quality\":\"scalable\",\"cloud_top_m\":2800,\"cloud_type\":0.85,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":48.2554688997943,\"limiting_magnitude\":6.5,\"longitude_deg\":11.6522926105154,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":960,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":266.995,\"sun_elev_deg\":29.52,\"sun_scale\":1,\"turbidity\":2.8,\"visibility_m\":20000,\"weather\":\"cloudy\",\"wetness\":0}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"cloudy\",\"sceneMinutes\":1080,\"site\":{\"latitudeDeg\":48.2554688997943,\"longitudeDeg\":11.6522926105154,\"timeZone\":\"Europe/Berlin (CEST)\",\"utcOffsetHours\":2},\"sunSource\":\"solar-model\",\"weather\":\"cloudy\"}"
+  },
+  {
+   "site": "garching",
+   "environment": 0,
+   "cloudFixedStepS": 0.041666666666666664,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.45,\"ev100_bias\":0,\"haze\":0.03,\"night\":{\"cloud_base_m\":1200,\"cloud_density\":1,\"cloud_fixed_step_s\":0.041666666666666664,\"cloud_quality\":\"scalable\",\"cloud_top_m\":2800,\"cloud_type\":0.85,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":48.2554688997943,\"limiting_magnitude\":6.5,\"longitude_deg\":11.6522926105154,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":960,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":266.995,\"sun_elev_deg\":29.52,\"sun_scale\":1,\"turbidity\":2.8,\"visibility_m\":20000,\"weather\":\"cloudy\",\"wetness\":0}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"cloudy\",\"sceneMinutes\":1080,\"site\":{\"latitudeDeg\":48.2554688997943,\"longitudeDeg\":11.6522926105154,\"timeZone\":\"Europe/Berlin (CEST)\",\"utcOffsetHours\":2},\"sunSource\":\"solar-model\",\"weather\":\"cloudy\"}"
+  },
+  {
+   "site": "garching",
+   "environment": 1,
+   "cloudFixedStepS": null,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0,\"ev100_bias\":0,\"haze\":0,\"night\":{\"cloud_base_m\":1200,\"cloud_density\":1,\"cloud_fixed_step_s\":0.03333333333333333,\"cloud_quality\":\"scalable\",\"cloud_top_m\":2800,\"cloud_type\":0.85,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":48.2554688997943,\"limiting_magnitude\":6.5,\"longitude_deg\":11.6522926105154,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":600,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":37.461,\"sun_elev_deg\":61.113,\"sun_scale\":1,\"turbidity\":2.4,\"visibility_m\":25000,\"weather\":\"clear\",\"wetness\":0}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"clear\",\"sceneMinutes\":720,\"site\":{\"latitudeDeg\":48.2554688997943,\"longitudeDeg\":11.6522926105154,\"timeZone\":\"Europe/Berlin (CEST)\",\"utcOffsetHours\":2},\"sunSource\":\"solar-model\",\"weather\":\"clear\"}"
+  },
+  {
+   "site": "garching",
+   "environment": 1,
+   "cloudFixedStepS": 0.041666666666666664,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0,\"ev100_bias\":0,\"haze\":0,\"night\":{\"cloud_base_m\":1200,\"cloud_density\":1,\"cloud_fixed_step_s\":0.041666666666666664,\"cloud_quality\":\"scalable\",\"cloud_top_m\":2800,\"cloud_type\":0.85,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":48.2554688997943,\"limiting_magnitude\":6.5,\"longitude_deg\":11.6522926105154,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":600,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":37.461,\"sun_elev_deg\":61.113,\"sun_scale\":1,\"turbidity\":2.4,\"visibility_m\":25000,\"weather\":\"clear\",\"wetness\":0}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"clear\",\"sceneMinutes\":720,\"site\":{\"latitudeDeg\":48.2554688997943,\"longitudeDeg\":11.6522926105154,\"timeZone\":\"Europe/Berlin (CEST)\",\"utcOffsetHours\":2},\"sunSource\":\"solar-model\",\"weather\":\"clear\"}"
+  },
+  {
+   "site": "garching",
+   "environment": 2,
+   "cloudFixedStepS": null,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.9,\"ev100_bias\":0,\"haze\":0.1,\"night\":{\"cloud_base_m\":500,\"cloud_density\":1.8,\"cloud_fixed_step_s\":0.03333333333333333,\"cloud_quality\":\"scalable\",\"cloud_top_m\":2600,\"cloud_type\":0.3,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":48.2554688997943,\"limiting_magnitude\":6.5,\"longitude_deg\":11.6522926105154,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":171,\"utc_minutes\":1320,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":162.193,\"sun_elev_deg\":-16.371,\"sun_scale\":1,\"turbidity\":2.6,\"visibility_m\":1500,\"weather\":\"rain\",\"wetness\":1}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"rain\",\"sceneMinutes\":0,\"site\":{\"latitudeDeg\":48.2554688997943,\"longitudeDeg\":11.6522926105154,\"timeZone\":\"Europe/Berlin (CEST)\",\"utcOffsetHours\":2},\"sunSource\":\"solar-model\",\"weather\":\"heavy_rain\"}"
+  },
+  {
+   "site": "garching",
+   "environment": 2,
+   "cloudFixedStepS": 0.041666666666666664,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.9,\"ev100_bias\":0,\"haze\":0.1,\"night\":{\"cloud_base_m\":500,\"cloud_density\":1.8,\"cloud_fixed_step_s\":0.041666666666666664,\"cloud_quality\":\"scalable\",\"cloud_top_m\":2600,\"cloud_type\":0.3,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":48.2554688997943,\"limiting_magnitude\":6.5,\"longitude_deg\":11.6522926105154,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":171,\"utc_minutes\":1320,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":162.193,\"sun_elev_deg\":-16.371,\"sun_scale\":1,\"turbidity\":2.6,\"visibility_m\":1500,\"weather\":\"rain\",\"wetness\":1}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"rain\",\"sceneMinutes\":0,\"site\":{\"latitudeDeg\":48.2554688997943,\"longitudeDeg\":11.6522926105154,\"timeZone\":\"Europe/Berlin (CEST)\",\"utcOffsetHours\":2},\"sunSource\":\"solar-model\",\"weather\":\"heavy_rain\"}"
+  },
+  {
+   "site": "garching",
+   "environment": 3,
+   "cloudFixedStepS": null,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.6,\"ev100_bias\":0,\"haze\":0.2,\"night\":{\"cloud_base_m\":400,\"cloud_density\":1.4,\"cloud_fixed_step_s\":0.03333333333333333,\"cloud_quality\":\"scalable\",\"cloud_top_m\":1200,\"cloud_type\":0.1,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":48.2554688997943,\"limiting_magnitude\":6.5,\"longitude_deg\":11.6522926105154,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":1067.4,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":248.263,\"sun_elev_deg\":12.143,\"sun_scale\":1,\"turbidity\":3,\"visibility_m\":600,\"weather\":\"fog\",\"wetness\":0.1}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"fog\",\"sceneMinutes\":1187.4,\"site\":{\"latitudeDeg\":48.2554688997943,\"longitudeDeg\":11.6522926105154,\"timeZone\":\"Europe/Berlin (CEST)\",\"utcOffsetHours\":2},\"sunSource\":\"solar-model\",\"weather\":\"fog_light\"}"
+  },
+  {
+   "site": "garching",
+   "environment": 3,
+   "cloudFixedStepS": 0.041666666666666664,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.6,\"ev100_bias\":0,\"haze\":0.2,\"night\":{\"cloud_base_m\":400,\"cloud_density\":1.4,\"cloud_fixed_step_s\":0.041666666666666664,\"cloud_quality\":\"scalable\",\"cloud_top_m\":1200,\"cloud_type\":0.1,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":48.2554688997943,\"limiting_magnitude\":6.5,\"longitude_deg\":11.6522926105154,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":1067.4,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":248.263,\"sun_elev_deg\":12.143,\"sun_scale\":1,\"turbidity\":3,\"visibility_m\":600,\"weather\":\"fog\",\"wetness\":0.1}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"fog\",\"sceneMinutes\":1187.4,\"site\":{\"latitudeDeg\":48.2554688997943,\"longitudeDeg\":11.6522926105154,\"timeZone\":\"Europe/Berlin (CEST)\",\"utcOffsetHours\":2},\"sunSource\":\"solar-model\",\"weather\":\"fog_light\"}"
+  },
+  {
+   "site": "garching",
+   "environment": 4,
+   "cloudFixedStepS": null,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.95,\"ev100_bias\":-0.45417589318580215,\"haze\":0.33,\"night\":{\"cloud_base_m\":700,\"cloud_density\":1.4,\"cloud_fixed_step_s\":0.03333333333333333,\"cloud_quality\":\"scalable\",\"cloud_top_m\":1900,\"cloud_type\":0.15,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":48.2554688997943,\"limiting_magnitude\":6.5,\"longitude_deg\":11.6522926105154,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":780,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":2.2,\"sun_azim_deg\":310.602,\"sun_elev_deg\":57.615,\"sun_scale\":0.85,\"turbidity\":3.2,\"visibility_m\":777,\"weather\":\"overcast\",\"wetness\":0.7}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{\"exposure\":1.37,\"haze\":0.33,\"sky\":2.2,\"sun\":0.85,\"visibilityM\":777},\"preset\":\"overcast\",\"sceneMinutes\":900,\"site\":{\"latitudeDeg\":48.2554688997943,\"longitudeDeg\":11.6522926105154,\"timeZone\":\"Europe/Berlin (CEST)\",\"utcOffsetHours\":2},\"sunSource\":\"solar-model\",\"weather\":\"wet_road\"}"
+  },
+  {
+   "site": "garching",
+   "environment": 4,
+   "cloudFixedStepS": 0.041666666666666664,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.95,\"ev100_bias\":-0.45417589318580215,\"haze\":0.33,\"night\":{\"cloud_base_m\":700,\"cloud_density\":1.4,\"cloud_fixed_step_s\":0.041666666666666664,\"cloud_quality\":\"scalable\",\"cloud_top_m\":1900,\"cloud_type\":0.15,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":48.2554688997943,\"limiting_magnitude\":6.5,\"longitude_deg\":11.6522926105154,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":780,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":2.2,\"sun_azim_deg\":310.602,\"sun_elev_deg\":57.615,\"sun_scale\":0.85,\"turbidity\":3.2,\"visibility_m\":777,\"weather\":\"overcast\",\"wetness\":0.7}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{\"exposure\":1.37,\"haze\":0.33,\"sky\":2.2,\"sun\":0.85,\"visibilityM\":777},\"preset\":\"overcast\",\"sceneMinutes\":900,\"site\":{\"latitudeDeg\":48.2554688997943,\"longitudeDeg\":11.6522926105154,\"timeZone\":\"Europe/Berlin (CEST)\",\"utcOffsetHours\":2},\"sunSource\":\"solar-model\",\"weather\":\"wet_road\"}"
+  },
+  {
+   "site": "garching",
+   "environment": 5,
+   "cloudFixedStepS": null,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.95,\"ev100_bias\":0,\"haze\":0.1,\"night\":{\"cloud_base_m\":700,\"cloud_density\":1.4,\"cloud_fixed_step_s\":0.03333333333333333,\"cloud_quality\":\"scalable\",\"cloud_top_m\":1900,\"cloud_type\":0.15,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":48.2554688997943,\"limiting_magnitude\":6.5,\"longitude_deg\":11.6522926105154,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":1319.9,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":197.88,\"sun_elev_deg\":-16.348,\"sun_scale\":1,\"turbidity\":3.2,\"visibility_m\":12000,\"weather\":\"overcast\",\"wetness\":0.05}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"overcast\",\"sceneMinutes\":1439.9,\"site\":{\"latitudeDeg\":48.2554688997943,\"longitudeDeg\":11.6522926105154,\"timeZone\":\"Europe/Berlin (CEST)\",\"utcOffsetHours\":2},\"sunSource\":\"solar-model\",\"weather\":\"overcast\"}"
+  },
+  {
+   "site": "garching",
+   "environment": 5,
+   "cloudFixedStepS": 0.041666666666666664,
+   "lighting": "{\"air_density\":1,\"ambient_scale\":1,\"atmosphere\":true,\"cloud_cover\":0.95,\"ev100_bias\":0,\"haze\":0.1,\"night\":{\"cloud_base_m\":700,\"cloud_density\":1.4,\"cloud_fixed_step_s\":0.041666666666666664,\"cloud_quality\":\"scalable\",\"cloud_top_m\":1900,\"cloud_type\":0.15,\"cloud_wind_mps\":[12,4],\"elevation_m\":15,\"exposure_offset_stops\":0,\"fixture_budget\":12,\"fixture_shadow_budget\":0,\"latitude_deg\":48.2554688997943,\"limiting_magnitude\":6.5,\"longitude_deg\":11.6522926105154,\"natural_ambient_lux\":0.002,\"sky_debug_mode\":0,\"sky_display_lift\":120,\"urban_skyglow_lux\":0.05,\"utc_day_of_year\":172,\"utc_minutes\":1319.9,\"utc_year\":2026,\"window_mode\":\"synthetic_facade\"},\"ozone_du\":300,\"rung\":3,\"sky_scale\":1,\"sun_azim_deg\":197.88,\"sun_elev_deg\":-16.348,\"sun_scale\":1,\"turbidity\":3.2,\"visibility_m\":12000,\"weather\":\"overcast\",\"wetness\":0.05}",
+   "provenance": "{\"dayOfYear\":172,\"overrides\":{},\"preset\":\"overcast\",\"sceneMinutes\":1439.9,\"site\":{\"latitudeDeg\":48.2554688997943,\"longitudeDeg\":11.6522926105154,\"timeZone\":\"Europe/Berlin (CEST)\",\"utcOffsetHours\":2},\"sunSource\":\"solar-model\",\"weather\":\"overcast\"}"
+  }
+ ]
+}

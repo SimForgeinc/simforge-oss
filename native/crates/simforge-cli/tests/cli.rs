@@ -24,6 +24,8 @@ fn simforge(home: &Path) -> Command {
         "SIMFORGE_MAPS_CACHE_ROOT",
         "SIMFORGE_ACTOR_ASSETS_ROOT",
         "SIMFORGE_FFMPEG_BINARY",
+        "SIMFORGE_SKY_ASSETS",
+        "SIMFORGE_NATIVE_RUNTIME_ROOT",
         "SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER",
         "WGPU_BACKEND",
         "WGPU_ADAPTER_NAME",
@@ -228,16 +230,30 @@ fn argument_errors_are_structured_exit_1_with_nothing_on_stdout() {
     assert_eq!(stderr_error(&stderr)["detail"]["didYouMean"], "pull");
 }
 
+/// The smallest argument list each planned command parses with.
+fn minimal_args(command: &str) -> Vec<&'static str> {
+    match command {
+        "render" => vec![
+            "render", "ws", "--preset", "training", "--rig", "rig.json", "--out", "out",
+        ],
+        "env serve" => vec!["env", "serve", "ws", "--socket", "env.sock"],
+        other => panic!("add minimal arguments for the planned command {other:?}"),
+    }
+}
+
 #[test]
 fn planned_commands_fail_loudly() {
     let home = home();
-    let (exit, stdout, stderr, _) =
-        run(simforge(home.path()).args(["package", "verify", "some.scenario.zip"]));
-    assert_eq!(exit, 1);
-    assert_eq!(stdout, Value::Null);
-    let error = stderr_error(&stderr);
-    assert_eq!(error["code"], "not_implemented");
-    assert_eq!(error["path"], "package verify");
+    for command in simforge_cli::commands::PLANNED {
+        let (exit, stdout, stderr, _) = run(simforge(home.path()).args(minimal_args(command)));
+        assert_eq!(exit, 1, "{command}");
+        assert_eq!(stdout, Value::Null, "{command}");
+        let error = stderr_error(&stderr);
+        assert_eq!(error["code"], "not_implemented", "{command}");
+        assert_eq!(error["path"], *command);
+        let (_, doc, _, _) = run(simforge(home.path()).args(command.split(' ')).arg("--help"));
+        assert_eq!(doc["status"], "planned", "{command}");
+    }
 }
 
 /// A one-shot HTTP server answering every request with `body` (status 200) or 404.
@@ -273,6 +289,7 @@ fn check<'a>(doc: &'a Value, id: &str) -> &'a Value {
 const CHECK_IDS: &[&str] = &[
     "gpu",
     "ffmpeg",
+    "sky",
     "maps-cache",
     "maps-disk",
     "assets-cache",
@@ -464,4 +481,16 @@ fn pretty_is_the_same_document_indented() {
         serde_json::from_str::<Value>(&pretty_text).unwrap(),
         compact
     );
+}
+
+#[test]
+fn doctor_reports_missing_sky_plates_as_a_failure() {
+    let home = home();
+    let (exit, doc, _, _) = run(simforge(home.path())
+        .args(["doctor", "--offline"])
+        .env("SIMFORGE_SKY_ASSETS", home.path().join("no-sky")));
+    let sky = check(&doc, "sky");
+    assert_eq!(sky["status"], "fail", "{sky}");
+    assert!(sky["fix"].as_str().unwrap().contains("SIMFORGE_SKY_ASSETS"));
+    assert_eq!(exit, 2);
 }

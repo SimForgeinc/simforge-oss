@@ -35,3 +35,52 @@ pub const CATALOG_ALIASES: &[(&str, &str)] = &[
 pub fn canonical_catalog_id(id: &str) -> &str {
     CATALOG_ALIASES.iter().find(|(alias, _)| *alias == id).map_or(id, |(_, target)| *target)
 }
+
+/// Catalog ids whose model a procedural builder draws (no closure GLB): the
+/// native render accepts them without an actor-closure model.
+pub const PROCEDURAL_CATALOG_IDS: &[&str] = &[
+    "robot.delivery-4w",
+    "robot.wheel",
+    "vehicle.ambulance.low_poly",
+    "vehicle.bicycle.low_poly",
+    "vehicle.box_truck.low_poly",
+    "vehicle.bus.low_poly",
+    "vehicle.cement_mixer.low_poly",
+    "vehicle.chevrolet_corvette.low_poly",
+    "vehicle.delivery_van.low_poly",
+    "vehicle.dump_truck.low_poly",
+    "vehicle.fire_command_suv.low_poly",
+    "vehicle.fire_engine.low_poly",
+    "vehicle.flatbed_truck.low_poly",
+    "vehicle.ford_mustang.low_poly",
+    "vehicle.garbage_truck.low_poly",
+    "vehicle.hatchback.low_poly",
+    "vehicle.honda_civic.low_poly",
+    "vehicle.jeep_wrangler.low_poly",
+    "vehicle.kia.carnival.low_poly",
+    "vehicle.minivan.low_poly",
+    "vehicle.mobility_scooter.low_poly",
+    "vehicle.motorcycle.low_poly",
+    "vehicle.pickup.low_poly",
+    "vehicle.police_cruiser.low_poly",
+    "vehicle.police_suv.low_poly",
+    "vehicle.porsche_911.low_poly",
+    "vehicle.school_bus.low_poly",
+    "vehicle.sedan.low_poly",
+    "vehicle.semi_truck.low_poly",
+    "vehicle.shuttle_bus.low_poly",
+    "vehicle.suv.low_poly",
+    "vehicle.tanker_truck.low_poly",
+    "vehicle.taxi.low_poly",
+    "vehicle.tesla_model_3.low_poly",
+    "vehicle.tow_truck.low_poly",
+    "vehicle.toyota_camry.low_poly",
+    "vehicle.tram.low_poly",
+    "vehicle.utility_bucket_truck.low_poly",
+    "vehicle.van.low_poly",
+];
+
+/// Whether `id` is a catalog id (exactly, not an alias) with a procedural builder.
+pub fn is_procedural_catalog_id(id: &str) -> bool {
+    PROCEDURAL_CATALOG_IDS.binary_search(&id).is_ok()
+}

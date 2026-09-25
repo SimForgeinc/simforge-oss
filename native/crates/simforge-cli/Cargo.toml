@@ -4,7 +4,7 @@
 # relocates it.
 name = "simforge"
 description = "The SimForge command line: package, maps, assets, timeline, render, simulate, env serve, doctor."
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/SimForgeinc/simforge-sdk"
@@ -39,8 +39,27 @@ ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] 
 fs4 = { version = "1", default-features = false }
 sha2 = "0.10"
 flate2 = "1"
+regex = "1"
+# Decodes the render job's RGB frames (lossless RGBA8 PNG) for the video encoder.
+png = "0.18"
 # The engine: traces, the render timeline and its sampler.
 simforge-core = { path = "../simforge-core" }
+# Map bundles (lane graph with speed limits, static colliders) for re-simulation.
+simforge-compiler = { path = "../simforge-compiler" }
+# simforge.scenario-package/v1: the same reader/verifier the hosted exporter's
+# Node binding writes with.
+simforge-package = { path = "../simforge-package" }
+
+# The renderer, in process: `render` runs render_service's job path (the
+# same request path the render service serves) and `env serve` its episode
+# path. The simforge-render binary stays for the worker image. Headless:
+# no `view` (the winit viewport), so the CLI links no windowing, input or
+# audio libraries.
+simforge-render = { path = "../../../renderer/service", default-features = false }
+render-core = { path = "../../../renderer/render-core" }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [package.metadata.dist]
 # Explicit: cargo-dist 0.33's global package filter does not select it.

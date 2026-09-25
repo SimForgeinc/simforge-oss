@@ -8,7 +8,7 @@ use render_core::fixture::{actor_matrix_col_major, check_fixture, ParityFixture}
 
 fn fixture_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../packages/viewer/fixtures/renderer-contract/basic-intersection.v1.json")
+        .join("../../fixtures/renderer-contract/basic-intersection.v1.json")
 }
 
 #[test]

@@ -349,8 +349,11 @@ function checkIdPasses(outDir, scene) {
 /** Exit 8 unless the renderer's observed transforms match the timeline sampler. */
 function checkParity(outDir, scene) {
   if (!scene.parity) return undefined;
-  // The CLI from source (the checkout the goldens run in; no build step).
-  const cmd = (process.env.GOLDEN_PARITY_CMD ?? `node --conditions=development --import tsx ${path.join(repoRoot, 'packages/cli/bin/simforge.js')} render parity`).split(' ');
+  // The Rust sampler's parity grader (simforge-core example `render-parity`;
+  // ci-local.sh builds it). Stopgap until the `simforge` CLI drives the goldens.
+  const built = path.join(repoRoot, 'native/target/release/examples/render-parity');
+  const cmd = (process.env.GOLDEN_PARITY_CMD ?? (fs.existsSync(built) ? built
+    : `cargo run --quiet --release --manifest-path ${path.join(repoRoot, 'native/Cargo.toml')} -p simforge-core --example render-parity --`)).split(' ');
   const observed = path.join(outDir, scene.parity.observed ?? 'observed-frames.jsonl');
   if (!fs.existsSync(observed)) {
     throw new GateFailure(1, `parity: the job wrote no ${path.basename(observed)} (job \`observe\` must write the observed actor transforms of every tick)`);

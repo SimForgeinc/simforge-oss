@@ -9,7 +9,7 @@ working renderer internals.
 Source of truth: `packages/viewer/src/renderer-contract.ts` (pure types +
 normative pure functions, no `three` import, no runtime dependency).
 Conformance evidence: `packages/viewer/src/renderer-contract.test.ts` against
-`packages/viewer/fixtures/renderer-contract/basic-intersection.v1.json`,
+`fixtures/renderer-contract/basic-intersection.v1.json`,
 executed through the Three adapter
 (`packages/viewer/src/renderer-contract-adapter.ts`).
 
@@ -252,7 +252,7 @@ input digests never imply pixel parity.
 
 ## Parity fixtures
 
-`packages/viewer/fixtures/renderer-contract/*.json`
+`fixtures/renderer-contract/*.json`
 (`simforge.renderer-parity-fixture/v1`). Given the embedded scene-state.v1
 document at tick `T` (+ playback cues + darkness default), a conforming
 renderer must reproduce:

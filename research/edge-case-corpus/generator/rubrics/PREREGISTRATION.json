@@ -1,7 +1,0 @@
-{
- "count": 100,
- "sha256_all_rubrics": "e12ea25f4ac0e7a1766f7f592a28bdcce154bacc30d62b019109b773ec388074",
- "sha256_generator": "bd6f31e4617b6b061f71e4da72f8dd35e981999959df01efb6646487c98c0d52",
- "frozenAt": "2026-08-06T15:33:13.907626+00:00",
- "note": "All 100 rubrics (DEV and HELDOUT) frozen BEFORE the compiler was finished and before any held-out archetype was run. Rubrics are a pure function of the archetype cell, so no rubric can be tuned to admit a particular scenario."
-}

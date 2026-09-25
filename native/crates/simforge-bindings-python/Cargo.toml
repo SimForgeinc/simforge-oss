@@ -5,14 +5,15 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+publish = false
 
 [lib]
 name = "simforge_oss_gym_native"
 crate-type = ["cdylib"]
 
 [dependencies]
-simforge-bindings-common = { path = "../simforge-bindings-common" }
-simforge-core = { path = "../simforge-core" }
+simforge-bindings-common = { path = "../simforge-bindings-common", version = "0.1.0" }
+simforge-core = { path = "../simforge-core", version = "0.1.0" }
 serde_json.workspace = true
 pyo3 = { version = "0.27", features = ["abi3-py310"] }
 numpy = "0.27"

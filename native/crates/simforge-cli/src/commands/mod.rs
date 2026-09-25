@@ -18,14 +18,7 @@ pub mod timeline;
 /// Commands whose surface is fixed but whose implementation has not landed.
 /// `--help` marks them `"status": "planned"` and running one fails loudly
 /// with `not_implemented` (exit 1). Each command's PR removes its entry.
-pub const PLANNED: &[&str] = &[
-    "render",
-    "simulate",
-    "env serve",
-    "package inspect",
-    "package verify",
-    "package import",
-];
+pub const PLANNED: &[&str] = &["env serve"];
 
 /// The one render preset definition lives in the renderer
 /// (`render_core::render_config::Preset`); these are its names.

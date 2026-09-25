@@ -1,7 +1,0 @@
-{
- "rubric": "occluded-child.rubric.json",
- "sha256": "a9ef262be1834e4a69f04fd993efc710ec7dae23e6e991bf9564852e6c465318",
- "registeredAt": "2026-08-06T08:19:59.241007+00:00",
- "provenance": "artifacts/agent/phase1-scene-model.md section (c), authored pre-schema, pre-simulation",
- "note": "Bands are the author's ORIGINAL targets. Deliberately NOT relaxed to match the tuned corpus."
-}

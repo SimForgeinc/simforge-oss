@@ -1,0 +1,52 @@
+{
+ "schema": "simforge.map-installation.v1",
+ "name": "mini-yale",
+ "version": "v1",
+ "profile": "native",
+ "members": {
+  "master.gltf": {
+   "sha256": "6d6002d988f42530c372c122aed9da01d2f048e66ed883ab9db7d59297f6cfc8",
+   "bytes": 40650
+  },
+  "geometry.bin": {
+   "sha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+   "bytes": 16
+  },
+  "3d/manifest.json": {
+   "sha256": "6da4e5eb339d44aa39d5e22334704ae772fc594db1776b6684d2ee4171010d24",
+   "bytes": 13726
+  },
+  "images/50c8c12e3c445b22dce027a6a878f675b8dda3d530af4df2d0e00d54de9d56ca.ktx2": {
+   "sha256": "ff37b6d7d87700ab21b3bd1140d676eb714c9c06cc77a6ea50bce83758b89281",
+   "bytes": 80
+  },
+  "3d/variants/objects/f84940f6b1fe452cc0fa9bf4c2dcb8d7f81398609ee0006509284ad539a1c7ab.ktx2": {
+   "sha256": "80ebe60f5195b507a5066b75771290894e73cd7ca806466eb3cd4c952ff82389",
+   "bytes": 80
+  },
+  "images/56a7c78ec82ebd9b80e907b17692482ed38453525510000cc182323dbb996670.ktx2": {
+   "sha256": "ff37b6d7d87700ab21b3bd1140d676eb714c9c06cc77a6ea50bce83758b89281",
+   "bytes": 80
+  },
+  "3d/variants/objects/e4a712b81d2b09e9365cdaa7583e2a461035a7601b4a2c6a2c00abb90c4ec016.ktx2": {
+   "sha256": "43a54fa611688e38911a8908cff5a0088d1a4fda1fd9031413e91c17f3a5c2b8",
+   "bytes": 80
+  },
+  "images/8aff45e00fccc26927e0aeb6745e894b6990aa3899390511f75b8e9ecf7a9618.ktx2": {
+   "sha256": "37a2339bc11ff31198b2f071084a5ebb5041475ef514e7b1452ac7853577c27c",
+   "bytes": 80
+  },
+  "3d/variants/objects/b1dd3193c3e9550a25297cfeceace4ca4568a04a603a39c66d3a50452300f16e.ktx2": {
+   "sha256": "43a54fa611688e38911a8908cff5a0088d1a4fda1fd9031413e91c17f3a5c2b8",
+   "bytes": 80
+  },
+  "3d/variants/bc7-mini.json": {
+   "sha256": "9ceac9769f1bf5fde2767a36adcbcceccce418d115bb1971f7ca90ae36601aea",
+   "bytes": 1777
+  },
+  "3d/variants/manifest.json": {
+   "sha256": "432d810c3a783fefc39696103c184b57579b3b95c11c7ffeefaffdbcdccad033",
+   "bytes": 329
+  }
+ }
+}

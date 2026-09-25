@@ -93,3 +93,7 @@ studio/public/scenario-editor/driver-behaviors/
 # attribution. models/ is the local working directory the pack tools write and
 # scripts/actor-assets/seal-packs.mjs seals and publishes from.
 catalog/*/models/
+
+# Local build and resolution outputs (the gate runs uv and cargo in place).
+**/target/
+/adapters/*/uv.lock

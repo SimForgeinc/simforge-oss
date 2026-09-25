@@ -2,10 +2,13 @@
 name = "sensors"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+publish = false
 
 [dependencies]
 render-core = { path = "../render-core" }
-bevy = { version = "0.19.1", default-features = true, features = ["png", "hdr", "ktx2", "debug", "tonemapping_luts"] }
+# Headless: Bevy's platform layer comes only through render-core's `windowing`.
+bevy = { version = "0.19.1", default-features = false, features = ["png", "hdr", "ktx2", "debug", "tonemapping_luts"] }
 anyhow = "1"
 serde = { version = "1", features = ["derive"] }
 # Pinned with the rest of the renderer; `gpu_rays` drives ray queries directly.

@@ -1,116 +1,53 @@
-# AGENTS.md — driving SimForge from an agent
+# AGENTS.md: working in simforge-sdk
 
-SimForge is a deterministic scenario-generation pipeline: author a portable
-**template** (logical anchor + choreography, no road IDs, no coordinates), match
-it to concrete **sites** on real maps, sample **instances**, simulate, filter,
-and verify. The `simforge` CLI is the stable surface for every step.
+This repository is the SimForge SDK: the deterministic engine, the renderer,
+the `simforge` CLI and the Python gym and adapters. It is public (Apache-2.0)
+and it is the source of truth for that code. The hosted SimForge app
+(https://simforge.ai) consumes it at a pinned commit.
 
-## Setup
+## Layout
 
-```sh
-pnpm install
-node packages/cli/bin/simforge.js --help        # the command surface, as JSON
-```
+| Path | What |
+|---|---|
+| `native/` | Cargo workspace: `simforge-core` (engine, traces, render timeline), `simforge-compiler`, `simforge-session`, `simforge-bindings-common`, `simforge-bindings-python` (the gym's `_native`). `crates/simforge-timeline-python` and `crates/simforge-cli` are their own workspaces |
+| `renderer/` | Cargo workspace: `simforge-render` (Bevy; one renderer, presets `training` and `showcase`), sensors, viewport, C ABI (`ffi`), vendored Bevy patches (`vendor/`) |
+| `adapters/` | Python: `gym` (`simforge-oss-gym`), `timeline`, `carla-exec` (bring your own CARLA 0.10), `alpamayo` (code only), `auto-e2e`, `ros2-bridge`, `gpu`, `physics` |
+| `contracts/`, `fixtures/` | contract locks and the fixtures every consumer is tested against: golden traces, canonical JSON vectors, archive corpus, render-timeline identity corpus, renderer contract, OpenSCENARIO conformance |
+| `examples/` | scenario templates (the authoring catalog) |
+| `catalog/` | actor catalog manifests and attribution (model blobs are served by content digest) |
+| `qualification/golden-harness/` | render goldens on Mesa lavapipe (CPU Vulkan), the adapter of record |
+| `docs/` | engineering contracts (engine semver, render timeline, scenario package, ...) |
 
-- **Map bundles are required** for anything map-bound. Pull an active immutable
-  map version with `simforge maps pull <map>@<version>`; the default cache is
-  `${XDG_DATA_HOME:-~/.local/share}/simforge/maps`, and
-  `SIMFORGE_MAPS_CACHE_ROOT=<dir>` relocates it for the CLI, compiler, and
-  Studio. `richmond-field-station` is the only public map. Other maps require
-  an authorized private registry; pass its URL explicitly with `--registry`.
-  Do not promote another map to the public registry.
-- Build a package in isolation: `pnpm --filter @simforge-oss/cli build`.
-- Run one test file: `cd packages/cli && npx vitest run src/__tests__/cli-smoke.test.ts`.
+There is no TypeScript here. `qualification/golden-harness/*.mjs` and
+`scripts/actor-assets/closures.mjs` (actor-model closures by digest) are plain
+Node with no dependencies; the CLI replaces both (`simforge assets pull`, goldens).
 
-## CLI contract
+## Rules
 
-- **stdout is the result** — one JSON document (pretty-printed only with
-  `--pretty`). stderr carries progress-free structured errors:
-  `{code, path?, reason, detail?}`.
-- **Exit codes:** `0` ok · `1` the command could not run (bad flags, missing
-  file, unknown map) · `2` it ran and found something wrong with the input
-  (schema issues, unresolved map, rejected trace). Key repair loops off `2`.
-- `--help` on any command prints the same JSON surface; unknown flags are
-  errors, never warnings.
+- **Determinism is the product.** Trace bytes must not depend on who built the
+  engine. A change that moves a golden-trace digest needs the `ENGINE_SEM_VER`
+  bump described in `docs/engineering/engine-semver.md`.
+- **No silent fallbacks.** Fail with a named error, or record the substitution
+  explicitly in the evidence (`docs/engineering/no-silent-fallbacks.md`).
+- **One renderer, two presets.** Do not add a second render path.
+- **Self-contained.** No path dependency may leave this checkout
+  (`scripts/check-boundary.sh` proves it with `cargo metadata`). No private
+  hosts, datasets or images: this tree is public.
+- **Map-only computation belongs to map ingest,** not to render or simulation time.
 
-## The authoring loop
-
-```sh
-U=node packages/cli/bin/simforge.js
-
-$U schemas --content > /tmp/template.schema.json    # the emission contract
-
-$U template new --out s.template.json               # deterministic v2 skeleton
-$U template validate s.template.json                # tier-1; exit 2 = repair
-$U template validate s.template.json --map yale-st-palo-alto-ca   # + map-backed checks
-
-$U sites match s.template.json --all-maps           # ranked concrete sites
-$U instantiate s.template.json --map yale-st-palo-alto-ca --site <siteId> \
-    --seed fixed-seed-1 --out i.instance.json
-$U simulate i.instance.json --trace i.trace.json.gz
-$U evaluate i.trace.json.gz                         # reject filters
-$U evidence verify i.instance.json i.trace.json.gz  # same-input-hash proof
-$U export i.instance.json --format xosc-1.4 --out i.xosc
-```
-
-`simforge batch s.template.json --all-maps --draws 5 --out out/` runs the
-whole matrix (instantiate → simulate → evaluate) with per-cell seeds and a
-resumable ledger. `catalog create/verify/batch` manage the 100-slot per-map
-scenario catalog.
-
-Query the world instead of guessing coordinates — the model never sees raw
-road IDs:
+## Checks
 
 ```sh
-$U maps list
-$U locations find --map yale-st-palo-alto-ca --type junction --facts control=signalized
-$U locations resolve "signalized junction near a school" --map yale-st-palo-alto-ca
+scripts/gate-local.sh      # the merge gate: boundary, rustfmt/clippy on touched files,
+                           # cargo nextest, pytest of affected packages, lavapipe goldens
+cd native && cargo nextest run
+cd renderer && cargo nextest run
+cd adapters/gym && uv run --with pytest python -m pytest -q
+qualification/golden-harness/ci-local.sh verify   # needs mesa-vulkan-drivers + map corpora
 ```
 
-## Export (OpenSCENARIO) and render
+## Landing
 
-```sh
-$U export instance.json --format xosc-1.4 --out scenario.xosc
-$U render hash render-intent.json
-$U render run render-intent.json --engine browser --inputs inputs.json --out clip/
-```
-
-`export` formats: `xosc-1.4`, `xosc-1.3-esmini`, `osc-2.2`. OpenSCENARIO
-import is not supported.
-
-## Determinism rules
-
-- Execute the fixed-step **20 ms** runtime through the native Rust or browser
-  WASM bindings; never fall back to the retired TypeScript simulator.
-- Replay identity is scoped to the pinned runtime, backend, maps and assets.
-  Cross-host numerical conformance and cross-backend sensor fidelity are
-  separate qualification gates, not assumed byte identity.
-- Same pinned inputs × template × site × seed ⇒ replayable artifacts. Never use
-  wall-clock seeds; pass `--seed` (or `--draws` for the seeded matrix).
-- `template new` is a deterministic generator (fixed timestamps); stamp real
-  times on first save.
-- Traces are gzipped and hash-pinned; `evidence verify` proves an instance and
-  trace share one input hash before anyone reads metrics off the trace.
-
-## Studio styling
-
-Studio UI (`packages/studio-ui/src`, `studio/app`) is styled with StyleX from
-shared tokens, recipes and primitives. Before writing or changing any style,
-read `docs/engineering/studio-style-guide.md`; it has the rules and the
-template a new component starts from. `pnpm style:ratchet --check` and
-`pnpm lint:style` must pass.
-
-## Docs
-
-- `docs/situation-authoring.md` — current situation-first experiment: gateway
-  identity, owned Blender workbench, C/D v2 benchmark, automated ensembles and
-  the replayable corpus.
-- `docs/agent-authoring-architecture.md` — the layer stack and build contract.
-- `docs/simcloud-convergence.md` — canonical ownership and the local-to-product
-  flow.
-- `packages/cli/README.md` — full command reference.
-
-## Git safety
-- Several agents work on one machine at once. Never run `git stash`, `reset`, `checkout --`, `clean` or `apply` in a tree you did not create. Use your own worktree.
-- Mutate with `git -C <absolute path>`, so a failed `cd` can't leave a command running in someone else's checkout.
-- Move a shared branch only with `commit` or `merge`, never with `update-ref` or `reset`.
+Open a PR against `main` and add the `ready` label once `scripts/gate-local.sh`
+passes. The merge service runs the gate from `main` on the exact merge commit
+and fast-forwards `main`; nobody pushes `main` by hand.

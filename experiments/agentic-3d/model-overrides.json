@@ -1,7 +1,0 @@
-{
-  "vehicle.bicycle": {
-    "glbPath": "experiments/agentic-3d/assets/custom.cyclist-with-rider/model.glb",
-    "attribution": "generated:custom.cyclist-with-rider",
-    "scaleToDims": true
-  }
-}

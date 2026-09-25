@@ -1,8 +1,0 @@
-{
- "id": "k-restart-policy-v1",
- "K": 3,
- "statement": "The authoring step is stochastic. The ALGORITHM therefore makes K=3 independent authoring attempts per brief on the identical frozen surface, and admits a brief if ANY attempt clears the strict gate. This is declared BEFORE running and applied UNIFORMLY to dev and held-out. It is a restart policy, not per-brief tuning: no brief receives a different K, a different prompt, or a different tool surface.",
- "appliedTo": "all 92 briefs",
- "declaredAt": "2026-08-07T00:29:35.939991+00:00",
- "sha256": "2ff39fc427985e48642895dc9fb51a3a711a43848ea9d1b335abffdbd1d42137"
-}

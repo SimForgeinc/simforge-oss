@@ -1,0 +1,3 @@
+# oss/.gitignore ignores **/3d/variants/ (pulled map caches); this fixture
+# is a committed closure and carries its variants.
+!/mini-yale/3d/variants/

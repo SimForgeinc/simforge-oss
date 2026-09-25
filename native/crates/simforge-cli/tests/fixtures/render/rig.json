@@ -1,0 +1,818 @@
+{
+ "provenance": "packages/render/src/native/camera-schedule.ts + schedule.ts + luminaires.ts via tsx, on lowering case ambulance-plane",
+ "sources": [
+  {
+   "actorId": "focus-vehicle",
+   "sensorId": "front-camera",
+   "sensorLabel": "Front camera",
+   "outputName": "ego-front-camera-rgb",
+   "modality": "rgb",
+   "transform": {
+    "position": {
+     "x": 1.6,
+     "y": 1.45,
+     "z": 0
+    },
+    "rotation": {
+     "yawRad": 0,
+     "pitchRad": 0,
+     "rollRad": 0
+    }
+   },
+   "attributes": {
+    "width": 1280,
+    "height": 720,
+    "fps": 20,
+    "horizontalFovDeg": 90,
+    "nearM": 0.05,
+    "farM": 1000
+   }
+  },
+  {
+   "actorId": "focus-vehicle",
+   "sensorId": "roof-lidar",
+   "sensorLabel": "Roof lidar",
+   "outputName": "ego-roof-lidar-lidar",
+   "modality": "lidar",
+   "transform": {
+    "position": {
+     "x": 0,
+     "y": 1.9,
+     "z": 0
+    },
+    "rotation": {
+     "yawRad": 0,
+     "pitchRad": 0,
+     "rollRad": 0
+    }
+   },
+   "attributes": {
+    "channels": 64,
+    "rangeM": 120,
+    "pointsPerSecond": 1200000,
+    "rotationFrequencyHz": 10,
+    "upperFovDeg": 15,
+    "lowerFovDeg": -15,
+    "horizontalFovDeg": 360
+   }
+  },
+  {
+   "actorId": "focus-vehicle",
+   "sensorId": "front-radar",
+   "sensorLabel": "Front radar",
+   "outputName": "ego-front-radar-radar",
+   "modality": "radar",
+   "transform": {
+    "position": {
+     "x": 2.2,
+     "y": 0.6,
+     "z": 0
+    },
+    "rotation": {
+     "yawRad": 0,
+     "pitchRad": 0,
+     "rollRad": 0
+    }
+   },
+   "attributes": {
+    "horizontalFovDeg": 60,
+    "verticalFovDeg": 10,
+    "rangeM": 150,
+    "pointsPerSecond": 1500
+   }
+  },
+  {
+   "actorId": "focus-vehicle",
+   "sensorId": "chase-cam-trailing",
+   "sensorLabel": "Front camera",
+   "outputName": "chase",
+   "modality": "rgb",
+   "transform": {
+    "position": {
+     "x": -9,
+     "y": 3.4,
+     "z": 0.3
+    },
+    "rotation": {
+     "yawRad": 0.2,
+     "pitchRad": -0.197,
+     "rollRad": 0.05
+    }
+   },
+   "attributes": {
+    "width": 640,
+    "height": 360,
+    "fps": 20,
+    "horizontalFovDeg": 70,
+    "nearM": 0.1,
+    "farM": 800
+   }
+  }
+ ],
+ "sensorHosts": [
+  {
+   "sourceId": "ego-front-camera-rgb",
+   "actorId": "focus-vehicle",
+   "vehicleAsset": {
+    "catalogAssetId": "vehicle.sedan"
+   }
+  },
+  {
+   "sourceId": "ego-roof-lidar-lidar",
+   "actorId": "focus-vehicle",
+   "vehicleAsset": {
+    "catalogAssetId": "vehicle.sedan"
+   }
+  },
+  {
+   "sourceId": "ego-front-radar-radar",
+   "actorId": "focus-vehicle",
+   "vehicleAsset": {
+    "catalogAssetId": "vehicle.sedan"
+   }
+  },
+  {
+   "sourceId": "chase",
+   "actorId": "focus-vehicle",
+   "vehicleAsset": {
+    "catalogAssetId": "vehicle.sedan"
+   }
+  }
+ ],
+ "cameraScheduleSha256": "2a610028fd11857c116ce824a501ebb5dd5977d550f324a0f1a0b0cb53b08045",
+ "cameraScheduleHead": "[[{\"attach\":{\"actorId\":\"focus-vehicle\",\"hostVisible\":false,\"offsetM\":[1.6,0,1.45],\"pitchDeg\":0,\"rollDeg\":0,\"yawDeg\":0},\"eye\":[394.9810745639297,-11.790500000000002,-1827.4163386907105],\"farM\":1000,\"fovDeg\":58.71550708558254,\"height\":720,\"nearM\":0.05,\"sensorId\":\"ego-front-camera-rgb\",\"target\":[367.41465468673283,-11.790500000000002,-1785.7019227754172],\"width\":1280},{\"attach\":{\"actorId\":\"focus-vehicle\",\"hostVisible\":true,\"offsetM\":[-9,-0.3,3.4],\"pitchDeg\":-11.287268564077218,\"rollDeg\":2.864788975654116,\"yawDeg\":-11.459155902616464},\"eye\":[401.0754420733872,-9.8405,-1836.0943963454897],\"farM\":800,\"fovDeg\":42.99566141876367,\"height\":360,\"nearM\":0.1,\"sensorId\":\"chase\",\"target\":[382.70815409335745,-19.626912073025853,-1790.6315667921547],\"width\":640}],[{\"attach\":{\"actorId\":\"focus-vehicle\",\"hostVisible\":false,\"offsetM\":[1.6,0,1.45],\"pitchDeg\":0,\"rollDeg\":0,\"yawDeg\":0},\"eye\":[394.98107326760476,-11.790500000000002,-1827.4163395473706],\"farM\":1000,\"fovDeg\":58.71550708558254,\"height\":720,\"nearM\":0.05,\"sensorId\":\"ego-front-camera-rgb\",\"target\":[367.4146128802532,-11.790500000000002,-1785.7019504027053],\"width\":1280},{\"attach\":{\"actorId\":\"focus-vehicle\",\"hostVisible\":true,\"offsetM\":[-9,-0.3,3.4],\"pitchDeg\":-11.287268564077218,\"rollDeg\":2.864788975654116,\"yawDeg\":-11.459155902616464},\"eye\":[401.0754492045913,-9.8405,-1836.0943912837156],\"farM\":800,\"fovDeg\":42.99566141876367,\"height\":360,\"nearM\":0.1,\"sensorId\":\"chase\",\"target\":[382.70811707420137,-19.626912073025853,-1790.631579567447],\"width\":640}]]",
+ "sensorRigs": "{\"lidars\":[{\"attach\":{\"actorId\":\"focus-vehicle\",\"hostVisible\":false,\"offsetM\":[0,0,1.9],\"pitchDeg\":0,\"rollDeg\":0,\"yawDeg\":0},\"channels\":64,\"horizontalFovDeg\":360,\"pointsPerSecond\":1200000,\"rangeM\":120,\"rotationFrequencyHz\":10,\"sensorId\":\"ego-roof-lidar-lidar\",\"verticalFovDeg\":30}],\"radars\":[{\"attach\":{\"actorId\":\"focus-vehicle\",\"hostVisible\":false,\"offsetM\":[2.2,0,0.6],\"pitchDeg\":0,\"rollDeg\":0,\"yawDeg\":0},\"horizontalFovDeg\":60,\"pointsPerSecond\":1500,\"rangeM\":150,\"sensorId\":\"ego-front-radar-radar\",\"verticalFovDeg\":10}]}",
+ "clipPlanes": {
+  "nearM": 0.05,
+  "farM": 1000
+ },
+ "schedules": [
+  {
+   "schema": "simforge.render-fixed-schedule/v1",
+   "sourceId": "ego-front-camera-rgb",
+   "startSeconds": 0.5,
+   "endSeconds": 18.25,
+   "framesPerSecond": 20,
+   "frameCount": 355
+  },
+  {
+   "schema": "simforge.render-fixed-schedule/v1",
+   "sourceId": "ego-roof-lidar-lidar",
+   "startSeconds": 0.5,
+   "endSeconds": 18.25,
+   "framesPerSecond": 10,
+   "frameCount": 178
+  },
+  {
+   "schema": "simforge.render-fixed-schedule/v1",
+   "sourceId": "ego-front-radar-radar",
+   "startSeconds": 0.5,
+   "endSeconds": 18.25,
+   "framesPerSecond": 20,
+   "frameCount": 355
+  },
+  {
+   "schema": "simforge.render-fixed-schedule/v1",
+   "sourceId": "chase",
+   "startSeconds": 0.5,
+   "endSeconds": 18.25,
+   "framesPerSecond": 20,
+   "frameCount": 355
+  }
+ ],
+ "unionMicros": [
+  500000,
+  550000,
+  600000,
+  650000,
+  700000,
+  750000,
+  800000,
+  850000,
+  900000,
+  950000,
+  1000000,
+  1050000,
+  1100000,
+  1150000,
+  1200000,
+  1250000,
+  1300000,
+  1350000,
+  1400000,
+  1450000,
+  1500000,
+  1550000,
+  1600000,
+  1650000,
+  1700000,
+  1750000,
+  1800000,
+  1850000,
+  1900000,
+  1950000,
+  2000000,
+  2050000,
+  2100000,
+  2150000,
+  2200000,
+  2250000,
+  2300000,
+  2350000,
+  2400000,
+  2450000,
+  2500000,
+  2550000,
+  2600000,
+  2650000,
+  2700000,
+  2750000,
+  2800000,
+  2850000,
+  2900000,
+  2950000,
+  3000000,
+  3050000,
+  3100000,
+  3150000,
+  3200000,
+  3250000,
+  3300000,
+  3350000,
+  3400000,
+  3450000,
+  3500000,
+  3550000,
+  3600000,
+  3650000,
+  3700000,
+  3750000,
+  3800000,
+  3850000,
+  3900000,
+  3950000,
+  4000000,
+  4050000,
+  4100000,
+  4150000,
+  4200000,
+  4250000,
+  4300000,
+  4350000,
+  4400000,
+  4450000,
+  4500000,
+  4550000,
+  4600000,
+  4650000,
+  4700000,
+  4750000,
+  4800000,
+  4850000,
+  4900000,
+  4950000,
+  5000000,
+  5050000,
+  5100000,
+  5150000,
+  5200000,
+  5250000,
+  5300000,
+  5350000,
+  5400000,
+  5450000,
+  5500000,
+  5550000,
+  5600000,
+  5650000,
+  5700000,
+  5750000,
+  5800000,
+  5850000,
+  5900000,
+  5950000,
+  6000000,
+  6050000,
+  6100000,
+  6150000,
+  6200000,
+  6250000,
+  6300000,
+  6350000,
+  6400000,
+  6450000,
+  6500000,
+  6550000,
+  6600000,
+  6650000,
+  6700000,
+  6750000,
+  6800000,
+  6850000,
+  6900000,
+  6950000,
+  7000000,
+  7050000,
+  7100000,
+  7150000,
+  7200000,
+  7250000,
+  7300000,
+  7350000,
+  7400000,
+  7450000,
+  7500000,
+  7550000,
+  7600000,
+  7650000,
+  7700000,
+  7750000,
+  7800000,
+  7850000,
+  7900000,
+  7950000,
+  8000000,
+  8050000,
+  8100000,
+  8150000,
+  8200000,
+  8250000,
+  8300000,
+  8350000,
+  8400000,
+  8450000,
+  8500000,
+  8550000,
+  8600000,
+  8650000,
+  8700000,
+  8750000,
+  8800000,
+  8850000,
+  8900000,
+  8950000,
+  9000000,
+  9050000,
+  9100000,
+  9150000,
+  9200000,
+  9250000,
+  9300000,
+  9350000,
+  9400000,
+  9450000,
+  9500000,
+  9550000,
+  9600000,
+  9650000,
+  9700000,
+  9750000,
+  9800000,
+  9850000,
+  9900000,
+  9950000,
+  10000000,
+  10050000,
+  10100000,
+  10150000,
+  10200000,
+  10250000,
+  10300000,
+  10350000,
+  10400000,
+  10450000,
+  10500000,
+  10550000,
+  10600000,
+  10650000,
+  10700000,
+  10750000,
+  10800000,
+  10850000,
+  10900000,
+  10950000,
+  11000000,
+  11050000,
+  11100000,
+  11150000,
+  11200000,
+  11250000,
+  11300000,
+  11350000,
+  11400000,
+  11450000,
+  11500000,
+  11550000,
+  11600000,
+  11650000,
+  11700000,
+  11750000,
+  11800000,
+  11850000,
+  11900000,
+  11950000,
+  12000000,
+  12050000,
+  12100000,
+  12150000,
+  12200000,
+  12250000,
+  12300000,
+  12350000,
+  12400000,
+  12450000,
+  12500000,
+  12550000,
+  12600000,
+  12650000,
+  12700000,
+  12750000,
+  12800000,
+  12850000,
+  12900000,
+  12950000,
+  13000000,
+  13050000,
+  13100000,
+  13150000,
+  13200000,
+  13250000,
+  13300000,
+  13350000,
+  13400000,
+  13450000,
+  13500000,
+  13550000,
+  13600000,
+  13650000,
+  13700000,
+  13750000,
+  13800000,
+  13850000,
+  13900000,
+  13950000,
+  14000000,
+  14050000,
+  14100000,
+  14150000,
+  14200000,
+  14250000,
+  14300000,
+  14350000,
+  14400000,
+  14450000,
+  14500000,
+  14550000,
+  14600000,
+  14650000,
+  14700000,
+  14750000,
+  14800000,
+  14850000,
+  14900000,
+  14950000,
+  15000000,
+  15050000,
+  15100000,
+  15150000,
+  15200000,
+  15250000,
+  15300000,
+  15350000,
+  15400000,
+  15450000,
+  15500000,
+  15550000,
+  15600000,
+  15650000,
+  15700000,
+  15750000,
+  15800000,
+  15850000,
+  15900000,
+  15950000,
+  16000000,
+  16050000,
+  16100000,
+  16150000,
+  16200000,
+  16250000,
+  16300000,
+  16350000,
+  16400000,
+  16450000,
+  16500000,
+  16550000,
+  16600000,
+  16650000,
+  16700000,
+  16750000,
+  16800000,
+  16850000,
+  16900000,
+  16950000,
+  17000000,
+  17050000,
+  17100000,
+  17150000,
+  17200000,
+  17250000,
+  17300000,
+  17350000,
+  17400000,
+  17450000,
+  17500000,
+  17550000,
+  17600000,
+  17650000,
+  17700000,
+  17750000,
+  17800000,
+  17850000,
+  17900000,
+  17950000,
+  18000000,
+  18050000,
+  18100000,
+  18150000,
+  18200000
+ ],
+ "fixtures": [
+  {
+   "source_id": "n0",
+   "source_name": "{g0}StreetLight",
+   "position": [
+    -100,
+    6,
+    -90
+   ],
+   "heading_rad": 0,
+   "rule": "head"
+  },
+  {
+   "source_id": "n7",
+   "source_name": "{g1}StreetLight",
+   "position": [
+    -62.7,
+    7,
+    -36.9
+   ],
+   "heading_rad": 0.1,
+   "rule": "head"
+  },
+  {
+   "source_id": "n14",
+   "source_name": "{g2}StreetLight",
+   "position": [
+    -25.400000000000006,
+    8,
+    16.200000000000003
+   ],
+   "heading_rad": 0.2,
+   "rule": "head"
+  },
+  {
+   "source_id": "n21",
+   "source_name": "{g3}StreetLight",
+   "position": [
+    11.899999999999991,
+    6,
+    69.30000000000001
+   ],
+   "heading_rad": 0.30000000000000004,
+   "rule": "head"
+  },
+  {
+   "source_id": "n4",
+   "source_name": "{g4}StreetLight",
+   "position": [
+    49.19999999999999,
+    7,
+    -57.599999999999994
+   ],
+   "heading_rad": 0.4,
+   "rule": "head"
+  },
+  {
+   "source_id": "n11",
+   "source_name": "{g5}StreetLight",
+   "position": [
+    86.5,
+    8,
+    -4.5
+   ],
+   "heading_rad": 0.5,
+   "rule": "head"
+  },
+  {
+   "source_id": "n18",
+   "source_name": "{g6}StreetLight",
+   "position": [
+    -76.20000000000002,
+    6,
+    48.60000000000002
+   ],
+   "heading_rad": 0.6000000000000001,
+   "rule": "head"
+  },
+  {
+   "source_id": "n1",
+   "source_name": "{g7}StreetLight",
+   "position": [
+    -38.900000000000034,
+    7,
+    -78.30000000000001
+   ],
+   "heading_rad": 0.7000000000000001,
+   "rule": "head"
+  },
+  {
+   "source_id": "n8",
+   "source_name": "{g8}StreetLight",
+   "position": [
+    -1.6000000000000227,
+    8,
+    -25.19999999999999
+   ],
+   "heading_rad": 0.8,
+   "rule": "head"
+  },
+  {
+   "source_id": "n15",
+   "source_name": "{g9}StreetLight",
+   "position": [
+    35.69999999999999,
+    6,
+    27.900000000000034
+   ],
+   "heading_rad": 0.9,
+   "rule": "head"
+  },
+  {
+   "source_id": "n22",
+   "source_name": "{g10}StreetLight",
+   "position": [
+    73,
+    7,
+    81
+   ],
+   "heading_rad": 1,
+   "rule": "head"
+  },
+  {
+   "source_id": "n5",
+   "source_name": "{g11}StreetLight",
+   "position": [
+    -89.70000000000005,
+    8,
+    -45.89999999999998
+   ],
+   "heading_rad": 1.1,
+   "rule": "head"
+  },
+  {
+   "source_id": "n12",
+   "source_name": "{g12}StreetLight",
+   "position": [
+    -52.400000000000034,
+    6,
+    7.2000000000000455
+   ],
+   "heading_rad": 1.2000000000000002,
+   "rule": "head"
+  },
+  {
+   "source_id": "n19",
+   "source_name": "{g13}StreetLight",
+   "position": [
+    -15.100000000000023,
+    7,
+    60.30000000000007
+   ],
+   "heading_rad": 1.3,
+   "rule": "head"
+  },
+  {
+   "source_id": "n2",
+   "source_name": "{g14}StreetLight",
+   "position": [
+    22.199999999999932,
+    8,
+    -66.60000000000002
+   ],
+   "heading_rad": 1.4000000000000001,
+   "rule": "head"
+  },
+  {
+   "source_id": "n9",
+   "source_name": "{g15}StreetLight",
+   "position": [
+    59.5,
+    6,
+    -13.5
+   ],
+   "heading_rad": 1.5,
+   "rule": "head"
+  },
+  {
+   "source_id": "n16",
+   "source_name": "{g16}StreetLight",
+   "position": [
+    96.79999999999995,
+    7,
+    39.60000000000002
+   ],
+   "heading_rad": 1.6,
+   "rule": "head"
+  },
+  {
+   "source_id": "n23",
+   "source_name": "{g17}StreetLight",
+   "position": [
+    -65.90000000000009,
+    8,
+    -87.29999999999995
+   ],
+   "heading_rad": 1.7000000000000002,
+   "rule": "head"
+  },
+  {
+   "source_id": "n6",
+   "source_name": "{g18}StreetLight",
+   "position": [
+    -28.600000000000023,
+    6,
+    -34.19999999999993
+   ],
+   "heading_rad": 1.8,
+   "rule": "head"
+  },
+  {
+   "source_id": "n13",
+   "source_name": "{g19}StreetLight",
+   "position": [
+    8.699999999999932,
+    7,
+    18.899999999999977
+   ],
+   "heading_rad": 1.9000000000000001,
+   "rule": "head"
+  },
+  {
+   "source_id": "n20",
+   "source_name": "{g20}StreetLight",
+   "position": [
+    46,
+    8,
+    72
+   ],
+   "heading_rad": 2,
+   "rule": "head"
+  },
+  {
+   "source_id": "n3",
+   "source_name": "{g21}StreetLight",
+   "position": [
+    83.29999999999995,
+    6,
+    -54.899999999999864
+   ],
+   "heading_rad": 2.1,
+   "rule": "head"
+  },
+  {
+   "source_id": "n10",
+   "source_name": "{g22}StreetLight",
+   "position": [
+    -79.40000000000009,
+    7,
+    -1.7999999999999545
+   ],
+   "heading_rad": 2.2,
+   "rule": "head"
+  },
+  {
+   "source_id": "n17",
+   "source_name": "{g23}StreetLight",
+   "position": [
+    -42.10000000000002,
+    8,
+    51.299999999999955
+   ],
+   "heading_rad": 2.3000000000000003,
+   "rule": "head"
+  },
+  {
+   "source_id": "n3b",
+   "source_name": "{g3}StreetLight",
+   "position": [
+    11.899999999999991,
+    6,
+    69.30000000000001
+   ],
+   "heading_rad": 0.30000000000000004,
+   "rule": "head"
+  }
+ ],
+ "orderedFixtures": "{\"fixtures\":[{\"heading_rad\":2.1,\"position\":[83.29999999999995,6,-54.899999999999864],\"rule\":\"head\",\"source_id\":\"n3\",\"source_name\":\"{g21}StreetLight\"},{\"heading_rad\":1.4000000000000001,\"position\":[22.199999999999932,8,-66.60000000000002],\"rule\":\"head\",\"source_id\":\"n2\",\"source_name\":\"{g14}StreetLight\"},{\"heading_rad\":1.7000000000000002,\"position\":[-65.90000000000009,8,-87.29999999999995],\"rule\":\"head\",\"source_id\":\"n23\",\"source_name\":\"{g17}StreetLight\"},{\"heading_rad\":0.7000000000000001,\"position\":[-38.900000000000034,7,-78.30000000000001],\"rule\":\"head\",\"source_id\":\"n1\",\"source_name\":\"{g7}StreetLight\"},{\"heading_rad\":0.4,\"position\":[49.19999999999999,7,-57.599999999999994],\"rule\":\"head\",\"source_id\":\"n4\",\"source_name\":\"{g4}StreetLight\"},{\"heading_rad\":0,\"position\":[-100,6,-90],\"rule\":\"head\",\"source_id\":\"n0\",\"source_name\":\"{g0}StreetLight\"},{\"heading_rad\":1.8,\"position\":[-28.600000000000023,6,-34.19999999999993],\"rule\":\"head\",\"source_id\":\"n6\",\"source_name\":\"{g18}StreetLight\"},{\"heading_rad\":1.5,\"position\":[59.5,6,-13.5],\"rule\":\"head\",\"source_id\":\"n9\",\"source_name\":\"{g15}StreetLight\"},{\"heading_rad\":0.8,\"position\":[-1.6000000000000227,8,-25.19999999999999],\"rule\":\"head\",\"source_id\":\"n8\",\"source_name\":\"{g8}StreetLight\"},{\"heading_rad\":1.1,\"position\":[-89.70000000000005,8,-45.89999999999998],\"rule\":\"head\",\"source_id\":\"n5\",\"source_name\":\"{g11}StreetLight\"},{\"heading_rad\":0.1,\"position\":[-62.7,7,-36.9],\"rule\":\"head\",\"source_id\":\"n7\",\"source_name\":\"{g1}StreetLight\"},{\"heading_rad\":0.5,\"position\":[86.5,8,-4.5],\"rule\":\"head\",\"source_id\":\"n11\",\"source_name\":\"{g5}StreetLight\"},{\"heading_rad\":2.2,\"position\":[-79.40000000000009,7,-1.7999999999999545],\"rule\":\"head\",\"source_id\":\"n10\",\"source_name\":\"{g22}StreetLight\"},{\"heading_rad\":1.9000000000000001,\"position\":[8.699999999999932,7,18.899999999999977],\"rule\":\"head\",\"source_id\":\"n13\",\"source_name\":\"{g19}StreetLight\"},{\"heading_rad\":1.2000000000000002,\"position\":[-52.400000000000034,6,7.2000000000000455],\"rule\":\"head\",\"source_id\":\"n12\",\"source_name\":\"{g12}StreetLight\"},{\"heading_rad\":0.9,\"position\":[35.69999999999999,6,27.900000000000034],\"rule\":\"head\",\"source_id\":\"n15\",\"source_name\":\"{g9}StreetLight\"},{\"heading_rad\":1.6,\"position\":[96.79999999999995,7,39.60000000000002],\"rule\":\"head\",\"source_id\":\"n16\",\"source_name\":\"{g16}StreetLight\"},{\"heading_rad\":0.2,\"position\":[-25.400000000000006,8,16.200000000000003],\"rule\":\"head\",\"source_id\":\"n14\",\"source_name\":\"{g2}StreetLight\"},{\"heading_rad\":2.3000000000000003,\"position\":[-42.10000000000002,8,51.299999999999955],\"rule\":\"head\",\"source_id\":\"n17\",\"source_name\":\"{g23}StreetLight\"},{\"heading_rad\":2,\"position\":[46,8,72],\"rule\":\"head\",\"source_id\":\"n20\",\"source_name\":\"{g20}StreetLight\"},{\"heading_rad\":1.3,\"position\":[-15.100000000000023,7,60.30000000000007],\"rule\":\"head\",\"source_id\":\"n19\",\"source_name\":\"{g13}StreetLight\"},{\"heading_rad\":0.6000000000000001,\"position\":[-76.20000000000002,6,48.60000000000002],\"rule\":\"head\",\"source_id\":\"n18\",\"source_name\":\"{g6}StreetLight\"},{\"heading_rad\":0.30000000000000004,\"position\":[11.899999999999991,6,69.30000000000001],\"rule\":\"head\",\"source_id\":\"n21\",\"source_name\":\"{g3}StreetLight\"},{\"heading_rad\":0.30000000000000004,\"position\":[11.899999999999991,6,69.30000000000001],\"rule\":\"head\",\"source_id\":\"n3b\",\"source_name\":\"{g3}StreetLight\"},{\"heading_rad\":1,\"position\":[73,7,81],\"rule\":\"head\",\"source_id\":\"n22\",\"source_name\":\"{g10}StreetLight\"}],\"observer\":[394.9810745639297,-11.790500000000002,-1827.4163386907105]}"
+}

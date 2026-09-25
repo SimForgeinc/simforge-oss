@@ -28,10 +28,15 @@ pub fn main(argv: Vec<String>) -> anyhow::Result<()> {
     match command.as_str() {
         "serve" => serve::run(rest),
         "job" => job::run(rest),
+        #[cfg(feature = "view")]
         "view" => simforge_render_view::run(
             std::iter::once(format!("{program} view"))
                 .chain(rest)
                 .collect(),
+        ),
+        #[cfg(not(feature = "view"))]
+        "view" => anyhow::bail!(
+            "this build of simforge-render is headless (built without the `view` feature); the interactive viewport is not available"
         ),
         "dev" => {
             let mut rest = rest.into_iter();

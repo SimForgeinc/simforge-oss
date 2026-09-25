@@ -10,7 +10,7 @@ license.workspace = true
 name = "simforge_package"
 
 [dependencies]
-simforge-core = { path = "../simforge-core" }
+simforge-core = { path = "../simforge-core", version = "0.1.0" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

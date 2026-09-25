@@ -247,7 +247,7 @@ mod tests {
     #[test]
     fn template_upgrade_absent_field_semantics_match_the_contract_lock() {
         let lock_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../packages/scenario/scenario-contract.lock.json");
+            .join("../../../contracts/scenario-contract.lock.json");
         let lock: Value =
             serde_json::from_str(&std::fs::read_to_string(&lock_path).expect("contract lock"))
                 .expect("contract lock json");

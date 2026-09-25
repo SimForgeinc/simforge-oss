@@ -1,4 +1,0 @@
-{
-  "_doc": "Turbo tasks that are genuinely red on main: verify reports them as known-red and does not gate on them, and says when one starts passing. Each entry names its owner and the failure (\"owner: reason\"). Environment gaps (missing tools, build ordering, machine-dependent output) are fixed, not listed.",
-  "tasks": {}
-}

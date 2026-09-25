@@ -8,6 +8,7 @@ exclude = ["vendor/bevy_gltf", "vendor/bevy_pbr", "vendor/bevy_mesh", "vendor/be
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
 
 # Vendored Bevy 0.19.1 crates, each carrying a patch intended for upstream
 # (headers in vendor/*/src/lib.rs list the deviations):

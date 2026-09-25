@@ -5514,16 +5514,23 @@ checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
 
 [[package]]
 name = "simforge"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "flate2",
  "fs4",
  "futures-lite",
+ "libc",
+ "png",
+ "regex",
+ "render-core",
  "serde",
  "serde_json",
  "sha2",
+ "simforge-compiler",
  "simforge-core",
+ "simforge-package",
+ "simforge-render",
  "tempfile",
  "ureq",
  "wgpu",
@@ -5541,6 +5548,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "simforge-compiler"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "serde",
+ "serde_json",
+ "sha2",
+ "simforge-core",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "simforge-core"
 version = "0.1.0"
 dependencies = [
@@ -5550,6 +5569,19 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror 2.0.20",
+]
+
+[[package]]
+name = "simforge-package"
+version = "0.1.0"
+dependencies = [
+ "crc32fast",
+ "flate2",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2",
+ "simforge-core",
 ]
 
 [[package]]

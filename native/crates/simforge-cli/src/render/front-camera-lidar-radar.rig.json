@@ -1,0 +1,42 @@
+{
+  "schema": "simforge.render-rig/v1",
+  "sources": [
+    {
+      "actorId": "ego",
+      "sensorId": "front-camera",
+      "sensorLabel": "Front camera",
+      "outputName": "ego-front-camera-rgb",
+      "modality": "rgb",
+      "transform": {
+        "position": { "x": 1.6, "y": 1.45, "z": 0 },
+        "rotation": { "yawRad": 0, "pitchRad": 0, "rollRad": 0 }
+      },
+      "attributes": { "width": 1280, "height": 720, "fps": 20, "horizontalFovDeg": 90, "nearM": 0.05, "farM": 1000 }
+    },
+    {
+      "actorId": "ego",
+      "sensorId": "roof-lidar",
+      "sensorLabel": "Roof lidar",
+      "outputName": "ego-roof-lidar-lidar",
+      "modality": "lidar",
+      "transform": {
+        "position": { "x": 0, "y": 1.9, "z": 0 },
+        "rotation": { "yawRad": 0, "pitchRad": 0, "rollRad": 0 }
+      },
+      "attributes": { "channels": 64, "rangeM": 120, "pointsPerSecond": 1200000, "rotationFrequencyHz": 10, "upperFovDeg": 15, "lowerFovDeg": -15, "horizontalFovDeg": 360 }
+    },
+    {
+      "actorId": "ego",
+      "sensorId": "front-radar",
+      "sensorLabel": "Front radar",
+      "outputName": "ego-front-radar-radar",
+      "modality": "radar",
+      "transform": {
+        "position": { "x": 2.2, "y": 0.6, "z": 0 },
+        "rotation": { "yawRad": 0, "pitchRad": 0, "rollRad": 0 }
+      },
+      "attributes": { "horizontalFovDeg": 60, "verticalFovDeg": 10, "rangeM": 150, "pointsPerSecond": 1500 }
+    }
+  ],
+  "video": { "width": 1280, "height": 720, "fps": 20, "container": "mp4", "codec": "h264", "quality": "standard" }
+}

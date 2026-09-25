@@ -6,6 +6,7 @@ description = "Headless-ish Bevy load test for SimForge CARLA vehicle GLBs: load
 license = "Apache-2.0"
 
 # Standalone: intentionally detached from the engine workspace.
+publish = false
 [workspace]
 
 [dependencies]

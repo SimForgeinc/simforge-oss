@@ -15,6 +15,7 @@ pub mod installed_maps;
 pub mod net;
 pub mod paths;
 pub mod registry;
+pub mod render;
 pub mod workspace;
 
 use std::ffi::OsString;

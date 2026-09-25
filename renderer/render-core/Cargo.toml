@@ -2,6 +2,8 @@
 name = "render-core"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+publish = false
 
 [dependencies]
 crossbeam-channel = "0.5"
@@ -9,7 +11,29 @@ crossbeam-channel = "0.5"
 # The source map GLBs use specular, anisotropy, clearcoat, and (potentially) transmission
 # textures. Bevy gates those texture bindings behind explicit features; omitting them
 # silently drops authored PBR inputs.
-bevy = { version = "0.19.1", default-features = true, features = [
+#
+# Headless by default: Bevy's default feature set minus its platform layer
+# (winit, x11, wayland, gilrs, clipboard, custom cursor) and audio, so the
+# `simforge` CLI and the render service link no windowing, input or audio
+# libraries (libwayland, libudev, libasound). The plugin set the headless
+# engine runs is unchanged: it always disabled WinitPlugin and AudioPlugin.
+# The interactive viewport turns the platform layer back on with the
+# `windowing` feature.
+bevy = { version = "0.19.1", default-features = false, features = [
+  # = Bevy's `default` (2d, 3d, ui, audio) without `default_platform`'s
+  # windowing/input backends and without `audio`.
+  "default_app",
+  "std",
+  "multi_threaded",
+  "default_font",
+  "sysinfo_plugin",
+  "2d_bevy_render",
+  "3d_bevy_render",
+  "ui_api",
+  "ui_bevy_render",
+  "bevy_ui_widgets",
+  "scene",
+  "picking",
   "png",
   "jpeg",
   "hdr",
@@ -50,6 +74,12 @@ libc = { version = "0.2", optional = true }
 
 [features]
 default = ["pcss"]
+# The windowed platform layer (winit + x11/wayland, gilrs, clipboard, audio)
+# for the interactive viewport. The headless engine disables WinitPlugin and
+# AudioPlugin when they are compiled in, so this feature must be on exactly
+# when Bevy has them: every crate that enables Bevy's platform layer enables
+# it (the viewport, through simforge-render's `view`).
+windowing = ["bevy/bevy_winit", "bevy/x11", "bevy/wayland", "bevy/bevy_gilrs", "bevy/bevy_clipboard", "bevy/custom_cursor", "bevy/audio"]
 # Chrome-trace CPU spans of every Bevy system (profiling builds only).
 trace-chrome = ["bevy/trace_chrome"]
 # PCSS soft shadows (lighting ladder rung 4)

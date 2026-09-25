@@ -5,14 +5,15 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+publish = false
 
 [lib]
 name = "simforge_bindings_common"
 
 [dependencies]
-simforge-core = { path = "../simforge-core" }
-simforge-session = { path = "../simforge-session" }
-simforge-compiler = { path = "../simforge-compiler" }
+simforge-core = { path = "../simforge-core", version = "0.1.0" }
+simforge-session = { path = "../simforge-session", version = "0.1.0" }
+simforge-compiler = { path = "../simforge-compiler", version = "0.1.0" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

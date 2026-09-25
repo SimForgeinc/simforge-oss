@@ -2836,36 +2836,42 @@ impl SceneApp {
                 }),
             );
         }
+        let default_plugins = DefaultPlugins
+            .set(bevy::app::TaskPoolPlugin {
+                task_pool_options: map_load_task_pools(),
+            })
+            .set(crate::platform::asset_plugin())
+            // Device creation on the backend this OS is qualified
+            // for (Vulkan / Metal / DX12); the resident engine keeps
+            // asynchronous pipeline compilation.
+            .set(crate::platform::render_plugin(false))
+            .set(WindowPlugin {
+                primary_window: None,
+                exit_condition: ExitCondition::DontExit,
+                ..default()
+            })
+            // The pipelined renderer steps the render app on its own
+            // thread driven by App::run(); our host-controlled update
+            // loop requires in-line render stepping.
+            .disable::<bevy::render::pipelined_rendering::PipelinedRenderingPlugin>()
+            .set(LogPlugin {
+                filter: "warn,wgpu_core=warn,wgpu_hal=warn,naga=warn".into(),
+                ..default()
+            });
+        // Headless builds have no windowing or audio plugins at all; a build
+        // with the viewport's platform layer (`windowing`) compiles them in,
+        // and the engine never runs them.
+        #[cfg(feature = "windowing")]
+        let default_plugins = default_plugins
+            .disable::<bevy::winit::WinitPlugin>()
+            .disable::<bevy::audio::AudioPlugin>();
         app.insert_resource(ClearColor(Color::BLACK))
             .insert_resource(DirectionalLightShadowMap { size: 2048 })
             .insert_resource(Legend::default())
             .init_resource::<CaptureRequest>()
             .init_resource::<HostLayerUnion>()
             .add_plugins((
-                DefaultPlugins
-                    .set(bevy::app::TaskPoolPlugin {
-                        task_pool_options: map_load_task_pools(),
-                    })
-                    .set(crate::platform::asset_plugin())
-                    // Device creation on the backend this OS is qualified
-                    // for (Vulkan / Metal / DX12); the resident engine keeps
-                    // asynchronous pipeline compilation.
-                    .set(crate::platform::render_plugin(false))
-                    .set(WindowPlugin {
-                        primary_window: None,
-                        exit_condition: ExitCondition::DontExit,
-                        ..default()
-                    })
-                    .disable::<bevy::winit::WinitPlugin>()
-                    .disable::<bevy::audio::AudioPlugin>()
-                    // The pipelined renderer steps the render app on its own
-                    // thread driven by App::run(); our host-controlled update
-                    // loop requires in-line render stepping.
-                    .disable::<bevy::render::pipelined_rendering::PipelinedRenderingPlugin>()
-                    .set(LogPlugin {
-                        filter: "warn,wgpu_core=warn,wgpu_hal=warn,naga=warn".into(),
-                        ..default()
-                    }),
+                default_plugins,
                 ScheduleRunnerPlugin::run_loop(Duration::ZERO),
                 crate::road_detail::RoadDetailPlugin,
                 crate::sky_pass::SkyPassPlugin { assets: sky_assets },

@@ -2,6 +2,8 @@
 name = "simforge-render-ffi"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+publish = false
 
 [lib]
 name = "simforge_render"

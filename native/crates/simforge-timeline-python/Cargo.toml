@@ -16,7 +16,7 @@ name = "simforge_oss_timeline_native"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-simforge-core = { path = "../simforge-core" }
+simforge-core = { path = "../simforge-core", version = "0.1.0" }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 pyo3 = { version = "0.27", features = ["abi3-py310"] }
 

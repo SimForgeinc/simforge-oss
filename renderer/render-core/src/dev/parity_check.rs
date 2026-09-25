@@ -8,7 +8,7 @@
 //!
 //! ```text
 //! simforge-render dev parity-check \
-//!   --fixture packages/viewer/fixtures/renderer-contract/basic-intersection.v1.json \
+//!   --fixture fixtures/renderer-contract/basic-intersection.v1.json \
 //!   --extract-scene /tmp/fixture-scene.json
 //! ```
 

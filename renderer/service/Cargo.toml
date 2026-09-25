@@ -3,6 +3,8 @@ name = "simforge-render"
 description = "The SimForge Renderer: one engine, one binary (serve | job | view | dev)."
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+publish = false
 
 [lib]
 name = "render_service"
@@ -14,7 +16,9 @@ path = "src/bin/simforge-render.rs"
 [dependencies]
 render-core = { path = "../render-core" }
 sensors = { path = "../sensors" }
-simforge-render-view = { path = "../viewport" }
+# The interactive viewport (`simforge-render view`) is the only windowed
+# code; without the `view` feature the service is headless.
+simforge-render-view = { path = "../viewport", optional = true }
 flate2 = "1"
 sha2 = "0.10"
 bevy = { version = "0.19.1", default-features = false }
@@ -42,6 +46,9 @@ windows-sys = { version = "0.61", features = [
 ] }
 
 [features]
+default = ["view"]
+# `simforge-render view` (winit window) and the platform layer it needs.
+view = ["dep:simforge-render-view", "render-core/windowing"]
 # Device-resident sensor output (`open_device_stream` & co.); off by default.
 # Linux-only (opaque-fd Vulkan/CUDA export): render-core rejects the feature
 # at compile time on other targets.

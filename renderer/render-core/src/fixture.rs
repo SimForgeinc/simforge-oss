@@ -1,7 +1,7 @@
 //! Renderer parity fixture (`simforge.renderer-parity-fixture/v1`) consumer.
 //!
 //! Loads the fixture document shipped in
-//! `packages/viewer/fixtures/renderer-contract/*.v1.json`, recomputes the
+//! `fixtures/renderer-contract/*.v1.json`, recomputes the
 //! actor world matrices from the embedded scene-state tick using the
 //! contract's normative frame-assembly rule (yaw-about-+Y quaternion,
 //! column-major Three order), derives the vehicle light states with

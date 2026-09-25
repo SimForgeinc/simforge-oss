@@ -2954,7 +2954,7 @@ def test_independent_worker_has_no_legacy_runtime_dependency():
 # private product-repository copy.
 # --------------------------------------------------------------------------
 
-GOLDEN_DIR = Path(__file__).resolve().parents[3] / "packages/openscenario/conformance"
+GOLDEN_DIR = Path(__file__).resolve().parents[3] / "fixtures/openscenario-conformance"
 
 
 def golden(name: str) -> bytes:

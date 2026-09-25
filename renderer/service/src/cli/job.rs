@@ -35,7 +35,7 @@ const JOB_USAGE: &str = "simforge-render job --job JOB.json [--preset training|s
         [--passes rgb,id,depth,semantic] [--out-dir DIR]\n\
     common: [--ground-mesh GROUND-MESH.bin] [--scene-set field=json ...] [--start N] [--ticks N] [--out RESULT.json] [--dump-dir DIR --dump-every N]\n\
             [--sweep ENTRIES.json] [--camera-size WxH] [--ablate a,b] [--shm-size-mb 512]\n\
-    JOB.json is simforge.render-job/v2: {schema, scene, sceneState?, rig: {cameras?, lidars?, radars?, pronto?}, ticks?: {start?, count?}, passes, outDir, observe?}.\n\
+    JOB.json is simforge.render-job/v2: {schema, scene, sceneState?, rig: {cameras?, cameraSchedule?, lidars?, radars?, pronto?}, ticks?: {start?, count?}, passes, outDir, observe?, simTimesS?}.\n\
     Artifacts: <outDir>/<sensor>/<tick:08>.<pass>.png|.f32.bin|.ply|.csv plus <outDir>/results.json.";
 
 struct Args {
@@ -469,6 +469,8 @@ fn plan_from_replay(args: &Args) -> Result<Plan> {
         spec,
         frames,
         cameras,
+        camera_schedule: None,
+        sim_times_s: None,
         lidars,
         radars,
         passes: args.passes.clone().unwrap_or_else(|| vec!["rgb".into()]), // fallback-ok: the replay form's documented default pass
@@ -576,6 +578,12 @@ struct JobSpec {
     /// parity gate. Needs a scene state.
     #[serde(default)]
     observe: bool,
+    /// Per scene-state tick, the simulation time of its capture
+    /// (`render_bundle.sim_time_s`: the frame's clip time, which drives the
+    /// pinned sky/cloud clock). Absent, the service derives `tick / tickHz`,
+    /// which equals the clip time only for a single-rate schedule from 0.
+    #[serde(default)]
+    sim_times_s: Option<Vec<f64>>,
 }
 
 #[derive(serde::Deserialize, Default)]
@@ -601,6 +609,12 @@ struct JobRig {
     /// sensors (plus the trailing chase camera) mount on `host`.
     #[serde(default)]
     pronto: Option<ProntoRig>,
+    /// Per scene-state tick, the cameras that capture it (that tick's
+    /// `render_bundle.cameras`): in a multi-rate rig each camera renders
+    /// only on its own frames. Replaces `cameras`; absent, every camera
+    /// captures every tick.
+    #[serde(default)]
+    camera_schedule: Option<Vec<Vec<serde_json::Value>>>,
 }
 
 #[derive(serde::Deserialize)]
@@ -655,6 +669,30 @@ fn plan_from_job(path: &std::path::Path, args: &Args) -> Result<Plan> {
             }
         }
     };
+    if let Some(schedule) = &job.rig.camera_schedule {
+        anyhow::ensure!(
+            job.rig.cameras.is_empty() && job.rig.pronto.is_none(),
+            "rig.cameraSchedule replaces rig.cameras (and a pronto rig): name the cameras per tick only"
+        );
+        anyhow::ensure!(
+            schedule.len() == frames.len(),
+            "rig.cameraSchedule has {} ticks, the scene state {}",
+            schedule.len(),
+            frames.len()
+        );
+    }
+    if let Some(times) = &job.sim_times_s {
+        anyhow::ensure!(
+            times.len() == frames.len(),
+            "simTimesS has {} entries, the scene state {} ticks",
+            times.len(),
+            frames.len()
+        );
+        anyhow::ensure!(
+            times.iter().all(|t| t.is_finite()),
+            "simTimesS must be finite"
+        );
+    }
     let mut cameras = job.rig.cameras;
     let mut lidars = job.rig.lidars;
     let mut radars = job.rig.radars;
@@ -667,8 +705,13 @@ fn plan_from_job(path: &std::path::Path, args: &Args) -> Result<Plan> {
         lidars.extend(l);
         radars.extend(r);
     }
+    let scheduled = job
+        .rig
+        .camera_schedule
+        .as_ref()
+        .is_some_and(|ticks| ticks.iter().any(|t| !t.is_empty()));
     anyhow::ensure!(
-        !(cameras.is_empty() && lidars.is_empty() && radars.is_empty()),
+        !(cameras.is_empty() && !scheduled && lidars.is_empty() && radars.is_empty()),
         "job rig has no sensors"
     );
     anyhow::ensure!(
@@ -680,6 +723,8 @@ fn plan_from_job(path: &std::path::Path, args: &Args) -> Result<Plan> {
         spec,
         frames,
         cameras,
+        camera_schedule: job.rig.camera_schedule,
+        sim_times_s: job.sim_times_s,
         lidars,
         radars,
         passes: job.passes,
@@ -766,6 +811,10 @@ struct Plan {
     /// Scene-state frames (`load_scene_state`); empty for a static scene.
     frames: Vec<serde_json::Value>,
     cameras: Vec<serde_json::Value>,
+    /// Per tick, the cameras of that tick (replaces `cameras`).
+    camera_schedule: Option<Vec<Vec<serde_json::Value>>>,
+    /// Per tick, `render_bundle.sim_time_s`.
+    sim_times_s: Option<Vec<f64>>,
     lidars: Vec<serde_json::Value>,
     radars: Vec<serde_json::Value>,
     /// `rgb | id | depth | semantic` for the cameras.
@@ -788,6 +837,8 @@ pub fn run(argv: Vec<String>) -> Result<()> {
         mut spec,
         frames,
         cameras,
+        camera_schedule,
+        sim_times_s,
         lidars,
         radars,
         passes,
@@ -803,8 +854,13 @@ pub fn run(argv: Vec<String>) -> Result<()> {
         serde_json::to_string(&resolved)?
     );
     eprintln!(
-        "simforge-render job: {} cameras, {} lidars, {} radars, ticks {}..{} of {}",
+        "simforge-render job: {} cameras{}, {} lidars, {} radars, ticks {}..{} of {}",
         cameras.len(),
+        if camera_schedule.is_some() {
+            " (per-tick schedule)"
+        } else {
+            ""
+        },
         lidars.len(),
         radars.len(),
         start,
@@ -910,12 +966,19 @@ pub fn run(argv: Vec<String>) -> Result<()> {
     let mut stages: BTreeMap<String, f64> = BTreeMap::new();
     let mut gpu_frames: Vec<f64> = Vec::new();
     for (n, tick) in (start..end).enumerate() {
+        let tick_cameras = match &camera_schedule {
+            Some(schedule) => &schedule[tick],
+            None => &cameras,
+        };
         let mut body = serde_json::json!({
             "i": 10 + tick, "op": "render_bundle", "sim_tick": tick,
-            "cameras": cameras, "passes": passes,
+            "cameras": tick_cameras, "passes": passes,
         });
         if !frames.is_empty() {
             body["tick_index"] = serde_json::json!(tick);
+        }
+        if let Some(times) = &sim_times_s {
+            body["sim_time_s"] = serde_json::json!(times[tick]);
         }
         if observe {
             body["observe"] = serde_json::json!(true);
@@ -967,11 +1030,18 @@ pub fn run(argv: Vec<String>) -> Result<()> {
                     format!("tick {tick}: the service answered `observe` without observed actors")
                 })?;
                 let frame = &frames[tick];
-                // The frame's own simulation time, else its tick over its rate.
-                let time = match (frame["t"].as_f64(), frame["tickHz"].as_f64()) {
-                    (Some(t), _) => t,
-                    (None, Some(hz)) if hz > 0.0 => tick as f64 / hz,
-                    _ => bail!("tick {tick}: the scene-state frame has neither `t` nor a positive `tickHz`"),
+                // The capture's simulation time (`simTimesS`, the time the
+                // frame was sampled at), else the frame's own time, else its
+                // tick over its rate.
+                let time = match (
+                    sim_times_s.as_ref().map(|times| times[tick]),
+                    frame["t"].as_f64(),
+                    frame["tickHz"].as_f64(),
+                ) {
+                    (Some(t), _, _) => t,
+                    (None, Some(t), _) => t,
+                    (None, None, Some(hz)) if hz > 0.0 => tick as f64 / hz,
+                    _ => bail!("tick {tick}: no simTimesS, and the scene-state frame has neither `t` nor a positive `tickHz`"),
                 };
                 use std::io::Write;
                 let mut line = serde_json::to_vec(

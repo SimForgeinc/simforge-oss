@@ -79,7 +79,7 @@ pub fn run(args: DoctorArgs, _ctx: &Ctx) -> CmdResult {
                 .with_path("--timeout"),
         );
     }
-    let mut checks = vec![gpu_check(), ffmpeg_check()];
+    let mut checks = vec![gpu_check(), ffmpeg_check(), sky_check()];
     checks.extend(cache_checks());
     checks.push(registry_check(&args));
     Ok(report(checks))
@@ -249,6 +249,28 @@ fn gpu_check() -> Check {
             detail,
         )
         .fix("install a hardware GPU driver, or set SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1 to render on the software adapter explicitly")
+    }
+}
+
+// ------------------------------------------------------------------ sky plates
+
+/// The renderer's sky plates (NASA star map and moon, pinned by
+/// `SOURCES.json`), resolved and verified exactly as a render resolves them.
+fn sky_check() -> Check {
+    match render_core::sky_pass::SkyAssetPaths::resolve() {
+        Ok(paths) => Check::new(
+            "sky",
+            Status::Ok,
+            format!("sky plates verified in {}", paths.dir.display()),
+            json!({ "dir": paths.dir, "star": paths.star, "moon": paths.moon }),
+        ),
+        Err(error) => Check::new(
+            "sky",
+            Status::Fail,
+            format!("{error:#}"),
+            json!({ "env": std::env::var("SIMFORGE_SKY_ASSETS").ok() }),
+        )
+        .fix("renders need the two pinned sky plates: set SIMFORGE_SKY_ASSETS to a directory holding SOURCES.json and the .skytex plates"),
     }
 }
 
