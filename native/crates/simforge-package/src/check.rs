@@ -12,10 +12,13 @@
 //! - each timeline: canonical, identity equals its `timelines[]` entry, the
 //!   key recomputes, it is of this trace and this map's height source;
 //!   `catalog.catalogIds` is exactly the ids the timelines bind;
-//! - map closure: canonical, counts, `map.xodr` digest, pin-closure digest;
+//! - map closures: the registry release's canonical closure (and web
+//!   closure, when present), canonical, counts, `map.xodr` digest, ground,
+//!   pin-closure digest over both;
 //! - blobs: every blob is named by a closure listing, at the listed size;
-//!   none → thin; any → full, which must then hold every non-texture map
-//!   member and every actor blob reachable from `catalogIds`.
+//!   none → thin; any → full, which must then hold every canonical member,
+//!   the web-only members the CLI reads, and every actor blob reachable from
+//!   `catalogIds`.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Read;
@@ -27,7 +30,8 @@ use simforge_core::trace::timeline::{RenderTimeline, SAMPLER_VERSION, TIMELINE_K
 use simforge_core::trace::SimTrace;
 
 use crate::closure::{
-    blob_index, ActorClosure, MapClosure, MapMemberRole, ACTOR_CATALOG_PATH, GROUND_MEMBER,
+    blob_index, is_cli_web_member, pin_closure_sha256, ActorClosure, MapClosure,
+    ACTOR_CATALOG_PATH, GROUND_MEMBER,
 };
 use crate::error::{ErrorCode, PackageError, Result};
 use crate::manifest::{parse_canonical, BlobCount, Manifest, RESOLUTION_SCHEMA};
@@ -73,9 +77,12 @@ pub struct ContentReport {
     pub trace: TraceReport,
     pub timelines: Vec<TimelineReport>,
     pub embedded_blobs: BlobCount,
+    /// Members of the canonical closure (all embedded in the full form).
     pub map_members: u64,
-    pub texture_members: u64,
-    pub embedded_texture_members: u64,
+    /// Members of the web closure (0 without one).
+    pub web_members: u64,
+    /// Web-only members the CLI reads (embedded in the full form).
+    pub cli_web_members: u64,
     /// Checks this form cannot perform, stated rather than skipped silently.
     pub not_verifiable: Vec<String>,
 }
@@ -336,10 +343,26 @@ pub(crate) fn check_contents(input: &ContentInput<'_>) -> Result<ContentReport> 
     // closures and catalog
     let path = "map/closure.json";
     let map_bytes = member(input, path);
-    let map = MapClosure::parse(map_bytes)?;
+    let map = MapClosure::parse(map_bytes, "canonical", path)?;
     canonical(map_bytes, path).map_err(|_| {
         PackageError::closure("not_canonical", "map/closure.json is not canonical JSON").at(path)
     })?;
+    let web_path = "map/web-closure.json";
+    let web = match input.members.get(web_path) {
+        Some(bytes) => {
+            let web = MapClosure::parse(bytes, "web", web_path)?;
+            crate::closure::paths_agree(&map, &web)?;
+            canonical(bytes, web_path).map_err(|_| {
+                PackageError::closure(
+                    "not_canonical",
+                    "map/web-closure.json is not canonical JSON",
+                )
+                .at(web_path)
+            })?;
+            Some(web)
+        }
+        None => None,
+    };
     if map.members.len() as u64 != m.map.closure.member_count
         || map.total_bytes() != m.map.closure.bytes
     {
@@ -395,7 +418,7 @@ pub(crate) fn check_contents(input: &ContentInput<'_>) -> Result<ContentReport> 
         }
         _ => {}
     }
-    let pin = map.pin_closure_sha256();
+    let pin = pin_closure_sha256(&map, web.as_ref());
     if pin != m.map.pin_closure_sha256 {
         return Err(mismatch(
             "map_pin_closure",
@@ -422,7 +445,7 @@ pub(crate) fn check_contents(input: &ContentInput<'_>) -> Result<ContentReport> 
     }
 
     // blobs and form
-    let index = blob_index(&map, &actors)?;
+    let index = blob_index(&map, web.as_ref(), &actors)?;
     let mut embedded = BlobCount { count: 0, bytes: 0 };
     for (sha, size) in input.blobs {
         match index.get(sha) {
@@ -446,14 +469,11 @@ pub(crate) fn check_contents(input: &ContentInput<'_>) -> Result<ContentReport> 
             }
         }
     }
-    let textures = map
-        .members
+    let web_cli: Vec<(&String, &crate::closure::MapClosureMember)> = web
         .iter()
-        .filter(|x| x.role == MapMemberRole::Texture);
-    let texture_members = textures.clone().count() as u64;
-    let embedded_texture_members = textures
-        .filter(|x| input.blobs.contains_key(&x.sha256))
-        .count() as u64;
+        .flat_map(|w| w.members.iter())
+        .filter(|(p, _)| is_cli_web_member(p) && !map.members.contains_key(*p))
+        .collect();
     let mut not_verifiable = Vec::new();
     let form = if input.blobs.is_empty() {
         not_verifiable.push(
@@ -470,13 +490,14 @@ pub(crate) fn check_contents(input: &ContentInput<'_>) -> Result<ContentReport> 
             )
             .at(path)
         };
-        for x in map
-            .members
-            .iter()
-            .filter(|x| x.role != MapMemberRole::Texture)
-        {
+        for (p, x) in &map.members {
             if !input.blobs.contains_key(&x.sha256) {
-                return Err(incomplete(&format!("map/{}", x.relative_path), &x.sha256));
+                return Err(incomplete(&format!("map/{p}"), &x.sha256));
+            }
+        }
+        for (p, x) in &web_cli {
+            if !input.blobs.contains_key(&x.sha256) {
+                return Err(incomplete(&format!("map/{p}"), &x.sha256));
             }
         }
         let catalog = &actors.members[ACTOR_CATALOG_PATH];
@@ -523,8 +544,8 @@ pub(crate) fn check_contents(input: &ContentInput<'_>) -> Result<ContentReport> 
         timelines,
         embedded_blobs: embedded,
         map_members: map.members.len() as u64,
-        texture_members,
-        embedded_texture_members,
+        web_members: web.as_ref().map_or(0, |w| w.members.len() as u64),
+        cli_web_members: web_cli.len() as u64,
         not_verifiable,
     })
 }

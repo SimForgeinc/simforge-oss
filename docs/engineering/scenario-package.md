@@ -124,7 +124,8 @@ simulation/trace.json.gz              the stored trace object, byte for byte
 simulation/resolution.json.gz         simforge.sim-resolution/v1, byte for byte
 simulation/materialized-traffic.json  when the result has a traffic artifact
 timeline/<timelineSha256>.json        the render timeline(s), canonical JSON
-map/closure.json                      the map version's browser closure listing
+map/closure.json                      the map registry release's canonical closure (native render assets)
+map/web-closure.json                  the release's web closure, when it has one
 actors/closure.json                   the actor-assets closure document
 catalog/entries.json                  the gallery catalog entries the request key hashed
 export/scenario.xosc                  optional: the derived OpenSCENARIO 1.4 export
@@ -134,7 +135,7 @@ blobs/sha256/<aa>/<sha256>            full form only: closure members, content-a
 
 - Every name matches the allowlist in section 10. None is derived from user
   text (titles, map labels, catalog ids).
-- Map blobs and actor blobs share `blobs/`. A blob that appears in both
+- Map blobs and actor blobs share `blobs/`. A blob that appears in several
   closures is stored once.
 - `receipt.json` is `{schema: "simforge.scenario-package-receipt/v1",
   packageId, form, exportedAt, exporterRelease, textureTier?,
@@ -146,8 +147,9 @@ blobs/sha256/<aa>/<sha256>            full form only: closure members, content-a
 ### 4.1 Members
 
 `manifest.members` is sorted by `path`. It lists every member except
-`manifest.json`, `receipt.json` and `blobs/`. Blobs are listed by the two
-closure documents, and those documents are themselves members.
+`manifest.json`, `receipt.json` and `blobs/`. Blobs are listed by the closure
+documents (map canonical, map web, actors), and those documents are
+themselves members.
 
 | `path` | `role` | Required | `mediaType` | Extra identity check on import |
 |---|---|---|---|---|
@@ -156,7 +158,8 @@ closure documents, and those documents are themselves members.
 | `simulation/resolution.json.gz` | `resolution` | yes | `application/vnd.simforge.sim-resolution+json+gzip` | `sha256 = simulation.resolutionSha256` |
 | `simulation/materialized-traffic.json` | `traffic` | when present | `application/vnd.uniscenarios.materialized-traffic+json` | `sha256 = simulation.trafficSha256` |
 | `timeline/<sha>.json` | `timeline` | at least one | `application/vnd.simforge.render-timeline+json` | `sha256 = <sha>`; its `identity.timelineKey` is listed in `timelines[]` |
-| `map/closure.json` | `map-closure` | yes | `application/vnd.simforge.browser-asset-set+json` | `sha256(canonicalJson) = map.browserClosureSha256`; pin digest recomputes to `map.pinClosureSha256` |
+| `map/closure.json` | `map-closure` | yes | `application/vnd.simforge.map-closure+json` | the registry release's canonical closure (`map-closure.v1`, kind `canonical`, `metadata.master`), canonical JSON byte for byte: `sha256 = map.canonicalClosureSha256`; pin digest (over both map closures) recomputes to `map.pinClosureSha256` |
+| `map/web-closure.json` | `map-web-closure` | when the release has one | `application/vnd.simforge.map-closure+json` | the release's web closure (kind `web`, `toolFingerprint`): `sha256 = map.webClosureSha256`; a path both closures list names the same bytes |
 | `actors/closure.json` | `actor-closure` | yes | `application/vnd.simforge.actor-assets-closure+json` | `sha256 = catalog.actorClosureDigest` |
 | `catalog/entries.json` | `catalog` | yes | `application/json` | canonical; `sha256 = catalog.catalogSha256` |
 | `export/scenario.xosc` | `xosc` | no | `application/xml` | informational; never a render input |
@@ -199,7 +202,8 @@ contract string where it has one (for example `simforge.sim-resolution/v1`).
   "map": {
     "mapVersionId": "…", "sourceMapId": "el-camino-road", "label": "El Camino Road",
     "xodrSha256": "…", "coordinateSystemSha256": "…",
-    "mapClosureDigest": "…", "pinClosureSha256": "…", "browserClosureSha256": "…",
+    "mapClosureDigest": "…", "pinClosureSha256": "…",
+    "canonicalClosureSha256": "…", "webClosureSha256": "…", "registryReleaseDigest": "…",
     "heightSourceDigest": "…", "groundDigest": null,
     "closure": { "memberCount": 9412, "bytes": 1161000000 }
   },
@@ -249,10 +253,12 @@ contract string where it has one (for example `simforge.sim-resolution/v1`).
 | `map.xodrSha256`, `coordinateSystemSha256` | sha256 | Must equal the trace header's `engineGraphDigest` and the map version row. |
 | `map.mapClosureDigest` | sha256 | `simforge.map-closure/v1` (native `MapBundle.closureDigest`), key material in `simKey`. |
 | `map.pinClosureSha256` | sha256 | `simforge.map-pin-closure/v1` over the simulation members (document-pinning.md). |
-| `map.browserClosureSha256` | sha256 | `uniscenario.browser-asset-set/v1` digest of `map/closure.json`. |
+| `map.canonicalClosureSha256` | sha256 | sha256 of `map/closure.json`: the registry release's canonical closure digest (`closureDigest` in the registry). The canonical closure lists the native render assets (`master.gltf`, `geometry.bin`) and every derivative built into it (ground, geometry LOD, luminaires, road decals, texture density, texture tiers, SUMO). |
+| `map.webClosureSha256` | sha256 \| null | sha256 of `map/web-closure.json`, the release's web closure; null when the release has none. |
+| `map.registryReleaseDigest` | sha256 \| null | The registry release document (`simforge.map-release.v1`) these closures belong to, when the map version came from a registry (hosted native asset sets record it). Import looks the release up by this digest first. |
 | `map.heightSourceDigest` | sha256 | `heightSource.digest` of the timeline's height source. |
 | `map.groundDigest` | sha256 \| null | Trace v5 ground source. Null before v5. |
-| `map.closure` | object | Member count and total bytes of the whole browser closure. |
+| `map.closure` | object | Member count and total bytes of the canonical closure. |
 | `catalog.assetCatalogVersionId` | string \| null | The revision's catalog pin. |
 | `catalog.catalogSha256` | sha256 | `canonicalJsonSha256(catalogEntries)` from the request key. |
 | `catalog.actorClosureDigest` | sha256 | `actors.native-closure` digest (`simforge.actor-assets-closure/v1`). |
@@ -279,7 +285,7 @@ format 5 governed by the map closure (section 8.1, rule 10);
 member's `sha256` equals its typed field (`document.json` =
 `scenario.contentSha256`, trace = `traceGzipSha256`, resolution =
 `resolutionSha256`, traffic = `trafficSha256`, `map/closure.json` =
-`browserClosureSha256`, `actors/closure.json` = `actorClosureDigest`,
+`canonicalClosureSha256`, `map/web-closure.json` = `webClosureSha256` (null exactly when absent), `actors/closure.json` = `actorClosureDigest`,
 `catalog/entries.json` = `catalogSha256`, xosc = `executionPackage.xoscSha256`);
 `timelines[]` and the `timeline/` members name the same timelines;
 `render` is set exactly when `render/pin.json` is a member, and
@@ -356,14 +362,14 @@ replaced.
    - Bind it, and record `bound_by = 'closure-digest'`.
    - Only simulation members decide this. Render-only members (tiers, tiles)
      may differ, and the UI says so.
-3. **Full form.** Install the embedded closure as a map version. Keep
-   `mapVersionId` when the id is free, otherwise mint a new id and record
-   `imported_from_map_version_id`. The browser asset set is verified exactly
-   as a map publication is (`closure.ts`). Render members that were not
-   embedded (other texture tiers) are listed and marked `unavailable` (see
-   open question 2).
-4. **Thin form.** Fetch the closure members by digest from this installation's
-   configured content origins (section 7).
+3. **Full form.** Install the embedded canonical closure (and the web-only
+   members it carries) as the map release, exactly as `maps pull`
+   materialises a registry release. Keep `mapVersionId` when the id is free,
+   otherwise mint a new id and record `imported_from_map_version_id`.
+4. **Thin form.** Resolve the release by digest (`registryReleaseDigest`,
+   else a release whose canonical closure digest is
+   `canonicalClosureSha256`), or fetch the closure members by digest from
+   this installation's configured content origins (section 7).
 5. **Otherwise fail** with `package_map_missing`. The error names the map
    (label, `mapVersionId`, `xodrSha256` prefix) and offers:
    - **"Transfer to map version X"**, for each local map version of the same
@@ -493,7 +499,7 @@ requested by digest only, and the list never comes from the package.
 
 | | Thin | Full |
 |---|---|---|
-| Contains | Manifest, document, trace, resolution, timeline(s), closure listings, catalog, optional xosc | Thin + `blobs/` for the map's simulation members, the render geometry (`3d/manifest.json`, `3d/tiles`, `3d/runtime`, `3d/env`), **one** texture tier, and the actor blobs reachable from `catalogIds` |
+| Contains | Manifest, document, trace, resolution, timeline(s), closure listings, catalog, optional xosc | Thin + `blobs/` for every member of the canonical closure (the native render assets and their derivatives, texture tiers included), the web-only members the CLI reads, and the actor blobs reachable from `catalogIds` |
 | Plays | Where the map version (by id or closure digest) and the actor closure are available (R1–R8) | Anywhere, offline, including another installation |
 | Built | Synchronously in the request (< 1 s) | As a background export job, with progress; streamed from the content stores |
 
@@ -534,22 +540,33 @@ These rules close open question 1 and the container half of open question 2.
    (`package_closure_invalid`, `closure_size_conflict`). The writer dedupes
    blobs it is given twice. Role members (`document.json`, timelines, ...)
    are never deduplicated against blobs: they are always present by path.
-5. **The full set.** Every member of the map closure whose `role` is not
-   `texture` (simulation members, render geometry, runtime, environment,
-   manifests and metadata, so the embedded closure installs and verifies as
-   a map publication does), plus the actor blobs reachable from
-   `catalog.catalogIds` through the closure's `catalog-models.json` (that
-   file itself, each id's `model.glbPath` and every
-   `animations.<motion>.glbPath`; an id the table does not list is
-   procedural and reaches nothing). Other listed blobs (unbound actor
-   models, texture members) may be embedded and are verified like any blob.
-6. **Textures.** A full package embeds the texture members of the tier(s)
-   its exporter selected; `receipt.textureTier` names the tier for display.
-   The container verifier does not decide tier completeness (it cannot tell
-   tiers apart from the listing); the map installer does, exactly as for a
-   map publication, and marks texture members that were not embedded
-   `unavailable`. A render that needs an unavailable member fails loudly;
-   it never substitutes another tier.
+5. **The full set** (revised 2026-09-25: the map closure is the registry
+   release's CANONICAL closure, not the browser asset set, which has no
+   native master and could not render on the CLI):
+   - every member of `map/closure.json`, the canonical closure: the native
+     render assets (`master.gltf`, `geometry.bin`) and every derivative
+     built into it (ground, geometry LOD, luminaires, road decals, texture
+     density, texture tiers, SUMO). A full package therefore renders
+     offline with the native renderer;
+   - the web-only members of `map/web-closure.json` the CLI reads
+     (`is_cli_web_member`: the simulation members published web-side, the
+     static colliders, and `derived/ambient/turn-verdicts.json.gz`);
+   - the actor blobs reachable from `catalog.catalogIds` through the actor
+     closure's `catalog-models.json` (that file itself, each id's
+     `model.glbPath` and every `animations.<motion>.glbPath`; an id the
+     table does not list is procedural and reaches nothing).
+   Other listed blobs (other web members, unbound actor models) may be
+   embedded and are verified like any blob.
+6. **Two listings, verbatim.** `map/closure.json` and `map/web-closure.json`
+   are the registry's own `map-closure.v1` documents, canonical JSON byte for
+   byte, so their sha256 are the registry's closure digests and an importer
+   matches a release by digest instead of member by member. (One merged
+   listing was the alternative; it would have had a digest no registry
+   knows.) The canonical closure must be `kind: canonical` with
+   `metadata.master: true`; the web closure `kind: web` with a
+   `toolFingerprint`; a path both list must name the same bytes
+   (`closure_path_conflict`). The pin closure is computed over the
+   simulation members of both.
 7. **`referencedActorBlobs`** is `{count, bytes}` over the *distinct
    digests* of the reachable set in rule 5 (including
    `catalog-models.json`). A full package proves it; a thin package cannot
@@ -561,7 +578,7 @@ These rules close open question 1 and the container half of open question 2.
    already holds that digest. `simforge package verify` never skips: it
    hashes every member and every blob.
 9. **Limits by form.** The container-size limit is chosen by the form the
-   container has (thin: 64 MiB, full: 4 GiB); the writer refuses to produce
+   container has (thin: 64 MiB, full: 32 GiB, since a full package carries the whole canonical closure, about 3–4 GB for Richmond Field Station); the writer refuses to produce
    a container the default reader would refuse.
 10. **Ground (trace format 5 on).** The engine records `header.groundDigest`
     only when the map has a ground surface, so a trace v5 on a map without
@@ -669,7 +686,7 @@ completes.
 **Container (strict reader):**
 
 - Names must match
-  `^(manifest\.json|receipt\.json|document\.json|simulation/[a-z-]+\.json(\.gz)?|timeline/[0-9a-f]{64}\.json|(map|actors)/closure\.json|catalog/entries\.json|export/scenario\.xosc|render/pin\.json|blobs/sha256/[0-9a-f]{2}/[0-9a-f]{64})$`.
+  `^(manifest\.json|receipt\.json|document\.json|simulation/[a-z-]+\.json(\.gz)?|timeline/[0-9a-f]{64}\.json|(map|actors)/closure\.json|map/web-closure\.json|catalog/entries\.json|export/scenario\.xosc|render/pin\.json|blobs/sha256/[0-9a-f]{2}/[0-9a-f]{64})$`.
   This rejects absolute paths, `..`, backslashes, drive letters, NUL,
   non-ASCII and zip-slip by construction. Members are never written to a
   path taken from the archive. They stream into a staging store keyed by
@@ -706,7 +723,7 @@ file with the central directory immediately before them.
 | Limit | Default |
 |---|---|
 | Container size, thin | 64 MiB |
-| Container size, full | 4 GiB |
+| Container size, full | 32 GiB |
 | Entry count | 100,000 |
 | `manifest.json` | 1 MiB |
 | Any single non-blob member | 256 MiB |
@@ -776,10 +793,9 @@ packages start with stage B and grow every release.
 
 1. ~~**One id for thin and full.**~~ Resolved: one id; the form is a
    container property (section 8.1).
-2. **Texture tiers in full packages.** The container rules are resolved
-   (section 8.1, rule 6: any selected tier, the installer marks the rest
-   `unavailable` and renders fail loudly on them). Still open: the default
-   tier (proposed `256-uastc`) and whether exporters may embed several.
+2. ~~**Texture tiers in full packages.**~~ Resolved by section 8.1 rule 5:
+   a full package embeds the canonical closure, whose texture tiers are the
+   ones the map release built.
 3. **Newer sampler.** Refuse (as specified), or accept and render with a
    timeline the reader derives from the trace with its own sampler? Poses x,
    y and heading are identical either way; z, pitch, roll and lights may

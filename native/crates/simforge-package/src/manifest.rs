@@ -23,7 +23,8 @@ pub const SCHEMA_PREFIX: &str = "simforge.scenario-package/v";
 pub const MAJOR: u64 = 1;
 pub const ACTOR_CLOSURE_SCHEMA: &str = "simforge.actor-assets-closure/v1";
 pub const RESOLUTION_SCHEMA: &str = "simforge.sim-resolution/v1";
-pub const BROWSER_ASSET_SET_SCHEMA: &str = "uniscenario.browser-asset-set/v1";
+/// The map registry's closure document (`map-closure.v1`, kind `canonical` or `web`).
+pub const MAP_CLOSURE_SCHEMA: &str = "map-closure.v1";
 pub const RENDER_PIN_SCHEMA: &str = "simforge.render-pin/v1";
 pub const SAMPLER_PREFIX: &str = "simforge.timeline-sampler/";
 /// Largest integer a JavaScript reader represents exactly.
@@ -178,7 +179,17 @@ pub struct MapRef {
     pub coordinate_system_sha256: String,
     pub map_closure_digest: String,
     pub pin_closure_sha256: String,
-    pub browser_closure_sha256: String,
+    /// sha256 of `map/closure.json`: the registry release's CANONICAL closure
+    /// (native render assets and their derivatives), its `closureDigest`.
+    pub canonical_closure_sha256: String,
+    /// sha256 of `map/web-closure.json`, the release's web closure, when the
+    /// release has one (it carries the web-only members the CLI also reads:
+    /// static colliders, ambient turn verdicts).
+    pub web_closure_sha256: Option<String>,
+    /// The map registry release (`simforge.map-release.v1`, its sha256) whose
+    /// closures these are, when the map version came from a registry: import
+    /// looks the release up by this digest first, then by closure digests.
+    pub registry_release_digest: Option<String>,
     pub height_source_digest: String,
     pub ground_digest: Option<String>,
     pub closure: CountBytes,
@@ -369,7 +380,7 @@ impl Manifest {
             Role::Timeline => {
                 Some(simforge_core::trace::timeline::RENDER_TIMELINE_VERSION.to_owned())
             }
-            Role::MapClosure => Some(BROWSER_ASSET_SET_SCHEMA.to_owned()),
+            Role::MapClosure | Role::MapWebClosure => Some(MAP_CLOSURE_SCHEMA.to_owned()),
             Role::ActorClosure => Some(self.catalog.actor_closure_schema.clone()),
             Role::RenderPin => Some(RENDER_PIN_SCHEMA.to_owned()),
             Role::Traffic | Role::Catalog | Role::Xosc => None,
@@ -580,10 +591,16 @@ impl Manifest {
             ("map.coordinateSystemSha256", &m.coordinate_system_sha256),
             ("map.mapClosureDigest", &m.map_closure_digest),
             ("map.pinClosureSha256", &m.pin_closure_sha256),
-            ("map.browserClosureSha256", &m.browser_closure_sha256),
+            ("map.canonicalClosureSha256", &m.canonical_closure_sha256),
             ("map.heightSourceDigest", &m.height_source_digest),
         ] {
             digest(field, v)?;
+        }
+        if let Some(d) = &m.web_closure_sha256 {
+            digest("map.webClosureSha256", d)?;
+        }
+        if let Some(d) = &m.registry_release_digest {
+            digest("map.registryReleaseDigest", d)?;
         }
         safe_integer("map.closure.bytes", m.closure.bytes)?;
         if m.closure.member_count == 0 {
@@ -769,14 +786,15 @@ impl Manifest {
     /// Member digests that the manifest also records in a typed field.
     fn validate_member_digests(&self) -> Result<()> {
         let sim = &self.simulation;
-        let expect: [(&str, Option<&String>); 7] = [
+        let expect: [(&str, Option<&String>); 8] = [
             ("document.json", Some(&self.scenario.content_sha256)),
             ("simulation/trace.json.gz", Some(&sim.trace_gzip_sha256)),
             (
                 "simulation/resolution.json.gz",
                 Some(&sim.resolution_sha256),
             ),
-            ("map/closure.json", Some(&self.map.browser_closure_sha256)),
+            ("map/closure.json", Some(&self.map.canonical_closure_sha256)),
+            ("map/web-closure.json", self.map.web_closure_sha256.as_ref()),
             (
                 "actors/closure.json",
                 Some(&self.catalog.actor_closure_digest),

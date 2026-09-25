@@ -1,12 +1,20 @@
-//! The two closure listings a package carries, and the blob index they define.
+//! The closure listings a package carries, and the blob index they define.
 //!
-//! - `map/closure.json`: `uniscenario.browser-asset-set/v1`, canonical JSON of
-//!   `{contractVersion, members: [{relativePath, sha256, byteLength, mediaType, role, required}]}`
-//!   (`closure.ts` `planUploadedMapClosure`); its sha256 is `map.browserClosureSha256`.
+//! - `map/closure.json`: the map registry release's CANONICAL closure,
+//!   `map-closure.v1` kind `canonical` (`{schema, kind, members: {<path>:
+//!   {sha256, bytes, ...}}, metadata: {master: true}}`), byte for byte as the
+//!   registry serves it: canonical JSON whose sha256 is the release's
+//!   `closureDigest` (`map.canonicalClosureSha256`). It lists the native render
+//!   assets (`master.gltf`, `geometry.bin`) and every derivative built into it
+//!   (ground, geometry LOD, luminaires, decals, texture tiers).
+//! - `map/web-closure.json` (when the release has one): the release's web
+//!   closure, kind `web` (`map.webClosureSha256`). The CLI reads a few of its
+//!   web-only members ([`is_cli_web_member`]).
 //! - `actors/closure.json`: `simforge.actor-assets-closure/v1`,
-//!   `{schema, members: {<path>: {bytes, sha256}}}`; its sha256 is `catalog.actorClosureDigest`.
+//!   `{schema, members: {<path>: {bytes, sha256}}, licenses?}`; its sha256 is
+//!   `catalog.actorClosureDigest`.
 //!
-//! Blobs (`blobs/sha256/<aa>/<sha256>`) are exactly the digests these two
+//! Blobs (`blobs/sha256/<aa>/<sha256>`) are exactly the digests these
 //! listings name, each stored once.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -16,7 +24,7 @@ use serde_json::Value;
 use simforge_core::hash::sha256_bytes;
 
 use crate::error::{PackageError, Result};
-use crate::manifest::{ACTOR_CLOSURE_SCHEMA, BROWSER_ASSET_SET_SCHEMA, MAX_SAFE_INTEGER};
+use crate::manifest::{ACTOR_CLOSURE_SCHEMA, MAP_CLOSURE_SCHEMA, MAX_SAFE_INTEGER};
 use crate::names::is_hex64;
 
 /// `catalog-models.json`: the actor-closure member the renderer resolves catalog ids through.
@@ -44,33 +52,33 @@ pub fn is_simulation_member(path: &str) -> bool {
             .any(|p| path.starts_with(p))
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum MapMemberRole {
-    Manifest,
-    Environment,
-    Geometry,
-    Texture,
-    Runtime,
-    Metadata,
+/// Web-closure members the CLI reads besides the canonical closure: the
+/// static colliders (a simulation member published web-side) and the
+/// ambient turn verdicts. A full package embeds them when the web closure
+/// lists them.
+pub const CLI_WEB_MEMBERS_EXACT: [&str; 1] = ["derived/ambient/turn-verdicts.json.gz"];
+
+pub fn is_cli_web_member(path: &str) -> bool {
+    is_simulation_member(path) || CLI_WEB_MEMBERS_EXACT.contains(&path)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "camelCase")]
+/// One member of a registry closure: its digest and size (other fields are
+/// kept by the document, never read).
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MapClosureMember {
-    pub relative_path: String,
     pub sha256: String,
-    pub byte_length: u64,
-    pub media_type: String,
-    pub role: MapMemberRole,
-    pub required: bool,
+    pub bytes: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "camelCase")]
+/// A registry closure document (`map-closure.v1`), parsed like the
+/// registry's `assertClosure`.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MapClosure {
-    pub contract_version: String,
-    pub members: Vec<MapClosureMember>,
+    /// `canonical` or `web`.
+    pub kind: String,
+    /// `metadata.master`: the tiled native master format.
+    pub master: bool,
+    pub members: BTreeMap<String, MapClosureMember>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -104,72 +112,113 @@ pub fn is_relative_path(v: &str) -> bool {
 }
 
 impl MapClosure {
-    pub fn parse(bytes: &[u8]) -> Result<Self> {
-        let closure: MapClosure = serde_json::from_slice(bytes).map_err(|e| {
-            PackageError::closure("map_closure_schema", format!("map/closure.json: {e}"))
-        })?;
-        if closure.contract_version != BROWSER_ASSET_SET_SCHEMA {
-            return Err(PackageError::closure(
-                "map_closure_schema",
-                format!(
-                    "map/closure.json contractVersion is {:?}",
-                    closure.contract_version
-                ),
+    /// Parse `path` (`map/closure.json` or `map/web-closure.json`) and require
+    /// the kind its role names.
+    pub fn parse(bytes: &[u8], kind: &str, path: &str) -> Result<Self> {
+        let bad = |why: String| {
+            PackageError::closure("map_closure_schema", format!("{path}: {why}")).at(path)
+        };
+        let doc: Value = serde_json::from_slice(bytes).map_err(|e| bad(e.to_string()))?;
+        let obj = doc.as_object().ok_or_else(|| bad("not an object".into()))?;
+        if obj.get("schema").and_then(Value::as_str) != Some(MAP_CLOSURE_SCHEMA) {
+            return Err(bad(format!("schema is not {MAP_CLOSURE_SCHEMA}")));
+        }
+        let found = obj.get("kind").and_then(Value::as_str).unwrap_or_default();
+        if found != kind {
+            return Err(bad(format!(
+                "kind is {found:?}, this member holds the {kind} closure"
+            )));
+        }
+        if kind != "canonical" && obj.get("toolFingerprint").is_none() {
+            return Err(bad(format!("a {kind} closure names its toolFingerprint")));
+        }
+        let master = obj
+            .get("metadata")
+            .and_then(|m| m.get("master"))
+            .and_then(Value::as_bool)
+            == Some(true);
+        if kind == "canonical" && !master {
+            return Err(bad(
+                "the canonical closure predates the map master format (metadata.master); re-ingest the map".into(),
             ));
         }
-        if closure.members.is_empty()
-            || !closure
-                .members
-                .windows(2)
-                .all(|w| w[0].relative_path < w[1].relative_path)
-        {
-            return Err(PackageError::closure(
-                "map_closure_schema",
-                "map/closure.json members must be non-empty, sorted by relativePath and unique",
-            ));
-        }
-        for m in &closure.members {
-            if !is_relative_path(&m.relative_path)
-                || !is_hex64(&m.sha256)
-                || m.byte_length > MAX_SAFE_INTEGER
-                || m.media_type.is_empty()
-            {
-                return Err(PackageError::closure(
-                    "map_closure_schema",
-                    format!("map/closure.json member {:?} is malformed", m.relative_path),
-                ));
+        let listed = obj
+            .get("members")
+            .and_then(Value::as_object)
+            .filter(|m| !m.is_empty())
+            .ok_or_else(|| bad("members must be a non-empty object".into()))?;
+        let mut members = BTreeMap::new();
+        for (p, m) in listed {
+            let sha = m.get("sha256").and_then(Value::as_str).unwrap_or_default();
+            let size = m.get("bytes").and_then(Value::as_u64);
+            match size {
+                Some(size) if is_relative_path(p) && is_hex64(sha) && size <= MAX_SAFE_INTEGER => {
+                    members.insert(
+                        p.clone(),
+                        MapClosureMember {
+                            sha256: sha.to_owned(),
+                            bytes: size,
+                        },
+                    );
+                }
+                _ => return Err(bad(format!("member {p:?} is malformed"))),
             }
         }
-        Ok(closure)
+        Ok(Self {
+            kind: kind.to_owned(),
+            master,
+            members,
+        })
     }
 
     pub fn member(&self, path: &str) -> Option<&MapClosureMember> {
-        self.members
-            .binary_search_by(|m| m.relative_path.as_str().cmp(path))
-            .ok()
-            .map(|i| &self.members[i])
+        self.members.get(path)
     }
 
     pub fn total_bytes(&self) -> u64 {
-        self.members.iter().map(|m| m.byte_length).sum()
+        self.members.values().map(|m| m.bytes).sum()
     }
+}
 
-    /// `simforge.map-pin-closure/v1`: sha256 over `"<relativePath> <sha256>\n"`
-    /// lines of the simulation members, in byte order of path.
-    pub fn pin_closure_sha256(&self) -> String {
-        let mut text = String::new();
-        for m in self
-            .members
-            .iter()
-            .filter(|m| is_simulation_member(&m.relative_path))
-        {
-            text.push_str(&m.relative_path);
-            text.push(' ');
-            text.push_str(&m.sha256);
-            text.push('\n');
+/// A path listed by both map closures must name the same bytes.
+pub fn paths_agree(canonical: &MapClosure, web: &MapClosure) -> Result<()> {
+    for (p, m) in &web.members {
+        if let Some(c) = canonical.members.get(p) {
+            if c.sha256 != m.sha256 {
+                return Err(PackageError::closure(
+                    "closure_path_conflict",
+                    format!(
+                        "{p} is {} in the canonical closure and {} in the web closure",
+                        c.sha256, m.sha256
+                    ),
+                )
+                .at(p.clone()));
+            }
         }
-        sha256_bytes(text.as_bytes())
     }
+    Ok(())
+}
+
+/// `simforge.map-pin-closure/v1`: sha256 over `"<path> <sha256>\n"` lines of
+/// the simulation members, in byte order of path, over the canonical closure
+/// and the web closure together (static colliders are published web-side).
+pub fn pin_closure_sha256(canonical: &MapClosure, web: Option<&MapClosure>) -> String {
+    let mut sim = BTreeMap::new();
+    for c in std::iter::once(canonical).chain(web) {
+        for (p, m) in &c.members {
+            if is_simulation_member(p) {
+                sim.insert(p.as_str(), m.sha256.as_str());
+            }
+        }
+    }
+    let mut text = String::new();
+    for (p, h) in sim {
+        text.push_str(p);
+        text.push(' ');
+        text.push_str(h);
+        text.push('\n');
+    }
+    sha256_bytes(text.as_bytes())
 }
 
 impl ActorClosure {
@@ -283,14 +332,23 @@ impl ActorClosure {
     }
 }
 
-/// digest → size, over both closures. A digest listed twice (within or
-/// across closures) must carry one size; it is one blob.
-pub fn blob_index(map: &MapClosure, actors: &ActorClosure) -> Result<BTreeMap<String, u64>> {
+/// digest → size, over every closure listing. A digest listed twice (within
+/// or across closures) must carry one size; it is one blob. A path listed by
+/// both map closures must name the same bytes.
+pub fn blob_index(
+    canonical: &MapClosure,
+    web: Option<&MapClosure>,
+    actors: &ActorClosure,
+) -> Result<BTreeMap<String, u64>> {
+    if let Some(web) = web {
+        paths_agree(canonical, web)?;
+    }
     let mut index: BTreeMap<String, u64> = BTreeMap::new();
-    let listed = map
+    let listed = canonical
         .members
         .iter()
-        .map(|m| (&m.relative_path, &m.sha256, m.byte_length))
+        .chain(web.into_iter().flat_map(|w| w.members.iter()))
+        .map(|(p, m)| (p, &m.sha256, m.bytes))
         .chain(actors.members.iter().map(|(p, m)| (p, &m.sha256, m.bytes)));
     for (path, sha, size) in listed {
         match index.get(sha) {

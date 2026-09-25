@@ -101,37 +101,35 @@ fn media_type(path: &str) -> &'static str {
     }
 }
 
-/// A `uniscenario.browser-asset-set/v1` listing, canonical.
-pub fn map_closure(files: &BTreeMap<String, Vec<u8>>) -> Vec<u8> {
-    let members: Vec<Value> = files
+/// A registry `map-closure.v1` document of `kind` over `files`, canonical
+/// (the canonical kind is a master closure; the web kind names a tool).
+pub fn registry_closure(kind: &str, files: &BTreeMap<String, Vec<u8>>) -> Vec<u8> {
+    let members: serde_json::Map<String, Value> = files
         .iter()
-        .map(|(path, bytes)| {
-            let collider = path.split('/').any(|s| {
-                s.starts_with("collider")
-                    || s.starts_with("static-collider.")
-                    || s == "static-collider"
-            });
-            json!({
-                "relativePath": path,
-                "sha256": sha(bytes),
-                "byteLength": bytes.len(),
-                "mediaType": media_type(path),
-                "role": map_role(path),
-                "required": !collider,
-            })
-        })
+        .map(|(p, b)| (p.clone(), json!({ "sha256": sha(b), "bytes": b.len() })))
         .collect();
-    canonical_bytes(
-        &json!({ "contractVersion": "uniscenario.browser-asset-set/v1", "members": members }),
-    )
+    let mut doc = json!({ "schema": "map-closure.v1", "kind": kind, "members": members });
+    if kind == "canonical" {
+        doc["metadata"] = json!({ "master": true });
+    } else {
+        doc["toolFingerprint"] = json!(sha(format!("fixture {kind} tool").as_bytes()));
+    }
+    canonical_bytes(&doc)
 }
 
-pub fn pin_closure(files: &BTreeMap<String, Vec<u8>>) -> String {
-    let mut text = String::new();
-    for (path, bytes) in files {
-        if is_simulation_member(path) {
-            text.push_str(&format!("{path} {}\n", sha(bytes)));
+/// `simforge.map-pin-closure/v1` over the simulation members of both closures.
+pub fn pin_closure(files: &[&BTreeMap<String, Vec<u8>>]) -> String {
+    let mut sim = BTreeMap::new();
+    for f in files {
+        for (path, bytes) in *f {
+            if is_simulation_member(path) {
+                sim.insert(path.clone(), sha(bytes));
+            }
         }
+    }
+    let mut text = String::new();
+    for (path, h) in sim {
+        text.push_str(&format!("{path} {h}\n"));
     }
     sha(text.as_bytes())
 }
@@ -221,7 +219,10 @@ pub struct Case {
     pub release: String,
     pub timeline: Vec<u8>,
     pub document: Vec<u8>,
+    /// The canonical closure's members (all embedded in the full form).
     pub map_files: BTreeMap<String, Vec<u8>>,
+    /// The web closure's members, when the release has one.
+    pub web_files: Option<BTreeMap<String, Vec<u8>>>,
     pub xosc: Option<Vec<u8>>,
     pub actors_closure: Vec<u8>,
     pub actor_blobs: BTreeMap<String, Vec<u8>>,
@@ -273,6 +274,7 @@ impl Case {
                 doc_entry["path"].as_str().unwrap()
             ))),
             map_files,
+            web_files: None,
             xosc: None,
             actors_closure: actors.closure,
             actor_blobs: actors.blobs,
@@ -309,9 +311,12 @@ impl Case {
         case
     }
 
-    /// The committed fixture scenario: `rc73-engine090-richmond-small` with a
-    /// three-member map closure (the real OpenDRIVE, the 3D manifest, one
-    /// texture that full packages leave out).
+    /// The committed fixture scenario: `rc73-engine090-richmond-small` on a
+    /// small registry release: a canonical closure (the real OpenDRIVE and 3D
+    /// manifest, stand-in native master `master.gltf` + `geometry.bin` and a
+    /// texture tier object) and a web closure (sharing the OpenDRIVE and
+    /// manifest; web-only static colliders and turn verdicts the CLI reads,
+    /// and a web tile it does not).
     pub fn fixture() -> Case {
         let rich = richmond_files();
         let mut files = BTreeMap::new();
@@ -320,13 +325,40 @@ impl Case {
             rich["3d/manifest.json"].clone(),
         );
         files.insert("map.xodr".to_owned(), rich["map.xodr"].clone());
+        files.insert(
+            "master.gltf".to_owned(),
+            br#"{"asset":{"version":"2.0","generator":"synthetic fixture master"}}"#.to_vec(),
+        );
+        files.insert(
+            "geometry.bin".to_owned(),
+            b"synthetic fixture master geometry".to_vec(),
+        );
         let ktx = b"\xabKTX 20\xbb\r\n\x1a\nsynthetic fixture texture".to_vec();
         files.insert(format!("3d/variants/objects/{}.ktx2", sha(&ktx)), ktx);
+        let mut web = BTreeMap::new();
+        web.insert(
+            "3d/manifest.json".to_owned(),
+            rich["3d/manifest.json"].clone(),
+        );
+        web.insert("map.xodr".to_owned(), rich["map.xodr"].clone());
+        web.insert(
+            "3d/variants/static-colliders-v2.json".to_owned(),
+            br#"{"colliders":[],"schemaVersion":2}"#.to_vec(),
+        );
+        web.insert(
+            "derived/ambient/turn-verdicts.json.gz".to_owned(),
+            gzip(br#"{"verdicts":[]}"#),
+        );
+        web.insert(
+            "3d/tiles/road.glb".to_owned(),
+            b"glTF\x02\x00\x00\x00synthetic fixture web tile".to_vec(),
+        );
         let mut case = Case::from_corpus(
             "rc73-engine090-richmond-small",
             "rc73-doc-child-reveal",
             files,
         );
+        case.web_files = Some(web);
         case.title = "Fixture: cardboard box on the Richmond Field Station loop".to_owned();
         case.xosc = Some(
             b"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<OpenSCENARIO><FileHeader description=\"fixture\"/></OpenSCENARIO>\n"
@@ -382,7 +414,10 @@ impl Case {
         let tl = self.timeline_value();
         let id = &tl["identity"];
         let timeline_sha = sha(&self.timeline);
-        let map_closure_bytes = map_closure(&self.map_files);
+        let map_closure_bytes = registry_closure("canonical", &self.map_files);
+        let web_closure_bytes = self.web_files.as_ref().map(|w| registry_closure("web", w));
+        let mut pin_sets = vec![&self.map_files];
+        pin_sets.extend(self.web_files.as_ref());
         let catalog_entries = canonical_bytes(&json!(self
             .catalog_ids()
             .iter()
@@ -443,8 +478,10 @@ impl Case {
                 "xodrSha256": sha(&self.map_files["map.xodr"]),
                 "coordinateSystemSha256": sha(b"fixture coordinate system"),
                 "mapClosureDigest": "5b611c7574bd90ac50419b42f8e47c467bcaf2b106b18b87f16ceb7ef6976155",
-                "pinClosureSha256": pin_closure(&self.map_files),
-                "browserClosureSha256": sha(&map_closure_bytes),
+                "pinClosureSha256": pin_closure(&pin_sets),
+                "canonicalClosureSha256": sha(&map_closure_bytes),
+                "webClosureSha256": web_closure_bytes.as_ref().map(|b| sha(b)),
+                "registryReleaseDigest": null,
                 "heightSourceDigest": id["heightFieldDigest"],
                 "groundDigest": self.ground_digest,
                 "closure": {
@@ -477,6 +514,9 @@ impl Case {
             self.timeline.clone(),
         );
         members.insert("map/closure.json".to_owned(), map_closure_bytes);
+        if let Some(web) = web_closure_bytes {
+            members.insert("map/web-closure.json".to_owned(), web);
+        }
         members.insert(
             "actors/closure.json".to_owned(),
             self.actors_closure.clone(),
@@ -495,8 +535,11 @@ impl Case {
             b.member(&path, bytes).unwrap();
         }
         if full {
-            for (path, bytes) in &self.map_files {
-                if map_role(path) != "texture" {
+            for bytes in self.map_files.values() {
+                b.blob(bytes.clone());
+            }
+            for (path, bytes) in self.web_files.iter().flatten() {
+                if simforge_package::closure::is_cli_web_member(path) {
                     b.blob(bytes.clone());
                 }
             }

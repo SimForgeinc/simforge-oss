@@ -95,7 +95,7 @@ impl Default for Limits {
     fn default() -> Self {
         Self {
             max_thin_bytes: 64 * 1024 * 1024,
-            max_full_bytes: 4 * 1024 * 1024 * 1024,
+            max_full_bytes: 32 * 1024 * 1024 * 1024,
             max_entries: 100_000,
             max_manifest_bytes: 1024 * 1024,
             max_member_bytes: 256 * 1024 * 1024,

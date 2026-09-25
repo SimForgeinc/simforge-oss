@@ -147,12 +147,15 @@ fn file_paths_extraction_and_file_blobs() {
     let blob_dir = dir.join("blob-sources");
     std::fs::create_dir_all(&blob_dir).unwrap();
     let mut b = case.builder(false);
-    for (path, bytes) in &case.map_files {
-        if map_role(path) != "texture" {
-            let file = blob_dir.join(sha(bytes));
-            std::fs::write(&file, bytes).unwrap();
-            b.blob_file(&sha(bytes), &file).unwrap();
-        }
+    let web_cli = case
+        .web_files
+        .iter()
+        .flatten()
+        .filter(|(p, _)| simforge_package::closure::is_cli_web_member(p));
+    for (_, bytes) in case.map_files.iter().chain(web_cli) {
+        let file = blob_dir.join(sha(bytes));
+        std::fs::write(&file, bytes).unwrap();
+        b.blob_file(&sha(bytes), &file).unwrap();
     }
     for p in [
         "catalog-models.json",
@@ -262,22 +265,14 @@ fn full_form_rules() {
     let (thin, _) = b.to_bytes().unwrap();
     assert!(thin.content.not_verifiable[0].starts_with("catalog.referencedActorBlobs"));
     // Full: refused.
-    for (path, bytes) in &case.map_files {
-        if map_role(path) != "texture" {
-            b.blob(bytes.clone());
-        }
-    }
+    embed_map(&mut b, &case);
     b.blob(case.actor_blobs["catalog-models.json"].clone());
     b.blob(case.actor_blobs["models/hazard.cardboard_box/model.glb"].clone());
     assert_eq!(b.to_bytes().unwrap_err().rule, "referenced_actor_blobs");
 
     // A reachable actor blob left out: incomplete.
     let mut b = case.builder(false);
-    for (path, bytes) in &case.map_files {
-        if map_role(path) != "texture" {
-            b.blob(bytes.clone());
-        }
-    }
+    embed_map(&mut b, &case);
     b.blob(case.actor_blobs["catalog-models.json"].clone());
     let err = b.to_bytes().unwrap_err();
     assert_eq!(
@@ -289,19 +284,24 @@ fn full_form_rules() {
         Some("actors/models/hazard.cardboard_box/model.glb")
     );
 
-    // Blobs nothing reaches but a closure lists (the unbound sedan, the texture) are allowed.
+    // A web-only member the CLI reads left out: incomplete.
+    let mut b = case.builder(false);
+    for bytes in case.map_files.values() {
+        b.blob(bytes.clone());
+    }
+    b.blob(case.actor_blobs["catalog-models.json"].clone());
+    b.blob(case.actor_blobs["models/hazard.cardboard_box/model.glb"].clone());
+    let err = b.to_bytes().unwrap_err();
+    assert_eq!(err.rule, "blob_missing");
+    assert!(err.path.as_deref().unwrap().starts_with("map/"), "{err}");
+
+    // Blobs nothing requires but a closure lists (the unbound sedan, a web
+    // tile the CLI does not read) are allowed.
     let mut b = case.builder(true);
     b.blob(case.actor_blobs["models/vehicle.sedan/model.glb"].clone());
-    let tex = case
-        .map_files
-        .iter()
-        .find(|(p, _)| map_role(p) == "texture")
-        .unwrap()
-        .1
-        .clone();
-    b.blob(tex);
+    b.blob(case.web_files.as_ref().unwrap()["3d/tiles/road.glb"].clone());
     let (outcome, bytes) = b.to_bytes().unwrap();
-    assert_eq!(outcome.content.embedded_texture_members, 1);
+    assert_eq!(outcome.content.cli_web_members, 2);
     verify_bytes(&bytes, &options()).unwrap();
 
     // The same blob supplied twice is one entry.
@@ -391,5 +391,17 @@ fn inspection_and_names() {
         "cliCheck",
     ] {
         assert!(report.contains_key(key), "{key}");
+    }
+}
+
+/// Every blob of the map's full set: the canonical closure and the web-only members the CLI reads.
+fn embed_map(b: &mut PackageBuilder, case: &Case) {
+    for bytes in case.map_files.values() {
+        b.blob(bytes.clone());
+    }
+    for (p, bytes) in case.web_files.iter().flatten() {
+        if simforge_package::closure::is_cli_web_member(p) {
+            b.blob(bytes.clone());
+        }
     }
 }

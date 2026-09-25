@@ -5,35 +5,35 @@
       "file": "valid/thin.scenario.zip",
       "form": "thin",
       "note": "thin package with receipt and derived xosc; map and actors by digest",
-      "packageId": "df647f6e1f59caaf83c4b7ce8fd9076a9ca6e3eb7af228e080f134f6a6a6f1c0",
+      "packageId": "7d09de907f3fb448c68d0a5c450ee73fccaab37ac3a50a01694d5ead2fe79c0d",
       "valid": true
     },
     {
       "file": "valid/full.scenario.zip",
       "form": "full",
-      "note": "the same revision, full: every non-texture map blob and the reachable actor blobs (same packageId as thin)",
-      "packageId": "df647f6e1f59caaf83c4b7ce8fd9076a9ca6e3eb7af228e080f134f6a6a6f1c0",
+      "note": "the same revision, full: every canonical map blob, the web-only members the CLI reads, and the reachable actor blobs (same packageId as thin)",
+      "packageId": "7d09de907f3fb448c68d0a5c450ee73fccaab37ac3a50a01694d5ead2fe79c0d",
       "valid": true
     },
     {
       "file": "valid/thin-minimal.scenario.zip",
       "form": "thin",
       "note": "no receipt, no xosc: only required members",
-      "packageId": "20a3bab2d11e5fc4b9a9a83582b3b491431697251d3b8881de843da7f6b51483",
+      "packageId": "b5f3515ce41119344737c6ae3f34ca95e1dba0e919fd759502f5f47848a4a634",
       "valid": true
     },
     {
       "file": "valid/thin-v5-ground.scenario.zip",
       "form": "thin",
       "note": "trace v5 on a map with a ground surface: groundDigest is the ground mesh sha256",
-      "packageId": "b22a98a0d50c9f523553401d246b31bf9b38064a8c45174d26ce1b4614046422",
+      "packageId": "3fd4bbf142464ab8dceb4ce34256f9482022516285ef468c71ba929de15b68ad",
       "valid": true
     },
     {
       "file": "valid/thin-v5-no-ground.scenario.zip",
       "form": "thin",
       "note": "trace v5 on a map without a ground surface: groundDigest null",
-      "packageId": "c6ba16e09b373fd84394fc0276d4e3b2affdc72cb1b3fc4a8bd90b784f1b7ff0",
+      "packageId": "f4dd557dad2aed6bc3e24f9a09bb7aa0368996a42fd02de459f9b09337da8116",
       "valid": true
     },
     {
@@ -270,7 +270,7 @@
     {
       "code": "package_manifest_invalid",
       "file": "invalid/manifest-digest-field.scenario.zip",
-      "note": "map.browserClosureSha256 is not the map/closure.json member digest",
+      "note": "map.canonicalClosureSha256 is not the map/closure.json member digest",
       "rule": "member_digest_field",
       "valid": false
     },
@@ -405,6 +405,34 @@
       "file": "invalid/actor-closure-no-catalog.scenario.zip",
       "note": "the actor closure has no catalog-models.json",
       "rule": "actor_closure_schema",
+      "valid": false
+    },
+    {
+      "code": "package_closure_invalid",
+      "file": "invalid/map-closure-not-master.scenario.zip",
+      "note": "a canonical closure that predates the native master format",
+      "rule": "map_closure_schema",
+      "valid": false
+    },
+    {
+      "code": "package_closure_invalid",
+      "file": "invalid/map-closure-kind.scenario.zip",
+      "note": "the web closure where the canonical closure belongs",
+      "rule": "map_closure_schema",
+      "valid": false
+    },
+    {
+      "code": "package_closure_invalid",
+      "file": "invalid/closure-path-conflict.scenario.zip",
+      "note": "map.xodr names different bytes in the canonical and the web closure",
+      "rule": "closure_path_conflict",
+      "valid": false
+    },
+    {
+      "code": "package_form_incomplete",
+      "file": "invalid/form-missing-web-member.scenario.zip",
+      "note": "every canonical blob embedded, but not the static colliders the CLI reads from the web closure",
+      "rule": "blob_missing",
       "valid": false
     },
     {
