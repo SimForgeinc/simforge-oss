@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "locations",
+  "resolve",
+  "parked cars along the block",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "e85812dafd74b88ac64c01b08aed39039aff0852c58a649c0d61a9bd29481b34"
+}

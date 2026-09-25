@@ -1,0 +1,32 @@
+{
+ "argv": [
+  "locations",
+  "find",
+  "--map",
+  "richmond-field-station",
+  "--affordances",
+  "teleport"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "unknown_value",
+  "detail": {
+   "allowed": [
+    "vehicleSpawn",
+    "pedestrianSpawn",
+    "cyclistSpawn",
+    "parkedVehicle",
+    "occluder",
+    "route",
+    "crossing",
+    "stopPoint",
+    "propPlacement",
+    "conflictPoint"
+   ]
+  },
+  "path": "affordances",
+  "reason": "\"teleport\" is not a valid affordances"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}
