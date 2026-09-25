@@ -356,7 +356,13 @@ fn apply_pbr_lighting(
     let specular_occlusion = in.specular_occlusion;
 
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
-    let NdotV = max(dot(in.N, in.V), 0.0001);
+    // SimForge patch: clamp N.V to 1 as well. N and V are unit vectors
+    // only to rounding, so a surface facing the camera head-on can give
+    // N.V = 1 + 1 ulp. F_Schlick then takes pow(1 - N.V, 5) of a negative
+    // number, which is NaN wherever pow follows the exp2(y * log2(x))
+    // definition (lavapipe): 2x2 NaN blocks on a Richmond eucalyptus
+    // trunk in every light's Burley diffuse.
+    let NdotV = clamp(dot(in.N, in.V), 0.0001, 1.0);
     let R = reflect(-in.V, in.N);
 
 #ifdef STANDARD_MATERIAL_CLEARCOAT
@@ -366,7 +372,7 @@ fn apply_pbr_lighting(
     let clearcoat_perceptual_roughness = in.material.clearcoat_perceptual_roughness;
     let clearcoat_roughness = lighting::perceptualRoughnessToRoughness(clearcoat_perceptual_roughness);
     let clearcoat_N = in.clearcoat_N;
-    let clearcoat_NdotV = max(dot(clearcoat_N, in.V), 0.0001);
+    let clearcoat_NdotV = clamp(dot(clearcoat_N, in.V), 0.0001, 1.0);
     let clearcoat_R = reflect(-in.V, clearcoat_N);
 #endif  // STANDARD_MATERIAL_CLEARCOAT
 
