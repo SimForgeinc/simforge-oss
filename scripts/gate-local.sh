@@ -14,6 +14,8 @@
 #   python     pytest for every affected Python package (uv, locked toolchain)
 #   goldens    lavapipe render goldens (qualification/golden-harness), when the
 #              renderer, the engine core, the harness or its fixtures changed
+#              (a scene whose input key a merge-service PASS recorded in
+#              $GATE_HOME/goldens-pass.jsonl is skipped; GOLDENS_FULL=1 renders all)
 #
 # The base is the merge base of HEAD and origin/main, or HEAD^1 when HEAD is
 # already on main. No skip flags. The tree must be clean.
@@ -74,6 +76,8 @@ if test "${1:-}" = --step; then
       done
       exit $rc ;;
     goldens)
+      # Keys of the scenes this run renders and PASSes; the outer gate records them.
+      export GOLDEN_KEYS_OUT="$out/goldens-keys.jsonl"; rm -f "$GOLDEN_KEYS_OUT"
       maps="${SIMFORGE_MAPS_CACHE_ROOT:-$HOME/.local/share/simforge/maps}"
       export SIMFORGE_CORPUS_RICHMOND="${SIMFORGE_CORPUS_RICHMOND:-$maps/.corpus/richmond-field-station}"
       export SIMFORGE_CORPUS_YALE="${SIMFORGE_CORPUS_YALE:-$maps/.corpus/yale-street}"
@@ -118,6 +122,21 @@ touched() { grep -Eq "$1" <<<"$changed"; }
 if command -v sccache >/dev/null; then export RUSTC_WRAPPER=sccache; fi
 export CARGO_TERM_COLOR=never CI=true
 
+key_file="$GATE_HOME/.gate-key"
+test -s "$key_file" || (umask 077 && head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' >"$key_file")
+# The goldens skip ledger: lines the merge service appended after a sandboxed PASS,
+# each HMAC'd with this machine's gate key. Only lines that verify reach the step,
+# as "<key> <sha>" (the step never sees the ledger or the key).
+ledger="$GATE_HOME/goldens-pass.jsonl"; ledger_view="$run_dir/goldens-ledger.txt"; : >"$ledger_view"
+if test "${GOLDENS_FULL:-0}" != 1 && test -s "$ledger"; then
+  gkey="$(cat "$key_file")"
+  while IFS= read -r line; do
+    body="$(jq -c 'del(.hmac)' <<<"$line" 2>/dev/null)" || continue
+    want="$(jq -r '.hmac // empty' <<<"$line")"
+    test -n "$want" && test "$(printf '%s' "$body" | openssl dgst -sha256 -hmac "$gkey" -r | cut -d' ' -f1)" = "$want" || continue
+    jq -r 'select(.key|test("^[0-9a-f]{64}$")) | "\(.key) \(.sha)"' <<<"$body"
+  done <"$ledger" >"$ledger_view"
+fi
 steps_json="[]"; failing=""
 record_step() { steps_json="$(jq -c --arg n "$1" --arg s "$2" --argjson t "$3" --arg l "$4" --arg d "$5" '. + [{name:$n,status:$s,seconds:$t,log:$l,detail:$d}]' <<<"$steps_json")"; printf '  %-4s  %-22s %5ss  %s\n' "$(tr a-z A-Z <<<"$2")" "$1" "$3" "$5"; }
 SANDBOX="${GATE_SANDBOX:-off}"
@@ -148,7 +167,7 @@ if test "$SANDBOX" = required; then
   common="$(cd "$(git rev-parse --git-common-dir)" && pwd)"
   maps="${GATE_SANDBOX_MAPS:-${SIMFORGE_MAPS_CACHE_ROOT:-$HOME/.local/share/simforge/maps}}"
   sky="${GATE_SANDBOX_SKY:-${XDG_CACHE_HOME:-$HOME/.cache}/simforge/sky-products}"
-  mounts=(-v "$sbx:/cache" -v "$common:$common:ro" -v "$script_path:/gate/gate-local.sh:ro" -v "$defs/proxy.crt:/gate/proxy.crt:ro" -v "$defs/ca-bundle.crt:/etc/ssl/certs/ca-certificates.crt:ro")
+  mounts=(-v "$sbx:/cache" -v "$common:$common:ro" -v "$script_path:/gate/gate-local.sh:ro" -v "$ledger_view:/gate/goldens-ledger.txt:ro" -v "$defs/proxy.crt:/gate/proxy.crt:ro" -v "$defs/ca-bundle.crt:/etc/ssl/certs/ca-certificates.crt:ro")
   # Object stores this clone borrows from (git alternates) are mounted read-only too.
   while IFS= read -r alt; do test -d "$alt" && mounts+=(-v "$alt:$alt:ro"); done < <(cat "$common/objects/info/alternates" 2>/dev/null)
   test -d "$maps/.corpus" && mounts+=(-v "$maps/.corpus:/maps/.corpus:ro")
@@ -162,7 +181,7 @@ if test "$SANDBOX" = required; then
     -e NODE_EXTRA_CA_CERTS=/gate/proxy.crt -e SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt -e NODE_USE_ENV_PROXY=1 \
     -e CARGO_HTTP_PROXY="$proxy" -e GIT_PROXY_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt -e UV_NATIVE_TLS=1 \
     -e UV_CACHE_DIR=/cache/uv -e XDG_CACHE_HOME=/cache/xdg -e SIMFORGE_MAPS_CACHE_ROOT=/maps -e SIMFORGE_SKY_PRODUCTS=/sky-products -e CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}" \
-    -e GATE_BASE="$base" -e GATE_STEP_OUT=/cache/step-out \
+    -e GATE_BASE="$base" -e GATE_STEP_OUT=/cache/step-out -e GOLDEN_PASS_LEDGER=/gate/goldens-ledger.txt -e GOLDENS_FULL="${GOLDENS_FULL:-0}" \
     "$gate_tag" sleep infinity >/dev/null || die "could not start the sandbox"
   # The sandbox's own clone (objects shared read-only with the host clone), the
   # pinned toolchain and cargo-nextest; git and cargo run inside, never on the host.
@@ -183,7 +202,7 @@ run_step() { # name detail -- step args...
   local name="$1" detail="$2"; shift 3
   local log="$run_dir/${name//[:\/]/-}.log" t0 status; t0=$(date +%s)
   if test -n "$container"; then docker exec -w /cache/src "$container" bash /gate/gate-local.sh --step "$@" >"$log" 2>&1
-  else ( export GATE_BASE="$base" GATE_STEP_OUT="$run_dir/step-out"; bash "$script_path" --step "$@" ) >"$log" 2>&1; fi
+  else ( export GATE_BASE="$base" GATE_STEP_OUT="$run_dir/step-out" GOLDEN_PASS_LEDGER="$ledger_view"; bash "$script_path" --step "$@" ) >"$log" 2>&1; fi
   status=$?; local dt=$(( $(date +%s) - t0 ))
   if test $status -eq 0; then record_step "$name" pass "$dt" "$log" "$detail"; return 0; fi
   record_step "$name" fail "$dt" "$log" "$detail (exit $status)"; tail -n 60 "$log" | sed 's/^/      | /'; echo "      \\ full log: $log"; failing="$name"; return 1; }
@@ -213,8 +232,20 @@ if $ok; then
 fi
 
 finished=$(date +%s); result=$($ok && echo pass || echo fail)
-key_file="$GATE_HOME/.gate-key"
-test -s "$key_file" || (umask 077 && head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' >"$key_file")
+# A sandboxed (merge service) PASS records the keys of the scenes it rendered, so a
+# later change that leaves a scene's inputs unchanged skips it. Contributor runs
+# (no sandbox) never write the ledger.
+if $ok && test "$SANDBOX" = required && jq -e '.[] | select(.name == "goldens" and .status == "pass")' <<<"$steps_json" >/dev/null; then
+  keys_out="$sbx/step-out/goldens-keys.jsonl"
+  if test -s "$keys_out"; then
+    gkey="$(cat "$key_file")"
+    jq -c 'select((.sceneId|test("^[a-z0-9][a-z0-9-]*$")) and (.key|test("^[0-9a-f]{64}$"))) | {sceneId, key}' "$keys_out" 2>/dev/null |
+    while IFS= read -r k; do
+      body="$(jq -c --arg sha "$sha" --arg id "$run_id" --arg at "$(date -u +%FT%TZ)" '{v:1} + . + {sha:$sha, run:$id, at:$at}' <<<"$k")"
+      printf '%s\n' "$(jq -c --arg h "$(printf '%s' "$body" | openssl dgst -sha256 -hmac "$gkey" -r | cut -d' ' -f1)" '. + {hmac:$h}' <<<"$body")"
+    done >>"$ledger"
+  fi
+fi
 prev="$(tail -n 1 "$GATE_HOME/records.jsonl" 2>/dev/null | sha256sum | cut -d' ' -f1)"
 body="$(jq -cn --arg sha "$sha" --arg base "$base" --arg tree "$(git rev-parse 'HEAD^{tree}')" --arg repo "simforge-sdk" --arg sandbox "$SANDBOX" \
   --arg result "$result" --arg failing "$failing" --arg host "$(hostname)" --arg user "$(id -un)" \
