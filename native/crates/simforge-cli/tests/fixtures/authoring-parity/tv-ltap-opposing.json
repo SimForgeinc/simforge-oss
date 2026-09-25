@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/ltap-opposing.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "0c532248f800384dfc1d663c20a83330ce12d65e680a8c44c63f5ba4d30822d0"
+}

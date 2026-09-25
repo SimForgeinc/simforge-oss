@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/09-stalled-vehicle-beyond-sight/scenario.template.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "752030d73b426beff76c8dd0ee4d1789ba6783efccc287799acfbbc9055abb9b"
+}

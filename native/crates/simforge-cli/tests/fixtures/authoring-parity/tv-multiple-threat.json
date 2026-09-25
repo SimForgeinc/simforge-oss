@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/multiple-threat.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "a6540bdaa4c12b8ed6ec50c106c05b42617dc4a266225d4f9f86b7a9da5a5d79"
+}

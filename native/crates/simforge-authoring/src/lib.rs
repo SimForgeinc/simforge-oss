@@ -10,10 +10,13 @@
 //! structured `{code, path?, reason, detail?}` with `findings` selecting exit 2.
 
 pub mod instance;
+pub mod jsfmt;
 pub mod json;
 pub mod maps;
 pub mod paths;
 pub mod sites;
 pub mod template;
+pub mod template_new;
+pub mod validate;
 
 pub use simforge_compiler::CompileError;

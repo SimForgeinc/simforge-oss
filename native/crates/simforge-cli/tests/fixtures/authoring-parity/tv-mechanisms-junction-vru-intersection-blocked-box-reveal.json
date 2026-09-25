@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/junction-vru/intersection-blocked-box-reveal.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "9044577889ea23eef205c5b31d1cd3056daca90da6c00fcaa9d6511292f90882"
+}

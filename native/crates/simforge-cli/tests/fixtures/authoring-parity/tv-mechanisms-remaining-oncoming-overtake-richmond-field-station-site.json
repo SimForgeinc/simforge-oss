@@ -1,0 +1,15 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/remaining/oncoming-overtake.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "6bc90b7974510a7e"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "b92563a13a3a09d24b6e6f932aa56af9b3d092d11f3f5cb2aba853ccdddfca60"
+}

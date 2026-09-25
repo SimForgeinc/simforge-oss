@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/parking-transit/vehicle-pulls-out.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "8d40358e9c9e800c051d631a30c6457edf5c90875b483a3c731825130d4a72a4"
+}

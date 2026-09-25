@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "packages/cli/package.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "45618dbfeb3188ecc947bd9a645c95f57311ba20fe8c55bf5ce91fda8c2c9ce6"
+}

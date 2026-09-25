@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/02-police-roadside-stop/scenario.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "a56e1ff1a94ecbe782269012244012ea6f9cdd6d4d2f226aba4c4db8009954d2"
+}

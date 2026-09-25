@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "packages/cli/parity/fixtures/broken-templates/cycle.template.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "a7c951b98300836a7b8645ec217c1a38d2b683106dcbc5d937e9bcd5ebd258a3"
+}

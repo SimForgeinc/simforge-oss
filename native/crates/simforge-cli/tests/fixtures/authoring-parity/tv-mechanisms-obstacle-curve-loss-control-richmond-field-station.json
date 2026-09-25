@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/obstacle/curve-loss-control.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "93551a3d74a00d5d7c73ae292a02dbebb3b948f82db68115274586653385cb39"
+}

@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/remaining/reversing-pedestrian.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "0f88fde210c46cb6940535cf754f314f38c559a7d89b8ca7d5915c899e8646b7"
+}

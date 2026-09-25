@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/06-wrong-way-vehicle-blind-approach/scenario.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "510e9f38994bba8a621d1c636dd772f4c7506dda7bfa9371948e90fec42095bc"
+}

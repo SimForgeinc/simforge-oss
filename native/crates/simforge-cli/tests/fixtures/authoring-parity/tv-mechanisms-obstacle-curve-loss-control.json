@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/obstacle/curve-loss-control.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "77ab13900b9f99917ca9383d2bc58e0d3139f1cbf21e6a450b14c1149b0aa41b"
+}
