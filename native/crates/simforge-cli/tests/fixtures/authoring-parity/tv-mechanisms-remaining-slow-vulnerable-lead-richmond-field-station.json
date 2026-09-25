@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/remaining/slow-vulnerable-lead.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "dccdcabe5d29ebec0901c0ed2242a991c9e3eff93d268862104bedd0d4239923"
+}

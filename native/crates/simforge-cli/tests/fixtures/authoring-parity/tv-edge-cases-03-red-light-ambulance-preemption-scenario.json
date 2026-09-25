@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/03-red-light-ambulance-preemption/scenario.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "dbef311f641d22ca57067d843b5505a0637d0e848745f0889fa3b4d1b9664ead"
+}

@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "packages/cli/parity/fixtures/broken-templates/missing-dynamics.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "5634ca546a3bd59452cec95556a696cd54eab2eb46977784907693c20fd922a0"
+}

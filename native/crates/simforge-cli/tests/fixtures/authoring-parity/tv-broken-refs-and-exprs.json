@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "packages/cli/parity/fixtures/broken-templates/refs-and-exprs.template.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "7cb8cacf3be2a6b9eb57da2305233a941c0c35bf51224966dc2b38d0f317209f"
+}

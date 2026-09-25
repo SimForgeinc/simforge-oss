@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "packages/cli/parity/fixtures/broken-templates/schema-unknown-field.template.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "6096a068288fdba09e84981609511439db6d63df7d2ccdef96ac53f3e1d3ad10"
+}

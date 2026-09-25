@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/junction-vru/intersection-blocked-box-reveal.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "d230667730c7e0e9c0082244d16a717e2db853923e1ec7f17e8e08b05bc0ecc2"
+}

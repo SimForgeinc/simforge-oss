@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/remaining/oncoming-overtake.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "9eced00aa4d087eb311557b6b72cbf2964d2cc42594f18364d11851c5755f092"
+}

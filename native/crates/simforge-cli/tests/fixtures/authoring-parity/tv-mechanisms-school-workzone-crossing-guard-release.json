@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/school-workzone/crossing-guard-release.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "a33989a433051344786f88014283619c590b1543d9df10f90a220ef3ec5d96ca"
+}

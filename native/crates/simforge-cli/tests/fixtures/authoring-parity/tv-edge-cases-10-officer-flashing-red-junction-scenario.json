@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/10-officer-flashing-red-junction/scenario.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "2a62908213bd776410e0a2f9260dcd1d19e5349039e35e4db01b41856f7e9559"
+}

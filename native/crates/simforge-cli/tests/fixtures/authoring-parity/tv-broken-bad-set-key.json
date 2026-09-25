@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "packages/cli/parity/fixtures/broken-templates/bad-set-key.template.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "76b66e1cbd3c8c3daf5bd37162e3aaba744946c1a7364959cb482780186acd78"
+}
