@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/edge-cases/05-cyclist-occlusion-conflict/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "f5c3f1d5a8eb899c12a8da00610a14c22294bb7b68a850747224c7b8ceef038b"
+}

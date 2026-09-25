@@ -1,0 +1,18 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/school-workzone/lane-shift.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "07e71d3b49800ede",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 0,
+ "files": {
+  "instance.json": "8b6486d175b8742f0c0c9c0f95a630b8d93d5b1d8a6b7df369cd23864042e9a7"
+ },
+ "stderr": null,
+ "stdoutSha256": "d620aa69465036adacb13e0b2871d9582bb8adced3571e0a3cf36c0f407c4b57"
+}

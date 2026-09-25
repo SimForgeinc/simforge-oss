@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/junction-vru/adult-midblock-crossing.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "6a2cd602cdb551531e01f11149411ca586f25befe60e1879300eb9e49b04f3e8"
+}

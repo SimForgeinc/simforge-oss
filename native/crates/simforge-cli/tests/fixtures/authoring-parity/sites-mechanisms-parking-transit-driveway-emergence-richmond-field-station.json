@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/parking-transit/driveway-emergence.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "be510b0412fec442262f53d4a92d45921dc518490ebcc148a2b4fb7ba89313d5"
+}

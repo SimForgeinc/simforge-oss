@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/parking-transit/bus-pullout.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "dacce9d8d36460ef6cf721f855d94e95382ff64fb5ccddf0dbdda5067635841c"
+}

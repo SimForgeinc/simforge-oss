@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/edge-cases/03-red-light-ambulance-preemption/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "0ac862bc49c531fc",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "role_unbound",
+  "detail": {
+   "notes": [
+    "feature \"near-crosswalk\" did not bind to a crossing"
+   ],
+   "status": "failed"
+  },
+  "path": "roles.pedestrian",
+  "reason": "required role \"pedestrian\" did not bind at this site"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

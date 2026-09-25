@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/corridor/merge-gap-collapse.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "009a933fe1b5ad6c",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "role_unbound",
+  "detail": {
+   "notes": [
+    "junction 166 has no merge right movement conflicting with the ego path"
+   ],
+   "status": "failed"
+  },
+  "path": "roles.merging",
+  "reason": "required role \"merging\" did not bind at this site"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

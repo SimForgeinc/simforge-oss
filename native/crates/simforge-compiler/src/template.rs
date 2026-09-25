@@ -668,6 +668,7 @@ impl TurnDirection {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "left" | "Left" => Some(Self::Left),
@@ -724,6 +725,7 @@ impl JunctionControl {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "signalized" => Some(Self::Signalized),
@@ -1148,6 +1150,7 @@ impl ActorClass {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         Self::ALL.iter().copied().find(|c| c.as_str() == s)
     }
@@ -1882,14 +1885,20 @@ impl ManualDriveRecording {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "mode", rename_all = "camelCase", deny_unknown_fields)]
 pub enum SceneAbsoluteInitialRoute {
-    LanePath { lanes: Vec<String> },
+    LanePath {
+        lanes: Vec<String>,
+    },
     WorldPath {
         points: Vec<ScenePointXZ>,
         #[serde(default)]
         stop_controls: Vec<WorldPathStopControl>,
     },
-    CustomRoute { points: Vec<ScenePointXZ> },
-    CustomTimedRoute { points: Vec<SceneTimedPoint> },
+    CustomRoute {
+        points: Vec<ScenePointXZ>,
+    },
+    CustomTimedRoute {
+        points: Vec<SceneTimedPoint>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2029,7 +2038,6 @@ pub struct RigidOffsetM {
     pub along_m: f64,
     pub across_m: f64,
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
@@ -2812,7 +2820,6 @@ pub struct TimedFramePose {
     pub pose: FramePose,
     pub time_s: f64,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "mode", rename_all = "camelCase", deny_unknown_fields)]

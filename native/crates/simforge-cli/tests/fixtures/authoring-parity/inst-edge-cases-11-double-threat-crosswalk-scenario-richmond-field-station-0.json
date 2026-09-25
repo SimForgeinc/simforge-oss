@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/edge-cases/11-double-threat-crosswalk/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "09eaf56dc22d397b",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": {
+  "code": "role_unbound",
+  "detail": {
+   "notes": [
+    "lane k=1 does not exist at this site (onMissing: fail)"
+   ],
+   "status": "failed"
+  },
+  "path": "roles.outer-pickup",
+  "reason": "required role \"outer-pickup\" did not bind at this site"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

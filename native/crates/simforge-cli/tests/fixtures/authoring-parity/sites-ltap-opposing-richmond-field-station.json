@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/ltap-opposing.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "ae2bca4e2ecbd50c4dd0a944af4b6632b2a6db4fba66087afb3e8a717d91601f"
+}

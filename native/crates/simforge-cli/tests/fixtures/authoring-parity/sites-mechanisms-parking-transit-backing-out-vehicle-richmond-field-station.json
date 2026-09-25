@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/parking-transit/backing-out-vehicle.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "2167ba69ff499aa59a2a0aec065dae71ebb03658c12d0df78354125ea1adb280"
+}

@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/edge-cases/03-red-light-ambulance-preemption/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "c601eee78d48091b057221984d58896d6eae3109574885b378ee5511bdb82200"
+}

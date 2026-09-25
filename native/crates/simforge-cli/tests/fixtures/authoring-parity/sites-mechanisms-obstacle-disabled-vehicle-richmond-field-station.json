@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/obstacle/disabled-vehicle.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "86c8da53883758f41e15e08e0bda5b921ec61404d5fccc4e547ceb2780d49a23"
+}

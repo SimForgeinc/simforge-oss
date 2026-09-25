@@ -54,6 +54,8 @@ simforge-compiler = { path = "../simforge-compiler" }
 # simforge.scenario-package/v1: the same reader/verifier the hosted exporter's
 # Node binding writes with.
 simforge-package = { path = "../simforge-package" }
+# Authoring (template, sites, instantiate, variation, batch, catalog, locations).
+simforge-authoring = { path = "../simforge-authoring" }
 
 # The renderer, in process: `render` runs render_service's job path (the
 # same request path the render service serves) and `env serve` its episode

@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/remaining/reversing-pedestrian.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "5c88c52dd5d51ebc7bc3013afb40c0551269c506dc95647d02fcd1bd096af815"
+}

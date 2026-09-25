@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/cpnco-dartout.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "65f86ffcd46dfb631efc091ee9dcb071abc958d6d67a750e4e7e1132ef409426"
+}

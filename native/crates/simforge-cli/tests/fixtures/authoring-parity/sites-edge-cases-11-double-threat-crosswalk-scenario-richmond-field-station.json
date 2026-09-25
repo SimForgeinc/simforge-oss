@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/edge-cases/11-double-threat-crosswalk/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "395366fd187d15e602ab47230ac504d08be351317bbddf8895eca6be50d15675"
+}

@@ -1,0 +1,18 @@
+{
+ "argv": [
+  "instantiate",
+  "examples/mechanisms/corridor/queue-tail.template.json",
+  "--map",
+  "richmond-field-station",
+  "--site",
+  "10aedd5e437cd43a",
+  "--out",
+  "{OUT}/instance.json"
+ ],
+ "exit": 0,
+ "files": {
+  "instance.json": "768207d01018b227d5ccc8072f0df5049df458525c10149b850a2bda9a11af6e"
+ },
+ "stderr": null,
+ "stdoutSha256": "6c3d98458b1196e8a12939233a7db171128224e24a5c3c62d6f408be678788fa"
+}

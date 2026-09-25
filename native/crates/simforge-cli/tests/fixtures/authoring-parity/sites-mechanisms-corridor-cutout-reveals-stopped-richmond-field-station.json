@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/corridor/cutout-reveals-stopped.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "8e492274c8e9b0c66494cdb3ffb2f58ef775fb6e54b5f48af56625183181899a"
+}

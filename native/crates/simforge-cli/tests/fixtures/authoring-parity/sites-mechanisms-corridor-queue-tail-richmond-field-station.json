@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/corridor/queue-tail.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "fe43b252ffb06a0b5bcb72b36ef25089afcaf81ee45deea0fd508b9987820c7b"
+}

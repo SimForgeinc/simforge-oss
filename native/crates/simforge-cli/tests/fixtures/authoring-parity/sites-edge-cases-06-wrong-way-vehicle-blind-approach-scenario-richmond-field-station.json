@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/edge-cases/06-wrong-way-vehicle-blind-approach/scenario.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "d91970aa6feee4b4f1033e769c3641dc0fc31ded4b1bc31c88113c165ea70ccb"
+}

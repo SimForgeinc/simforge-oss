@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "sites",
+  "match",
+  "examples/mechanisms/corridor/cut-in-brake.template.json",
+  "--map",
+  "richmond-field-station",
+  "--rejected"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "4e8be2d91f465c626cc5fb1dc4f821bcac198297f4d66f9a5280c36dae4773a1"
+}
