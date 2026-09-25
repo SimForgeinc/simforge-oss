@@ -30,7 +30,7 @@ From source (Rust 1.98, pinned by `rust-toolchain.toml`; Vulkan headers on Linux
 ```sh
 git clone https://github.com/SimForgeinc/simforge-sdk
 cd simforge-sdk
-cargo build --release --manifest-path renderer/Cargo.toml -p simforge   # -> renderer/target/release/simforge
+cargo build --release -p simforge   # -> target/release/simforge
 ```
 
 Python (uv or pip; the extension is built by maturin):
