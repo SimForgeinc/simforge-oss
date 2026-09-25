@@ -13,7 +13,7 @@
 # mounted the libraries but no Vulkan device on Docker 29.1 / driver 595.84);
 # the entrypoint states which one it picked on
 # stderr and exports SIMFORGE_CONTAINER_DEVICE, and SIMFORGE_DEVICE=gpu makes a
-# missing GPU a hard error. See docs/src/install/container.md.
+# missing GPU a hard error. See skills/simforge-quickstart/references/container.md.
 ARG BASE=ubuntu:24.04@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3
 FROM ${BASE}
 ARG TARGETARCH
@@ -43,6 +43,8 @@ RUN set -eux; \
 COPY --chmod=0755 bin/${TARGETARCH}/simforge /usr/local/bin/simforge
 COPY --chmod=0755 docker/simforge-entrypoint.sh /usr/local/bin/simforge-entrypoint
 COPY LICENSE NOTICE THIRD_PARTY_NOTICES.md /usr/share/doc/simforge/
+# The agent skills, for agents working inside the container.
+COPY skills /usr/share/simforge/skills
 
 # The NVIDIA container toolkit mounts the driver's Vulkan library only when
 # the graphics capability is requested.
@@ -54,7 +56,7 @@ ENV NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility \
 LABEL org.opencontainers.image.title="simforge" \
       org.opencontainers.image.description="SimForge CLI with the deterministic renderer (Vulkan: NVIDIA via --runtime nvidia, or Mesa lavapipe on CPU)" \
       org.opencontainers.image.source="https://github.com/SimForgeinc/simforge-sdk" \
-      org.opencontainers.image.url="https://docs.simforge.ai" \
+      org.opencontainers.image.url="https://github.com/SimForgeinc/simforge-sdk" \
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.version="${SIMFORGE_VERSION}" \
       org.opencontainers.image.revision="${SIMFORGE_REVISION}"

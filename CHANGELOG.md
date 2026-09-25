@@ -14,6 +14,7 @@ reads it).
   the closed-loop environment server and `simforge doctor`.
 - Distribution: signed archives and installers (Linux x86_64/aarch64, macOS
   arm64, Windows x86_64), `ghcr.io/simforgeinc/simforge`, the
-  `simforge-oss-gym` wheel, the Homebrew tap, docs.simforge.ai.
+  Python wheels (`simforge-oss-gym` and its four siblings), the Homebrew tap, and
+  agent skills (`skills/`, for Claude Code, Codex and other agents).
 - 0.1.0-rc.* were the TypeScript/Studio preview stack published from
   simforge-oss; they are not continued.

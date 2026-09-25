@@ -21,7 +21,9 @@ SIMFORGE_ASSET_CATALOGS="catalog/vehicles-carla catalog/pedestrians-carla"
 # The asset closures the SDK pins (simforge.asset-closures-lock/v1, track X):
 # every closure in it is attribution-checked on every release.
 SIMFORGE_CLOSURES_LOCK=catalog/closures.lock.json
-# The fixture the release smoke renders with lavapipe: a full-form (air-gapped)
-# scenario package, so the smoke needs no registry. Proposed path (track P).
-SIMFORGE_SMOKE_PACKAGE=fixtures/scenario-package/smoke/richmond-06.full.zip
+# The fixture the release smoke renders with lavapipe (track P): a thin package
+# pinning the public Richmond release and actor closure by digest; its golden
+# scene is qualification/golden-harness package-smoke-richmond. The rig path is
+# settled at the dry run.
+SIMFORGE_SMOKE_PACKAGE=fixtures/scenario-package/smoke/richmond-public.scenario.zip
 SIMFORGE_SMOKE_RIG=fixtures/scenario-package/smoke/rig.json

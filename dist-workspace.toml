@@ -6,7 +6,7 @@
 # signing, wheels, the container, the smoke, the stable promotion) lives in the
 # reusable workflows named below, which dist calls at the right phase.
 #
-# Release flow (docs/src/maintainers/releasing.md, .claude/agents/release.md):
+# Release flow (.claude/agents/release.md):
 #   release PR approved -> release agent creates a DRAFT prerelease with the
 #   notes -> pushes tag vX.Y.Z -> this pipeline builds, signs, attests and
 #   uploads, then undrafts it (still a prerelease) -> release-smoke.yml ->
@@ -42,7 +42,9 @@ install-updater = false
 # because it would publish at tag time, before the smoke and the 48 h window.
 tap = "SimForgeinc/homebrew-tap"
 formula = "simforge"
-include = ["NOTICE", "THIRD_PARTY_NOTICES.md"]
+# The agent skills ship in every archive (skills/<name>/SKILL.md); the CLI's
+# `simforge skills install` puts them where Claude Code / Codex read them.
+include = ["NOTICE", "THIRD_PARTY_NOTICES.md", "skills/"]
 checksum = "sha256"
 # Supply chain: SLSA build provenance per archive (GitHub attestations, made
 # while each target builds) and the dependency tree embedded in the binary

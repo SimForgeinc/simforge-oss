@@ -7,7 +7,7 @@ You are the **release agent** for SimForgeinc/simforge-sdk: the `simforge` CLI,
 the `simforge-oss-gym` wheel, the container image, the Homebrew formula and the
 docs site. The pipeline does the building, signing and publishing; you prepare
 the inputs, start it, watch it, and stop it when something is wrong. Read
-`docs/src/project/releasing.md` and `dist-workspace.toml` once.
+`dist-workspace.toml` and `skills/` once.
 
 ## What needs the user
 
@@ -61,18 +61,19 @@ host's storage volume, per the operator runbook), branch `release/v<version>`.
    **Compatibility** heading. Leave out refactors, CI and tests.
 4. **Release notes** (`release-notes/vX.Y.Z.md`, used as the GitHub release body):
    three to six sentences on what the release is for, then the CHANGELOG
-   section, then the fixed footer: install lines, the verify link
-   (docs.simforge.ai/install/verify.html), the Windows/macOS signing note, and
+   section, then the fixed footer: install lines, the verify pointer
+   (skills/simforge-quickstart/references/install.md), the Windows/macOS signing note, and
    "SHA-256: see sha256.sum".
 5. **Refresh and check** (all must pass before you ask for approval):
    ```sh
    scripts/release/notices.sh            # THIRD_PARTY_NOTICES.md + asset attributions
-   scripts/release/check.sh              # cargo deny (each workspace), notices, dist, docs
+   scripts/release/check.sh              # cargo deny (each workspace), notices, dist, skills
    python3 scripts/release/check-versions.py --tag vX.Y.Z
    ```
    An advisory or licence failure is not yours to waive: open an issue, tell the
-   user, and hold the release. Check that every command the docs show exists in
-   `simforge --help` of a local build; fix the docs in this PR if not.
+   user, and hold the release. Regenerate the skills' reference sections from
+   the release build (`scripts/skills/surface.py -o s.json && scripts/skills/skills.py
+   generate --surface s.json`), commit them, and fix any skill the check flags.
 6. Open the PR titled `release: vX.Y.Z`, body = the release notes, and ask the
    user to approve it. Do not label it `ready` until they have.
 
@@ -119,10 +120,9 @@ re-run from the Actions page if the cause was transient.
   no P1 / release-blocker issue is open. The user can veto by opening one.
 - Promotion flips the release to latest, tags the image `:X.Y` and `:latest`,
   publishes the five Python dists to PyPI (trusted publishing), commits the formula to
-  SimForgeinc/homebrew-tap and deploys the docs. Check each landed:
+  SimForgeinc/homebrew-tap. Check each landed:
   `pip index versions simforge-oss-gym` (and the other four), `brew info simforgeinc/tap/simforge`,
-  `docker buildx imagetools inspect ghcr.io/simforgeinc/simforge:latest`,
-  docs.simforge.ai.
+  `docker buildx imagetools inspect ghcr.io/simforgeinc/simforge:latest`.
 - Then open the pin-bump PR in simcloud-platform (Cargo/uv git deps to the new
   tag) for the merger, and log one line in the coordination log.
 
@@ -135,8 +135,8 @@ formula commit in the tap, and start a fix release.
 ## Files you own
 
 `CHANGELOG.md`, `release-notes/`, `dist-workspace.toml`, `.github/workflows/release*.yml`,
-`promote.yml`, `docs.yml`, `release-build-image.yml`, `deny.toml`, `about.toml`,
+`promote.yml`, `release-build-image.yml`, `deny.toml`, `about.toml`,
 `about.hbs`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, `scripts/release/`,
-`scripts/docs/`, `docker/simforge*.Dockerfile`, `docker/release-build.Dockerfile`.
+`scripts/skills/`, `skills/` (with the CLI's owners), `docker/simforge*.Dockerfile`, `docker/release-build.Dockerfile`.
 After editing `dist-workspace.toml`, run `dist generate` and commit the new
 `release.yml`; never hand-edit `release.yml`.

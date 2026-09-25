@@ -87,7 +87,7 @@ case "$check" in
     run() { docker run --rm -e SIMFORGE_DEVICE=cpu -v "$fixtures:/fixtures:ro" -v "$work/render:/work" "$ref" "$@"; }
     run package verify "$pkg" >"$work/render/verify.json" || fail "package verify"
     run package import "$pkg" --into /work/ws >"$work/render/import.json" || fail "package import"
-    run render /work/ws --preset training --rig "$rig" --out /work/out >"$work/render/render.json" || fail "render (lavapipe)"
+    run render /work/ws --preset training --rig "$rig" --out /work/out --allow-software-adapter >"$work/render/render.json" || fail "render (lavapipe)"
     [[ -f "$work/render/out/results.json" ]] || fail "render wrote no results.json"
     expected="$fixtures/expected-results.lavapipe.json"
     if [[ -f "$expected" ]]; then

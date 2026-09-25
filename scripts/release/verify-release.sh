@@ -7,7 +7,8 @@
 #
 # Needs: gh >= 2.49 (gh attestation), cosign >= 2.4, sha256sum/shasum.
 # Exits non-zero on the first asset that fails; prints one JSON summary line.
-# The same commands are documented for users in docs/src/install/verify.md.
+# The same commands are documented for users in
+# skills/simforge-quickstart/references/install.md.
 set -euo pipefail
 
 repo="${SIMFORGE_RELEASE_REPO:-SimForgeinc/simforge-sdk}"

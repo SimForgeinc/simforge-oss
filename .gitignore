@@ -90,5 +90,3 @@ studio/public/scenario-editor/driver-behaviors/
 .devflow/
 .turbo/
 
-# mdBook output (docs/book.toml build-dir)
-docs/book/

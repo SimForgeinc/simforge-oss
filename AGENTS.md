@@ -114,3 +114,25 @@ template a new component starts from. `pnpm style:ratchet --check` and
 - Several agents work on one machine at once. Never run `git stash`, `reset`, `checkout --`, `clean` or `apply` in a tree you did not create. Use your own worktree.
 - Mutate with `git -C <absolute path>`, so a failed `cd` can't leave a command running in someone else's checkout.
 - Move a shared branch only with `commit` or `merge`, never with `update-ref` or `reset`.
+
+## Agent skills (using the simforge CLI)
+
+`skills/` holds task skills in the open Agent Skills format (a `SKILL.md` with
+`name`/`description` frontmatter, plus `references/`). Claude Code reads them
+through `.claude/skills` (a link to `skills/`); for Codex and other agents, read
+the `SKILL.md` that matches the task. Outside this repo they ship in every
+release archive and the container image (`/usr/share/simforge/skills`).
+
+| Skill | Use it to |
+|---|---|
+| `skills/simforge-quickstart` | install the CLI, run `simforge doctor`, first render of an exported package |
+| `skills/simforge-render` | render with the training/showcase presets, rigs, passes, outputs |
+| `skills/simforge-closed-loop` | `simforge env serve` + the gym client; plug in a driving model |
+| `skills/simforge-scenario-package` | inspect/verify/import packages; thin vs full; errors and exit codes |
+| `skills/simforge-maps-assets` | `simforge maps pull`, `simforge assets pull`, caches, licences |
+| `skills/simforge-troubleshoot` | read `simforge doctor` and the error codes |
+
+The command/flag tables inside them are generated from `simforge --help`
+(`scripts/skills/skills.py generate`); the gate (`scripts/release/check.sh
+skills`) fails when a skill names a command or flag the CLI does not have.
+When you change a command, regenerate them in the same change.

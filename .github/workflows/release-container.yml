@@ -67,6 +67,7 @@ jobs:
             install -m 0755 "dl/simforge-${triple}/simforge" "ctx/bin/$arch/simforge"
           done
           cp LICENSE NOTICE THIRD_PARTY_NOTICES.md ctx/
+          cp -R skills ctx/skills
           cp docker/simforge-entrypoint.sh ctx/docker/
           echo "platforms=$platforms" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
