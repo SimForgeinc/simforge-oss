@@ -13,8 +13,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."   # repo root
 
 echo "=== step 1/3: build native renderer ==="
-cargo build --release -p simforge-render --manifest-path renderer/Cargo.toml
-cargo build --release -p simforge-core --example render-parity --manifest-path native/Cargo.toml
+cargo build --release -p simforge-render
+cargo build --release -p simforge-core --example render-parity
 
 echo "=== step 1b: sky plates (pinned NASA sources, verified) ==="
 uv run --quiet --no-project --with numpy==2.3.3 --with pillow==11.3.0 python renderer/tools/prepare_sky.py

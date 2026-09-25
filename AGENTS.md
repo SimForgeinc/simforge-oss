@@ -9,8 +9,9 @@ and it is the source of truth for that code. The hosted SimForge app
 
 | Path | What |
 |---|---|
-| `native/` | Cargo workspace: `simforge-core` (engine, traces, render timeline), `simforge-compiler`, `simforge-session`, `simforge-bindings-common`, `simforge-bindings-python` (the gym's `_native`). `crates/simforge-timeline-python` and `crates/simforge-cli` are their own workspaces |
-| `renderer/` | Cargo workspace: `simforge-render` (Bevy; one renderer, presets `training` and `showcase`), sensors, viewport, C ABI (`ffi`), vendored Bevy patches (`vendor/`) |
+| `Cargo.toml` | the one Cargo workspace (native/crates/*, renderer/*); vendored Bevy under `[patch.crates-io]`; one `Cargo.lock` |
+| `native/` | crates: `simforge-core` (engine, traces, render timeline), `simforge-compiler`, `simforge-session`, `simforge-bindings-common`, `simforge-bindings-python` (the gym's `_native`), `simforge-timeline-python`, the `simforge` CLI (`crates/simforge-cli`), `simforge-package`, `simforge-assets`, `simforge-authoring` |
+| `renderer/` | crates: `simforge-render` (Bevy; one renderer, presets `training` and `showcase`), sensors, viewport, C ABI (`ffi`), vendored Bevy patches (`vendor/`) |
 | `adapters/` | Python: `gym` (`simforge-oss-gym`), `timeline`, `carla-exec` (bring your own CARLA 0.10), `alpamayo` (code only), `auto-e2e`, `ros2-bridge`, `gpu`, `physics` |
 | `contracts/`, `fixtures/` | contract locks and the fixtures every consumer is tested against: golden traces, canonical JSON vectors, archive corpus, render-timeline identity corpus, renderer contract, OpenSCENARIO conformance |
 | `examples/` | scenario templates (the authoring catalog) |
@@ -40,8 +41,7 @@ Node with no dependencies; the CLI replaces both (`simforge assets pull`, golden
 ```sh
 scripts/gate-local.sh      # the merge gate: boundary, rustfmt/clippy on touched files,
                            # cargo nextest, pytest of affected packages, lavapipe goldens
-cd native && cargo nextest run
-cd renderer && cargo nextest run
+cargo nextest run --workspace --exclude simforge-bindings-python --exclude simforge-timeline-python   # one workspace
 cd adapters/gym && uv run --with pytest python -m pytest -q
 qualification/golden-harness/ci-local.sh verify   # needs mesa-vulkan-drivers + map corpora
 ```

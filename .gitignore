@@ -59,9 +59,8 @@ tools/bridge-fidelity/.corpus/
 
 # Next build output
 studio/.next/
-/native/target
-/renderer/target
-renderer/target-*/
+/target
+/target-*/
 renderer/vendor/bevy_gltf/target/
 
 # Static assets studio/scripts/sync-studio-assets.mjs copies from installed

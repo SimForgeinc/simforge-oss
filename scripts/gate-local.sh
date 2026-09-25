@@ -53,17 +53,13 @@ if test "${1:-}" = --step; then
   case "$step" in
     boundary) exec scripts/check-boundary.sh ;;
     rust)
-      ws="$1"
-      ( cd "$ws" && cargo fmt --check ) >"$out/fmt.txt" 2>&1
-      ( cd "$ws" && cargo clippy --all-targets --message-format=short -- --cap-lints warn ) >"$out/clippy.txt" 2>&1 || { tail -40 "$out/clippy.txt"; exit 1; }
-      ratchet "$ws" "$out/fmt.txt" "$out/clippy.txt" || exit 1
-      # The PyO3 extension crate links libpython only as a test binary; its
-      # behaviour is covered by the gym's pytest (built by maturin, abi3).
-      excl=(); test "$ws" = native && excl=(--workspace --exclude simforge-bindings-python)
-      if test "$ws" = native/crates/simforge-timeline-python; then
-        echo "nextest: skipped (a PyO3 wheel crate; adapters/timeline's pytest exercises it)"; exit 0
-      fi
-      cd "$ws" && exec cargo nextest run --no-fail-fast --no-tests=pass "${excl[@]}" ;;
+      # The one Cargo workspace. rustfmt/clippy judge only the files this change
+      # touched (a ratchet); nextest runs every crate except the PyO3 wheel
+      # crates, whose test binaries link libpython (their pytest suites cover them).
+      cargo fmt --all --check >"$out/fmt.txt" 2>&1
+      cargo clippy --workspace --all-targets --message-format=short -- --cap-lints warn >"$out/clippy.txt" 2>&1 || { tail -40 "$out/clippy.txt"; exit 1; }
+      ratchet . "$out/fmt.txt" "$out/clippy.txt" || exit 1
+      exec cargo nextest run --no-fail-fast --no-tests=pass --workspace --exclude simforge-bindings-python --exclude simforge-timeline-python ;;
     python)
       rc=0
       for d in "$@"; do
@@ -195,19 +191,12 @@ skip_step() { record_step "$1" skip 0 "" "$2"; }
 
 ok=true
 run_step boundary "cargo metadata + uv + no TS" -- boundary || ok=false
-engine='^(native/Cargo\.(toml|lock)|native/crates/simforge-(core|compiler|session|bindings-common|bindings-python|timeline-python|package)/|fixtures/|examples/|contracts/|rust-toolchain\.toml)'
-declare -A ws_when=(
-  [native]="$engine"
-  [renderer]='^(renderer/|native/crates/simforge-(core|compiler|session|package|cli)/|native/Cargo\.lock|fixtures/|catalog/|rust-toolchain\.toml)'
-  [native/crates/simforge-timeline-python]='^(native/crates/simforge-(timeline-python|core)/|rust-toolchain\.toml)'
-)
-# The simforge CLI (native/crates/simforge-cli) is a member of the renderer workspace.
-for ws in native renderer native/crates/simforge-timeline-python; do
-  $ok || break
-  test -f "$ws/Cargo.toml" || continue
-  if touched "${ws_when[$ws]}"; then run_step "rust:$ws" "fmt+clippy ratchet, nextest" -- rust "$ws" || ok=false
-  else skip_step "rust:$ws" "not affected"; fi
-done
+engine='^(Cargo\.(toml|lock)|native/crates/simforge-(core|compiler|session|bindings-common|bindings-python|timeline-python|package)/|fixtures/|examples/|contracts/|rust-toolchain\.toml)'
+if $ok; then
+  if touched '^(Cargo\.(toml|lock)|native/|renderer/|fixtures/|examples/|contracts/|catalog/|skills/|rust-toolchain\.toml)'; then
+    run_step rust "fmt+clippy ratchet, nextest (workspace)" -- rust || ok=false
+  else skip_step rust "no Rust input changed"; fi
+fi
 if $ok; then
   py=()
   for d in $(git ls-files -- '*pyproject.toml' | xargs -n1 dirname | sort -u); do
@@ -218,7 +207,7 @@ if $ok; then
   else skip_step python "no Python package affected"; fi
 fi
 if $ok; then
-  if touched '^(renderer/|native/crates/simforge-core/|native/Cargo\.lock|qualification/golden-harness/|catalog/|rust-toolchain\.toml)'; then
+  if touched '^(Cargo\.(toml|lock)|renderer/|native/crates/simforge-core/|qualification/golden-harness/|catalog/|rust-toolchain\.toml)'; then
     run_step goldens "lavapipe, verify all" -- goldens || ok=false
   else skip_step goldens "renderer/engine not affected"; fi
 fi

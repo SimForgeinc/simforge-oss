@@ -12,12 +12,6 @@ homepage = "https://simforge.ai"
 documentation = "https://docs.simforge.ai"
 readme = false
 rust-version = "1.85"
-# A member of the renderer workspace, not of native/: `simforge render` and
-# `simforge env serve` link the renderer as a library, and only the renderer
-# workspace root carries the vendored-Bevy [patch.crates-io] table and the
-# lockfile those builds are pinned by. native/Cargo.toml excludes this
-# directory. The SDK split moves everything into one workspace (track S).
-workspace = "../../../renderer"
 
 [[bin]]
 name = "simforge"

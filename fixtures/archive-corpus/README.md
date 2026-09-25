@@ -71,7 +71,7 @@ pnpm archive-corpus add-trace <trace.json.gz> --id rcN-<short-name> \
 pnpm archive-corpus add-document <document.json> --id rcN-<short-name>-doc \
   --release v0.1.0-rc.N --recorded <YYYY-MM-DD> --source "<where it came from>" [--kind revision]
 pnpm archive-corpus:verify
-cargo test --manifest-path native/Cargo.toml -p simforge-core --test archive_corpus
+cargo test -p simforge-core --test archive_corpus
 ```
 
 Pick artifacts that exercise something the corpus lacks: a new actor kind,

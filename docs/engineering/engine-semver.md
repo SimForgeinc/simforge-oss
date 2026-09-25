@@ -118,7 +118,7 @@ construction. The editor's "Verified" comparison monitors that in production.
 repository. The core routes transcendental math through its own port
 (`simforge-core/src/math`), so a compiler upgrade should not move a trace. Make
 the upgrade in its own change, with the golden corpus and the identity test
-green. `rust-version` in `native/Cargo.toml` remains the minimum supported
+green. `rust-version` in the root `Cargo.toml` remains the minimum supported
 version.
 
 ## Map closure: one constructor

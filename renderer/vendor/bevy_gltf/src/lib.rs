@@ -6,7 +6,7 @@
 )]
 
 //! SimForge vendored fork of `bevy_gltf` 0.19.1 (crates.io sources, wired via
-//! `[patch.crates-io]` in `renderer/Cargo.toml`).
+//! `[patch.crates-io]` in the root `Cargo.toml`).
 //!
 //! Deviations from upstream, all intended for upstreaming:
 //!

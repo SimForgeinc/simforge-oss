@@ -20,6 +20,8 @@ requires = ["maturin>=1.7,<2.0"]
 build-backend = "maturin"
 
 [tool.maturin]
+# Fat-LTO release profile of the SDK workspace (Cargo.toml [profile.wheel]).
+profile = "wheel"
 # The extension crate sits beside the native workspace (excluded from it,
 # own lockfile). There is no pure-Python sampler: an install without the
 # extension is an install failure.

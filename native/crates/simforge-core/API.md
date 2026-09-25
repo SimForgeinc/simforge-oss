@@ -1,6 +1,6 @@
 # simforge-core public API (NativeFoundation)
 
-Crate `simforge-core`, lib `simforge_core`. Workspace `native/Cargo.toml` (`members = ["crates/*"]`, `[workspace.dependencies]`: serde, serde_json, thiserror = "2", sha2 = "0.10", flate2 rust_backend). Edition 2021, rust-version 1.85, all math `f64`.
+Crate `simforge-core`, lib `simforge_core`. Workspace: the root `Cargo.toml` ( `[workspace.dependencies]`: serde, serde_json, thiserror = "2", sha2 = "0.10", flate2 rust_backend). Edition 2021, rust-version 1.85, all math `f64`.
 
 ## `simforge_core::error`
 - `SchemaIssue { code: &'static str, path: String, message: String }` (zod codes: invalid_type/too_small/too_big/not_finite/invalid_string/invalid_enum_value/invalid_literal/invalid_union_discriminator/unrecognized_keys/custom).
