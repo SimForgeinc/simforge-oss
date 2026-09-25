@@ -11,6 +11,8 @@ mod authoring_support;
 pub mod batch;
 pub mod doctor;
 pub mod env;
+pub mod evaluate;
+pub mod evidence;
 pub mod instantiate;
 pub mod locations;
 pub mod maps;
@@ -89,6 +91,11 @@ pub enum Command {
     Variation(variation::VariationCommand),
     /// Sites x draws matrix of a template: instantiate -> simulate -> evaluate per cell, resumable.
     Batch(batch::BatchArgs),
+    /// The reject filters (and an optional intent rubric) over a trace; exit 2 when it rejects.
+    Evaluate(evaluate::EvaluateArgs),
+    /// Evidence integrity between an instance and a trace.
+    #[command(subcommand)]
+    Evidence(evidence::EvidenceCommand),
 }
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
@@ -108,6 +115,8 @@ pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
         Command::Locations(cmd) => locations::run(cmd, ctx),
         Command::Variation(cmd) => variation::run(cmd, ctx),
         Command::Batch(args) => batch::run(args, ctx),
+        Command::Evaluate(args) => evaluate::run(args, ctx),
+        Command::Evidence(cmd) => evidence::run(cmd, ctx),
     }
 }
 

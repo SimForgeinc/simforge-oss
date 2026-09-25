@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "fixtures/archive-corpus/traces/rc73-engine090-richmond-small.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "27acebb967af33704e1392f67c1ad34dd562afa5e9b1ee54cf098838b82b22c3"
+}

@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "fixtures/archive-corpus/traces/rc43-v4pre-worker-intrusion.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "0552dea5da6ea59586d31fdf2b54cc434a52755ab8f4f5174849987dcff5a953"
+}

@@ -1,0 +1,16 @@
+{
+ "argv": [
+  "evidence",
+  "verify",
+  "does-not-exist.instance.json",
+  "examples/edge-cases/01-construction-chicane-reversing-truck/scenario.trace.json.gz"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "file_not_found",
+  "path": "does-not-exist.instance.json",
+  "reason": "cannot read does-not-exist.instance.json"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

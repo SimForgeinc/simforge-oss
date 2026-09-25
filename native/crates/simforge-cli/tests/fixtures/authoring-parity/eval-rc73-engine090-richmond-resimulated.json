@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "fixtures/archive-corpus/traces/rc73-engine090-richmond-resimulated.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "d793a942c489e20de526adf9eca2b8ffd7a120484c11b289daceeabcf54b0c7e"
+}
