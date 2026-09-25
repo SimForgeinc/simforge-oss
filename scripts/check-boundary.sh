@@ -21,7 +21,9 @@ for manifest in $(git ls-files -- '*Cargo.toml' | grep -v '^renderer/vendor/'); 
     while test "$dir" != "."; do dir="$(dirname "$dir")"; test -f "$dir/Cargo.toml" && grep -q '^\[workspace\]' "$dir/Cargo.toml" && covered=1 && break; done
     test $covered = 1 && continue
   fi
-  out="$(cargo metadata --format-version 1 --manifest-path "$manifest" 2>&1)" || { echo "boundary: cargo metadata failed for $manifest:"; echo "$out" | tail -5; fail=1; continue; }
+  err="$(mktemp)"
+  out="$(cargo metadata --format-version 1 --manifest-path "$manifest" 2>"$err")" || { echo "boundary: cargo metadata failed for $manifest:"; tail -5 "$err"; rm -f "$err"; fail=1; continue; }
+  rm -f "$err"
   bad="$(jq -r --arg root "$root/" '.packages[] | select(.source == null) | .manifest_path | select(startswith($root) | not)' <<<"$out")"
   if test -n "$bad"; then echo "boundary: $manifest resolves a path crate outside the SDK:"; sed 's/^/  /' <<<"$bad"; fail=1; fi
   echo "boundary: $manifest ok ($(jq '[.packages[] | select(.source == null)] | length' <<<"$out") local crates)"
