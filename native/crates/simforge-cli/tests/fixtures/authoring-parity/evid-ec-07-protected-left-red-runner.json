@@ -1,0 +1,12 @@
+{
+ "argv": [
+  "evidence",
+  "verify",
+  "examples/edge-cases/07-protected-left-red-runner/scenario.instance.json",
+  "examples/edge-cases/07-protected-left-red-runner/scenario.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "a44d4aa38ef13231cbb0efb14b4175c2e30bd1b76a2676fbf10a825e76c222bd"
+}

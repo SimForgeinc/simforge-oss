@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "examples/edge-cases/12-fire-engine-gridlock-escape/scenario.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "49dbcdd0d4b718f70bc3b438b132f879d16a652fd2ac0c5d6e2bcc4ceb249e26"
+}

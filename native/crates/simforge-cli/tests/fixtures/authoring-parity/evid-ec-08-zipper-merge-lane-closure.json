@@ -1,0 +1,12 @@
+{
+ "argv": [
+  "evidence",
+  "verify",
+  "examples/edge-cases/08-zipper-merge-lane-closure/scenario.instance.json",
+  "examples/edge-cases/08-zipper-merge-lane-closure/scenario.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "4471683742b79687575c7d650d9aa85c24c588cdd897d311306f2ecd2c52b679"
+}

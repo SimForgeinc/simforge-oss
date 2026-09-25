@@ -1,0 +1,16 @@
+{
+ "argv": [
+  "evidence",
+  "verify",
+  "fixtures/yale-header.xodr",
+  "examples/edge-cases/01-construction-chicane-reversing-truck/scenario.trace.json.gz"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "invalid_json",
+  "path": "fixtures/yale-header.xodr",
+  "reason": "expected value at line 1 column 1"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

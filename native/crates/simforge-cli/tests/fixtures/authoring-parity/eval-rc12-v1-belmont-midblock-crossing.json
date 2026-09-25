@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "evaluate",
+  "fixtures/archive-corpus/traces/rc12-v1-belmont-midblock-crossing.trace.json.gz"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "trace",
+  "reason": "metrics.criticalitySamples was not recorded by this trace (stored as v1, traceVersion 1); re-simulate it explicitly to evaluate it"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

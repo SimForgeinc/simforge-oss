@@ -1,0 +1,12 @@
+{
+ "argv": [
+  "evidence",
+  "verify",
+  "examples/edge-cases/03-red-light-ambulance-preemption/scenario.instance.json",
+  "examples/edge-cases/03-red-light-ambulance-preemption/scenario.trace.json.gz"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "e1160073359ba444a36407a9eadbf572877cfe0c65df79ec163ea9c78ae072c4"
+}
