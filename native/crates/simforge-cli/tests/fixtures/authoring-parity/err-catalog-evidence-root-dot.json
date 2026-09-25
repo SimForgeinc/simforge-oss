@@ -1,0 +1,20 @@
+{
+ "argv": [
+  "catalog",
+  "create",
+  "--map",
+  "richmond-field-station",
+  "--evidence-root",
+  "./",
+  "--out",
+  "{OUT}/c.json"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "bad_value",
+  "path": "--evidence-root",
+  "reason": "--evidence-root must be a non-empty relative path without .."
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

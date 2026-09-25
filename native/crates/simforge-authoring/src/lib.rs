@@ -14,6 +14,7 @@ pub mod engine;
 pub mod evaluate;
 pub mod evidence;
 pub mod export;
+pub mod catalog;
 pub mod instance;
 pub mod json;
 pub mod jsfmt;
