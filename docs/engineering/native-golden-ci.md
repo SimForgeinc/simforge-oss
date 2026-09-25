@@ -171,8 +171,34 @@ node qualification/golden-harness/golden.mjs record <scene>
 node qualification/golden-harness/golden.mjs verify all
 ```
 
-Scenes render up to `GOLDEN_JOBS` at a time (default 2, bounded by available
-memory), each with an even share of the cores (`LP_NUM_THREADS`).
+## In the merge gate
+
+Goldens run in the merge gate (`scripts/gate-local.sh`, step `goldens`,
+sandboxed, on lavapipe) whenever the renderer, the engine core, Cargo, the
+harness or `catalog/` changed, beside the `rust` and `python` steps, which start
+at the same time.
+
+- **Scheduling** (`ci-local.sh`): scenes start longest first (the last run's
+  per-scene durations, kept in the XDG cache), each once the memory not yet used
+  (the cgroup's limit minus its anonymous memory, and the host's MemAvailable)
+  covers `GOLDEN_MEM_GB` (15; a map scene holds up to ~14 GB on lavapipe) plus what
+  the running scenes may still grow into; the first always starts; at most
+  `GOLDEN_JOBS` (3).
+- **Skip by content, never by path**: `golden.mjs key <scene|all>` hashes
+  everything a scene's verify reads (the built `simforge-render` and
+  `render-parity` binaries, the job with paths normalised and every file it names,
+  the pinned packs, the sky pins, the parity timeline, the golden record, the
+  lavapipe identity and environment, the harness sources). A scene whose key a
+  sandboxed merge-gate PASS recorded in `$GATE_HOME/goldens-pass.jsonl` (HMAC'd
+  with the gate key; the step never sees the key or writes the ledger) is not
+  rendered again. Release builds are deterministic (two clean builds of `main`:
+  identical binaries), so any change that reaches the renderer binary re-renders.
+- **Nightly full run**: the merge service runs the gate on `main` with
+  `GOLDENS_FULL=1` (every scene, no skips) each night; a red night invalidates the
+  ledger, so every later gate renders every scene until a full PASS.
+
+Local runs (`ci-local.sh verify`, or the gate without a sandbox) render every
+scene unless you point `GOLDEN_PASS_LEDGER` at `<key> <sha>` lines you trust.
 
 ## Render-timeline scenes
 
