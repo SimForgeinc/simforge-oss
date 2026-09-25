@@ -161,13 +161,12 @@ fn verify(package: &Path) -> CmdResult {
     Ok(Outcome::ok(out))
 }
 
+/// Closure members: path to (sha256, bytes).
+type Members = std::collections::BTreeMap<String, (String, u64)>;
+
 /// A registry closure document in the package (`map/closure.json`, the
-/// release's canonical closure; `map/web-closure.json`, its web closure):
-/// member path to (sha256, bytes).
-fn closure_members(
-    ws: &Path,
-    member: &str,
-) -> Result<Option<std::collections::BTreeMap<String, (String, u64)>>, CliError> {
+/// release's canonical closure; `map/web-closure.json`, its web closure).
+fn closure_members(ws: &Path, member: &str) -> Result<Option<Members>, CliError> {
     let path = ws.join(member);
     if !path.is_file() {
         return Ok(None);
