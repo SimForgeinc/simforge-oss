@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/parking-transit/bus-pullout.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "e58567eddf43381100ddc77701977518c8d845037265fae160642aa966b7cf2b"
+}

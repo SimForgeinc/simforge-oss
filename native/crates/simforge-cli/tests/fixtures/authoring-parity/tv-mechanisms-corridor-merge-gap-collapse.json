@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/corridor/merge-gap-collapse.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "ed2105f81cd6d427953ca1a5a4e5fcb2ec5c35561bc99281823016d649cb04b4"
+}

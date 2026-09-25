@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/cpnco-parked-row.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "61962875a1a266ba92c60e6b8df554427fd421473b2a206f3ac9a3446fe101f7"
+}

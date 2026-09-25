@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/04-child-emerging-behind-bus/scenario.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "d0154ef62329902d2ca5f8c7fa14eae3534d007ecef122302074f67690ac76e0"
+}

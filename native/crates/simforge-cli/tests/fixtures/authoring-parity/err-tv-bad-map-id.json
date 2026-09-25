@@ -1,0 +1,17 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/bus-stop-emergence.template.json",
+  "--map",
+  "Bad_Map"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "unknown_map",
+  "path": "--map",
+  "reason": "invalid map identifier \"Bad_Map\""
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

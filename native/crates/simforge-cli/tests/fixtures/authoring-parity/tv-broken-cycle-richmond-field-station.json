@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "packages/cli/parity/fixtures/broken-templates/cycle.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "386db65473c2a8895e4d45ab402ef1e43405036165e3d68ac5d887b5c8e3d491"
+}

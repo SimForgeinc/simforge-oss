@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/obstacle/animal-crossing.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "30d9b03aee65550e3412373907c696eb8e2c34f0aac7f92e367753094efacdd6"
+}

@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/obstacle/disabled-vehicle.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "079cadeeaa7594a170da03c957c37b88e8458e9ac8a0f4391837d424f82def5f"
+}

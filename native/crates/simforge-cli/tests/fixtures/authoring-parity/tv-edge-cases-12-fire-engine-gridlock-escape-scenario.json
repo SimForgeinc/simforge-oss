@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/12-fire-engine-gridlock-escape/scenario.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "5df2a5b8b876a5877ce06568afbdd627b9ded33eb5b74f8636a9eb9a9d64eefb"
+}

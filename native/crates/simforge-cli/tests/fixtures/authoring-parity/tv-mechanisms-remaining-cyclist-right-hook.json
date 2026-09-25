@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/remaining/cyclist-right-hook.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "41011b1e202f5a7844ce3e22789a7af2d6a00d3d073db33ba145fa25fe52ca28"
+}

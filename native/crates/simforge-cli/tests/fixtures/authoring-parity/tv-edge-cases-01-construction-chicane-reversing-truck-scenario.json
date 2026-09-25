@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/01-construction-chicane-reversing-truck/scenario.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "ab746dd5b7979cbb5bdd9d2d7c8758f3f6536ff08fc1b00f835322016c5aab16"
+}

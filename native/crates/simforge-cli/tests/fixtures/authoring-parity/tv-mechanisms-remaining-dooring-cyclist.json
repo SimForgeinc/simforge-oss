@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/remaining/dooring-cyclist.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "330179f12e8b834870dc51434e6651f02c1f94ef456116999812184788f3bf4a"
+}

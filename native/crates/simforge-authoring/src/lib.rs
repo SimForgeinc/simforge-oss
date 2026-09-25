@@ -16,12 +16,16 @@ pub mod evidence;
 pub mod instance;
 pub mod json;
 pub mod jsvalue;
+pub mod jsfmt;
 pub mod maps;
 pub mod metrics;
 pub mod paths;
 pub mod readers;
 pub mod sites;
 pub mod template;
+pub mod validation;
 pub mod variation;
+pub mod template_new;
+pub mod validate;
 
 pub use simforge_compiler::CompileError;

@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/corridor/lead-hard-brake.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "f5ea3e92bc07917de7560dc4fcec8da5c71936752c8f3b379736c172bd76372b"
+}

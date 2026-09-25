@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/obstacle/fallen-cargo.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "a29164db0aa7e668b8b9498da8015eb78904fe87768037d25656880dc43f5be9"
+}

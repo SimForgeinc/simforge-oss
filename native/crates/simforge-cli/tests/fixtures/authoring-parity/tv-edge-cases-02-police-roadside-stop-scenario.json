@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/02-police-roadside-stop/scenario.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "48fb9482dcc5b5286f86893a0a7e98bdb8f015573314ef5bcf420bd8856c6fdd"
+}

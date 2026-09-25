@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/parking-transit/delivery-double-park.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "82a99310241b6ab1f15b3b668adefca14a4240c17d64b6dd7de8f1b117696cc4"
+}

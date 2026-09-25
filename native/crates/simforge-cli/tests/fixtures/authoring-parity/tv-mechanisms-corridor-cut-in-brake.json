@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/corridor/cut-in-brake.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "d679693447884efb3dfef3cacb65e16be28ce0b6ada75a7d98cd846a2816a8b8"
+}

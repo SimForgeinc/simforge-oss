@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/remaining/cross-traffic-stop-violation.template.json",
+  "--map",
+  "richmond-field-station"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "6ee182967c7e20c9c646513d5fa3545631c1a42187d5887d85a2cb8dcd69049d"
+}

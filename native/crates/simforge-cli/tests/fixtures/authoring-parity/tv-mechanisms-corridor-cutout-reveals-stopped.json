@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/corridor/cutout-reveals-stopped.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "b2b3bc1656cacc0b1ea3175f9445545edcf0f5a25508070701790ea2625e8d61"
+}

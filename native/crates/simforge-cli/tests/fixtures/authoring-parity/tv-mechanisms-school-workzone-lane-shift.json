@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/school-workzone/lane-shift.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "4f9ea128219baec0202ee42e3addd49abfec8401c0cc147eff83d75aec7d7796"
+}

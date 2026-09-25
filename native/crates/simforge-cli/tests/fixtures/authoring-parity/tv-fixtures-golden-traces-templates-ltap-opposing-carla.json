@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "fixtures/golden-traces/templates/ltap-opposing.carla.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "5b2590ebc9dd09927658895e854f6758794b4aa26615c2e17b7eb513e364f9b2"
+}
