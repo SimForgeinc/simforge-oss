@@ -340,3 +340,136 @@ fn a_record_that_does_not_name_its_input_or_another_world_is_refused() {
         "{err}"
     );
 }
+
+/// A maps cache laid out as `maps pull` installs a release: the semantic
+/// profile without the collider derivative, the web profile with it, both
+/// stamped with the release receipt (`releaseDigest`).
+fn pulled_layout(root: &Path, web_release: &str) -> PathBuf {
+    let src = map_dir();
+    let semantic = root.join("dev-assets/richmond-field-station");
+    let web = root.join("map-bundles/richmond-field-station");
+    fn copy_tree(from: &Path, to: &Path, skip_variants: bool) {
+        for entry in std::fs::read_dir(from).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            let name = entry.file_name();
+            if skip_variants && name == "variants" {
+                continue;
+            }
+            let target = to.join(&name);
+            if path.is_dir() {
+                std::fs::create_dir_all(&target).unwrap();
+                copy_tree(&path, &target, skip_variants);
+            } else {
+                std::fs::create_dir_all(to).unwrap();
+                std::fs::copy(&path, &target).unwrap();
+            }
+        }
+    }
+    copy_tree(&src, &semantic, true);
+    std::fs::create_dir_all(web.join("3d")).unwrap();
+    copy_tree(&src.join("3d"), &web.join("3d"), false);
+    // installed_maps finds the map by its plain map.xodr.
+    std::fs::write(
+        semantic.join("map.xodr"),
+        plain(std::fs::read(src.join("map.xodr.gz")).unwrap()),
+    )
+    .unwrap();
+    let receipt = |release: &str| {
+        json!({ "schema": "simforge.map-installation.v1", "name": "richmond-field-station", "version": "v9", "releaseDigest": release }).to_string()
+    };
+    std::fs::write(semantic.join(".map-release.json"), receipt(&"a".repeat(64))).unwrap();
+    std::fs::write(web.join(".map-release.json"), receipt(web_release)).unwrap();
+    assert!(!semantic.join("3d/variants").exists());
+    semantic
+}
+
+#[test]
+fn colliders_come_from_the_web_install_of_the_same_release() {
+    let home = tempfile::tempdir().unwrap();
+    let (case, resolved) = one_case();
+    let ws = workspace(home.path(), &case, &resolved, |_| {});
+    let maps = home.path().join("maps");
+    pulled_layout(&maps, &"a".repeat(64));
+    let (code, doc, err) = run(simforge(home.path())
+        .arg("simulate")
+        .arg(&ws)
+        .env("SIMFORGE_MAPS_CACHE_ROOT", &maps));
+    assert_eq!(code, 0, "{err}");
+    assert!(doc["map"]["staticColliders"].as_u64().unwrap() > 0, "{doc}");
+    assert_eq!(
+        doc["map"]["colliderSource"]["from"],
+        "the web install of the same release"
+    );
+    assert_eq!(doc["deterministicMatch"], true, "{doc}");
+}
+
+#[test]
+fn a_map_without_colliders_is_refused_unless_explicitly_allowed() {
+    let home = tempfile::tempdir().unwrap();
+    let (case, resolved) = one_case();
+    // The web install is of another release: its colliders are not used.
+    let ws = workspace(home.path(), &case, &resolved, |m| {
+        m["map"]["mapClosureDigest"] = Value::Null;
+    });
+    let maps = home.path().join("maps");
+    pulled_layout(&maps, &"b".repeat(64));
+    let (code, _, err) = run(simforge(home.path())
+        .arg("simulate")
+        .arg(&ws)
+        .env("SIMFORGE_MAPS_CACHE_ROOT", &maps));
+    assert_eq!(code, 2);
+    assert_eq!(err["code"], "static_colliders_missing", "{err}");
+    let (code, doc, err) = run(simforge(home.path())
+        .args(["simulate", "--allow-no-colliders"])
+        .arg(&ws)
+        .env("SIMFORGE_MAPS_CACHE_ROOT", &maps));
+    assert_eq!(code, 0, "{err}");
+    assert_eq!(doc["map"]["staticColliders"], 0);
+    assert_eq!(
+        doc["map"]["colliderSource"]["from"],
+        "none (--allow-no-colliders)"
+    );
+}
+
+/// Set to a maps cache where `simforge maps pull richmond-field-station@v2`
+/// ran (dev-assets/, .corpus/ and map-bundles/ of the public release).
+fn pulled_richmond() -> PathBuf {
+    PathBuf::from(std::env::var_os("SIMFORGE_CLI_TEST_PULLED_MAPS").expect(
+        "set SIMFORGE_CLI_TEST_PULLED_MAPS to a maps cache holding `simforge maps pull richmond-field-station@v2`",
+    ))
+}
+
+#[test]
+#[ignore = "needs a maps cache with the public richmond-field-station pulled (SIMFORGE_CLI_TEST_PULLED_MAPS)"]
+fn a_pulled_richmond_simulates_with_its_colliders_without_map_dir() {
+    let home = tempfile::tempdir().unwrap();
+    let (case, resolved) = one_case();
+    // The public release is another world than the committed golden one
+    // (other collider build, no ground surface): its closure and trace
+    // differ, so neither is pinned (another engine label: no match expected).
+    let ws = workspace(home.path(), &case, &resolved, |m| {
+        m["map"]["mapClosureDigest"] = Value::Null;
+        m["engine"]["engineSemVer"] = json!("0.0.0-public-world");
+    });
+    let maps = pulled_richmond();
+    let semantic = maps.join("dev-assets/richmond-field-station");
+    // The semantic install carries no collider derivative of its own.
+    let own = simforge_compiler::bundle::load_static_colliders(&semantic).1;
+    assert_eq!(
+        own.status,
+        simforge_compiler::bundle::StaticColliderStatus::Unavailable
+    );
+    let (code, doc, err) = run(simforge(home.path())
+        .arg("simulate")
+        .arg(&ws)
+        .env("SIMFORGE_MAPS_CACHE_ROOT", &maps));
+    assert_eq!(code, 0, "{err}");
+    assert!(doc["map"]["staticColliders"].as_u64().unwrap() > 0, "{doc}");
+    assert_eq!(
+        doc["map"]["colliderSource"]["dir"],
+        maps.join("map-bundles/richmond-field-station")
+            .to_str()
+            .unwrap()
+    );
+}

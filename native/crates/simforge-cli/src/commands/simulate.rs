@@ -28,10 +28,11 @@ use std::sync::Arc;
 use clap::Args;
 use serde_json::{json, Value};
 use simforge_compiler::bundle::{
-    load_static_colliders, DERIVED_FILE, LOCATIONS_FILE, SEARCH_INDEX_FILE, SIGNALS_FILE,
-    TOPOLOGY_FILE,
+    load_static_colliders, StaticColliderDiagnostics, StaticColliderStatus, DERIVED_FILE,
+    LOCATIONS_FILE, SEARCH_INDEX_FILE, SIGNALS_FILE, TOPOLOGY_FILE,
 };
 use simforge_compiler::{MapBundle, MapBundleSources};
+use simforge_core::engine::StaticMapCollider;
 use simforge_core::engine::{run_simulation, GroundContext, RunOptions};
 use simforge_core::map::TopologyIndex;
 
@@ -64,6 +65,9 @@ pub struct SimulateArgs {
     /// Instance mode (the positional is an instance file): also write the trace here (gzip JSON).
     #[arg(long, value_name = "FILE")]
     pub trace: Option<PathBuf>,
+    /// Simulate without map colliders when the map publishes none (recorded in the result; the default refuses).
+    #[arg(long)]
+    pub allow_no_colliders: bool,
 }
 
 /// `simulate <instance.json>`: when the positional is a file, it is an
@@ -75,6 +79,7 @@ fn run_instance(args: SimulateArgs) -> CmdResult {
         ("--out", args.out.is_some()),
         ("--map-dir", args.map_dir.is_some()),
         ("--cache-root", args.cache_root.is_some()),
+        ("--allow-no-colliders", args.allow_no_colliders),
     ];
     if let Some((flag, _)) = workspace_flags.iter().find(|(_, set)| *set) {
         return Err(CliError::new(
@@ -146,12 +151,86 @@ pub struct World {
     pub ground_digest: Option<String>,
     pub colliders: usize,
     pub collider_status: Value,
+    /// Where the static-collider derivative was read from.
+    pub collider_source: Value,
+}
+
+fn release_digest(dir: &Path) -> Option<String> {
+    let bytes = std::fs::read(dir.join(".map-release.json")).ok()?;
+    let receipt: Value = serde_json::from_slice(&bytes).ok()?;
+    receipt["releaseDigest"].as_str().map(str::to_owned)
+}
+
+/// The map's static colliders. `maps pull` installs the collider derivative
+/// only with the release's WEB closure (`map-bundles/<map>`), so a semantic
+/// (`dev-assets/`) or native (`.corpus/`) install reads it from the web
+/// install of the same release (same `.map-release.json` releaseDigest).
+/// Absent everywhere is an error (a 0-collider run is never silent) unless
+/// `allow_none`, which is recorded.
+fn colliders_for(
+    dir: &Path,
+    allow_none: bool,
+) -> Result<(Vec<StaticMapCollider>, StaticColliderDiagnostics, Value), CliError> {
+    let (own, own_diag) = load_static_colliders(dir);
+    if own_diag.status == StaticColliderStatus::Ready {
+        return Ok((
+            own,
+            own_diag,
+            json!({ "dir": dir, "from": "map directory" }),
+        ));
+    }
+    let mut tried = vec![json!({ "dir": dir, "reason": own_diag.warning })];
+    let sibling = (|| {
+        let name = dir.file_name()?;
+        let root = dir.parent()?.parent()?;
+        Some(root.join("map-bundles").join(name))
+    })();
+    if let (Some(web), Some(release)) = (sibling, release_digest(dir)) {
+        if web != dir && web.is_dir() {
+            if release_digest(&web).as_deref() == Some(release.as_str()) {
+                let (cs, diag) = load_static_colliders(&web);
+                if diag.status == StaticColliderStatus::Ready {
+                    return Ok((
+                        cs,
+                        diag,
+                        json!({ "dir": web, "from": "the web install of the same release", "releaseDigest": release }),
+                    ));
+                }
+                tried.push(json!({ "dir": web, "reason": diag.warning }));
+            } else {
+                tried.push(
+                    json!({ "dir": web, "reason": "a different release (releaseDigest differs)" }),
+                );
+            }
+        }
+    }
+    if allow_none {
+        return Ok((
+            own,
+            own_diag,
+            json!({ "from": "none (--allow-no-colliders)", "tried": tried }),
+        ));
+    }
+    Err(CliError::findings(
+        "static_colliders_missing",
+        format!(
+            "no static-collider derivative for {} (the map's colliders live in its release's web closure: `simforge maps pull` installs it under map-bundles/); pass --allow-no-colliders to simulate without them",
+            dir.display()
+        ),
+    )
+    .with_path(dir.display().to_string())
+    .with_detail(json!({ "tried": tried })))
 }
 
 /// Build the simulation world from a map directory: topology (with the
 /// map's speed limits from its signal catalog), static colliders, and the
 /// ground surface when the map publishes one.
 pub fn load_world(dir: &Path) -> Result<World, CliError> {
+    load_world_with(dir, false)
+}
+
+/// [`load_world`], optionally accepting a map without colliders.
+pub fn load_world_with(dir: &Path, allow_no_colliders: bool) -> Result<World, CliError> {
     let bad = |code: &str, reason: String| {
         CliError::findings(code.to_owned(), reason).with_path(dir.display().to_string())
     };
@@ -169,7 +248,7 @@ pub fn load_world(dir: &Path) -> Result<World, CliError> {
     let signals = json_file(&dir.join(SIGNALS_FILE))?;
     let xodr_text = String::from_utf8(xodr.clone())
         .map_err(|_| bad("map_invalid", "map.xodr is not UTF-8".into()))?;
-    let (colliders, diagnostics) = load_static_colliders(dir);
+    let (colliders, diagnostics, collider_source) = colliders_for(dir, allow_no_colliders)?;
     let collider_status = serde_json::to_value(diagnostics.status).unwrap_or(Value::Null);
     let bundle = MapBundle::from_sources(MapBundleSources {
         map_id: dir
@@ -215,6 +294,7 @@ pub fn load_world(dir: &Path) -> Result<World, CliError> {
         closure_digest,
         ground_digest,
         collider_status,
+        collider_source,
     })
 }
 
@@ -342,7 +422,7 @@ pub fn run(args: SimulateArgs, _ctx: &Ctx) -> CmdResult {
         args.map_dir.as_deref(),
         args.cache_root.as_deref(),
     )?;
-    let world = load_world(&map_dir)?;
+    let world = load_world_with(&map_dir, args.allow_no_colliders)?;
     if world.xodr_sha256 != want_xodr {
         return Err(CliError::findings(
             "map_mismatch",
@@ -368,6 +448,7 @@ pub fn run(args: SimulateArgs, _ctx: &Ctx) -> CmdResult {
         "groundDigest": world.ground_digest,
         "staticColliders": world.colliders,
         "colliderStatus": world.collider_status,
+        "colliderSource": world.collider_source,
     });
     if let Some(packaged) = &packaged_closure {
         if packaged != &world.closure_digest {
