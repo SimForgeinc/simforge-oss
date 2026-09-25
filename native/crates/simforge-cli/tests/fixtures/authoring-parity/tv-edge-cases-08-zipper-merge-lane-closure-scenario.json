@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/edge-cases/08-zipper-merge-lane-closure/scenario.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "0f852ba5d415b5eb96a801984d80c54e102a83b08453a5307b9f7b40eb0e7a2e"
+}

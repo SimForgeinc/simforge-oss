@@ -17,6 +17,7 @@ pub mod render;
 pub mod simulate;
 pub mod sites;
 pub mod skills;
+pub mod template;
 pub mod timeline;
 
 /// Commands whose surface is fixed but whose implementation has not landed.
@@ -74,6 +75,9 @@ pub enum Command {
     Sites(sites::SitesCommand),
     /// Template x site x draw -> one concrete scenario instance.
     Instantiate(instantiate::InstantiateArgs),
+    /// Template skeletons and tier-1 validation.
+    #[command(subcommand)]
+    Template(template::TemplateCommand),
 }
 
 pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
@@ -89,6 +93,7 @@ pub fn dispatch(command: Command, ctx: &Ctx) -> CmdResult {
         Command::Skills(cmd) => skills::run(cmd, ctx),
         Command::Sites(cmd) => sites::run(cmd, ctx),
         Command::Instantiate(args) => instantiate::run(args, ctx),
+        Command::Template(cmd) => template::run(cmd, ctx),
     }
 }
 

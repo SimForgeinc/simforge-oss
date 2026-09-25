@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/junction-vru/right-turn-crosswalk.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "dd4c6f8971c175ebce392f6829dda7df43d4a4d6b4425f24af5540f622eaa54d"
+}

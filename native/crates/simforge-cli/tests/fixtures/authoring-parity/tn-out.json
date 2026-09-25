@@ -1,0 +1,14 @@
+{
+ "argv": [
+  "template",
+  "new",
+  "--out",
+  "{OUT}/new.template.json"
+ ],
+ "exit": 0,
+ "files": {
+  "new.template.json": "d6267217c64e0de7fa4eb8cd9c246db1a27a3d34c92eef6f243d08f9dc3cb4d1"
+ },
+ "stderr": null,
+ "stdoutSha256": "6f3afc60a7977042a604eb4fa38b45cfb78f9dc060115d0a2ae439bc75a8706f"
+}

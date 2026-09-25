@@ -1,0 +1,16 @@
+{
+ "argv": [
+  "template",
+  "new",
+  "--map",
+  "richmond-field-station",
+  "--out",
+  "{OUT}/nested/new.template.json"
+ ],
+ "exit": 0,
+ "files": {
+  "nested/new.template.json": "8f3b6b146ec3545fb95647b1976939197b4db98b8b987648a75c2ebe1e3a2c7e"
+ },
+ "stderr": null,
+ "stdoutSha256": "9eb721353c1a4a802d362743dce2d097971d2adf274483212436ed054e4a98f1"
+}

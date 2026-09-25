@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/remaining/red-light-late-entry.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "3985b394dedee05ce4d1c8032455fac6a521f9dfa634f646b971165d5755b404"
+}

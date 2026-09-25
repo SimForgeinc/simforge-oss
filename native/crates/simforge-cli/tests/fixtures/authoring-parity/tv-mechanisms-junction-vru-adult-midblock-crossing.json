@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "template",
+  "validate",
+  "examples/mechanisms/junction-vru/adult-midblock-crossing.template.json"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "3ec3e0e3909d0b0cc7cb8b95469f84c313ee42206c805f3363e5928879256143"
+}

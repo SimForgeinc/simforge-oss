@@ -2745,9 +2745,44 @@ pub struct GapTarget {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "mode", rename_all = "camelCase", deny_unknown_fields)]
 pub enum LaneTarget {
-    Relative { dk: i32 },
-    Absolute { k: i32 },
-    ToRole { role: String },
+    Relative {
+        #[serde(deserialize_with = "lane_step_dk")]
+        dk: i32,
+    },
+    Absolute {
+        #[serde(deserialize_with = "lane_index_k")]
+        k: i32,
+    },
+    ToRole {
+        role: String,
+    },
+}
+
+/// An integer within `[-bound, bound]`, refused with the schema's wording.
+fn bounded_lane<'de, D: Deserializer<'de>>(d: D, bound: i32) -> Result<i32, D::Error> {
+    let value = i32::deserialize(d)?;
+    if value > bound {
+        return Err(de::Error::custom(format!(
+            "Too big: expected number to be <={bound}"
+        )));
+    }
+    if value < -bound {
+        return Err(de::Error::custom(format!(
+            "Too small: expected number to be >={}",
+            -bound
+        )));
+    }
+    Ok(value)
+}
+
+/// `changeLane` relative step: at most four lanes either way.
+fn lane_step_dk<'de, D: Deserializer<'de>>(d: D) -> Result<i32, D::Error> {
+    bounded_lane(d, 4)
+}
+
+/// `changeLane` absolute lane index: within eight lanes of the reference.
+fn lane_index_k<'de, D: Deserializer<'de>>(d: D) -> Result<i32, D::Error> {
+    bounded_lane(d, 8)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -4164,4 +4199,32 @@ pub fn param_refs_by_path(template: &ScenarioTemplate) -> BTreeMap<String, Vec<S
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lane_change_targets_are_bounded_like_the_schema() {
+        let parse = |v: Value| serde_json::from_value::<LaneTarget>(v).map_err(|e| e.to_string());
+        assert_eq!(
+            parse(serde_json::json!({"mode": "relative", "dk": 4})),
+            Ok(LaneTarget::Relative { dk: 4 })
+        );
+        assert_eq!(
+            parse(serde_json::json!({"mode": "absolute", "k": -8})),
+            Ok(LaneTarget::Absolute { k: -8 })
+        );
+        let too_big = parse(serde_json::json!({"mode": "relative", "dk": 5})).unwrap_err();
+        assert!(
+            too_big.contains("Too big: expected number to be <=4"),
+            "{too_big}"
+        );
+        let too_small = parse(serde_json::json!({"mode": "absolute", "k": -9})).unwrap_err();
+        assert!(
+            too_small.contains("Too small: expected number to be >=-8"),
+            "{too_small}"
+        );
+    }
 }
