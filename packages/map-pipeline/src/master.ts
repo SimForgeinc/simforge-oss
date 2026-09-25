@@ -10,6 +10,8 @@ import { readWholeFile, sha256, sha256Large } from './closure.js';
 import { neutralizeExportErrorMaterials } from './export-error-materials.js';
 import type { ExportErrorMaterialReport } from './export-error-materials.js';
 import { assertSignaturesEquivalent, jsonImageDigests, materialSignature, sceneNodeSignatures } from './identity.js';
+import { repairVertexFrames } from './vertex-frames.js';
+import type { VertexFrameReport } from './vertex-frames.js';
 import type { NodeSignature } from './identity.js';
 import { classifyImages, encodeConcurrency, encodeKtx2, ktx2ToolFingerprint, mapConcurrent } from './ktx2.js';
 import type { ImageClass, Ktx2Options } from './ktx2.js';
@@ -36,12 +38,14 @@ import type { TerrainLayerReport } from './terrain-layer-textures.js';
  * Export defects that would otherwise render as errors are corrected as
  * JSON-level material edits and listed in `master-report.json`: magenta
  * "missing material" placeholders, PBR factors outside [0, 1], untextured
- * terrain layers, and metallic foliage. Nothing else differs from the source,
+ * terrain layers, and metallic foliage; and zero-length or non-finite vertex
+ * normals and tangents are repaired (vertex-frames.ts). Nothing else differs from the source,
  * and the builder proves it: every mesh node's world transform, vertex and
  * index data, and material sampling function (modulo the listed fixes) is
  * re-derived from the written files and compared with the source.
  */
-export const MASTER_BUILDER_REVISION = 1;
+/** 2: zero-length / non-finite vertex normals and tangents are repaired (vertex-frames.ts). */
+export const MASTER_BUILDER_REVISION = 2;
 export const GLTF_TRANSFORM_VERSION = '4.4.2';
 
 const CLASSIFY_VEGETATION = /veg|tree|bush|grass|foliage|plant/;
@@ -83,6 +87,8 @@ export interface MasterReport {
     pbrFactorClamps: MaterialRangeReport;
     terrainLayers: TerrainLayerReport;
     vegetationMaterialsMadeDielectric: string[];
+    /** Vertex normals and tangents repaired (the proof compares the repaired values). */
+    vertexFrames: VertexFrameReport;
   };
   images: MasterImageStats;
   proof: { meshNodesCompared: number; materialsExemptedByFix: number };
@@ -191,6 +197,9 @@ export async function buildMaster(options: BuildMasterOptions): Promise<MasterBu
     material.setMetallicFactor(0);
     dielectric.push(material.getName());
   }
+  // Zero-length or non-finite vertex normals and tangents (vertex-frames.ts).
+  // Before the signatures: the proof then holds modulo this listed fix.
+  const vertexFrames = repairVertexFrames(document);
   const fixedNames = new Set<string>([
     ...exportErrors.names,
     ...Object.keys(clamps.byName),
@@ -313,7 +322,7 @@ export async function buildMaster(options: BuildMasterOptions): Promise<MasterBu
       skins: root.listSkins().length,
       orphanRootsAttached,
     },
-    fixes: { exportErrorMaterials: exportErrors, pbrFactorClamps: clamps, terrainLayers: terrain, vegetationMaterialsMadeDielectric: dielectric },
+    fixes: { exportErrorMaterials: exportErrors, pbrFactorClamps: clamps, terrainLayers: terrain, vegetationMaterialsMadeDielectric: dielectric, vertexFrames },
     images: { distinct: pngCount, pngBytes, ktx2Bytes, encoded, cached, dilated, byClass, byLongestEdge },
     proof,
     toolFingerprint: sha256(`${masterToolFingerprint(options.ktx2)}\0${terrainDonorPoolDigest(donorLibrary)}`),

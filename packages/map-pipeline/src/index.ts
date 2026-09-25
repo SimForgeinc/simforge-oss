@@ -42,6 +42,8 @@ export * from './geometry-lod/index.js';
 export * from './road-decals.js';
 export * from './texture-density.js';
 export * from './luminaires.js';
+export { repairVertexFrames, VertexFrameError } from './vertex-frames.js';
+export type { VertexFrameReport } from './vertex-frames.js';
 export { substituteLods } from './geometry-lod/substitute.js';
 export type { SubstituteOptions, SubstituteReport } from './geometry-lod/substitute.js';
 
