@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "fixtures/archive-corpus/traces/rc72-engine070-richmond-commit.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "4fb787783baa4453a6611c10b4714f0aa73f8888b90e3a1ead77d60d38aa7ca0"
+}

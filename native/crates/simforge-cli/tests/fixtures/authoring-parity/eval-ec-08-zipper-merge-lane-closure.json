@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "examples/edge-cases/08-zipper-merge-lane-closure/scenario.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "419a3968e945a4b7b00a83d852ac21c8afd8894a16f2612a8b379f456ed2f82e"
+}

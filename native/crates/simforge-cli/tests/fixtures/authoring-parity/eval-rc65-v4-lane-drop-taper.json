@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "fixtures/archive-corpus/traces/rc65-v4-lane-drop-taper.trace.json.gz"
+ ],
+ "exit": 0,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "b49edeb12286330011cdc9ad3818daed0d16d0c81f5559b62e813e0bea337243"
+}

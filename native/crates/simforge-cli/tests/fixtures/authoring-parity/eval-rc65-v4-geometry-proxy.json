@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "fixtures/archive-corpus/traces/rc65-v4-geometry-proxy.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "09f88d837e490cdfe2e9898fe636f0166d97991d0c774073326472ee4fcba8b7"
+}

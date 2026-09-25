@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "examples/edge-cases/11-double-threat-crosswalk/scenario.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "f220caaca24be4aa53406bbf857794ddc5ed162994ddc0b06b93824a9d1eb0a0"
+}

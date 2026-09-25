@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "examples/edge-cases/05-cyclist-occlusion-conflict/scenario.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "3de63ba78e13a0166a828b7538bb7642b7681a4bc41b91c89db0a76ffa30e5e8"
+}

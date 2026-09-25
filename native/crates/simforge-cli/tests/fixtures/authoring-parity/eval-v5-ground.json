@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "evaluate",
+  "fixtures/scenario-package/sources/v5-ground.trace.json.gz"
+ ],
+ "exit": 2,
+ "files": {},
+ "stderr": null,
+ "stdoutSha256": "9ed9333ee568d826ce28dc15b7351c9566206135ae57616d417cf6584f83e55c"
+}

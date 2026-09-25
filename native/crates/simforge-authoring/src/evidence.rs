@@ -447,3 +447,40 @@ fn object(entries: Vec<(&str, Option<JsValue>)>) -> JsValue {
             .collect(),
     )
 }
+
+/// `simforge evidence verify <instance> <trace>`: the report (after the two
+/// file arguments) and whether the evidence holds.
+pub fn run_verify(
+    instance_file: &std::path::Path,
+    instance_arg: &str,
+    trace_file: &std::path::Path,
+    trace_arg: &str,
+) -> Result<(JsValue, bool), simforge_compiler::CompileError> {
+    let instance = crate::readers::read_instance(instance_file)?;
+    let handle = crate::readers::read_trace(trace_file)?;
+    // `toTrace()`: the quantised document.
+    let mut trace = handle.inner().clone();
+    trace.quantize();
+    let header = JsValue::from_serialize(&trace.header)?;
+    let physics_mode = serde_json::to_value(instance.input.physics_mode()).unwrap_or_default();
+    let report = verify_evidence_hashes(
+        &instance.document,
+        &TraceView {
+            header: &header,
+            track_ids: trace.ticks.actors.keys().cloned().collect(),
+        },
+        physics_mode.as_str().unwrap_or_default(),
+    );
+    let ok = report.ok;
+    let mut entries = vec![
+        (
+            "instance".to_owned(),
+            JsValue::String(instance_arg.to_owned()),
+        ),
+        ("trace".to_owned(), JsValue::String(trace_arg.to_owned())),
+    ];
+    if let JsValue::Object(fields) = JsValue::from_serialize(&report)? {
+        entries.extend(fields);
+    }
+    Ok((JsValue::object(entries), ok))
+}

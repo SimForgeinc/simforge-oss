@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "evaluate",
+  "fixtures/archive-corpus/traces/rc12-v3-construction-chicane.trace.json.gz"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "trace",
+  "reason": "ticks.actors.*.lateralOffsetM was not recorded by this trace (stored as v3, traceVersion 3); re-simulate it explicitly to evaluate it"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}

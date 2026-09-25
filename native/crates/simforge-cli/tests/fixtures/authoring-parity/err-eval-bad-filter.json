@@ -1,0 +1,16 @@
+{
+ "argv": [
+  "evaluate",
+  "fixtures/archive-corpus/traces/rc12-v1-belmont-midblock-crossing.trace.json.gz",
+  "--filter",
+  "bogus"
+ ],
+ "exit": 1,
+ "files": {},
+ "stderr": {
+  "code": "bad_value",
+  "path": "--filter",
+  "reason": "--filter must be critical | negative-control | all"
+ },
+ "stdoutSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+}
