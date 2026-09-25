@@ -1,9 +1,16 @@
 [package]
-name = "simforge-cli"
+# The package is `simforge` (release archives and the Homebrew formula are
+# named after it); the directory keeps its pre-split name until track S
+# relocates it.
+name = "simforge"
 description = "The SimForge command line: package, maps, assets, timeline, render, simulate, env serve, doctor."
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
+repository = "https://github.com/SimForgeinc/simforge-sdk"
+homepage = "https://simforge.ai"
+documentation = "https://docs.simforge.ai"
+readme = false
 rust-version = "1.85"
 # A member of the renderer workspace, not of native/: `simforge render` and
 # `simforge env serve` link the renderer as a library, and only the renderer
@@ -30,6 +37,14 @@ wgpu = { version = "29.0.4", default-features = false, features = ["std", "vulka
 futures-lite = "2"
 ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
 fs4 = { version = "1", default-features = false }
+sha2 = "0.10"
+flate2 = "1"
+# The engine: traces, the render timeline and its sampler.
+simforge-core = { path = "../simforge-core" }
+
+[package.metadata.dist]
+# Explicit: cargo-dist 0.33's global package filter does not select it.
+dist = true
 
 [dev-dependencies]
 tempfile = "3"

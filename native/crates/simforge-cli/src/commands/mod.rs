@@ -21,7 +21,6 @@ pub mod timeline;
 pub const PLANNED: &[&str] = &[
     "maps pull",
     "assets pull",
-    "timeline build",
     "render",
     "simulate",
     "env serve",

@@ -11,8 +11,10 @@
 pub mod commands;
 pub mod contract;
 pub mod help;
+pub mod installed_maps;
 pub mod net;
 pub mod paths;
+pub mod workspace;
 
 use std::ffi::OsString;
 

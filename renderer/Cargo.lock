@@ -5513,6 +5513,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
 
 [[package]]
+name = "simforge"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "flate2",
+ "fs4",
+ "futures-lite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "simforge-core",
+ "tempfile",
+ "ureq",
+ "wgpu",
+]
+
+[[package]]
 name = "simforge-assets"
 version = "0.1.0"
 dependencies = [
@@ -5521,20 +5538,6 @@ dependencies = [
  "sha2",
  "thiserror 2.0.20",
  "ureq",
-]
-
-[[package]]
-name = "simforge-cli"
-version = "0.1.0"
-dependencies = [
- "clap",
- "fs4",
- "futures-lite",
- "serde",
- "serde_json",
- "tempfile",
- "ureq",
- "wgpu",
 ]
 
 [[package]]
