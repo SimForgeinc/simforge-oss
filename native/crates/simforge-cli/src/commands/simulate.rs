@@ -1,4 +1,5 @@
-//! `simforge simulate`: re-simulate a workspace from its resolution record.
+//! `simforge simulate`: re-simulate a workspace from its resolution record,
+//! or (the positional is a file) run an authoring instance once.
 //!
 //! The resolution (`simulation/resolution.json.gz`, `simforge.sim-resolution/v1`)
 //! holds the exact input the packaged trace was simulated from
@@ -45,8 +46,8 @@ pub const RESIMULATED_DIR: &str = "simulation/resimulated";
 
 #[derive(Debug, Args)]
 pub struct SimulateArgs {
-    /// The workspace directory (an imported scenario package).
-    #[arg(value_name = "WORKSPACE")]
+    /// The workspace directory (an imported scenario package), or an instance file (scenario-instance or a bare SimScenarioInput).
+    #[arg(value_name = "WORKSPACE|INSTANCE")]
     pub workspace: PathBuf,
     /// Override the resolution's seed (the trace is then expected to differ).
     #[arg(long, value_name = "SEED")]
@@ -60,6 +61,37 @@ pub struct SimulateArgs {
     /// Map cache root to search. Default: SIMFORGE_MAPS_CACHE_ROOT, then $XDG_DATA_HOME/simforge/maps.
     #[arg(long, value_name = "DIR")]
     pub cache_root: Option<PathBuf>,
+    /// Instance mode (the positional is an instance file): also write the trace here (gzip JSON).
+    #[arg(long, value_name = "FILE")]
+    pub trace: Option<PathBuf>,
+}
+
+/// `simulate <instance.json>`: when the positional is a file, it is an
+/// authoring instance (`kind: scenario-instance`, or a bare SimScenarioInput)
+/// run once on its installed map; a directory is a workspace re-simulation.
+fn run_instance(args: SimulateArgs) -> CmdResult {
+    let workspace_flags = [
+        ("--seed", args.seed.is_some()),
+        ("--out", args.out.is_some()),
+        ("--map-dir", args.map_dir.is_some()),
+        ("--cache-root", args.cache_root.is_some()),
+    ];
+    if let Some((flag, _)) = workspace_flags.iter().find(|(_, set)| *set) {
+        return Err(CliError::new(
+            "conflicting_arguments",
+            format!("{flag} applies to a workspace; an instance file takes only --trace"),
+        )
+        .with_path(*flag));
+    }
+    let root = super::authoring_support::map_root()?;
+    let (payload, ok) = simforge_authoring::simulate::run_simulate_instance(
+        &root,
+        &args.workspace,
+        &args.workspace.display().to_string(),
+        args.trace.as_deref(),
+    )
+    .map_err(super::authoring_support::cli_error)?;
+    Ok(Outcome { value: payload.to_value(), exit: super::authoring_support::exit_for(ok) })
 }
 
 fn gunzip_if_needed(bytes: Vec<u8>) -> Result<Vec<u8>, std::io::Error> {
@@ -225,6 +257,20 @@ fn write_gzip(path: &Path, bytes: &[u8]) -> Result<(), CliError> {
 }
 
 pub fn run(args: SimulateArgs, _ctx: &Ctx) -> CmdResult {
+    // A file (or a missing `*.json` path, so it is reported as the missing
+    // instance it names) is an instance; anything else is a workspace.
+    let instance_path = args.workspace.is_file()
+        || (!args.workspace.exists() && args.workspace.extension().is_some_and(|e| e == "json"));
+    if instance_path {
+        return run_instance(args);
+    }
+    if args.trace.is_some() {
+        return Err(CliError::new(
+            "conflicting_arguments",
+            "--trace applies to an instance file; a workspace re-simulation writes --out",
+        )
+        .with_path("--trace"));
+    }
     let ws = Workspace::open(&args.workspace)?;
     let resolution_path = ws.member(RESOLUTION);
     let resolution: Value =
