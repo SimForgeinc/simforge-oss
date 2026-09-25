@@ -17,11 +17,74 @@
 #
 # The base is the merge base of HEAD and origin/main, or HEAD^1 when HEAD is
 # already on main. No skip flags. The tree must be clean.
+#
+# Sandbox. The steps run PR code, so the merge service runs them in a container
+# with no credentials, no docker socket, no GPU (lavapipe only), the host git
+# objects read-only, its own caches, and egress only through an allowlisting
+# proxy. The container and proxy definitions are the operator's, not this
+# repository's: GATE_SANDBOX_DEFS names a directory holding Dockerfile,
+# proxy.Dockerfile, squid.conf and allowlist.
+#   GATE_SANDBOX=off       (default) on the host: your own code on your machine
+#   GATE_SANDBOX=required  the merge service: never run PR code on the host
+# Map corpora (GATE_SANDBOX_MAPS, default the local map cache) and verified sky
+# plates (GATE_SANDBOX_SKY) are mounted read-only. The record says which mode ran.
+# `scripts/gate-local.sh --step <name> [args]` runs one step (what the sandbox
+# executes); it writes no record.
 # Records: $GATE_HOME/records.jsonl (hash chain + HMAC with $GATE_HOME/.gate-key),
 # run logs under $GATE_HOME/runs/<id>/. Exit 0 pass, 1 fail, 2 could not run.
 # The LAST line is always
 #   GATE PASS|FAIL|ERROR sha=<sha> time=<s>s [failing=<step>] record=<path>
 set -uo pipefail
+
+if test "${1:-}" = --step; then
+  # One step, in the current checkout; GATE_BASE names the base. No record.
+  shift; step="$1"; shift
+  root="$(git rev-parse --show-toplevel)"; cd "$root"
+  changed="$(git diff --name-only "$GATE_BASE" HEAD)"
+  out="${GATE_STEP_OUT:-$(mktemp -d)}"; mkdir -p "$out"
+  ratchet() { # <workspace dir> <fmt log> <clippy log>
+    local ws="$1" bad="" f
+    local fmt_files; fmt_files="$(grep -oE '^Diff in [^:]+' "$2" | sed "s#^Diff in $root/##" | sort -u)"
+    local clippy_files; clippy_files="$(grep -oE -- '--> [^:]+' "$3" | sed 's/^--> //' | sed "s#^#$ws/#" | sort -u)"
+    for f in $fmt_files; do grep -qxF "$f" <<<"$changed" && bad+=" rustfmt:$f"; done
+    for f in $clippy_files; do f="$(realpath -m --relative-to="$root" "$root/$f")"; grep -qxF "$f" <<<"$changed" && bad+=" clippy:$f"; done
+    test -z "$bad" || { echo "ratchet: files this change touched need fixing:$bad"; return 1; }
+  }
+  case "$step" in
+    boundary) exec scripts/check-boundary.sh ;;
+    rust)
+      ws="$1"
+      ( cd "$ws" && cargo fmt --check ) >"$out/fmt.txt" 2>&1
+      ( cd "$ws" && cargo clippy --all-targets --message-format=short -- --cap-lints warn ) >"$out/clippy.txt" 2>&1 || { tail -40 "$out/clippy.txt"; exit 1; }
+      ratchet "$ws" "$out/fmt.txt" "$out/clippy.txt" || exit 1
+      # The PyO3 extension crate links libpython only as a test binary; its
+      # behaviour is covered by the gym's pytest (built by maturin, abi3).
+      excl=(); test "$ws" = native && excl=(--workspace --exclude simforge-bindings-python)
+      if test "$ws" = native/crates/simforge-timeline-python; then
+        echo "nextest: skipped (a PyO3 wheel crate; adapters/timeline's pytest exercises it)"; exit 0
+      fi
+      cd "$ws" && exec cargo nextest run --no-fail-fast --no-tests=pass "${excl[@]}" ;;
+    python)
+      rc=0
+      for d in "$@"; do
+        echo "== pytest $d"
+        # CPU only (GPU-only tests skip themselves). A maturin package is rebuilt
+        # from this checkout (uv caches wheels by version, not by content).
+        rebuild=()
+        if grep -q 'build-backend = "maturin"' "$d/pyproject.toml"; then
+          rebuild=(--reinstall-package "$(python3 -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb"))["project"]["name"])' "$d/pyproject.toml")")
+        fi
+        ( cd "$d" && CUDA_VISIBLE_DEVICES="" uv run --quiet "${rebuild[@]}" --with pytest python -m pytest -q -p no:cacheprovider ) || rc=1
+      done
+      exit $rc ;;
+    goldens)
+      maps="${SIMFORGE_MAPS_CACHE_ROOT:-$HOME/.local/share/simforge/maps}"
+      export SIMFORGE_CORPUS_RICHMOND="${SIMFORGE_CORPUS_RICHMOND:-$maps/.corpus/richmond-field-station}"
+      export SIMFORGE_CORPUS_YALE="${SIMFORGE_CORPUS_YALE:-$maps/.corpus/yale-street}"
+      exec qualification/golden-harness/ci-local.sh verify ;;
+    *) echo "gate: unknown step $step" >&2; exit 2 ;;
+  esac
+fi
 
 GATE_HOME="${GATE_HOME:-${XDG_CACHE_HOME:-$HOME/.cache}/simforge-gate}"
 TRUNK="main"
@@ -36,8 +99,9 @@ sha="$(git rev-parse HEAD)"
 die() { echo "gate: $1" >&2; echo "GATE ERROR sha=$sha time=$(( $(date +%s) - started ))s $1"; exit 2; }
 
 test -z "$(git status --porcelain --untracked-files=normal)" || { git status --short | head -20 >&2; die "the working tree is not clean"; }
-for tool in git jq cargo uv python3 node; do command -v "$tool" >/dev/null || die "missing tool: $tool"; done
-cargo nextest --version >/dev/null 2>&1 || die "missing tool: cargo-nextest"
+if test "${GATE_SANDBOX:-off}" = required; then tools="git jq docker"; else tools="git jq cargo uv python3 node"; fi
+for tool in $tools; do command -v "$tool" >/dev/null || die "missing tool: $tool"; done
+test "${GATE_SANDBOX:-off}" = required || cargo nextest --version >/dev/null 2>&1 || die "missing tool: cargo-nextest"
 
 exec 9>"$GATE_HOME/gate.lock"
 if ! flock -n 9; then
@@ -60,52 +124,78 @@ export CARGO_TERM_COLOR=never CI=true
 
 steps_json="[]"; failing=""
 record_step() { steps_json="$(jq -c --arg n "$1" --arg s "$2" --argjson t "$3" --arg l "$4" --arg d "$5" '. + [{name:$n,status:$s,seconds:$t,log:$l,detail:$d}]' <<<"$steps_json")"; printf '  %-4s  %-22s %5ss  %s\n' "$(tr a-z A-Z <<<"$2")" "$1" "$3" "$5"; }
-run_step() { local name="$1" detail="$2"; shift 3; local log="$run_dir/${name//[:\/]/-}.log" t0 status; t0=$(date +%s)
-  ( "$@" ) >"$log" 2>&1; status=$?; local dt=$(( $(date +%s) - t0 ))
+SANDBOX="${GATE_SANDBOX:-off}"
+container=""
+cleanup() { test -n "$container" && docker rm -f "$container" >/dev/null 2>&1; return 0; }
+trap cleanup EXIT
+if test "$SANDBOX" = required; then
+  defs_src="${GATE_SANDBOX_DEFS:?GATE_SANDBOX=required needs GATE_SANDBOX_DEFS (Dockerfile, proxy.Dockerfile, squid.conf, allowlist)}"
+  docker info >/dev/null 2>&1 || die "GATE_SANDBOX=required but docker is not usable"
+  defs="$run_dir/sandbox-defs"; mkdir -p "$defs"
+  for f in Dockerfile proxy.Dockerfile squid.conf allowlist; do cp "$defs_src/$f" "$defs/$f" 2>/dev/null || die "$defs_src/$f missing"; done
+  gate_tag="simforge-gate:$(sha256sum <"$defs/Dockerfile" | cut -c1-12)"
+  proxy_tag="simforge-gate-proxy:$(cat "$defs"/proxy.Dockerfile "$defs"/squid.conf "$defs"/allowlist | sha256sum | cut -c1-12)"
+  docker image inspect "$gate_tag" >/dev/null 2>&1 ||
+    docker build -q -t "$gate_tag" --build-arg UID="$(id -u)" --build-arg GID="$(id -g)" -f "$defs/Dockerfile" "$defs" >"$run_dir/image-build.log" 2>&1 || die "could not build $gate_tag"
+  docker image inspect "$proxy_tag" >/dev/null 2>&1 ||
+    docker build -q -t "$proxy_tag" -f "$defs/proxy.Dockerfile" "$defs" >"$run_dir/proxy-build.log" 2>&1 || die "could not build $proxy_tag"
+  docker network inspect gate-internal >/dev/null 2>&1 || docker network create --internal gate-internal >/dev/null || die "no gate-internal network"
+  if test "$(docker inspect -f '{{.Config.Image}} {{.State.Running}}' gate-proxy 2>/dev/null)" != "$proxy_tag true"; then
+    docker rm -f gate-proxy >/dev/null 2>&1
+    dns_opts=(); for ns in $(awk '/^nameserver [0-9.]+$/ { print $2 }' /run/systemd/resolve/resolv.conf 2>/dev/null); do dns_opts+=(--dns "$ns"); done
+    docker run -d --name gate-proxy --restart unless-stopped --ulimit nofile=65536:65536 "${dns_opts[@]}" --network bridge "$proxy_tag" >/dev/null || die "could not start gate-proxy"
+    docker network connect gate-internal gate-proxy || die "could not attach gate-proxy"
+  fi
+  docker cp gate-proxy:/etc/squid/proxy.crt "$defs/proxy.crt" >/dev/null 2>&1 || die "could not read gate-proxy's certificate"
+  cat /etc/ssl/certs/ca-certificates.crt "$defs/proxy.crt" >"$defs/ca-bundle.crt"
+  sbx="$GATE_HOME/sandbox-cache"; mkdir -p "$sbx"
+  common="$(cd "$(git rev-parse --git-common-dir)" && pwd)"
+  maps="${GATE_SANDBOX_MAPS:-${SIMFORGE_MAPS_CACHE_ROOT:-$HOME/.local/share/simforge/maps}}"
+  sky="${GATE_SANDBOX_SKY:-${XDG_CACHE_HOME:-$HOME/.cache}/simforge/sky-products}"
+  mounts=(-v "$sbx:/cache" -v "$common:$common:ro" -v "$script_path:/gate/gate-local.sh:ro" -v "$defs/proxy.crt:/gate/proxy.crt:ro" -v "$defs/ca-bundle.crt:/etc/ssl/certs/ca-certificates.crt:ro")
+  # Object stores this clone borrows from (git alternates) are mounted read-only too.
+  while IFS= read -r alt; do test -d "$alt" && mounts+=(-v "$alt:$alt:ro"); done < <(cat "$common/objects/info/alternates" 2>/dev/null)
+  test -d "$maps/.corpus" && mounts+=(-v "$maps/.corpus:/maps/.corpus:ro")
+  test -d "$sky" && mounts+=(-v "$sky:/sky-products:ro")
+  proxy=http://gate-proxy:8888; sproxy=https://gate-proxy:8443
+  container="gate-$run_id"
+  docker run -d --name "$container" --network gate-internal \
+    --cpus "${SANDBOX_CPUS:-12}" --memory "${SANDBOX_MEMORY:-32g}" --pids-limit 8192 --security-opt no-new-privileges "${mounts[@]}" \
+    -e HTTP_PROXY="$proxy" -e http_proxy="$proxy" -e HTTPS_PROXY="$proxy" -e https_proxy="$sproxy" \
+    -e NO_PROXY="localhost,127.0.0.1,gate-proxy" -e no_proxy="localhost,127.0.0.1,gate-proxy" \
+    -e NODE_EXTRA_CA_CERTS=/gate/proxy.crt -e SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt -e NODE_USE_ENV_PROXY=1 \
+    -e CARGO_HTTP_PROXY="$proxy" -e GIT_PROXY_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt -e UV_NATIVE_TLS=1 \
+    -e UV_CACHE_DIR=/cache/uv -e XDG_CACHE_HOME=/cache/xdg -e SIMFORGE_MAPS_CACHE_ROOT=/maps -e SIMFORGE_SKY_PRODUCTS=/sky-products -e CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}" \
+    -e GATE_BASE="$base" -e GATE_STEP_OUT=/cache/step-out \
+    "$gate_tag" sleep infinity >/dev/null || die "could not start the sandbox"
+  # The sandbox's own clone (objects shared read-only with the host clone), the
+  # pinned toolchain and cargo-nextest; git and cargo run inside, never on the host.
+  docker exec "$container" bash -euc "
+    test -x /cache/cargo/bin/rustup || rustup-init -y -q --no-modify-path --profile minimal --default-toolchain none
+    test -d /cache/src/.git || git clone -q --shared --no-checkout '$common' /cache/src
+    cd /cache/src && git -c advice.detachedHead=false checkout -q --force --detach '$sha' && git clean -fdq
+    test \"\$(git rev-parse HEAD)\" = '$sha'
+    if ! test -x /cache/cargo/bin/cargo-nextest; then
+      curl -fsSL -o /tmp/nextest.tgz https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-0.9.146/cargo-nextest-0.9.146-x86_64-unknown-linux-gnu.tar.gz
+      tar -xzf /tmp/nextest.tgz -C /cache/cargo/bin cargo-nextest
+    fi" >"$run_dir/checkout.log" 2>&1 || { cat "$run_dir/checkout.log" >&2; die "sandbox setup for $sha failed"; }
+elif test "$SANDBOX" != off; then
+  die "GATE_SANDBOX must be off or required, not $SANDBOX"
+fi
+
+run_step() { # name detail -- step args...
+  local name="$1" detail="$2"; shift 3
+  local log="$run_dir/${name//[:\/]/-}.log" t0 status; t0=$(date +%s)
+  if test -n "$container"; then docker exec -w /cache/src "$container" bash /gate/gate-local.sh --step "$@" >"$log" 2>&1
+  else ( export GATE_BASE="$base" GATE_STEP_OUT="$run_dir/step-out"; bash "$script_path" --step "$@" ) >"$log" 2>&1; fi
+  status=$?; local dt=$(( $(date +%s) - t0 ))
   if test $status -eq 0; then record_step "$name" pass "$dt" "$log" "$detail"; return 0; fi
   record_step "$name" fail "$dt" "$log" "$detail (exit $status)"; tail -n 60 "$log" | sed 's/^/      | /'; echo "      \\ full log: $log"; failing="$name"; return 1; }
 skip_step() { record_step "$1" skip 0 "" "$2"; }
 
-# Files of this change that rustfmt/clippy flag, relative to the repo root.
-ratchet() { # <workspace dir> <fmt log> <clippy log>
-  local ws="$1" bad=""
-  local fmt_files; fmt_files="$(grep -oE '^Diff in [^:]+' "$2" | sed "s#^Diff in $root/##" | sort -u)"
-  local clippy_files; clippy_files="$(grep -oE '^(warning|error)[^:]*: .*|^ *--> [^:]+' "$3" | grep -oE -- '--> [^:]+' | sed 's/^--> //' | sed "s#^#$ws/#" | sort -u)"
-  for f in $fmt_files; do grep -qxF "$f" <<<"$changed" && bad+=" rustfmt:$f"; done
-  for f in $clippy_files; do f="$(realpath -m --relative-to="$root" "$root/$f")"; grep -qxF "$f" <<<"$changed" && bad+=" clippy:$f"; done
-  test -z "$bad" || { echo "ratchet: files this change touched need fixing:$bad"; return 1; }
-}
-step_rust() { # <workspace dir>
-  local ws="$1"
-  ( cd "$ws" && cargo fmt --check ) >"$run_dir/fmt-${ws//\//-}.txt" 2>&1
-  ( cd "$ws" && cargo clippy --all-targets --message-format=short -- --cap-lints warn ) >"$run_dir/clippy-${ws//\//-}.txt" 2>&1 || { tail -40 "$run_dir/clippy-${ws//\//-}.txt"; return 1; }
-  ratchet "$ws" "$run_dir/fmt-${ws//\//-}.txt" "$run_dir/clippy-${ws//\//-}.txt" || return 1
-  ( cd "$ws" && cargo nextest run --no-fail-fast --no-tests=pass )
-}
-step_python() { # <package dir>...
-  local rc=0 d
-  for d in "$@"; do
-    echo "== pytest $d"
-    # CPU only: the gate never takes a GPU (GPU-only tests skip themselves).
-    # A maturin package is rebuilt from this checkout (uv caches wheels by version,
-    # not by content, and a stale _native only makes its tests skip).
-    local rebuild=()
-    if grep -q 'build-backend = "maturin"' "$d/pyproject.toml"; then
-      rebuild=(--reinstall-package "$(python3 -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb"))["project"]["name"])' "$d/pyproject.toml")")
-    fi
-    ( cd "$d" && CUDA_VISIBLE_DEVICES="" uv run --quiet "${rebuild[@]}" --with pytest python -m pytest -q -p no:cacheprovider ) || rc=1
-  done
-  return $rc
-}
-step_goldens() {
-  export SIMFORGE_CORPUS_RICHMOND="${SIMFORGE_CORPUS_RICHMOND:-${SIMFORGE_MAPS_CACHE_ROOT:-$HOME/.local/share/simforge/maps}/.corpus/richmond-field-station}"
-  export SIMFORGE_CORPUS_YALE="${SIMFORGE_CORPUS_YALE:-${SIMFORGE_MAPS_CACHE_ROOT:-$HOME/.local/share/simforge/maps}/.corpus/yale-street}"
-  qualification/golden-harness/ci-local.sh verify
-}
-
 ok=true
-run_step boundary "cargo metadata + uv + no TS" -- scripts/check-boundary.sh || ok=false
-engine='^(native/Cargo\.(toml|lock)|native/crates/simforge-(core|compiler|session|bindings-common|bindings-python|package)/|fixtures/|examples/|contracts/|rust-toolchain\.toml)'
+run_step boundary "cargo metadata + uv + no TS" -- boundary || ok=false
+engine='^(native/Cargo\.(toml|lock)|native/crates/simforge-(core|compiler|session|bindings-common|bindings-python|timeline-python|package)/|fixtures/|examples/|contracts/|rust-toolchain\.toml)'
 declare -A ws_when=(
   [native]="$engine"
   [renderer]='^(renderer/|native/crates/simforge-(core|compiler|session|package|cli)/|native/Cargo\.lock|fixtures/|catalog/|rust-toolchain\.toml)'
@@ -115,7 +205,7 @@ declare -A ws_when=(
 for ws in native renderer native/crates/simforge-timeline-python; do
   $ok || break
   test -f "$ws/Cargo.toml" || continue
-  if touched "${ws_when[$ws]}"; then run_step "rust:$ws" "fmt+clippy ratchet, nextest" -- step_rust "$ws" || ok=false
+  if touched "${ws_when[$ws]}"; then run_step "rust:$ws" "fmt+clippy ratchet, nextest" -- rust "$ws" || ok=false
   else skip_step "rust:$ws" "not affected"; fi
 done
 if $ok; then
@@ -124,12 +214,12 @@ if $ok; then
     test -d "$d/tests" || continue
     if touched "^$d/" || { touched "$engine" && grep -Eq 'maturin|simforge-oss-gym|simforge-oss-timeline' "$d/pyproject.toml"; }; then py+=("$d"); fi
   done
-  if test ${#py[@]} -gt 0; then run_step python "${py[*]}" -- step_python "${py[@]}" || ok=false
+  if test ${#py[@]} -gt 0; then run_step python "${py[*]}" -- python "${py[@]}" || ok=false
   else skip_step python "no Python package affected"; fi
 fi
 if $ok; then
   if touched '^(renderer/|native/crates/simforge-core/|native/Cargo\.lock|qualification/golden-harness/|catalog/|rust-toolchain\.toml)'; then
-    run_step goldens "lavapipe, verify all" -- step_goldens || ok=false
+    run_step goldens "lavapipe, verify all" -- goldens || ok=false
   else skip_step goldens "renderer/engine not affected"; fi
 fi
 
@@ -137,11 +227,11 @@ finished=$(date +%s); result=$($ok && echo pass || echo fail)
 key_file="$GATE_HOME/.gate-key"
 test -s "$key_file" || (umask 077 && head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' >"$key_file")
 prev="$(tail -n 1 "$GATE_HOME/records.jsonl" 2>/dev/null | sha256sum | cut -d' ' -f1)"
-body="$(jq -cn --arg sha "$sha" --arg base "$base" --arg tree "$(git rev-parse 'HEAD^{tree}')" --arg repo "simforge-sdk" \
+body="$(jq -cn --arg sha "$sha" --arg base "$base" --arg tree "$(git rev-parse 'HEAD^{tree}')" --arg repo "simforge-sdk" --arg sandbox "$SANDBOX" \
   --arg result "$result" --arg failing "$failing" --arg host "$(hostname)" --arg user "$(id -un)" \
   --arg script "$script_sha" --arg id "$run_id" --arg dir "$run_dir" --arg prev "$prev" \
   --argjson started "$started" --argjson finished "$finished" --argjson steps "$steps_json" \
-  '{v:1, repo:$repo, id:$id, sha:$sha, base:$base, tree:$tree, result:$result, failing:(if $failing == "" then null else $failing end),
+  '{v:1, repo:$repo, sandbox:($sandbox == "required"), id:$id, sha:$sha, base:$base, tree:$tree, result:$result, failing:(if $failing == "" then null else $failing end),
     seconds:($finished-$started), started:($started|todate), finished:($finished|todate),
     host:$host, user:$user, gateScriptSha256:$script, steps:$steps, runDir:$dir, prev:$prev}')"
 hmac="$(printf '%s' "$body" | openssl dgst -sha256 -hmac "$(cat "$key_file")" -r | cut -d' ' -f1)"
