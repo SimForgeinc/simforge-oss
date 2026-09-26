@@ -1,7 +1,10 @@
 {
   "actors": {
     "catalogIds": [
-      "vehicle.ambulance"
+      "construction.jersey_barrier_run",
+      "vehicle.bus",
+      "vehicle.motorcycle",
+      "vehicle.sedan"
     ],
     "closureDigest": "793ec86ceda7734f1f5f7c0b260a396c11c970a471ab4418987e4d531f33daa4",
     "closureUrl": "https://da3tufozhdsvl.cloudfront.net/actor-assets/closures/793ec86ceda7734f1f5f7c0b260a396c11c970a471ab4418987e4d531f33daa4.json"
@@ -9,17 +12,18 @@
   "form": "thin",
   "map": {
     "blobOrigin": "https://da3tufozhdsvl.cloudfront.net/blobs/sha256/<aa>/<sha256>",
-    "canonicalClosureSha256": "dbd2411b05ed0570e0c5822e6de570f6a724899f03d4f46f66e88e3c0a2e7d82",
+    "canonicalClosureSha256": "5d94b1db4f96319399d7a17f64a4632c2b8193692c78cd2552055b22cf880791",
+    "groundDigest": "7256733c44d4bbd52d8182a8428e540b7e43c38139d320b11e25f7b0fdb00759",
     "registry": "https://da3tufozhdsvl.cloudfront.net",
-    "registryReleaseDigest": "a19b6e5273e340f7fe42e6d4ac0e966835d428bfac32d5e716a28f9dd6a6cf8e",
-    "release": "richmond-field-station@v2",
-    "webClosureSha256": "52ab5deae1d5383af260e1e2c774fa0ca6e4c5b73faf73a28258f046c898a4c9"
+    "registryReleaseDigest": "b3a37eaf56a7e10dceb4f1815205c1d01d9c538787824ff2150876c1d217a430",
+    "release": "richmond-field-station@v5",
+    "webClosureSha256": "c5f039e08a58e05d55d1f05b45d64718527265754b72a30415237b6920337ec4",
+    "xodrSha256": "531c1bd6f568c56a41fd868ffe1cec0e92bc7dcda9c794c67a8f80a450186b18"
   },
   "package": "richmond-public.scenario.zip",
-  "packageId": "8c86d40f84eed38a034720348dd68095a324966dec004a2b55e4d6ab92466ac8",
+  "packageId": "9e962b08f4383e0ab1285e3d138f09402b56a03e89e46c0a70099400744d2cde",
+  "packageSha256": "c273f567a1d9b57b9ec1061470d36735d9adf4889e1bfc6c178a7bd27f2190f1",
   "placeholders": [
-    "document.json (archive-corpus rc73-doc-child-reveal, not this trace's scenario)",
-    "simulation/resolution.json.gz",
     "scenario.simContentSha256",
     "simulation.simKey"
   ],
@@ -28,17 +32,38 @@
     "goldenScene": "package-smoke-richmond",
     "note": "Frame hashes live in the golden store (qualification/golden-harness/goldens/<fingerprint>/package-smoke-richmond.json), keyed by renderer sha. Until recorded the scene declares recording: unrecorded and golden.mjs verify fails with exit 10."
   },
+  "scenario": {
+    "authoring": {
+      "cli": "simforge 0.2.0 @ simforge-sdk d92a03fb",
+      "commands": [
+        "simforge maps pull richmond-field-station@v5",
+        "simforge sites match examples/edge-cases/06-wrong-way-vehicle-blind-approach/scenario.template.json --map richmond-field-station",
+        "simforge instantiate <template> --map richmond-field-station --site b0e874846bf75cb0 --draw 0 --out instance.json",
+        "simforge simulate <workspace carrying the instance input as its resolution> (workspace mode: loads the release's static colliders from its web install)"
+      ],
+      "draw": 0,
+      "map": "richmond-field-station@v5",
+      "note": "Site 163f99a4fcf84eb5 and the LTAP template's only site put an actor into map collider canonical-master/2470 (a building footprint on the roadway, reported to MAPS); this site has no map collision. The scenario's own head-on crash (focus-vehicle / wrong-way-sedan) is at t=10.44 s.",
+      "site": "b0e874846bf75cb0",
+      "template": "examples/edge-cases/06-wrong-way-vehicle-blind-approach/scenario.template.json"
+    },
+    "template": "examples/edge-cases/06-wrong-way-vehicle-blind-approach/scenario.template.json"
+  },
   "schema": "simforge.scenario-package-smoke/v1",
   "timeline": {
     "actorIds": [
-      "vehicle-muasiqo3-6wehouy0"
+      "focus-vehicle",
+      "following-motorcycle",
+      "opposing-bus",
+      "wrong-way-sedan"
     ],
     "samplerVersion": "simforge.timeline-sampler/3",
-    "timelineKey": "43788e095970edc494c097760eb280f55ba644b6e17965128412edf7380d4845",
-    "timelineSha256": "6d9504bb2cf270ca4a8b03e07c83514040988e5eb6ba64a1fbe8ade5f0e165b5"
+    "timelineKey": "2114e2f7d8f010095530165afedaea010063d990472327ecb0ce6f1bb5e211f2",
+    "timelineSha256": "12f99ebe8032aa417549f1912014a9788059bd9146ef148d09e968093fb8fe1a"
   },
   "trace": {
-    "archiveCorpusId": "rc72-engine070-richmond-commit",
-    "traceSha256": "7f73ef33ce690eacf08dd731b76bc47610314644f1d7ec5cbbe2596bb8bcd96c"
+    "engineSemVer": "0.12.1",
+    "traceFormat": 5,
+    "traceSha256": "db14a6bc06b565faf70a32182562858890f4b2a1bcb88cbb3893dc7612d227a0"
   }
 }

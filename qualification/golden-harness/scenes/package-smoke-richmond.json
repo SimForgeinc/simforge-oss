@@ -1,20 +1,20 @@
 {
   "sceneId": "package-smoke-richmond",
   "mapId": "richmond-field-station",
-  "description": "Release smoke: the thin scenario package fixtures/scenario-package/smoke/richmond-public.scenario.zip, whose closures resolve from the public stores: the public registry release richmond-field-station@v2 (canonical closure dbd2411b..., web closure 52ab5dea...) and actor closure 793ec86c. Its render timeline (sampler /3, one ambulance decelerating from 7 m/s) is sampled at 24 fps over 0..1 s by `simforge render scene-state` into the committed scene-state; the corpus is the release's canonical closure (master.gltf, served by digest from the public origin). Chase camera 9 m behind and 3 m above the ambulance. Ticks 0..23 render; tick 12 is hashed. `recording: unrecorded` until the first lavapipe record (SPLIT/R records it after the maps re-version, #797); while unrecorded, verify fails with exit 10, never passes.",
+  "description": "Release smoke: the thin scenario package fixtures/scenario-package/smoke/richmond-public.scenario.zip, whose closures resolve from the public stores: registry release richmond-field-station@v5 (release b3a37eaf..., canonical 5d94b1db..., web c5f039e0...) and actor closure 793ec86c. The scenario is edge case 06 (wrong-way vehicle, blind approach) instantiated with the simforge CLI on v5 and simulated there (trace format 5, engine 0.12.1, on the release's ground and colliders); the package re-simulates to its own trace. The scene-state stream is the CLI's own render lowering of the package timeline (`simforge render` job sceneState, 24 fps over 0..1 s, 24 ticks), passed through unchanged. Corpus: SIMFORGE_CORPUS_RICHMOND_V5 = the v5 native master (.corpus/richmond-field-station after `simforge maps pull richmond-field-station@v5`; master.gltf 017dc743...). Chase camera 9 m behind and 3 m above the focus vehicle; tick 12 is hashed. `recording: unrecorded` until SPLIT/R records it on lavapipe with the v0.2.0-rc.0 renderer; while unrecorded, verify fails with exit 10, never passes.",
   "recording": "unrecorded",
   "package": {
     "path": "fixtures/scenario-package/smoke/richmond-public.scenario.zip",
-    "packageId": "8c86d40f84eed38a034720348dd68095a324966dec004a2b55e4d6ab92466ac8",
-    "timelineSha256": "6d9504bb2cf270ca4a8b03e07c83514040988e5eb6ba64a1fbe8ade5f0e165b5",
-    "timelineKey": "43788e095970edc494c097760eb280f55ba644b6e17965128412edf7380d4845"
+    "packageId": "9e962b08f4383e0ab1285e3d138f09402b56a03e89e46c0a70099400744d2cde",
+    "timelineSha256": "12f99ebe8032aa417549f1912014a9788059bd9146ef148d09e968093fb8fe1a",
+    "timelineKey": "2114e2f7d8f010095530165afedaea010063d990472327ecb0ce6f1bb5e211f2"
   },
-  "corpusRootEnv": "SIMFORGE_CORPUS_RICHMOND",
+  "corpusRootEnv": "SIMFORGE_CORPUS_RICHMOND_V5",
   "corpusFiles": [
     "master.gltf"
   ],
   "sceneState": {
-    "gz": "qualification/golden-harness/fixtures/package-smoke-richmond.scene-state.json.gz"
+    "stream": "qualification/golden-harness/fixtures/package-smoke-richmond.scene-state.json"
   },
   "job": {
     "scene": {
@@ -49,7 +49,7 @@
             1
           ],
           "attach": {
-            "actorId": "vehicle-muasiqo3-6wehouy0",
+            "actorId": "focus-vehicle",
             "offsetM": [
               -9.0,
               0.0,

@@ -231,4 +231,4 @@ height with its road + body attitude. Three gates per run:
 |---|---|---|
 | `richmond-06-timeline` | richmond-field-station | 4 (car, motorcycle, bus, wrong-way sedan) |
 | `yale-05-timeline` | yale-street | 4 (truck, car, cyclist, pedestrian) |
-| `package-smoke-richmond` | richmond-field-station | 1 (ambulance), from the release smoke package `fixtures/scenario-package/smoke/richmond-public.scenario.zip`; declares `recording: "unrecorded"` until its first lavapipe record |
+| `package-smoke-richmond` | richmond-field-station@v5 (public) | 4 (sedan, motorcycle, bus, wrong-way sedan), edge case 06 from the release smoke package `fixtures/scenario-package/smoke/richmond-public.scenario.zip`; scene-state = the `simforge render` lowering of its timeline; corpus `SIMFORGE_CORPUS_RICHMOND_V5`; declares `recording: "unrecorded"` (verify exits 10) until its first lavapipe record |

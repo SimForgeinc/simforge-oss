@@ -43,18 +43,20 @@ the vector is the thin fixture's manifest.
 
 `richmond-public.scenario.zip` is a thin package whose closures resolve from
 the public stores: `map/closure.json` and `map/web-closure.json` are the
-public registry release `richmond-field-station@v2` canonical and web
-closures (`dbd2411b…`, `52ab5dea…`), byte for byte as the registry at
+public registry release `richmond-field-station@v5` canonical and web
+closures (`5d94b1db…`, `c5f039e0…`), byte for byte as the registry at
 `https://da3tufozhdsvl.cloudfront.net` serves them, every member served by
 digest from `/blobs/sha256/<aa>/<sha256>`; `map.registryReleaseDigest` is
-the release (`a19b6e52…`); the actor closure is the public, attributed
-`793ec86c…`. `mapClosureDigest` and `pinClosureSha256` are computed from the
-release's simulation members. The motion is the archived
-`rc72-engine070-richmond-commit` trace (one ambulance); its timeline is
-derived under the current sampler from the release's OpenDRIVE and
-topology. `smoke.json` lists the identities and the placeholder parts
-(document, resolution record, `simKey`, `simContentSha256`): the smoke
-covers import, timeline and render, not re-simulation.
+the release (`b3a37eaf…`); the actor closure is the public, attributed
+`793ec86c…`. The scenario is edge case 06 (wrong-way vehicle, blind
+approach), instantiated with the `simforge` CLI on v5 and simulated there
+(trace format 5, engine 0.12.1, on the release's ground and static
+colliders; `smoke.json` records the site, draw and commands). The resolution
+record carries the engine-resolved input, so `simforge simulate` on the
+imported package reproduces its trace byte for byte, and `simforge timeline
+build` reproduces its timeline. `mapClosureDigest` is the v5 simulation
+world's (`simforge simulate` reports it). Only `simKey` and
+`simContentSha256` are placeholders.
 
 Its render expectation is the golden-harness scene `package-smoke-richmond`
 (scene-state sampled from this timeline). Until its first lavapipe record
@@ -64,11 +66,11 @@ and clears the field.
 
 Regenerate (inputs are fetched by digest and verified): put the release's
 `release.json`, `canonical-closure.json` and `web-closure.json` (served
-canonical), its members `map/map.xodr` and `map/topology-index.json.gz`,
-`actor-closure.json` and its `catalog-models.json`, `map-closure-digest.txt`
-(`MapBundle::from_sources(...).closure_digest()` in `simforge-compiler`, over
-the release's simulation members) and
-`coordinate-system-sha256.txt` in a directory, then
+canonical), its members `map/map.xodr`, `map/topology-index.json.gz` and
+`map/derived/ground/ground-mesh.bin`, `actor-closure.json` and its
+`catalog-models.json`, the CLI's `instance.json` and `trace.json.gz` (see
+`smoke.json` `scenario.authoring`), `authoring.json`, `map-closure-digest.txt`
+and `coordinate-system-sha256.txt` in a directory, then
 
 ```sh
 SIMFORGE_SMOKE_INPUTS=<dir> cargo test -p simforge-package --test smoke -- --ignored
