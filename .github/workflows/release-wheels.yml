@@ -1,0 +1,102 @@
+name: release-wheels
+# dist local-artifacts job: the release's Python dists (layout.sh
+# SIMFORGE_PY_DISTS: gym, timeline, gpu, physics, render) at the CLI's version.
+# Native dists (maturin abi3: one wheel per platform covers CPython >= 3.10) on
+# every platform; pure wheels and all sdists once, on Linux x86_64. Uploaded as
+# `artifacts-wheels-*`, so dist's host step attaches them to the GitHub
+# release. PyPI gets them only when the release goes stable (promote.yml).
+on:
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64, target: "", test: true }
+          - { name: linux-aarch64, target: aarch64-unknown-linux-gnu, test: false }
+    name: wheel (${{ matrix.name }})
+    runs-on: simforge-build
+    container: ghcr.io/simforgeinc/simforge-release-build:2026-09-24
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Build
+        shell: bash
+        run: |
+          if [[ -n "${{ matrix.target }}" ]]; then scripts/release/build-wheels.sh wheels --target "${{ matrix.target }}"
+          else scripts/release/build-wheels.sh wheels --all; fi
+      - name: Import test
+        if: matrix.test
+        shell: bash
+        run: |
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install -q --no-deps wheels/*.whl
+          /tmp/venv/bin/pip install -q gymnasium numpy
+          /tmp/venv/bin/python -c "import simforge_oss_gym._native, simforge_oss_timeline._native; print('native extensions import')"
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: wheels/*
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: artifacts-wheels-${{ matrix.name }}
+          path: wheels/*
+          if-no-files-found: error
+
+  hosted:
+    # macOS and Windows: the public repo's free GitHub-hosted runners (the one
+    # allowed cloud exception, PROGRAM.md).
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: macos-arm64, runner: macos-14 }
+          - { name: windows-x86_64, runner: windows-2022 }
+    name: wheel (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Tools
+        shell: bash
+        run: |
+          pip install "maturin==1.15.0"
+          cargo install --locked --features cli cargo-about@0.9.2
+          cargo about --version
+      - name: Build
+        shell: bash
+        run: scripts/release/build-wheels.sh wheels
+      - name: Import test
+        shell: bash
+        run: |
+          python -m venv venv
+          if [[ -x venv/bin/python ]]; then py=venv/bin/python; else py=venv/Scripts/python.exe; fi
+          "$py" -m pip install -q --no-deps wheels/*.whl
+          "$py" -m pip install -q gymnasium numpy
+          "$py" -c "import simforge_oss_gym._native, simforge_oss_timeline._native; print('native extensions import')"
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: wheels/*
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: artifacts-wheels-${{ matrix.name }}
+          path: wheels/*
+          if-no-files-found: error

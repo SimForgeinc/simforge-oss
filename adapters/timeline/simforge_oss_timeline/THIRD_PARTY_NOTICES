@@ -15,9 +15,8 @@ Asset licences (the CC-BY-4.0 actor models) travel with the asset closures as
 
 ## Overview
 
-- Apache License 2.0 (51 crates)
+- Apache License 2.0 (37 crates)
 - MIT License (6 crates)
-- BSD 2-Clause "Simplified" License (1 crate)
 - Unicode License v3 (1 crate)
 
 ## Licences
@@ -676,21 +675,10 @@ limitations under the License.
 Used by:
 - [autocfg 1.5.1](https://github.com/cuviper/autocfg)
 - [cfg-if 1.0.4](https://github.com/rust-lang/cfg-if)
-- [crossbeam-deque 0.8.8](https://github.com/crossbeam-rs/crossbeam)
-- [crossbeam-epoch 0.9.21](https://github.com/crossbeam-rs/crossbeam)
-- [crossbeam-utils 0.8.23](https://github.com/crossbeam-rs/crossbeam)
-- [either 1.18.0](https://github.com/rayon-rs/either)
 - [flate2 1.1.10](https://github.com/rust-lang/flate2-rs)
 - [heck 0.5.0](https://github.com/withoutboats/heck)
-- [matrixmultiply 0.3.11](https://github.com/bluss/matrixmultiply/)
-- [ndarray 0.17.2](https://github.com/rust-ndarray/ndarray)
-- [num-complex 0.4.6](https://github.com/rust-num/num-complex)
-- [num-integer 0.1.47](https://github.com/rust-num/num-integer)
 - [num-traits 0.2.19](https://github.com/rust-num/num-traits)
 - [once_cell 1.21.4](https://github.com/matklad/once_cell)
-- [rawpointer 0.2.1](https://github.com/bluss/rawpointer/)
-- [rayon-core 1.13.0](https://github.com/rayon-rs/rayon)
-- [rayon 1.12.0](https://github.com/rayon-rs/rayon)
 - [version_check 0.9.5](https://github.com/SergioBenitez/version_check)
 
 ```text
@@ -1325,9 +1313,7 @@ limitations under the License.
 ### Apache License 2.0
 
 Used by:
-- [simforge-compiler 0.1.0](https://crates.io/crates/simforge-compiler)
 - [simforge-core 0.1.0](https://crates.io/crates/simforge-core)
-- [simforge-session 0.1.0](https://crates.io/crates/simforge-session)
 - [itoa 1.0.18](https://github.com/dtolnay/itoa)
 - [libc 0.2.189](https://github.com/rust-lang/libc)
 - [miniz_oxide 0.9.1](https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide)
@@ -1338,7 +1324,6 @@ Used by:
 - [pyo3-macros 0.29.2](https://github.com/pyo3/pyo3)
 - [pyo3 0.29.2](https://github.com/pyo3/pyo3)
 - [quote 1.0.47](https://github.com/dtolnay/quote)
-- [rustc-hash 2.1.3](https://github.com/rust-lang/rustc-hash)
 - [ryu-js 1.0.3](https://github.com/boa-dev/ryu-js)
 - [serde 1.0.229](https://github.com/serde-rs/serde)
 - [serde_core 1.0.229](https://github.com/serde-rs/serde)
@@ -1424,40 +1409,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
-```
-
-### BSD 2-Clause "Simplified" License
-
-Used by:
-- [numpy 0.29.0](https://github.com/PyO3/rust-numpy)
-
-```text
-BSD 2-Clause License
-
-Copyright (c) 2017, Toshiki Teramura
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-* Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-
-* Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ```
 

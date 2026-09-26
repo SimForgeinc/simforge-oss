@@ -2,7 +2,6 @@
   "sceneId": "package-smoke-richmond",
   "mapId": "richmond-field-station",
   "description": "Release smoke: the thin scenario package fixtures/scenario-package/smoke/richmond-public.scenario.zip, whose closures resolve from the public stores: registry release richmond-field-station@v5 (release b3a37eaf..., canonical 5d94b1db..., web c5f039e0...) and actor closure 793ec86c. The scenario is edge case 06 (wrong-way vehicle, blind approach) instantiated with the simforge CLI on v5 and simulated there (trace format 5, engine 0.12.1, on the release's ground and colliders); the package re-simulates to its own trace. The scene-state stream is the CLI's own render lowering of the package timeline (`simforge render` job sceneState, 24 fps over 0..1 s, 24 ticks), passed through unchanged. Corpus: SIMFORGE_CORPUS_RICHMOND_V5 = the v5 native master (.corpus/richmond-field-station after `simforge maps pull richmond-field-station@v5`; master.gltf 017dc743...). Chase camera 9 m behind and 3 m above the focus vehicle; tick 12 is hashed. `recording: unrecorded` until SPLIT/R records it on lavapipe with the v0.2.0-rc.0 renderer; while unrecorded, verify fails with exit 10, never passes.",
-  "recording": "unrecorded",
   "package": {
     "path": "fixtures/scenario-package/smoke/richmond-public.scenario.zip",
     "packageId": "9e962b08f4383e0ab1285e3d138f09402b56a03e89e46c0a70099400744d2cde",
@@ -51,9 +50,9 @@
           "attach": {
             "actorId": "focus-vehicle",
             "offsetM": [
-              -9.0,
-              0.0,
-              3.0
+              -9,
+              0,
+              3
             ],
             "pitchDeg": -10.008,
             "hostVisible": true

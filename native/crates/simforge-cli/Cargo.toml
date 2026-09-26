@@ -4,9 +4,10 @@
 # relocates it.
 name = "simforge"
 description = "The SimForge command line: package, maps, assets, timeline, render, simulate, env serve, doctor."
-version = "0.2.0"
+version = "0.2.0-rc.0"
 edition = "2021"
 license = "Apache-2.0"
+publish = false
 repository = "https://github.com/SimForgeinc/simforge-sdk"
 homepage = "https://simforge.ai"
 documentation = "https://docs.simforge.ai"

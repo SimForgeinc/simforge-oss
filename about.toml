@@ -1,0 +1,34 @@
+# cargo-about configuration: generates THIRD_PARTY_NOTICES.md for the shipped
+# `simforge` binary (scripts/release/notices.sh; checked fresh in CI).
+# The accepted list mirrors deny.toml's [licenses].allow: cargo-deny is the
+# policy gate, cargo-about only renders the notices.
+accepted = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "MIT",
+  "MIT-0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "0BSD",
+  "BSL-1.0",
+  "NCSA",
+  "CC0-1.0",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "CDLA-Permissive-2.0",
+]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+  "aarch64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+]
+# Our own path crates (Apache-2.0 via the repository LICENSE) are not listed.
+private = { ignore = true }
+ignore-build-dependencies = false
+ignore-dev-dependencies = true
+ignore-transitive-dependencies = false
+# Crates whose licence text is only discoverable with help.
+workarounds = ["ring", "rustls", "wasmtime", "bitvec"]
