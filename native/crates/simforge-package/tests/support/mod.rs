@@ -427,7 +427,7 @@ impl Case {
         let (count, bytes) = self.referenced_actor_blobs();
         let draft = json!({
             "schema": "simforge.scenario-package/v1",
-            "producer": { "app": "simforge-fixtures", "appVersion": "0.2.0", "minCli": "0.2.0" },
+            "producer": { "app": "simforge-fixtures", "appVersion": "0.2.0", "minCli": "0.2.0-rc.0" },
             "scenario": {
                 "title": self.title,
                 "documentSchema": "simforge.scenario.v2",

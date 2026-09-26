@@ -5,35 +5,35 @@
       "file": "valid/thin.scenario.zip",
       "form": "thin",
       "note": "thin package with receipt and derived xosc; map and actors by digest",
-      "packageId": "7d09de907f3fb448c68d0a5c450ee73fccaab37ac3a50a01694d5ead2fe79c0d",
+      "packageId": "5851fa03fa2abb0b47986d8af37c627517da39cb414a76d57099ae8e798e3ce0",
       "valid": true
     },
     {
       "file": "valid/full.scenario.zip",
       "form": "full",
       "note": "the same revision, full: every canonical map blob, the web-only members the CLI reads, and the reachable actor blobs (same packageId as thin)",
-      "packageId": "7d09de907f3fb448c68d0a5c450ee73fccaab37ac3a50a01694d5ead2fe79c0d",
+      "packageId": "5851fa03fa2abb0b47986d8af37c627517da39cb414a76d57099ae8e798e3ce0",
       "valid": true
     },
     {
       "file": "valid/thin-minimal.scenario.zip",
       "form": "thin",
       "note": "no receipt, no xosc: only required members",
-      "packageId": "b5f3515ce41119344737c6ae3f34ca95e1dba0e919fd759502f5f47848a4a634",
+      "packageId": "ea28e8082a7acc0e833403a6b3d27af9d86fd68c0d4317bffe3211eb804deeac",
       "valid": true
     },
     {
       "file": "valid/thin-v5-ground.scenario.zip",
       "form": "thin",
       "note": "trace v5 on a map with a ground surface: groundDigest is the ground mesh sha256",
-      "packageId": "3fd4bbf142464ab8dceb4ce34256f9482022516285ef468c71ba929de15b68ad",
+      "packageId": "b1192c4fe0fc1425a238517f1c73272b848c8e64aa7f093d3c32238f29eb79dd",
       "valid": true
     },
     {
       "file": "valid/thin-v5-no-ground.scenario.zip",
       "form": "thin",
       "note": "trace v5 on a map without a ground surface: groundDigest null",
-      "packageId": "f4dd557dad2aed6bc3e24f9a09bb7aa0368996a42fd02de459f9b09337da8116",
+      "packageId": "2dc5e53e4b65bc24f7f0598eeda343518ae8f5ba577fd88ccc71835f9eea084c",
       "valid": true
     },
     {
