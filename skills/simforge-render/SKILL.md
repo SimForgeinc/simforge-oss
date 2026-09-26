@@ -55,7 +55,7 @@ of the same scene differ in pixels: compare like with like.
 ## Reference
 
 <!-- simforge:reference render, timeline build -->
-_Generated from `simforge --help` (CLI 0.2.0) by scripts/skills/skills.py; do not edit._
+_Generated from `simforge --help` (CLI 0.2.0-rc.0) by scripts/skills/skills.py; do not edit._
 
 #### `simforge render`
 

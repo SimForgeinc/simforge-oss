@@ -896,7 +896,7 @@ wheels = [
 
 [[package]]
 name = "simforge-oss-render"
-version = "0.1.0rc67"
+version = "0.2.0rc0"
 source = { editable = "." }
 dependencies = [
     { name = "msgpack" },

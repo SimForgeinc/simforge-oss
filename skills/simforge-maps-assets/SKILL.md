@@ -46,7 +46,7 @@ licence, changes). The CLI itself is Apache-2.0; its dependencies are listed in
 ## Reference
 
 <!-- simforge:reference maps pull, assets pull -->
-_Generated from `simforge --help` (CLI 0.2.0) by scripts/skills/skills.py; do not edit._
+_Generated from `simforge --help` (CLI 0.2.0-rc.0) by scripts/skills/skills.py; do not edit._
 
 #### `simforge maps pull`
 
