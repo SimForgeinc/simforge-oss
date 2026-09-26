@@ -8,6 +8,10 @@ reads it).
 
 ## [Unreleased]
 
+## [0.2.0-rc.0]
+
+Release candidate of the first Rust CLI release (dry run).
+
 - First release of the Rust `simforge` CLI (0.2.0): scenario packages
   (`simforge.scenario-package/v1`), content-addressed maps and actor assets,
   the deterministic renderer (`training` and `showcase` presets), re-simulation,
