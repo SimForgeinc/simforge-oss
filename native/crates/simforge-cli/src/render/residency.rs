@@ -383,11 +383,17 @@ pub fn texture_residency_plan(
                 ),
             ));
         }
-        // A block-compressed base must be whole 4x4 blocks: keep the finest level that is.
+        // A block-compressed base must be whole 4x4 blocks, at least one in
+        // each direction: keep the finest level that is. (A 16x512 texture
+        // keeps 4x128 at most; its level 5 would be 0x16, which is a multiple
+        // of 4 but no texture.)
         let mut drop = finest.min(chain - 1);
         if !ktx2::is_rgba8(format) {
-            while drop > 0 && (ktx2::shr(width, drop) % 4 != 0 || ktx2::shr(height, drop) % 4 != 0)
-            {
+            let whole = |x: u32, drop: u32| {
+                let v = ktx2::shr(x, drop);
+                v >= 4 && v % 4 == 0
+            };
+            while drop > 0 && !(whole(width, drop) && whole(height, drop)) {
                 drop -= 1;
             }
         }
