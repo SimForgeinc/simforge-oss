@@ -32,6 +32,7 @@ run_deny() {
 run_notices() { need cargo-about; scripts/release/notices.sh --check; }
 run_dist() {
   need dist
+  python3 scripts/release/check-workflow-permissions.py
   dist generate --check
   dist plan --output-format=json >/dev/null
 }

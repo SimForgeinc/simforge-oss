@@ -77,7 +77,7 @@ github-build-setup = "../release-build-setup.yml"
 "release-wheels" = { contents = "read", id-token = "write", attestations = "write" }
 "release-sbom" = { contents = "read" }
 "release-sign" = { contents = "write", id-token = "write", attestations = "write" }
-"release-container" = { contents = "read", packages = "write", id-token = "write", attestations = "write" }
+"release-container" = { contents = "write", packages = "write", id-token = "write", attestations = "write" }
 "release-smoke" = { contents = "write" }
 
 # Linux builds, plan/host/announce run on path-pc's local runner; only macOS
