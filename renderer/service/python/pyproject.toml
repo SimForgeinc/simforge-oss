@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "simforge-oss-render"
-version = "0.2.0rc0"
+version = "0.2.0rc1"
 description = "SimForge resident renderer client, embedded C ABI adapter, and leased CUDA output transport"
 requires-python = ">=3.10"
 license = "Apache-2.0"
