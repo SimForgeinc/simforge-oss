@@ -22,7 +22,7 @@
       "args": [
         "job",
         "--job",
-        "/mnt/storage/worktrees/split-r-dry/artifacts/golden-harness/record/package-smoke-richmond/runA/package-smoke-richmond.job.json"
+        "<storage>/worktrees/split-r-dry/artifacts/golden-harness/record/package-smoke-richmond/runA/package-smoke-richmond.job.json"
       ],
       "job": {
         "schema": "simforge.render-job/v2",
@@ -37,10 +37,10 @@
             "preset": "training"
           },
           "warmupFrames": 20,
-          "vehicleModels": "/home/path/.cache/simforge/actor-assets/trees/c9fc02bba3c5c52af52d10a6d2496b90da1749bdf7ef7ed449d243ec74b2dadf",
-          "pedestrianModels": "/home/path/.cache/simforge/actor-assets/trees/fabfc5150b4afa96107bc1f6ca2bf179ab29bdd52aa19dd4f2b0ad13da227689",
+          "vehicleModels": "~/.cache/simforge/actor-assets/trees/c9fc02bba3c5c52af52d10a6d2496b90da1749bdf7ef7ed449d243ec74b2dadf",
+          "pedestrianModels": "~/.cache/simforge/actor-assets/trees/fabfc5150b4afa96107bc1f6ca2bf179ab29bdd52aa19dd4f2b0ad13da227689",
           "glbs": [
-            "/mnt/storage/tools/dry-maps/.corpus/richmond-field-station/master.gltf"
+            "<storage>/tools/dry-maps/.corpus/richmond-field-station/master.gltf"
           ]
         },
         "rig": {
@@ -81,8 +81,8 @@
           "rgb",
           "id"
         ],
-        "outDir": "/mnt/storage/worktrees/split-r-dry/artifacts/golden-harness/record/package-smoke-richmond/runA/package-smoke-richmond",
-        "sceneState": "/mnt/storage/worktrees/split-r-dry/qualification/golden-harness/fixtures/package-smoke-richmond.scene-state.json"
+        "outDir": "<storage>/worktrees/split-r-dry/artifacts/golden-harness/record/package-smoke-richmond/runA/package-smoke-richmond",
+        "sceneState": "<storage>/worktrees/split-r-dry/qualification/golden-harness/fixtures/package-smoke-richmond.scene-state.json"
       },
       "passesRenderedSequentially": false
     },
