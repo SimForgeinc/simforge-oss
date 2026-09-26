@@ -35,8 +35,13 @@
 //! | `v1`             | 1              | TS engine, ≤ Aug 20    | no `header.physics`, `lateralOffsetM`, `metrics.criticalitySamples`, ledger or `ego` |
 //! | `v3`             | 3              | TS engine, Aug 9–30    | no `lateralOffsetM` on some actors, no ledger, no `ego` |
 //! | `v4-pre-ledger`  | 4              | TS/native, Aug 20–Sep 5| no `header.ego`, no `semanticLedger`                   |
+//! | `v4-pre-ego`     | 4              | browser previews, Aug 10–Sep 17 | no `header.ego`                              |
 //! | `v4`             | 4              | native, ≤ engine 0.10  | no ground contact (`header.groundDigest`, `contact`)   |
 //! | `v5`             | 5              | native, engine 0.11+   | none (current)                                         |
+//!
+//! Independently of the version, a document stored in the scene frame
+//! (`header.frame = "scene"`, tracks carry `z = -y`: legacy editor previews)
+//! is converted back to xodr-local first; that is exact.
 
 use serde::de::IgnoredAny;
 use serde::{Deserialize, Serialize};
@@ -114,6 +119,7 @@ struct PeekHeader {
     #[serde(rename = "traceVersion")]
     trace_version: Option<Value>,
     ego: Option<IgnoredAny>,
+    frame: Option<String>,
 }
 
 /// How a stored document must be read.
@@ -132,7 +138,11 @@ pub fn stored_shape(bytes: &[u8]) -> Result<StoredShape, TraceError> {
         .header
         .ok_or_else(|| TraceError::Json("missing field `header`".to_owned()))?;
     let version = version_of(header.trace_version.as_ref())?;
-    if version == TRACE_FORMAT_VERSION && header.ego.is_some() && peek.semantic_ledger.is_some() {
+    if version == TRACE_FORMAT_VERSION
+        && header.ego.is_some()
+        && peek.semantic_ledger.is_some()
+        && header.frame.as_deref() != Some(SCENE_FRAME)
+    {
         Ok(StoredShape::Current)
     } else {
         Ok(StoredShape::Legacy { version })
@@ -177,8 +187,12 @@ pub fn upgrade_to_current(mut doc: Value) -> Result<(Value, TraceUpgrade), Trace
         1 => "v1",
         3 => "v3",
         _ if header.contains_key("ego") && doc.get("semanticLedger").is_some() => "v4",
+        _ if doc.get("semanticLedger").is_some() => "v4-pre-ego",
         _ => "v4-pre-ledger",
     };
+    // Frame first: a scene-frame document (legacy editor previews) is the
+    // same trace with `y` stored as scene `z = -y`.
+    scene_frame_to_xodr_local(&mut doc, &mut report)?;
     if version == 1 {
         v1_to_v3(&mut doc, &mut report)?;
     }
@@ -271,6 +285,47 @@ fn placeholder(
 
 /* -------------------------------------------------------------- steps */
 
+const SCENE_FRAME: &str = "scene";
+
+/// Scene frame → xodr-local: legacy editor previews (preview schema v2,
+/// engines 0.4.0–0.6.0) stored their tracks in the scene frame, `z = -y`
+/// with frame-invariant headings (`math::to_scene_xz`). The inverse is an
+/// exact negation; nothing else in those documents is frame-dependent.
+fn scene_frame_to_xodr_local(doc: &mut Value, report: &mut Report) -> Result<(), TraceError> {
+    let header = child(doc, "header", "trace")?;
+    if header.get("frame").and_then(Value::as_str) != Some(SCENE_FRAME) {
+        return Ok(());
+    }
+    report.step("scene_frame_to_xodr_local");
+    header.insert("frame".to_owned(), Value::from("xodr-local"));
+    let actors = child(doc, "ticks", "trace")?
+        .get_mut("actors")
+        .ok_or_else(|| TraceError::Json("missing field `actors` in ticks".to_owned()))?;
+    for (id, track) in obj(actors, "ticks.actors")?.iter_mut() {
+        let track = obj(track, &format!("ticks.actors.{id}"))?;
+        if track.contains_key("y") {
+            return Err(TraceError::Json(format!(
+                "scene-frame track ticks.actors.{id} carries both y and z"
+            )));
+        }
+        let z = track.remove("z").ok_or_else(|| {
+            TraceError::Json(format!("scene-frame track ticks.actors.{id} has no z channel"))
+        })?;
+        let y = z
+            .as_array()
+            .ok_or_else(|| TraceError::Json(format!("ticks.actors.{id}.z must be an array")))?
+            .iter()
+            .map(|v| {
+                v.as_f64()
+                    .map(|z| Value::from(-z + 0.0))
+                    .ok_or_else(|| TraceError::Json(format!("ticks.actors.{id}.z holds a non-number")))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        track.insert("y".to_owned(), Value::Array(y));
+    }
+    Ok(())
+}
+
 /// v1 → v3: v3 introduced the physics provenance block. Every v1 trace was
 /// recorded by the choreography backend, which trace v4 still names
 /// `kinematic-v1`; the per-actor backend rows are derived from the actor
@@ -360,6 +415,7 @@ fn v4_to_v5(_doc: &mut Value, report: &mut Report) -> Result<(), TraceError> {
 }
 
 fn v4_pre_ledger_to_v4(doc: &mut Value, report: &mut Report) -> Result<(), TraceError> {
+    rename_legacy_ledger_authority(doc, report)?;
     let header = child(doc, "header", "trace")?;
     let missing_ego = !header.contains_key("ego");
     let missing_ledger = obj(doc, "trace")?.get("semanticLedger").is_none();
@@ -381,6 +437,24 @@ fn v4_pre_ledger_to_v4(doc: &mut Value, report: &mut Report) -> Result<(), Trace
         let ledger = unrecorded_ledger(child(doc, "header", "trace")?);
         let root = obj(doc, "trace")?;
         placeholder(root, "semanticLedger", ledger, "semanticLedger", report);
+    }
+    Ok(())
+}
+
+/// Early ledgers (editor previews, engines 0.4.0–0.6.0) named the engine's
+/// own physics `uniscenarios-physics`, the product's name before it became
+/// SimForge; it is the value now spelled `simforge-physics`.
+fn rename_legacy_ledger_authority(doc: &mut Value, report: &mut Report) -> Result<(), TraceError> {
+    let Some(source) = obj(doc, "trace")?
+        .get_mut("semanticLedger")
+        .and_then(|l| l.get_mut("source"))
+        .and_then(Value::as_object_mut)
+    else {
+        return Ok(());
+    };
+    if source.get("motionAuthority").and_then(Value::as_str) == Some("uniscenarios-physics") {
+        source.insert("motionAuthority".to_owned(), Value::from("simforge-physics"));
+        report.step("rename_legacy_ledger_authority");
     }
     Ok(())
 }

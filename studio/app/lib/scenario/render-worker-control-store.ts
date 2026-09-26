@@ -645,9 +645,10 @@ export async function claimRenderJobV2(registrationId: string, workerNodeId: str
              ) input_rows`,
           { package_id: row.execution_package_id },
         );
-      // The authoritative render timeline, when the revision's simulation has
-      // one: canonical JSON bytes whose sha256 is the intent's timelineSha256.
-      // Both engines prefer it; jobs without it fall back to the xosc.
+      // The authoritative render timeline the job bound: canonical JSON bytes
+      // whose sha256 is the intent's timelineSha256. Jobs without one are the
+      // explicit legacy OpenSCENARIO replay (`motion_source = original-xosc`)
+      // or were submitted before timelines existed.
       const timelineAsset = intent.assets.find((asset) => asset.assetId === RENDER_TIMELINE_INPUT_ID);
       if (timelineAsset) {
         const timeline = (await renderTimelineObject(
@@ -873,23 +874,31 @@ async function activeLease(
   return { ...lease, render_intent: renderIntent } satisfies ActiveLease;
 }
 
-/** The stored render timeline of a job's authoritative simulation result. */
+/** The stored render timeline a job bound. */
 async function renderTimelineObject(
   query: <T>(sql: string, params: SqlParams) => Promise<T[]>,
   jobId: string,
 ): Promise<{ sha256: string; sizeBytes: number; bucket: string; key: string } | null> {
+  // The timeline the job bound (`render_jobs.timeline_sha256`), from the
+  // timelines keyed by sampler version: an old result renders a timeline
+  // derived from its stored trace under the current sampler. Only objects
+  // stored as the canonical bytes themselves are served to workers.
   const rows = await query<{
-    storage_bucket: string; timeline_storage_key: string | null; timeline_sha256: string | null; timeline_byte_length: number | string | null;
+    storage_bucket: string; storage_key: string; timeline_sha256: string; byte_length: number | string;
   }>(
-    `SELECT s.storage_bucket, s.timeline_storage_key, s.timeline_sha256, s.timeline_byte_length
-       FROM simforge.sim_results s
-       JOIN simforge.render_jobs j ON j.workspace_id = s.workspace_id AND j.sim_key = s.sim_key
-      WHERE j.id = :job_id`,
+    `SELECT t.storage_bucket, t.storage_key, t.timeline_sha256, t.byte_length
+       FROM simforge.render_jobs j
+       JOIN simforge.sim_timelines t
+         ON t.workspace_id = j.workspace_id AND t.timeline_sha256 = j.timeline_sha256
+        AND t.trace_sha256 = j.trace_sha256 AND t.storage_encoding = 'identity'
+      WHERE j.id = :job_id
+      ORDER BY t.created_at, t.timeline_key
+      LIMIT 1`,
     { job_id: jobId },
   );
   const row = rows[0];
-  if (!row?.timeline_storage_key || !row.timeline_sha256 || row.timeline_byte_length === null) return null;
-  return { sha256: row.timeline_sha256, sizeBytes: Number(row.timeline_byte_length), bucket: row.storage_bucket, key: row.timeline_storage_key };
+  if (!row) return null;
+  return { sha256: row.timeline_sha256, sizeBytes: Number(row.byte_length), bucket: row.storage_bucket, key: row.storage_key };
 }
 
 /** Re-authorize each refresh against the live lease and immutable input digest; no URL/session state is stored. */

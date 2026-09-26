@@ -26,6 +26,9 @@ import type {
   ScenarioRevisionDto,
   ScenarioSimulationResultDto,
   ScenarioSimulationStatusDto,
+  ScenarioRevisionMotionDto,
+  ScenarioMapVersionIdentityDto,
+  ScenarioRevisionResimulationDto,
   ScenarioSimulationVerificationDto,
   ScenarioTagDto,
   ScenarioValidationRunDto,
@@ -181,17 +184,25 @@ export interface StudioProjectService {
     filters?: Record<string, unknown>,
     signal?: AbortSignal,
   ): Promise<{ simKey: string; traceSha256: string; evaluation: Record<string, unknown> & { verdict: "accept" | "reject" } }>;
-  /** The authoritative simulation a revision renders and is evaluated against. */
-  resolveRevisionSimulation(
+  /** Which motion a revision's renders replay (its original result by default). Never simulates. */
+  getRevisionMotion(revisionId: string, signal?: AbortSignal): Promise<ScenarioRevisionMotionDto>;
+  /**
+   * Explicitly re-simulate a revision under the current engine: adds a result
+   * without changing what renders by default, and returns the motion diff
+   * against the active result.
+   */
+  resimulateRevision(
     revisionId: string,
     options?: { waitMs?: number; signal?: AbortSignal },
-  ): Promise<ScenarioSimulationStatusDto>;
+  ): Promise<ScenarioRevisionResimulationDto>;
 }
 
 /** Map catalog and artifact resolution. URLs may be presigned and short-lived. */
 export interface StudioArtifactService {
   /** The usable map catalog. Refresh after installation or an authorization change. */
   listMaps(signal?: AbortSignal, options?: { fresh?: boolean }): Promise<StudioMapEntry[]>;
+  /** One map version by id, including superseded publications; null when it does not exist here. */
+  getMapVersionIdentity(mapVersionId: string, signal?: AbortSignal): Promise<ScenarioMapVersionIdentityDto | null>;
   /**
    * WGS84 footprints of the installed maps, for drawing scenario coverage on
    * a 2D basemap. Immutable per map version, so it shares the map catalog's

@@ -76,6 +76,7 @@
       "storedSha256": "81af87e5f9bf66f5c69d346ad46b842ef620d37e6be751c4a5beefbf7b4004d0",
       "note": "trace v1, engine 0.2.0, bus doors + pedestrian",
       "expect": {
+        "timeline": "builds",
         "shape": "v1",
         "traceVersion": 1,
         "engineVersion": "0.2.0",
@@ -108,6 +109,7 @@
       "storedSha256": "675c7f18a1d4ccc593e0ea873daf1280f6fcb95362175450124e7f92bde18c25",
       "note": "trace v1, engine 0.2.3, pedestrian",
       "expect": {
+        "timeline": "builds",
         "shape": "v1",
         "traceVersion": 1,
         "engineVersion": "0.2.3",
@@ -140,6 +142,7 @@
       "storedSha256": "590e4379ce8341138b17bcd049dd48925b6c3392384973774386deee3a528d2a",
       "note": "trace v1, engine 0.2.3, catalogSlot header",
       "expect": {
+        "timeline": "builds",
         "shape": "v1",
         "traceVersion": 1,
         "engineVersion": "0.2.3",
@@ -172,6 +175,7 @@
       "storedSha256": "b37a783e8ea32b615d573d69f47a5913d2b160cb1a8b667e1d63f6b8e823904c",
       "note": "trace v3, engine 0.4.0, signals, reversing truck",
       "expect": {
+        "timeline": "builds",
         "shape": "v3",
         "traceVersion": 3,
         "engineVersion": "0.4.0",
@@ -201,6 +205,7 @@
       "storedSha256": "b363bee4a9a1b89b8244d09054d1d0651e4b126096ad56041562520c135f79fa",
       "note": "trace v3, engine 0.4.0, bicycle/pedestrian/truck",
       "expect": {
+        "timeline": "builds",
         "shape": "v3",
         "traceVersion": 3,
         "engineVersion": "0.4.0",
@@ -230,6 +235,7 @@
       "storedSha256": "e32865ffc67a555b503406791e0e3f2ee2b04bc97e8cc45059aa0336c3cc49c2",
       "note": "trace v4 before ego/ledger, engine 0.4.0, signals",
       "expect": {
+        "timeline": "builds",
         "shape": "v4-pre-ledger",
         "traceVersion": 4,
         "engineVersion": "0.4.0",
@@ -258,6 +264,7 @@
       "storedSha256": "f8ec7f75959a872d4bdc696efe9fea3f0d966d5acb221bb0dcc5138156d69699",
       "note": "trace v4 before ego/ledger, engine 0.4.0, pedestrian",
       "expect": {
+        "timeline": "builds",
         "shape": "v4-pre-ledger",
         "traceVersion": 4,
         "engineVersion": "0.4.0",
@@ -277,6 +284,64 @@
       }
     },
     {
+      "id": "rc43-preview-v2-dt005",
+      "kind": "trace",
+      "release": "v0.1.0-rc.43",
+      "recorded": "2026-08-10",
+      "source": "dev editor simulation preview (preview schema v2), engine 0.4.0",
+      "path": "traces/rc43-preview-v2-dt005.trace.json.gz",
+      "storedSha256": "e4947e784a63d2a707ea70583e7a20aaf2f65b17811d380dce3c6167aa2c0653",
+      "note": "scene frame, dt 0.05: readable, but the render timeline refuses it",
+      "container": "browser-preview",
+      "expect": {
+        "timeline": "refused-unsupported-dt",
+        "shape": "v4-pre-ego",
+        "traceVersion": 4,
+        "engineVersion": "0.4.0",
+        "mapId": "yale-street_20260409-234639",
+        "engineGraphDigest": "fbebbdccd6a6b5dfa18a321d74009dede3851f18b673a9b807e6f1b5ea3b17d5",
+        "actors": 1,
+        "ticks": 401,
+        "dt": 0.05,
+        "unrecorded": [
+          "header.ego"
+        ],
+        "documentSha256": "ee802d1d84040b2a25ff987e1ec2fd8b11ed3b6f704b10d83efe92598399ca20",
+        "identity": "ee802d1d84040b2a25ff987e1ec2fd8b11ed3b6f704b10d83efe92598399ca20",
+        "recordedTraceSha256": null,
+        "motionSha256": "84b6b5636afa7d17ec0592a59c13a99ed03539f2373435c52fbdf0907fb61086"
+      }
+    },
+    {
+      "id": "rc45-preview-v2-engine060",
+      "kind": "trace",
+      "release": "v0.1.0-rc.45",
+      "recorded": "2026-08-17",
+      "source": "dev editor simulation preview (preview schema v2), engine 0.6.0",
+      "path": "traces/rc45-preview-v2-engine060.trace.json.gz",
+      "storedSha256": "be21de6623223959b4417f83ca797f9cca1bc855cba8016954e8b6fdc186006a",
+      "note": "scene frame; trace v4 with a semantic ledger but no ego block",
+      "container": "browser-preview",
+      "expect": {
+        "timeline": "builds",
+        "shape": "v4-pre-ego",
+        "traceVersion": 4,
+        "engineVersion": "0.6.0",
+        "mapId": "easterbrook-discovery-school_20260410-191436",
+        "engineGraphDigest": "ae48d9dbee5577e7e8506f99ab7dc242f5bcbb13f55dc686344dcfc1068638e0",
+        "actors": 2,
+        "ticks": 151,
+        "dt": 0.02,
+        "unrecorded": [
+          "header.ego"
+        ],
+        "documentSha256": "316af4cca04351a42706b6f2a6fd9063ea387c0595b9dd16ea05608008099619",
+        "identity": "316af4cca04351a42706b6f2a6fd9063ea387c0595b9dd16ea05608008099619",
+        "recordedTraceSha256": null,
+        "motionSha256": "e7b8200fe14500418d83fb93032d99b2cfae671f6fc936dd3d42316c53ced672"
+      }
+    },
+    {
       "id": "rc65-v4-geometry-proxy",
       "kind": "trace",
       "release": "v0.1.0-rc.65",
@@ -286,6 +351,7 @@
       "storedSha256": "0abbfb0f298a04d3fa4b4833420d9142c0a4c61a8af0a11c62d3237e27e9d0f7",
       "note": "trace v4, engine 0.6.0 (native migration), static object, topologyDigest header",
       "expect": {
+        "timeline": "builds",
         "shape": "v4",
         "traceVersion": 4,
         "engineVersion": "0.6.0",
@@ -311,6 +377,7 @@
       "storedSha256": "4b35d311b4729a0b4562a5fa46596529127bc44c47c8e6e431dba59de3f20121",
       "note": "trace v4, engine 0.6.0, signals",
       "expect": {
+        "timeline": "builds",
         "shape": "v4",
         "traceVersion": 4,
         "engineVersion": "0.6.0",
@@ -324,6 +391,147 @@
         "identity": null,
         "recordedTraceSha256": null,
         "motionSha256": "3ac49b41241e397b3fcc99390fa9c3a04922b9b6168e9458ca5e86f9c1236599"
+      }
+    },
+    {
+      "id": "rc72-engine070-richmond-commit",
+      "kind": "trace",
+      "release": "v0.1.0-rc.72",
+      "recorded": "2026-09-22",
+      "source": "dev simulation result (QA workspace), engine 0.7.0, revision commit",
+      "path": "traces/rc72-engine070-richmond-commit.trace.json.gz",
+      "storedSha256": "e9e967f1671e4a24716d4b7efc98db18bb2ab9dd03385652f6ca331f1c8cea08",
+      "note": "first worker-authoritative results; sampler 1 timeline; same scenario as rc73-engine090-richmond-resimulated",
+      "height": {
+        "xodr": "fixtures/golden-traces/maps/richmond-field-station/map.xodr.gz",
+        "topology": "fixtures/golden-traces/maps/richmond-field-station/topology-index.json.gz"
+      },
+      "expect": {
+        "timeline": "builds",
+        "shape": "v4",
+        "traceVersion": 4,
+        "engineVersion": "0.7.0",
+        "mapId": "richmond-field-station",
+        "engineGraphDigest": "5b08367524edbc0c46cfb2f4cd77ef6a204f263bb14cf7e8f90a1fffde1c14d6",
+        "actors": 1,
+        "ticks": 1001,
+        "dt": 0.02,
+        "unrecorded": [],
+        "documentSha256": "8fdb913bf65165c37de6ee46f33f12bddf0d5d8dd95d67861171a4e5f212e081",
+        "identity": "7f73ef33ce690eacf08dd731b76bc47610314644f1d7ec5cbbe2596bb8bcd96c",
+        "recordedTraceSha256": "7f73ef33ce690eacf08dd731b76bc47610314644f1d7ec5cbbe2596bb8bcd96c",
+        "motionSha256": "0e0ae43774845085fe05286314398df8af2fe262c658c45d8d29c57f87dc3118"
+      },
+      "timeline": {
+        "path": "timelines/rc72-engine070-richmond-commit.timeline.json",
+        "storedSha256": "d8bb0b9d45a064fb1968a5e8d1b04f8f28ad7df1f50367cee4fe0a15af629074",
+        "samplerVersion": "simforge.timeline-sampler/1",
+        "timelineKey": "5422b259b0f0f1734bfa3e324038ad24e88ac8a5bcff70ba491c089e3a0fb46a",
+        "heightFieldDigest": "682c159171f948b4bf5955ba8ec33fbcbc80777b3b47cb27cb1f47edb2d3e0c0",
+        "motionSha256": "0e0ae43774845085fe05286314398df8af2fe262c658c45d8d29c57f87dc3118"
+      }
+    },
+    {
+      "id": "rc72-preview-v3-engine070",
+      "kind": "trace",
+      "release": "v0.1.0-rc.72",
+      "recorded": "2026-09-22",
+      "source": "dev editor simulation preview (preview schema v3), engine 0.7.0",
+      "path": "traces/rc72-preview-v3-engine070.trace.json.gz",
+      "storedSha256": "5e6930f29d37fdbd5b2c88aefac195adb97d9d4117d1aac3697145dba4785d93",
+      "note": "last legacy preview schema; dt 0.05",
+      "container": "browser-preview",
+      "expect": {
+        "timeline": "refused-unsupported-dt",
+        "shape": "v4",
+        "traceVersion": 4,
+        "engineVersion": "0.7.0",
+        "mapId": "easterbrook-discovery-school",
+        "engineGraphDigest": "ff368b92160bf1d8bc726a39039cb225be81a85518b0630ba8671e69f649c4f6",
+        "actors": 1,
+        "ticks": 401,
+        "dt": 0.05,
+        "unrecorded": [],
+        "documentSha256": "f59c1a51ffd4d2b3120db30a48c60b86468349f00266e533f64a816cc10c412c",
+        "identity": null,
+        "recordedTraceSha256": null,
+        "motionSha256": "84b6b5636afa7d17ec0592a59c13a99ed03539f2373435c52fbdf0907fb61086"
+      }
+    },
+    {
+      "id": "rc73-engine090-richmond-resimulated",
+      "kind": "trace",
+      "release": "v0.1.0-rc.73",
+      "recorded": "2026-09-23",
+      "source": "dev simulation result (QA workspace), engine 0.9.0, lazy re-simulation of an engine 0.7.0 revision",
+      "path": "traces/rc73-engine090-richmond-resimulated.trace.json.gz",
+      "storedSha256": "91b1a9d222df423015ac0ae2580d482139ee2df09ccca979b8423a432c8a2f89",
+      "note": "the render path re-simulated this revision under 0.9.0 (pre-replay-by-default)",
+      "height": {
+        "xodr": "fixtures/golden-traces/maps/richmond-field-station/map.xodr.gz",
+        "topology": "fixtures/golden-traces/maps/richmond-field-station/topology-index.json.gz"
+      },
+      "expect": {
+        "timeline": "builds",
+        "shape": "v4",
+        "traceVersion": 4,
+        "engineVersion": "0.9.0",
+        "mapId": "richmond-field-station",
+        "engineGraphDigest": "5b08367524edbc0c46cfb2f4cd77ef6a204f263bb14cf7e8f90a1fffde1c14d6",
+        "actors": 1,
+        "ticks": 1001,
+        "dt": 0.02,
+        "unrecorded": [],
+        "documentSha256": "d519cd90e9832356e863ea531543f879326618cf11f75cbc58ef220203294736",
+        "identity": "ab97bcbe4ac3b8a0b10b6e7f0d24269f1937d26aa21a767f8f713259b0db1317",
+        "recordedTraceSha256": "ab97bcbe4ac3b8a0b10b6e7f0d24269f1937d26aa21a767f8f713259b0db1317",
+        "motionSha256": "0e0ae43774845085fe05286314398df8af2fe262c658c45d8d29c57f87dc3118"
+      },
+      "timeline": {
+        "path": "timelines/rc73-engine090-richmond-resimulated.timeline.json",
+        "storedSha256": "b4f2d09b89e74969ab769aa995cd1acbc1ab27883593b8dac9bd57ddb980d342",
+        "samplerVersion": "simforge.timeline-sampler/1",
+        "timelineKey": "7bcc7b03d8878e16475c16fdafbf48a41d74c1c9b89a5ccbab1d5d74d96390f0",
+        "heightFieldDigest": "682c159171f948b4bf5955ba8ec33fbcbc80777b3b47cb27cb1f47edb2d3e0c0",
+        "motionSha256": "0e0ae43774845085fe05286314398df8af2fe262c658c45d8d29c57f87dc3118"
+      }
+    },
+    {
+      "id": "rc73-engine090-richmond-small",
+      "kind": "trace",
+      "release": "v0.1.0-rc.73",
+      "recorded": "2026-09-23",
+      "source": "dev simulation result (QA workspace), engine 0.9.0",
+      "path": "traces/rc73-engine090-richmond-small.trace.json.gz",
+      "storedSha256": "57f830173a06fb7744668b61f04e1f0bf7a594f02a68548be65a71ab35b8eb5d",
+      "note": "smallest stored result",
+      "height": {
+        "xodr": "fixtures/golden-traces/maps/richmond-field-station/map.xodr.gz",
+        "topology": "fixtures/golden-traces/maps/richmond-field-station/topology-index.json.gz"
+      },
+      "expect": {
+        "timeline": "builds",
+        "shape": "v4",
+        "traceVersion": 4,
+        "engineVersion": "0.9.0",
+        "mapId": "richmond-field-station",
+        "engineGraphDigest": "5b08367524edbc0c46cfb2f4cd77ef6a204f263bb14cf7e8f90a1fffde1c14d6",
+        "actors": 1,
+        "ticks": 1001,
+        "dt": 0.02,
+        "unrecorded": [],
+        "documentSha256": "e16bbbc1d592a3a4f2c3cffd28c14c527e54e21f7557730aee037d78e33facf6",
+        "identity": "a49b1f18d221ebab7c35358487e09cd85f7abde4f409cb617a27812fa5fed88a",
+        "recordedTraceSha256": "a49b1f18d221ebab7c35358487e09cd85f7abde4f409cb617a27812fa5fed88a",
+        "motionSha256": "f4a1a8c528b188b9cd9b713754211a423b5ea0bec087fae5c86fc31f8eef85aa"
+      },
+      "timeline": {
+        "path": "timelines/rc73-engine090-richmond-small.timeline.json",
+        "storedSha256": "c98ca4cd30f5cde8ac9f2b6b59037669074dba137a5badc63a0ec3db9ccb1c1c",
+        "samplerVersion": "simforge.timeline-sampler/1",
+        "timelineKey": "5fc7eac1ede98a48aef934ce6f50f8d99c0d8b2c6a2f80819127195ca9ddbbfd",
+        "heightFieldDigest": "682c159171f948b4bf5955ba8ec33fbcbc80777b3b47cb27cb1f47edb2d3e0c0",
+        "motionSha256": "f4a1a8c528b188b9cd9b713754211a423b5ea0bec087fae5c86fc31f8eef85aa"
       }
     }
   ]

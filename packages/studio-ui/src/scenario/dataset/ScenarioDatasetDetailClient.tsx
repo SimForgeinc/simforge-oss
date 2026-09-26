@@ -492,6 +492,20 @@ export function ScenarioDatasetDetailClient({
               >
                 Refresh
               </Button>
+              {actions.importTransfer ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  data-testid="import-transfer-confirm"
+                  onClick={() => {
+                    setError(null);
+                    actions.confirmImportTransfer();
+                  }}
+                >
+                  Transfer onto {actions.importTransfer.target.label} ({actions.importTransfer.target.mapVersionId})
+                </Button>
+              ) : null}
             </div>
           ) : null}
           {notice ? (

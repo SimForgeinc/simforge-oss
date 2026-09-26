@@ -22,8 +22,26 @@ import { toSceneXZ } from '../frames.js';
 import type { ActorKind, ControlIndication, Dims, MotionPhysicsMode, OperationalConditions, StaticProp } from '../schema/input.js';
 import type { MapDivergenceTrack, PerceptionMetrics, SensorTrack } from './sensor-track.js';
 
-/** The only readable format. v4 carries the mandatory lane-relative lateral-offset channel. */
-export const TRACE_FORMAT_VERSION = 4;
+/**
+ * The current format. v5 adds the optional ground-contact channels (`contact`,
+ * `header.groundDigest`; engine 0.11). v4 documents are the same shape without
+ * them and read as v5 with no contact (`READABLE_TRACE_VERSIONS`).
+ */
+export const TRACE_FORMAT_VERSION = 5;
+/** Formats a TS reader accepts directly: v4 is v5 without ground contact. */
+export const READABLE_TRACE_VERSIONS: readonly number[] = [4, 5];
+
+/** Engine ground contact (docs/engineering/ground-height.md), index-aligned with `ticks.t`. */
+export interface ActorContactTrack {
+  /** Ground-contact elevation at the footprint centre (bottom of the body), metres. */
+  readonly z: number[];
+  /** Road pitch, positive nose down. */
+  readonly pitchRad: number[];
+  /** Road roll, positive right side down. */
+  readonly rollRad: number[];
+  /** Per wheel `[FL, FR, RL, RR]`, contact minus body plane. */
+  readonly wheelDropM: [number, number, number, number][];
+}
 
 /** Decimal places each channel is quantised to before serialisation. */
 export const TRACE_PRECISION = {
@@ -62,6 +80,8 @@ export interface ActorTrack {
    * without the trace carrying a boolean for every tick.
    */
   readonly downSinceS?: number;
+  /** Engine ground contact (trace v5); present exactly when `header.groundDigest` is. */
+  readonly contact?: ActorContactTrack;
 }
 
 export interface ActorPhysicsTrack {
@@ -302,6 +322,8 @@ export interface TraceHeader {
   readonly mapId: string;
   /** Engine graph digest (currently source XODR sha256). */
   readonly engineGraphDigest: string;
+  /** sha256 of the map ground surface the engine grounded bodies on (trace v5). */
+  readonly groundDigest?: string;
   readonly dt: number;
   readonly clipSeconds: number;
   readonly warmupSeconds: number;
@@ -462,6 +484,16 @@ export function traceToSceneFrame(trace: SimTrace): SceneTrace {
         physics: Object.fromEntries(
           Object.entries(tr.physics).map(([key, values]: [string, number[]]) => [key, [...values]]),
         ) as unknown as ActorPhysicsTrack,
+      } : {}),
+      // Elevation is frame-independent (scene y = local z); pitch/roll keep
+      // OpenSCENARIO signs.
+      ...(tr.contact ? {
+        contact: {
+          z: [...tr.contact.z],
+          pitchRad: [...tr.contact.pitchRad],
+          rollRad: [...tr.contact.rollRad],
+          wheelDropM: tr.contact.wheelDropM.map((d) => [...d] as [number, number, number, number]),
+        },
       } : {}),
     };
   }

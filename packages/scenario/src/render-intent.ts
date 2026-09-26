@@ -7,6 +7,11 @@ import { Sha256 } from './sha256.js';
 import { canonicalJson } from './canonical-json.js';
 
 export const RENDER_INTENT_V1_SCHEMA = 'simforge.render-intent/v1' as const;
+/** `RenderIntentV1.motionSource`: see the field. */
+export const RENDER_MOTION_SOURCES = ['original', 'resimulated', 'original-xosc'] as const;
+export type RenderMotionSource = typeof RENDER_MOTION_SOURCES[number];
+/** The intent's explicit legacy replay (no stored trace; poses from the xosc). */
+export const LEGACY_XOSC_MOTION_SOURCE = 'original-xosc' satisfies RenderMotionSource;
 /**
  * Substitutions a render intent may explicitly allow. Each is a genuine
  * product choice, never a default:
@@ -15,11 +20,6 @@ export const RENDER_INTENT_V1_SCHEMA = 'simforge.render-intent/v1' as const;
  */
 export const RENDER_SUBSTITUTION_KINDS = ['carla-actor-body'] as const;
 export type RenderSubstitutionKind = typeof RENDER_SUBSTITUTION_KINDS[number];
-/** `RenderIntentV1.motionSource`: see the field. */
-export const RENDER_MOTION_SOURCES = ['original', 'resimulated', 'original-xosc'] as const;
-export type RenderMotionSource = typeof RENDER_MOTION_SOURCES[number];
-/** The intent's explicit legacy replay (no stored trace; poses from the xosc). */
-export const LEGACY_XOSC_MOTION_SOURCE = 'original-xosc' satisfies RenderMotionSource;
 /**
  * A trailing presentation camera authored on the sensor host. It rides outside the
  * measurement rig so a render can ship a drive-along view without restating the rig counts.

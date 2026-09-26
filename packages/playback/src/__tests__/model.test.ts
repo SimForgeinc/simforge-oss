@@ -232,11 +232,33 @@ describe('SimForge concrete playback import', () => {
       .toEqual([-0.25, 1.75]);
   });
 
-  it.each([0, TRACE_FORMAT_VERSION - 1, TRACE_FORMAT_VERSION + 1, 99])('fails closed for trace format v%s', (traceVersion) => {
+  it.each([0, 3, TRACE_FORMAT_VERSION + 1, 99])('fails closed for trace format v%s', (traceVersion) => {
     const fixture = pair();
     (fixture.trace.header as { traceVersion: number }).traceVersion = traceVersion;
     const error = message(() => parsePlaybackPair(fixture.instance, fixture.trace));
-    expect(error).toContain(`header.traceVersion must be ${TRACE_FORMAT_VERSION}`);
+    expect(error).toContain(`header.traceVersion must be one of 4, 5 (current ${TRACE_FORMAT_VERSION})`);
+  });
+
+  it('reads v4 as v5 without ground contact, and samples v5 contact as the body height', () => {
+    const v4 = pair();
+    (v4.trace.header as { traceVersion: number }).traceVersion = 4;
+    expect(() => parsePlaybackPair(v4.instance, v4.trace)).not.toThrow();
+    const v5 = pair();
+    (v5.trace.header as { traceVersion: number; groundDigest?: string }).traceVersion = 5;
+    (v5.trace.header as { groundDigest?: string }).groundDigest = 'g'.repeat(64);
+    for (const track of Object.values(mutableTracks(v5.trace)) as Record<string, unknown>[]) {
+      const n = (track['x'] as number[]).length;
+      (track as Record<string, unknown>)['contact'] = {
+        z: Array.from({ length: n }, (_, i) => 12 + i),
+        pitchRad: new Array(n).fill(0.01),
+        rollRad: new Array(n).fill(-0.02),
+        wheelDropM: Array.from({ length: n }, () => [0, 0, 0, 0]),
+      };
+    }
+    const bundle = parsePlaybackPair(v5.instance, v5.trace);
+    const sampled = samplePlaybackActors(bundle, bundle.trace.ticks.t[0]!).find((actor) => actor.present && !actor.static);
+    expect(sampled?.groundY).toBe(12);
+    expect(sampled?.roadRollRad).toBe(-0.02);
   });
 
   it('rejects a missing or malformed lateral channel', () => {
@@ -615,7 +637,7 @@ describe('SimForge concrete playback import', () => {
 
 
 /** Bake one worker-SUMO-shaped actor into the fixture trace, the way `mergeSumoTrafficIntoTrace` does. */
-function withSumoTraffic(source: SimTrace, id = 'sumo-0a1b2c3d', metadata: object = sumoTraceActorMetadata()): SimTrace {
+function withSumoTraffic(source: SimTrace, id = 'sumo-0a1b2c3d', metadata: object = sumoTraceActorMetadata('car')): SimTrace {
   return {
     ...source,
     header: {
@@ -674,8 +696,8 @@ describe('trace-only traffic (worker SUMO baked into the authoritative trace)', 
 
   it('uses the vehicle class the trace carries instead of assuming a sedan', () => {
     const fixture = pair();
-    const truck = { ...sumoTraceActorMetadata(), kind: 'truck', dims: { l: 8, w: 2.5, h: 3.4 }, tags: ['ambient', 'sumo'] };
-    const bus = { ...sumoTraceActorMetadata(), kind: 'bus', tags: ['ambient', 'catalog:vehicle.bus', 'sumo'] };
+    const truck = { ...sumoTraceActorMetadata('car'), kind: 'truck', dims: { l: 8, w: 2.5, h: 3.4 }, tags: ['ambient', 'sumo'] };
+    const bus = { ...sumoTraceActorMetadata('car'), kind: 'bus', tags: ['ambient', 'catalog:vehicle.bus', 'sumo'] };
     const bundle = parsePlaybackPair(
       fixture.instance,
       withSumoTraffic(withSumoTraffic(fixture.trace, 'sumo-truck001', truck), 'sumo-bus00001', bus),
@@ -690,7 +712,7 @@ describe('trace-only traffic (worker SUMO baked into the authoritative trace)', 
 
   it('derives the SUMO origin from tags on traces written without an explicit origin', () => {
     const fixture = pair();
-    const { origin: _origin, ...legacy } = sumoTraceActorMetadata();
+    const { origin: _origin, ...legacy } = sumoTraceActorMetadata('car');
     const traced = withSumoTraffic(fixture.trace, 'sumo-legacy01', legacy);
     expect(traceActorOrigin(traced, 'sumo-legacy01')).toBe('sumo');
     expect(traceOnlyTrafficActorIds(fixture.instance.input, traced)).toEqual(['sumo-legacy01']);

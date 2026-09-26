@@ -25,7 +25,7 @@ import { LEGACY_XOSC_MOTION_SOURCE, parseRenderIntent, type RenderIntentV1, type
 
 import { lowerTimelineToNative, type NativeTimelineLowering } from './timeline-lowering.js';
 import { lowerOpenScenarioToNative, type NativeSceneLowering } from './lowering.js';
-import { RENDER_TIMELINE_INPUT_ID, compareObserved, openRenderTimeline, type ParityReport } from '../timeline/index.js';
+import { RENDER_TIMELINE_INPUT_ID, checkTimelineContact, compareObserved, openRenderTimeline, type ContactGateReport, type ParityReport } from '../timeline/index.js';
 import { createNativeCameraSchedule, createNativeSensorRigs } from './camera-schedule.js';
 import { LidarVideoRasterizer, RadarVideoRasterizer, parseLidarPly, parseRadarCsv } from './sensor-video.js';
 import { StreamingZipWriter, HashedArtifactSink } from '../web/artifacts.js';
@@ -44,6 +44,9 @@ import {
   DEFAULT_NVENC_MAX_SESSIONS, VideoEncoder, assignVideoCodecs, encoderCodecArgs, nvencAvailable,
   type NativeVideoCodec, type NativeVideoEncoderPreference, type VideoFormat,
 } from './video-encoder.js';
+
+/** The map ground surface member (`derived/ground`, docs/engineering/ground-height.md). */
+const GROUND_MESH_MEMBER = 'derived/ground/ground-mesh.bin';
 
 export const NATIVE_RENDER_ENGINE_ID = 'bevy-retained';
 /** Per-RPC budgets for a started service (the start itself scales with the scene: `nativeStartupTimeoutMs`). */
@@ -490,16 +493,36 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         throw new RenderInputError('native_render_timeline_missing', `native render requires the ${RENDER_TIMELINE_INPUT_ID} input (the simulation's render timeline); job ${context.jobId} declares none and does not request motionSource '${LEGACY_XOSC_MOTION_SOURCE}'`);
       }
       const warnings: { code: string; message: string }[] = [];
+      let timelineBytes: Uint8Array | undefined;
+      let contactGate: ContactGateReport | undefined;
       const applyAttitude = options.applyAttitude !== false;
       let lowering: NativeSceneLowering | NativeTimelineLowering;
       let timelineSha256: string | undefined;
       if (timelineInput) {
-        const timelineLowering = await lowerTimelineToNative(await fs.readFile(timelineInput.path), rgbSchedules, { attitude: applyAttitude });
+        timelineBytes = new Uint8Array(await fs.readFile(timelineInput.path));
+        const timelineLowering = await lowerTimelineToNative(timelineBytes, rgbSchedules, { attitude: applyAttitude });
         timelineSha256 = timelineLowering.timelineSha256;
         if (timelineSha256 !== timelineInput.sha256) {
           throw new RenderInputError('render_timeline_digest_mismatch', `${RENDER_TIMELINE_INPUT_ID} bytes ${timelineInput.sha256} are not the canonical timeline ${timelineSha256}`);
         }
         lowering = timelineLowering;
+        // Contact gate: every wheel the renderer will draw stands on the
+        // rendered ground within 3 cm (docs/engineering/ground-height.md).
+        const groundMember = closure.members.get(GROUND_MESH_MEMBER);
+        if (groundMember) {
+          const opened = await openRenderTimeline(timelineBytes);
+          try {
+            contactGate = checkTimelineContact(opened, new Uint8Array(await fs.readFile(groundMember.path)));
+          } finally {
+            opened.free();
+          }
+          if (!contactGate.pass) {
+            const worst = contactGate.failures[0];
+            throw new Error(`render_contact_gate_failed: ${contactGate.failureCount} wheel contact(s) off the rendered ground by more than ${contactGate.toleranceM} m; worst ${worst?.actorId} tick ${worst?.tick} ${worst?.contact} gap ${worst?.gapM.toFixed(3)} m`);
+          }
+        } else {
+          warnings.push({ code: 'render_contact_gate_unavailable', message: `the map closure carries no ${GROUND_MESH_MEMBER}; wheel contact was not checked (a map version published before its ground derivative)` });
+        }
       } else {
         lowering = lowerOpenScenarioToNative((await fs.readFile(xoscInput.path)).toString('utf8'), xoscInput.sha256, rgbSchedules);
       }
@@ -521,6 +544,7 @@ export function createRenderEngine(options: NativeRenderEngineOptions = {}): Ren
         loweringSha256: lowering.sha256,
         sceneSource: lowering.source,
         ...(timelineSha256 ? { timelineSha256 } : {}),
+        ...(contactGate ? { contactGate: { pass: contactGate.pass, checked: contactGate.checked, maxAbsGapM: contactGate.maxAbsGapM, unsupported: contactGate.unsupported, groundSha256: contactGate.groundSha256 } } : {}),
         mapId: lowering.mapId,
         fixedTimestepSeconds: lowering.fixedTimestepSeconds,
         frames: lowering.states,

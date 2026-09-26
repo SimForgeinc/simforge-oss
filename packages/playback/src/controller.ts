@@ -373,6 +373,8 @@ export class PlaybackController {
   private playing = false;
   private readonly transport = new StudioTransport();
   private readonly metadataByActor: ReadonlyMap<string, PlaybackBundle['actors'][number]>;
+  /** Present bodies held back because no ground height is known for them yet. */
+  private readonly placingActors = new Set<string>();
   private sampled: readonly SampledActor[] = [];
   private sampledSignals: readonly SampledSignal[] = [];
   private renderedSignalHeadCount = 0;
@@ -613,15 +615,26 @@ export class PlaybackController {
     }
     const views: ActorView[] = this.sampled
       .filter((actor) => actor.present)
-      .map((actor) => {
+      .flatMap((actor) => {
+        // Height: the engine's ground contact (trace v5) is the body's height.
+        // A trace without contact (a map version published before its ground
+        // derivative) falls back to the rendered road under the body; while
+        // that road is still streaming the body is held back ("placing"),
+        // never drawn at y = 0 below the map.
+        const y = actor.groundY ?? this.sampleHeight(actor.x, actor.z);
+        if (y === null || y === undefined) {
+          this.placingActors.add(actor.id);
+          return [];
+        }
+        this.placingActors.delete(actor.id);
         const metadata = this.metadataByActor.get(actor.id);
         const cues = cuesByActor.get(actor.id);
-        return {
+        return [{
           id: actor.id,
           catalogId: actor.catalogId,
           dims: actor.dims,
           x: actor.x,
-          y: this.sampleHeight(actor.x, actor.z) ?? 0,
+          y,
           z: actor.z,
           headingRad: actor.headingRad,
           animationTimeS: this.time,
@@ -642,7 +655,7 @@ export class PlaybackController {
           ...(metadata?.bodyColor ? { bodyColor: metadata.bodyColor } : {}),
           ...(doorsByActor.has(actor.id) ? { doors: doorsByActor.get(actor.id) } : {}),
           ...(cues ? { emergency: cues.emergency, hornActive: cues.hornActive, indicator: cues.indicator } : {}),
-        } satisfies ActorView;
+        } satisfies ActorView];
       });
     const sampledById = new Map(this.sampled.map((actor) => [actor.id, actor] as const));
     const propViews: ActorView[] = this.bundle.props.flatMap((prop) => {
@@ -660,6 +673,13 @@ export class PlaybackController {
         headingRad = carrier.headingRad + prop.attachment.headingOffsetRad;
         heightM = prop.attachment.heightM;
       }
+      // A prop stands on the rendered road; held back while it streams.
+      const y = this.sampleHeight(x, z);
+      if (y === null) {
+        this.placingActors.add(prop.id);
+        return [];
+      }
+      this.placingActors.delete(prop.id);
       return [{
         id: prop.id,
         catalogId: prop.catalogId,
@@ -670,7 +690,7 @@ export class PlaybackController {
           h: prop.dims.h * prop.scale,
         },
         x,
-        y: (this.sampleHeight(x, z) ?? 0) + heightM,
+        y: y + heightM,
         z,
         headingRad,
       }];
@@ -686,6 +706,16 @@ export class PlaybackController {
       this.renderer.clearLayer(TRACE_TRAFFIC_LAYER);
     }
     this.renderer.syncLayer(this.options.renderer ? 'playback' : 'editor', [...views, ...propViews]);
+  }
+
+  /**
+   * Bodies that are present but not drawn because their ground height is not
+   * known yet (a trace without engine contact while the road layer streams).
+   * Hosts show them as "placing"; a body that stays here after the road has
+   * loaded is off the rendered map.
+   */
+  get placingActorIds(): readonly string[] {
+    return [...this.placingActors].sort();
   }
 
   private frameActors(): void {
