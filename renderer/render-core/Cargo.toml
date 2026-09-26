@@ -86,6 +86,12 @@ default = ["pcss"]
 windowing = ["bevy/bevy_winit", "bevy/x11", "bevy/wayland", "bevy/bevy_gilrs", "bevy/bevy_clipboard", "bevy/custom_cursor", "bevy/audio"]
 # Chrome-trace CPU spans of every Bevy system (profiling builds only).
 trace-chrome = ["bevy/trace_chrome"]
+# Dev only, never in a shipped build: when no sky source is configured, look
+# for the plates in this crate's source checkout (assets/sky, filled by
+# renderer/tools/prepare_sky_assets.py). Off by default, so a release binary
+# never probes or prints a path of the machine that built it, and tests stay
+# hermetic; use `simforge assets pull --only sky` or SIMFORGE_SKY_ASSETS instead.
+source-checkout-sky = []
 # PCSS soft shadows (lighting ladder rung 4)
 pcss = ["bevy/experimental_pbr_pcss"]
 # Solari raytraced GI (rung 5) — optional RT-hardware quality tier

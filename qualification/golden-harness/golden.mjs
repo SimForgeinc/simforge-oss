@@ -750,11 +750,16 @@ function hashTree(dir, skip = () => false) {
   return out;
 }
 
-/** The sky plate directory the renderer will select (sky_pass.rs `select_dir`, the explicit cases). */
+/**
+ * The sky plate directory the renderer will select (sky_pass.rs `select_dir`,
+ * the explicit cases). The harness requires one of them: the renderer has no
+ * source-checkout fallback, and an implicit choice (the asset cache) would be
+ * invisible to the scene keys. ci-local.sh exports SIMFORGE_SKY_ASSETS.
+ */
 function skyDir() {
   if (process.env.SIMFORGE_SKY_ASSETS) return process.env.SIMFORGE_SKY_ASSETS;
   if (process.env.SIMFORGE_NATIVE_RUNTIME_ROOT) return path.join(process.env.SIMFORGE_NATIVE_RUNTIME_ROOT, 'share/sky');
-  return path.join(repoRoot, 'renderer/render-core/assets/sky');
+  fail(1, 'no sky plates selected: set SIMFORGE_SKY_ASSETS (qualification/golden-harness/ci-local.sh sets it to renderer/render-core/assets/sky after renderer/tools/prepare_sky.py) or SIMFORGE_NATIVE_RUNTIME_ROOT');
 }
 
 /**
