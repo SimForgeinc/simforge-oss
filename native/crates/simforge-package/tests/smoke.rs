@@ -169,7 +169,7 @@ fn generate_smoke_package() {
     let (name, version) = RELEASE.split_once('@').unwrap();
     let draft = json!({
         "schema": "simforge.scenario-package/v1",
-        "producer": { "app": "simforge-fixtures", "appVersion": "0.2.0", "minCli": "0.2.0" },
+        "producer": { "app": "simforge-fixtures", "appVersion": "0.2.0", "minCli": "0.2.0-rc.0" },
         "scenario": {
             "title": "Smoke: wrong-way vehicle, blind approach, Richmond Field Station (public registry v5)",
             "documentSchema": "simforge.scenario.v2",
@@ -300,6 +300,28 @@ fn generate_smoke_package() {
     let mut text = serde_json::to_string_pretty(&meta).unwrap();
     text.push('\n');
     std::fs::write(dir.join("smoke.json"), text).unwrap();
+}
+
+/// The release smoke package is read by the release candidates of its first
+/// release as well as the release: `producer.minCli` is `0.2.0-rc.0`, and
+/// `minCli > reader` is semver precedence (a pre-release orders before its
+/// release), so 0.2.0-rc.0, 0.2.0-rc.1 and 0.2.0 read it and 0.1.x does not.
+#[test]
+fn the_smoke_package_is_readable_by_the_release_candidates() {
+    let dir = smoke_dir();
+    let meta: Value =
+        serde_json::from_slice(&std::fs::read(dir.join("smoke.json")).unwrap()).unwrap();
+    let bytes = std::fs::read(dir.join(meta["package"].as_str().unwrap())).unwrap();
+    for reader in ["0.2.0-rc.0", "0.2.0-rc.1", "0.2.0", "0.2.1"] {
+        let v = verify_bytes(&bytes, &VerifyOptions::new(Some(reader)).unwrap())
+            .unwrap_or_else(|e| panic!("simforge {reader} must read the smoke package: {e}"));
+        assert_eq!(v.manifest().producer.min_cli, "0.2.0-rc.0");
+    }
+    for reader in ["0.1.9", "0.2.0-alpha.1"] {
+        let err = verify_bytes(&bytes, &VerifyOptions::new(Some(reader)).unwrap())
+            .expect_err("an older reader must refuse the smoke package");
+        assert_eq!(err.rule, "version_ahead", "simforge {reader}: {err}");
+    }
 }
 
 #[test]
