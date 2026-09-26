@@ -72,3 +72,8 @@ lto = "fat"
 inherits = "release"
 codegen-units = 16
 debug = "line-tables-only"
+
+# The release archives (cargo-dist builds with `--profile dist`): exactly the
+# release profile, so a shipped binary is the one the goldens were recorded with.
+[profile.dist]
+inherits = "release"

@@ -1,0 +1,26 @@
+name: release-preflight
+# dist plan-job: runs beside `plan`; every build waits for it. A release is
+# refused before any binary is built when versions disagree, a dependency
+# breaks the licence/advisory policy, or the notices/attributions are stale.
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: simforge-build
+    container: ghcr.io/simforgeinc/simforge-release-build:2026-09-24
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: One version everywhere (Cargo, pyproject, CHANGELOG, tag)
+        run: python3 scripts/release/check-versions.py --tag "$GITHUB_REF_NAME"
+      - name: Licence, advisory, ban and source policy (deny.toml), every shipped workspace
+        run: scripts/release/check.sh deny
+      - name: THIRD_PARTY_NOTICES.md and asset attributions are current
+        run: scripts/release/check.sh notices
