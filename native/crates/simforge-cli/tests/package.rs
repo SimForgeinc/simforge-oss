@@ -31,9 +31,8 @@ fn simforge(home: &Path) -> Command {
         )
         .env("HOME", home);
     // No sky plates, explicitly: an empty SIMFORGE_SKY_ASSETS is the selected
-    // directory, so the lookup never falls through to the source checkout's
-    // assets/sky (plates materialised there by goldens or a build would
-    // otherwise report the sky as installed).
+    // directory, so a developer's real asset cache never reports the sky as
+    // installed here.
     let no_sky = home.join("no-sky");
     std::fs::create_dir_all(&no_sky).unwrap();
     cmd.env("SIMFORGE_SKY_ASSETS", no_sky);

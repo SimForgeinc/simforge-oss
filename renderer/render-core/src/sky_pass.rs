@@ -265,7 +265,11 @@ pub struct SkyAssetProvenance {
 /// 4. the pinned sky closure (`simforge_assets::PINNED_SKY_CLOSURE`) when
 ///    `simforge assets pull` has materialized it in the asset cache (fetched
 ///    by digest; the SDK install path, which has no runtime root);
-/// 5. the crate's `assets/sky` (source checkout, no installed runtime).
+/// 5. only with the dev-only `source-checkout-sky` feature: the crate's
+///    `assets/sky` in the source checkout the binary was built from. It is off
+///    in every shipped and default build, so a release binary never probes or
+///    prints a path of the machine that built it; without it, no source means
+///    an explicit error naming `simforge assets pull --only sky`.
 ///
 /// The directory must hold `SOURCES.json`, whose `product_sha256` /
 /// `product_bytes` are checked against the plates, so a stale or truncated
@@ -292,6 +296,7 @@ enum SkySelection {
     RuntimeRootEnv,
     InstalledRuntime,
     AssetCache,
+    #[cfg(feature = "source-checkout-sky")]
     SourceCheckout,
 }
 
@@ -302,7 +307,8 @@ impl SkySelection {
             Self::RuntimeRootEnv => "SIMFORGE_NATIVE_RUNTIME_ROOT/share/sky",
             Self::InstalledRuntime => "installed runtime share/sky beside the executable",
             Self::AssetCache => "the pinned sky closure in the asset cache (simforge assets pull)",
-            Self::SourceCheckout => "source checkout assets/sky",
+            #[cfg(feature = "source-checkout-sky")]
+            Self::SourceCheckout => "source checkout assets/sky (dev feature source-checkout-sky)",
         }
     }
 }
@@ -333,40 +339,53 @@ fn cached_sky_closure() -> Option<std::path::PathBuf> {
     store.materialized(&id).ok().flatten().map(|m| m.directory)
 }
 
+/// The error when no sky source is configured at all. It names no path of
+/// the build machine: shipped binaries have no source-checkout fallback.
+const NO_SKY_SOURCE: &str = "sky assets not found: the pinned sky closure is not in the asset cache, \
+     SIMFORGE_SKY_ASSETS and SIMFORGE_NATIVE_RUNTIME_ROOT are unset, and no installed runtime sits \
+     beside this executable; run `simforge assets pull --only sky` to fetch the pinned sky closure \
+     by digest, or set SIMFORGE_SKY_ASSETS to a directory holding SOURCES.json and the .skytex plates";
+
 /// Pure selection over the inputs; see [`SkyAssetPaths`] for the order.
+/// `None`: no source is configured (the caller reports [`NO_SKY_SOURCE`]).
 fn select_dir(
     sky_assets: Option<std::path::PathBuf>,
     runtime_root: Option<std::path::PathBuf>,
     executable: Option<&std::path::Path>,
     asset_cache: Option<std::path::PathBuf>,
-) -> (std::path::PathBuf, SkySelection) {
+) -> Option<(std::path::PathBuf, SkySelection)> {
     if let Some(dir) = sky_assets {
-        return (dir, SkySelection::SkyAssetsEnv);
+        return Some((dir, SkySelection::SkyAssetsEnv));
     }
     if let Some(root) = runtime_root {
-        return (root.join("share/sky"), SkySelection::RuntimeRootEnv);
+        return Some((root.join("share/sky"), SkySelection::RuntimeRootEnv));
     }
     if let Some(root) = executable.and_then(installed_runtime_root) {
-        return (root.join("share/sky"), SkySelection::InstalledRuntime);
+        return Some((root.join("share/sky"), SkySelection::InstalledRuntime));
     }
     if let Some(dir) = asset_cache {
-        return (dir, SkySelection::AssetCache);
+        return Some((dir, SkySelection::AssetCache));
     }
-    (
+    #[cfg(feature = "source-checkout-sky")]
+    return Some((
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/sky"),
         SkySelection::SourceCheckout,
-    )
+    ));
+    #[cfg(not(feature = "source-checkout-sky"))]
+    None
 }
 
 impl SkyAssetPaths {
     pub fn resolve() -> anyhow::Result<Self> {
         let executable = std::env::current_exe().ok(); // fallback-ok: search-path candidate only; a missing asset panics below
-        let (dir, selection) = select_dir(
+        let Some((dir, selection)) = select_dir(
             env_path("SIMFORGE_SKY_ASSETS"),
             env_path("SIMFORGE_NATIVE_RUNTIME_ROOT"),
             executable.as_deref(),
             cached_sky_closure(),
-        );
+        ) else {
+            anyhow::bail!("{NO_SKY_SOURCE}");
+        };
         Self::verify(dir, selection)
     }
 
@@ -884,16 +903,27 @@ mod tests {
     fn installed_binary_discovers_its_own_share_sky() {
         let root = scratch("installed");
         let exe = installed_layout(&root);
-        let (dir, selection) = select_dir(None, None, Some(exe.as_path()), None);
+        let (dir, selection) = select_dir(None, None, Some(exe.as_path()), None).unwrap();
         assert_eq!(selection, SkySelection::InstalledRuntime);
         assert_eq!(dir, root.join("share/sky"));
     }
 
     #[test]
-    fn binary_without_manifest_beside_it_is_a_source_checkout() {
+    #[cfg(not(feature = "source-checkout-sky"))]
+    fn nothing_configured_selects_nothing_and_names_no_build_path() {
         let root = scratch("target-dir");
         let exe = root.join("release/simforge-render");
-        let (dir, selection) = select_dir(None, None, Some(exe.as_path()), None);
+        assert!(select_dir(None, None, Some(exe.as_path()), None).is_none());
+        assert!(NO_SKY_SOURCE.contains("simforge assets pull --only sky"));
+        assert!(!NO_SKY_SOURCE.contains(env!("CARGO_MANIFEST_DIR")));
+    }
+
+    #[test]
+    #[cfg(feature = "source-checkout-sky")]
+    fn dev_feature_falls_back_to_the_source_checkout() {
+        let root = scratch("target-dir");
+        let exe = root.join("release/simforge-render");
+        let (dir, selection) = select_dir(None, None, Some(exe.as_path()), None).unwrap();
         assert_eq!(selection, SkySelection::SourceCheckout);
         assert_eq!(
             dir,
@@ -910,7 +940,8 @@ mod tests {
             Some(PathBuf::from("/opt/rt")),
             Some(exe.as_path()),
             None,
-        );
+        )
+        .unwrap();
         assert_eq!(selection, SkySelection::RuntimeRootEnv);
         assert_eq!(dir, Path::new("/opt/rt/share/sky"));
         let (dir, selection) = select_dir(
@@ -918,7 +949,8 @@ mod tests {
             Some(PathBuf::from("/opt/rt")),
             Some(exe.as_path()),
             Some(PathBuf::from("/cache/trees/sky")),
-        );
+        )
+        .unwrap();
         assert_eq!(selection, SkySelection::SkyAssetsEnv);
         assert_eq!(dir, Path::new("/plates"));
     }
@@ -928,12 +960,14 @@ mod tests {
         let root = scratch("sdk-install");
         let exe = root.join("bin/simforge");
         let cache = PathBuf::from("/cache/trees/sky");
-        let (dir, selection) = select_dir(None, None, Some(exe.as_path()), Some(cache.clone()));
+        let (dir, selection) =
+            select_dir(None, None, Some(exe.as_path()), Some(cache.clone())).unwrap();
         assert_eq!(selection, SkySelection::AssetCache);
         assert_eq!(dir, cache);
         // An installed runtime still outranks the cache.
         let installed = installed_layout(&scratch("installed-and-cache"));
-        let (_, selection) = select_dir(None, None, Some(installed.as_path()), Some(cache));
+        let (_, selection) =
+            select_dir(None, None, Some(installed.as_path()), Some(cache)).unwrap();
         assert_eq!(selection, SkySelection::InstalledRuntime);
     }
 
