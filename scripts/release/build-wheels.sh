@@ -16,6 +16,10 @@ root="$(git rev-parse --show-toplevel)"
 cd "$root"
 # shellcheck source=layout.sh
 source scripts/release/layout.sh
+# The Python interpreter: \$PYTHON, else python3; GitHub's Windows runners
+# (actions/setup-python) provide only `python`.
+PY="${PYTHON:-$(command -v python3 || command -v python)}"
+[[ -n "$PY" ]] || { echo "no python3 or python on PATH" >&2; exit 2; }
 
 out="$(realpath -m "$1")"; shift
 target=""; all=0
@@ -29,7 +33,7 @@ done
 mkdir -p "$out"
 
 maturin_field() {
-  python3 - "$1" "$2" <<'PY'
+  "$PY" - "$1" "$2" <<'PY'
 import pathlib, sys, tomllib
 d = pathlib.Path(sys.argv[1])
 m = tomllib.loads((d / "pyproject.toml").read_text())["tool"]["maturin"]
@@ -60,8 +64,8 @@ for entry in $SIMFORGE_PY_DISTS; do
       ;;
     pure)
       if [[ "$all" == 1 ]]; then
-        python3 -m build --version >/dev/null 2>&1 || { echo "build-wheels.sh: python -m build is required (pip install build)" >&2; exit 2; }
-        python3 -m build --wheel --sdist --outdir "$out" "$dir"
+        "$PY" -m build --version >/dev/null 2>&1 || { echo "build-wheels.sh: python -m build is required (pip install build)" >&2; exit 2; }
+        "$PY" -m build --wheel --sdist --outdir "$out" "$dir"
       fi
       ;;
     *) echo "build-wheels.sh: unknown kind '$kind' for $dir" >&2; exit 2 ;;
