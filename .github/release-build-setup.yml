@@ -1,0 +1,12 @@
+# Steps dist injects into every build-local-artifacts job before `dist build`
+# (dist-workspace.toml: github-build-setup). Kept outside workflows/ so GitHub
+# does not read it as a workflow.
+- name: Trust the checkout inside the build container
+  if: runner.os == 'Linux'
+  shell: bash
+  run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+- name: Show the toolchain (rust-toolchain.toml pins it)
+  shell: bash
+  run: |
+    rustup show active-toolchain || rustup toolchain install
+    cargo --version

@@ -7,6 +7,7 @@ description = "The SimForge command line: package, maps, assets, timeline, rende
 version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
+publish = false
 repository = "https://github.com/SimForgeinc/simforge-sdk"
 homepage = "https://simforge.ai"
 documentation = "https://docs.simforge.ai"
