@@ -25,16 +25,20 @@ version="${tag#v}"
 root="$(git rev-parse --show-toplevel)"
 # shellcheck source=layout.sh
 source "$root/scripts/release/layout.sh"
+# The Python interpreter: \$PYTHON, else python3; GitHub's Windows runners
+# (actions/setup-python) provide only `python`.
+PY="${PYTHON:-$(command -v python3 || command -v python)}"
+[[ -n "$PY" ]] || { echo "no python3 or python on PATH" >&2; exit 2; }
 work="${SMOKE_WORK:-$(mktemp -d)}"
 installer_url="https://github.com/${repo}/releases/download/${tag}/simforge-installer.sh"
 
-report() { printf '{"check":"%s","status":"%s","detail":%s}\n' "$1" "$2" "$(python3 -c 'import json,sys;print(json.dumps(sys.argv[1]))' "$3")"; }
+report() { printf '{"check":"%s","status":"%s","detail":%s}\n' "$1" "$2" "$("$PY" -c 'import json,sys;print(json.dumps(sys.argv[1]))' "$3")"; }
 fail() { report "$check" fail "$1"; exit 1; }
 plat() { case "$(uname -s)" in Linux) echo Linux ;; Darwin) echo Darwin ;; MINGW*|MSYS*|CYGWIN*) echo Windows ;; *) uname -s ;; esac; }
 
 image_ref() {
   gh release download "$tag" --repo "$repo" --dir "$work" -p container-image.json --clobber
-  python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));print(d["image"]+"@"+d["digest"])' "$work/container-image.json"
+  "$PY" -c 'import json,sys;d=json.load(open(sys.argv[1]));print(d["image"]+"@"+d["digest"])' "$work/container-image.json"
 }
 
 case "$check" in
@@ -87,27 +91,26 @@ case "$check" in
     rig="/fixtures/$(basename "$SIMFORGE_SMOKE_RIG")"
     mkdir -p "$work/render" && chmod 0777 "$work/render"
     run() { docker run --rm -e SIMFORGE_DEVICE=cpu -v simforge-smoke-data:/data -v "$fixtures:/fixtures:ro" -v "$work/render:/work" "$ref" "$@"; }
+    docker run --rm -v simforge-smoke-data:/data "$ref" assets pull --only sky >/dev/null || fail "sky closure pull in the image"
     run package verify "$pkg" >"$work/render/verify.json" || fail "package verify"
     run package import "$pkg" --into /work/ws >"$work/render/import.json" || fail "package import"
-    run render /work/ws --preset training --rig "$rig" --out /work/out --allow-software-adapter >"$work/render/render.json" || fail "render (lavapipe)"
+    run render /work/ws --preset training --rig "$rig" --out /work/out --allow-software-adapter --video off >"$work/render/render.json" || fail "render (lavapipe)"
     [[ -f "$work/render/out/results.json" ]] || fail "render wrote no results.json"
     expected="$fixtures/expected-results.lavapipe.json"
-    if [[ -f "$expected" ]]; then
-      python3 - "$expected" "$work/render/out/results.json" <<'PY' || fail "pass hashes differ from the recorded lavapipe goldens"
+    [[ -f "$expected" ]] || fail "no expected-results.lavapipe.json beside the fixture"
+    "$PY" - "$expected" "$work/render/out/results.json" <<'PY' || fail "artifacts differ from the recorded lavapipe render"
 import json, sys
-want = json.load(open(sys.argv[1]))["passes"]
-got = json.load(open(sys.argv[2]))["passes"]
-bad = [k for k, v in want.items() if got.get(k, {}).get("sha256") != v["sha256"]]
-sys.exit(1 if bad else 0)
+want = json.load(open(sys.argv[1]))["artifacts"]
+got = {a["path"]: a["sha256"] for a in json.load(open(sys.argv[2]))["artifacts"]}
+bad = sorted(p for p, sha in want.items() if got.get(p) != sha)
+print(f"{len(want) - len(bad)}/{len(want)} artifacts match; differing: {bad[:5]}", file=sys.stderr)
+sys.exit(1 if bad or set(got) != set(want) else 0)
 PY
-      report render pass "lavapipe render of $(basename "$SIMFORGE_SMOKE_PACKAGE") matches the recorded pass hashes"
-    else
-      fail "no expected-results.lavapipe.json beside the fixture: record the goldens on path-pc (golden.mjs record) first"
-    fi ;;
+    report render pass "lavapipe render of $(basename "$SIMFORGE_SMOKE_PACKAGE"): all $("$PY" -c 'import json,sys;print(len(json.load(open(sys.argv[1]))["artifacts"]))' "$expected") artifacts match the recorded hashes" ;;
 
   wheel)
     check="wheel-$(plat)"
-    python="${PYTHON:-python3}"
+    python="$PY"
     gh release download "$tag" --repo "$repo" --dir "$work/wheels" -p '*.whl' --clobber
     "$python" -m venv "$work/venv"
     if [[ -x "$work/venv/bin/python" ]]; then vpy="$work/venv/bin/python"; else vpy="$work/venv/Scripts/python.exe"; fi
@@ -141,7 +144,9 @@ PY
         curl --proto '=https' --tlsv1.2 -LsSf "$installer_url" | CARGO_HOME="$work/cargo" sh -s -- --no-modify-path >/dev/null || fail "shell installer"
         bin="$work/cargo/bin/simforge" ;;
       *)
-        powershell -ExecutionPolicy Bypass -c "\$env:CARGO_HOME='$work\\cargo'; \$env:SIMFORGE_NO_MODIFY_PATH='1'; irm https://github.com/${repo}/releases/download/${tag}/simforge-installer.ps1 | iex" >/dev/null || fail "powershell installer"
+        # PowerShell needs a Windows path, not git-bash's /tmp/...
+        winwork="$(cygpath -w "$work")"
+        powershell -ExecutionPolicy Bypass -c "\$env:CARGO_HOME='$winwork\\cargo'; irm https://github.com/${repo}/releases/download/${tag}/simforge-installer.ps1 | iex" >/dev/null || fail "powershell installer"
         bin="$work/cargo/bin/simforge.exe" ;;
     esac
     "$bin" --help >/dev/null || fail "--help"
