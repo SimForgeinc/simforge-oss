@@ -225,6 +225,9 @@ if test "$SANDBOX" = required; then
   # pinned toolchain and cargo-nextest; git and cargo run inside, never on the host.
   docker exec "$container" bash -euc "
     test -x /cache/cargo/bin/rustup || rustup-init -y -q --no-modify-path --profile minimal --default-toolchain none
+    # The sandbox's clone borrows this checkout's objects; one made from another
+    # checkout (an earlier host clone) is replaced.
+    test \"\$(cat /cache/src/.git/objects/info/alternates 2>/dev/null)\" = '$common/objects' || rm -rf /cache/src
     test -d /cache/src/.git || git clone -q --shared --no-checkout '$common' /cache/src
     cd /cache/src && git -c advice.detachedHead=false checkout -q --force --detach '$sha' && git clean -fdq
     test \"\$(git rev-parse HEAD)\" = '$sha'
