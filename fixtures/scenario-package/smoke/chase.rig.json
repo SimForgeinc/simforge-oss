@@ -1,0 +1,19 @@
+{
+  "schema": "simforge.render-rig/v1",
+  "sources": [
+    {
+      "actorId": "focus-vehicle",
+      "sensorId": "chase",
+      "sensorLabel": "Chase camera",
+      "outputName": "focus-vehicle-chase-rgb",
+      "modality": "rgb",
+      "transform": {
+        "position": { "x": -9, "y": 3, "z": 0 },
+        "rotation": { "yawRad": 0, "pitchRad": -0.2, "rollRad": 0 }
+      },
+      "attributes": { "width": 640, "height": 360, "fps": 24, "horizontalFovDeg": 58, "nearM": 0.05, "farM": 1000 }
+    }
+  ],
+  "clip": { "startSeconds": 0, "endSeconds": 1 },
+  "video": { "width": 640, "height": 360, "fps": 24, "container": "mp4", "codec": "h264", "quality": "standard" }
+}

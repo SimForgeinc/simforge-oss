@@ -21,8 +21,8 @@
     "xodrSha256": "531c1bd6f568c56a41fd868ffe1cec0e92bc7dcda9c794c67a8f80a450186b18"
   },
   "package": "richmond-public.scenario.zip",
-  "packageId": "9e962b08f4383e0ab1285e3d138f09402b56a03e89e46c0a70099400744d2cde",
-  "packageSha256": "c273f567a1d9b57b9ec1061470d36735d9adf4889e1bfc6c178a7bd27f2190f1",
+  "packageId": "dd90be957810547ef9c32a1648981b3390dbb79ebfd0418076a0709e1743e350",
+  "packageSha256": "67623fc8fb8cdd0f3d83f935d97096093fe991053a558c0b11967104031e5d67",
   "placeholders": [
     "scenario.simContentSha256",
     "simulation.simKey"

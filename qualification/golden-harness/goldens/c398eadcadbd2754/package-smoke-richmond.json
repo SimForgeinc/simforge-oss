@@ -1,0 +1,157 @@
+{
+  "schema": "simforge-oss.render-determinism-manifest.v1",
+  "generatedAt": "2026-09-26T05:26:20.703Z",
+  "claim": "byte-exactness of the native (Bevy/wgpu) render-job pass hashes across renders of one fixed scene state on pinned hardware",
+  "mode": "golden-record",
+  "renderConfig": {
+    "preset": "training"
+  },
+  "scenario": {
+    "instanceId": null,
+    "mapId": "richmond-field-station",
+    "sceneId": "package-smoke-richmond",
+    "inputs": {
+      "sceneDefinition": "qualification/golden-harness/scenes/package-smoke-richmond.json"
+    }
+  },
+  "rendererPath": {
+    "engine": "native-bevy",
+    "file": "target/release/simforge-render",
+    "sha256": "08d19f956aa5f635e97099f3d53a220bed8a96b477855d2b707f7d0da515b170",
+    "invocation": {
+      "args": [
+        "job",
+        "--job",
+        "<storage>/worktrees/split-r-dry/artifacts/golden-harness/record/package-smoke-richmond/runA/package-smoke-richmond.job.json"
+      ],
+      "job": {
+        "schema": "simforge.render-job/v2",
+        "scene": {
+          "lighting": {
+            "sun_elev_deg": 38,
+            "sun_azim_deg": 145,
+            "sun_lux": 28000,
+            "ambient": 0.6
+          },
+          "render": {
+            "preset": "training"
+          },
+          "warmupFrames": 20,
+          "vehicleModels": "~/.cache/simforge/actor-assets/trees/c9fc02bba3c5c52af52d10a6d2496b90da1749bdf7ef7ed449d243ec74b2dadf",
+          "pedestrianModels": "~/.cache/simforge/actor-assets/trees/fabfc5150b4afa96107bc1f6ca2bf179ab29bdd52aa19dd4f2b0ad13da227689",
+          "glbs": [
+            "<storage>/tools/dry-maps/.corpus/richmond-field-station/master.gltf"
+          ]
+        },
+        "rig": {
+          "cameras": [
+            {
+              "sensorId": "chase",
+              "width": 640,
+              "height": 360,
+              "fovDeg": 58,
+              "eye": [
+                0,
+                0,
+                0
+              ],
+              "target": [
+                0,
+                0,
+                1
+              ],
+              "attach": {
+                "actorId": "focus-vehicle",
+                "offsetM": [
+                  -9,
+                  0,
+                  3
+                ],
+                "pitchDeg": -10.008,
+                "hostVisible": true
+              }
+            }
+          ]
+        },
+        "ticks": {
+          "start": 0,
+          "count": 24
+        },
+        "passes": [
+          "rgb",
+          "id"
+        ],
+        "outDir": "<storage>/worktrees/split-r-dry/artifacts/golden-harness/record/package-smoke-richmond/runA/package-smoke-richmond",
+        "sceneState": "<storage>/worktrees/split-r-dry/qualification/golden-harness/fixtures/package-smoke-richmond.scene-state.json"
+      },
+      "passesRenderedSequentially": false
+    },
+    "versions": {
+      "bevy": "0.19.1",
+      "wgpu": "29.0.4",
+      "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+      "backend": "vulkan"
+    }
+  },
+  "hardware": {
+    "collectedAt": "2026-09-26T05:22:20.821Z",
+    "gpuFingerprint": "c398eadcadbd2754",
+    "host": {
+      "osPrettyName": "Ubuntu 24.04.4 LTS",
+      "kernel": "7.0.0-31-generic",
+      "arch": "x64",
+      "cpuModel": "Intel(R) Core(TM) Ultra 9 285K",
+      "cpuCount": 24,
+      "hostname": "path-pc",
+      "adapter": {
+        "icd": "/usr/share/vulkan/icd.d/lvp_icd.json",
+        "deviceName": "llvmpipe (LLVM 20.1.2, 256 bits)",
+        "driverName": "llvmpipe",
+        "driverInfo": "Mesa 25.2.8-0ubuntu0.24.04.2 (LLVM 20.1.2)"
+      }
+    }
+  },
+  "passHashes": {
+    "chase.t12.rgb": {
+      "file": "chase/00000012.rgb.png",
+      "sha256": "22de54e472b35a4165ff7cec2b3dc92c27af3016b9d1b11fea93de04391768e9",
+      "bytes": 199679
+    },
+    "chase.t12.id": {
+      "file": "chase/00000012.id.png",
+      "sha256": "8d341ae8099b25b8ffc4db17d12b86fbde641eedb8819bcb74761cd8f871822d",
+      "bytes": 22493
+    }
+  },
+  "idPasses": {
+    "chase.t12.id": {
+      "distinctIds": 288,
+      "coveredFraction": 0.7255
+    }
+  },
+  "sceneStateSha256": "10f2c24ce4a5de836878394ccc00fe7040cce585829d992a01e9af780ee6a4a4",
+  "corpusChecksums": [
+    {
+      "path": "master.gltf",
+      "sha256": "017dc74390705fa3041f11833451a02e8b44e3802ef81721a3f5e02298b48151",
+      "bytes": 1812765
+    }
+  ],
+  "timings": {
+    "avgFrameMs": 1518.623976,
+    "p50FrameMs": 1512.406328,
+    "p99FrameMs": 1570.91425,
+    "fps": 0.658490854749945,
+    "measuredFrames": 23
+  },
+  "twoRunEvidence": {
+    "runsCompared": 2,
+    "byteStable": true,
+    "runBTimingsAvgFrameMs": 1649.1642005217393
+  },
+  "verdict": {
+    "byteStable": true,
+    "driftedPasses": [],
+    "scope": "render-job pass hashes (pinned capture clock), one lavapipe build on one CPU model (the adapter of record) — cross-adapter reproducibility NOT claimed (docs/determinism-claim.md)"
+  }
+}
