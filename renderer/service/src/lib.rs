@@ -1,4 +1,4 @@
-//! service: long-lived native render service (WSB5).
+//! service: the long-lived native render service (WSB5).
 //!
 //! Map prewarmed once, then `(scene-state tick, rig, profile)` requests over
 //! a local endpoint return frame sets. Transport mirrors rl-env's env-server:
