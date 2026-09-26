@@ -7,7 +7,9 @@
 #   2. plan: every scene's job builds and its corpus resolves (no render)
 #   3. verify goldens (hash drift + >10% frame-time budget gate)
 # Corpus roots come from each scene's corpusRootEnv (SIMFORGE_CORPUS_RICHMOND,
-# SIMFORGE_CORPUS_YALE, SCEN_SENSOR_CORPUS_WSB1) or SCEN_SENSOR_CORPUS.
+# SIMFORGE_CORPUS_YALE, SCEN_SENSOR_CORPUS_WSB1) or SCEN_SENSOR_CORPUS. The corpora
+# pinned in corpora.json are provisioned here (step 1a): public registry releases
+# pulled and verified by digest into GOLDEN_CORPUS_CACHE; a failure fails the step.
 # Skips: a scene whose input key (golden.mjs key: the built binaries, the job and
 # every file it reads, the golden record, lavapipe, the harness) a trusted gate
 # already PASSed is not rendered again. GOLDEN_PASS_LEDGER names "<key> <sha>"
@@ -20,6 +22,11 @@ cd "$(dirname "$0")/../.."   # repo root
 echo "=== step 1/3: build native renderer ==="
 cargo build --release -p simforge-render
 cargo build --release -p simforge-core --example render-parity
+cargo build --release -p simforge --bin simforge
+
+echo "=== step 1a: pinned map corpora (corpora.json, pulled and verified by digest) ==="
+corpora="$(qualification/golden-harness/provision-corpora.sh)"
+eval "$corpora"
 
 echo "=== step 1b: sky plates (pinned NASA sources, verified) ==="
 uv run --quiet --no-project --with numpy==2.3.3 --with pillow==11.3.0 python renderer/tools/prepare_sky.py
