@@ -42,7 +42,7 @@ const map = await loadMap(input.mapId);
 const cache = process.env.SIMFORGE_MAPS_CACHE_ROOT ?? path.join(process.env.XDG_DATA_HOME ?? path.join(os.homedir(), '.local/share'), 'simforge/maps');
 const topology = path.join(process.env.SCEN_DEV_ASSETS ?? path.join(cache, 'dev-assets'), input.mapId, 'topology-index.json.gz');
 if (createHash('sha256').update(await fs.readFile(topology)).digest('hex') !== suite.topologySha256) throw new Error('map topology differs from the pinned benchmark suite');
-const gitSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+const gitSha = process.env.BENCH_GIT_SHA ?? execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
 // This gate requires the provisioned NVIDIA host; record its GPU and driver inventory.
 const gpu = execFileSync('nvidia-smi', ['--query-gpu=name,memory.total,driver_version,pci.bus_id', '--format=csv,noheader'], { encoding: 'utf8' }).trim();
 const hardware = { host: os.hostname(), cpu: os.cpus()[0]?.model, logical_cpus: os.cpus().length,
@@ -90,8 +90,16 @@ try {
   for (const file of world) meshes.push({ name: path.basename(file), sha256: createHash('sha256').update(await fs.readFile(file)).digest('hex') });
   const conditions = input.operationalConditions;
   const look = resolveNativeLighting({ weather: conditions.weather === 'rain' ? 'light_rain' : conditions.weather, timeOfDay: conditions.timeOfDay === 'day' ? 'noon' : conditions.timeOfDay, surfacePatches: [] });
-  const scene = { glbs: world, profile: 'cinematic', lighting: look.lighting, profileConfig: look.profileConfig,
-    autoMeter: true, warmupFrames: 20, nearM: 0.5, farM: 900 };
+  // BENCH_RENDER_PRESET (gpu-deep comparison): a simforge-render build renders the named preset (it
+  // refuses the retired profile fields); older builds render their rc.73 look.
+  const preset = process.env.BENCH_RENDER_PRESET;
+  const scene = preset
+    ? { glbs: world, lighting: look.lighting, render: { preset, set: { 'textures.tier': 'bc7-512' } }, textureTier: 'bc7-512',
+      // The bench scene names no actor catalogs: older builds drew cuboids
+      // silently; this build must be told to.
+      allowPrimitiveActors: true, autoMeter: true, warmupFrames: 20, nearM: 0.5, farM: 900 }
+    : { glbs: world, profile: 'cinematic', lighting: look.lighting, profileConfig: look.profileConfig,
+      autoMeter: true, warmupFrames: 20, nearM: 0.5, farM: 900 };
   const scenePath = path.join(scratch, 'scene.json');
   await fs.writeFile(scenePath, JSON.stringify(scene));
   for (const profileName of suite.renderProfiles as string[]) {
