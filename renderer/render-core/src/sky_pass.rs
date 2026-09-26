@@ -925,7 +925,10 @@ mod tests {
         let exe = root.join("release/simforge-render");
         let (dir, selection) = select_dir(None, None, Some(exe.as_path()), None).unwrap();
         assert_eq!(selection, SkySelection::SourceCheckout);
-        assert_eq!(dir, Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/sky"));
+        assert_eq!(
+            dir,
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/sky")
+        );
     }
 
     #[test]
@@ -957,12 +960,14 @@ mod tests {
         let root = scratch("sdk-install");
         let exe = root.join("bin/simforge");
         let cache = PathBuf::from("/cache/trees/sky");
-        let (dir, selection) = select_dir(None, None, Some(exe.as_path()), Some(cache.clone())).unwrap();
+        let (dir, selection) =
+            select_dir(None, None, Some(exe.as_path()), Some(cache.clone())).unwrap();
         assert_eq!(selection, SkySelection::AssetCache);
         assert_eq!(dir, cache);
         // An installed runtime still outranks the cache.
         let installed = installed_layout(&scratch("installed-and-cache"));
-        let (_, selection) = select_dir(None, None, Some(installed.as_path()), Some(cache)).unwrap();
+        let (_, selection) =
+            select_dir(None, None, Some(installed.as_path()), Some(cache)).unwrap();
         assert_eq!(selection, SkySelection::InstalledRuntime);
     }
 
