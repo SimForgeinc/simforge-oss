@@ -100,8 +100,12 @@ Gymnasium socket client are landing next.
 
 ## Repository
 
-See [AGENTS.md](AGENTS.md) for the layout, rules and checks (`scripts/gate-local.sh` is
-the merge gate: rustfmt/clippy on touched files, cargo nextest, the Python suites and the
+**This repository is a mirror; development happens upstream; PRs are imported
+manually.** The SDK is developed in SimForge's platform repository (at `sdk/`) and
+exported here automatically; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+See [AGENTS.md](AGENTS.md) for the layout, rules and checks (`scripts/gate-local.sh` runs
+them all: rustfmt/clippy on touched files, cargo nextest, the Python suites and the
 lavapipe render goldens). Contracts and fixtures live in `contracts/` and `fixtures/`.
 Engine semantics are versioned by `ENGINE_SEM_VER` (`docs/engineering/engine-semver.md`).
 

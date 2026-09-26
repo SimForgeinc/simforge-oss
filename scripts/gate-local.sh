@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# gate-local.sh: the SDK merge gate. The merger runs it (as of main, never a
-# PR's copy) on the exact merge commit it is about to land; contributors run it
-# before labelling a PR `ready`.
+# gate-local.sh: every SDK check in one run (boundary, Rust, Python, lavapipe
+# goldens). Upstream (sdk/ of the platform repository) the merge path runs the
+# boundary/Rust/Python checks through `pnpm verify`; this script is what the
+# nightly goldens run (platform scripts/merge-queue/sdk-goldens-nightly.sh) uses,
+# on an export commit, and what a contributor to the mirror can run.
 #
 #   scripts/gate-local.sh            gate HEAD of this checkout
 #

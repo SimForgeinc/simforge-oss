@@ -7,7 +7,9 @@
 #      this checkout (`cargo metadata`, the mechanical proof);
 #   3. every uv/maturin path source stays inside this checkout.
 set -euo pipefail
-root="$(git rev-parse --show-toplevel)"; cd "$root"
+# The SDK root: this script's parent (sdk/ of simcloud-platform, or the root of
+# the exported simforge-sdk mirror). git ls-files below lists only files under it.
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; cd "$root"
 fail=0
 
 ts="$(git ls-files -- '*.ts' '*.tsx' '*.mts' '*.cts' '*package.json' '*pnpm-lock.yaml' '*pnpm-workspace.yaml' '*tsconfig*.json')"

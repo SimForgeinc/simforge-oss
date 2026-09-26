@@ -185,8 +185,8 @@ class AutoE2EEngine:
     def load(self) -> None:
         import hashlib
 
-        import torch
-
+        # The refusal needs no torch: a host without the model stack still gets
+        # the named checkpoint_unavailable error, not an ImportError.
         if self.checkpoint_path is None:
             raise CheckpointUnavailable(
                 "AutoE2E requires a trained checkpoint and none was supplied. "
@@ -205,6 +205,8 @@ class AutoE2EEngine:
                 upstreamRepo=contract.UPSTREAM_REPO,
                 upstreamCommit=contract.UPSTREAM_COMMIT,
             )
+
+        import torch
 
         _require_upstream()
         from model_components.auto_e2e import AutoE2E
@@ -239,7 +241,10 @@ class AutoE2EEngine:
     # -- identity ----------------------------------------------------------
 
     def info(self) -> dict[str, Any]:
-        import torch
+        try:
+            import torch
+        except ModuleNotFoundError:  # a host without the model stack: say so
+            torch = None
 
         return {
             "service": "simforge-auto-e2e",
@@ -255,8 +260,8 @@ class AutoE2EEngine:
             "loaded": self.model is not None,
             "status": "ok" if self.model is not None else "no-checkpoint",
             "load_seconds": self.load_seconds,
-            "torch": torch.__version__,
-            "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+            "torch": None if torch is None else torch.__version__,
+            "gpu": torch.cuda.get_device_name(0) if torch is not None and torch.cuda.is_available() else None,
             "capabilities": self.capabilities(),
             "supports": ["act"],
             "output_kind": contract.OUTPUT_KIND,
@@ -332,15 +337,14 @@ class AutoE2EEngine:
         a caller explicitly asks for a shape-only run. That default is
         deliberate: the permissive path should be the one you have to ask for.
         """
-        import torch
-
-        from simforge_auto_e2e.obs import integrate_control, split_control, validate_observation
-
         if self.model is None:
             raise CheckpointUnavailable(
                 "engine is not loaded; AutoE2E requires an authorized trained "
                 "checkpoint before it can produce a trajectory"
             )
+        import torch
+
+        from simforge_auto_e2e.obs import integrate_control, split_control, validate_observation
         provenance = validate_observation(obs, scored=scored, config=self.config)
 
         # Apply the checkpoint's own history-masking policy before inference.

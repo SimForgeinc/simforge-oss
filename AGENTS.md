@@ -1,9 +1,10 @@
 # AGENTS.md: working in simforge-sdk
 
 This repository is the SimForge SDK: the deterministic engine, the renderer,
-the `simforge` CLI and the Python gym and adapters. It is public (Apache-2.0)
-and it is the source of truth for that code. The hosted SimForge app
-(https://simforge.ai) consumes it at a pinned commit.
+the `simforge` CLI and the Python gym and adapters. It is public (Apache-2.0).
+It is a read-only mirror of `sdk/` in SimForge's platform repository, where the
+SDK is developed and where the hosted SimForge app (https://simforge.ai) builds
+from it directly (see "Where development happens").
 
 ## Layout
 
@@ -38,7 +39,7 @@ Node with no dependencies; the CLI replaces both (`simforge assets pull`, golden
 - **No licensed-dataset content.** Third-party recorded-drive datasets and
   their reconstructions are licensed and not redistributable. Nothing from
   them, or derived from them, enters this repository, its fixtures, its
-  releases or its commit messages. Every PR is leak-scanned before it is gated.
+  releases or its commit messages. Every export is leak-scanned before it is pushed.
 - **No secrets, ever.** Never print a token or credential, and never commit one,
   not even in a log, a test fixture or a PR comment. Never shell-source an
   env file; pass values by named key.
@@ -46,48 +47,30 @@ Node with no dependencies; the CLI replaces both (`simforge assets pull`, golden
 ## Checks
 
 ```sh
-scripts/gate-local.sh      # the merge gate: boundary, then at once: rustfmt/clippy on touched
-                           # files + cargo nextest, pytest of affected packages, lavapipe goldens
-                           # (a scene whose content key already passed is skipped)
+scripts/check-boundary.sh  # self-contained Rust + Python, no TypeScript
 cargo nextest run --workspace --exclude simforge-bindings-python --exclude simforge-timeline-python   # one workspace
 cd adapters/gym && uv run --with pytest python -m pytest -q
-qualification/golden-harness/ci-local.sh verify   # needs mesa-vulkan-drivers + map corpora
+qualification/golden-harness/ci-local.sh verify   # lavapipe render goldens; needs mesa-vulkan-drivers + map corpora
+scripts/gate-local.sh      # all of the above at once (the nightly goldens run uses it)
 ```
 
-## Landing
+## Where development happens
 
-Open a PR against `main` and add the `ready` label once `scripts/gate-local.sh`
-passes. The merge service scans the change for private markers, runs the gate
-from `main` on the exact merge commit, inside a sandbox (`GATE_SANDBOX=required`:
-no credentials, allowlisted network, lavapipe instead of a GPU), and
-fast-forwards `main`; nobody pushes `main` by hand. PR comments from the merge
-service are public: they carry step results, never host paths or logs with
-private content.
+This repository is a read-only mirror. The SDK is developed upstream, in the
+private SimForge platform repository (at `sdk/`), where every change is gated
+together with the hosted app that consumes it. Each change to `sdk/` on the
+upstream main is exported here within minutes as one commit
+(`Export simcloud-platform <sha>`); nobody pushes `main` here by hand.
 
-After a landing, the hosted platform picks the new commit up through a pin-bump
-PR of its own (`sdk: bump to <sha>`), gated against every private consumer of
-the SDK. A change that breaks that bump is fixed here or adapted there; the SDK
-itself never depends on private code (`scripts/check-boundary.sh`).
-
-## Contributing
-
-1. Branch from `main`, keep the change small, and run `scripts/gate-local.sh`
-   (or the targeted `cargo nextest` / pytest / goldens for what you touched).
-2. Open a PR against `main` that says what changed, why, and how it was
-   verified. Add the `ready` label (maintainers add it for PRs from forks).
-3. The `gate/local` check on the PR shows each gate step. On `ready:failed`,
-   read the comment, fix the branch (rebase onto `main` if it conflicts), push,
-   remove `ready:failed` and add `ready` again.
-4. Never push `main` and never press Merge; the merge service lands PRs.
-5. If a change needs a matching change in the hosted app first, a maintainer
-   adds a `Requires-Platform:` trailer naming it, and the hosted app's pin
-   bump waits until that change has landed.
+Pull requests are welcome: a maintainer imports them upstream by hand (with
+credit) and closes the PR here once the export carries the change. Releases are
+cut by tagging an export commit here (`release.yml`).
 
 ## Decisions that shape this repository
 
-- **This repository is the source of truth** for the engine, the renderer, the
-  scenario package, the CLI and the Python gym and adapters. The hosted app
-  consumes it at a pinned commit and never forks it.
+- **One source for the engine, the renderer, the scenario package, the CLI and the
+  Python gym and adapters**: this tree. Upstream it lives at `sdk/` of the platform
+  repository, which the hosted app builds from directly; this repository mirrors it.
 - **Every CLI command is public, authoring included**: `template`, `sites`,
   `instantiate`, `batch`, `catalog`, `locations`, `variation`, `export`,
   `validate`, `evaluate`, `evidence verify` and `simulate`, plus the runtime
@@ -133,6 +116,5 @@ In flight:
 - Canonical-JSON numbers printed exactly as ECMAScript does (#39, draft). It
   moves map closure digests, so it lands together with new versions of every
   map.
-- Skipping unchanged golden scenes in the gate, with a nightly full run.
 - The `simforge env serve` Gymnasium socket client.
 
