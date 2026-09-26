@@ -8,9 +8,11 @@ reads it).
 
 ## [Unreleased]
 
-## [0.2.0-rc.0]
+## [0.2.0-rc.1]
 
 The first release candidate of the Rust `simforge` CLI (engine 0.12.1).
+(0.2.0-rc.0 was tagged but never published: its release workflow could not
+start; see the release-container permission fix.)
 
 ### Added
 - `simforge` CLI: `package inspect|verify|import` for scenario packages

@@ -1,6 +1,6 @@
 [project]
 name = "simforge-oss-timeline"
-version = "0.2.0rc0"
+version = "0.2.0rc1"
 description = "SimForge render timeline for Python renderers: the shared pose(timeline, actorId, t) sampler (Rust, PyO3) that makes every renderer replay the one authoritative trace identically."
 readme = "README.md"
 requires-python = ">=3.10"
