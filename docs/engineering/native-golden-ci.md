@@ -160,6 +160,19 @@ native install that `simforge maps pull <map>` writes. Actor scenes also read
 the CARLA model packs pinned in `catalog/closures.lock.json`, fetched by digest
 and verified before any render.
 
+Corpora pinned by registry release: `qualification/golden-harness/corpora.json`
+(today `SIMFORGE_CORPUS_RICHMOND_V5` = `richmond-field-station@v5`, for the
+release smoke scene). `ci-local.sh` step 1a (`provision-corpora.sh`) builds the
+`simforge` CLI and pulls each one with `simforge maps pull` from the public
+registry into `GOLDEN_CORPUS_CACHE` (default
+`$XDG_CACHE_HOME/simforge/golden-corpora/<releaseDigest>`), verifying every
+blob and requiring the installed receipt to carry the pinned release and
+canonical digests; a warm cache re-verifies in seconds. The gate sandbox
+reaches the registry through the gate proxy (the CDN is an HTTPS-only host in
+the platform's `ops/gate/squid.conf`) and keeps the cache in its persistent
+`/cache`. A missing, unreachable or drifted corpus fails the goldens step; a
+caller-set variable must point at a directory with the same receipt.
+
 ```sh
 qualification/golden-harness/ci-local.sh           # plan + verify every recorded scene
 qualification/golden-harness/ci-local.sh record    # re-record every scene, then verify
