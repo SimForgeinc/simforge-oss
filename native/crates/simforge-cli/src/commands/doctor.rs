@@ -78,7 +78,7 @@ pub fn run(args: DoctorArgs, _ctx: &Ctx) -> CmdResult {
                 .with_path("--timeout"),
         );
     }
-    let mut checks = vec![gpu_check(), ffmpeg_check(), sky_check()];
+    let mut checks = vec![gpu_check(), ffmpeg_check(), sky_check(), open_files_check()];
     checks.extend(cache_checks());
     checks.push(registry_check(&args));
     Ok(report(checks))
@@ -249,6 +249,61 @@ fn gpu_check() -> Check {
         )
         .fix("install a hardware GPU driver, or set SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER=1 to render on the software adapter explicitly")
     }
+}
+
+// ------------------------------------------------------------------ open files
+
+/// Below this soft limit, a large map's render may run out of file handles.
+const OPEN_FILES_WARN: u64 = 4096;
+
+/// The open-file limit as the startup raise left it (crate::limits).
+fn open_files_check() -> Check {
+    let Some(limit) = crate::limits::raise_open_files() else {
+        return Check::new(
+            "open-files",
+            Status::Skipped,
+            "this platform has no open-file limit to raise",
+            json!(null),
+        );
+    };
+    let detail = limit.to_json();
+    if let Some(error) = &limit.error {
+        return Check::new(
+            "open-files",
+            Status::Warn,
+            format!("could not raise the open-file limit ({error}); soft limit {}", limit.soft_after),
+            detail,
+        )
+        .fix("raise the limit before running simforge: `ulimit -n <n>`, or LimitNOFILE= in a systemd unit");
+    }
+    if limit.soft_after < OPEN_FILES_WARN {
+        return Check::new(
+            "open-files",
+            Status::Warn,
+            format!(
+                "open-file limit {} (hard limit {}): large maps may need more",
+                limit.soft_after, limit.hard
+            ),
+            detail,
+        )
+        .fix("raise the hard limit: `ulimit -Hn` as root, /etc/security/limits.conf, or LimitNOFILE= in a systemd unit");
+    }
+    Check::new(
+        "open-files",
+        Status::Ok,
+        if limit.soft_after > limit.soft_before {
+            format!(
+                "open-file limit {} (raised from {}; hard limit {})",
+                limit.soft_after, limit.soft_before, limit.hard
+            )
+        } else {
+            format!(
+                "open-file limit {} (hard limit {})",
+                limit.soft_after, limit.hard
+            )
+        },
+        detail,
+    )
 }
 
 // ------------------------------------------------------------------ sky plates

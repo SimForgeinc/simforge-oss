@@ -6,6 +6,8 @@ license.workspace = true
 publish = false
 
 [dependencies]
+# Bounds the asset files the residency reader holds open (texture_residency.rs).
+async-lock = "3"
 crossbeam-channel = "0.5"
 # `basis-universal` transcodes the map masters' UASTC KTX2 images to GPU formats at load.
 # The source map GLBs use specular, anisotropy, clearcoat, and (potentially) transmission
@@ -101,6 +103,7 @@ solari = ["bevy/bevy_solari"]
 gpu-interop = ["bevy/raw_vulkan_init", "wgpu/vulkan", "dep:ash", "dep:libc"]
 
 [dev-dependencies]
+libc = "0.2"
 # Walker grounding test (tests/walker_grounding.rs) poses skins straight from
 # glTF, independent of Bevy; same crate version bevy_gltf already locks.
 gltf = { version = "1.4", default-features = false, features = ["utils", "names"] }

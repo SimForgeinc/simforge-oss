@@ -12,7 +12,12 @@
 //! fraction of the texture memory and upload.
 //!
 //! The reader wraps the default file source; it only ever changes the bytes
-//! of files the plan lists. A listed file that cannot be trimmed fails its
+//! of files the plan lists. It also bounds how many asset files are open at
+//! once ([`MAX_OPEN_FILES`]) and hands Bevy's loaders the bytes rather than
+//! the open file: the asset server starts every texture load of a map at
+//! once, and a loader keeps its reader until it has finished decoding, so a
+//! map with thousands of KTX2 textures used to hold thousands of files open
+//! while the transcodes queued, and failed with "Too many open files". A listed file that cannot be trimmed fails its
 //! load (and so the job), and a listed file the scene never loads fails
 //! readiness: the plan is never applied partially or silently.
 use anyhow::{bail, ensure, Context, Result};
@@ -24,6 +29,11 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
 
 pub const SCHEMA: &str = "simforge.texture-residency-plan.v1";
+
+/// Asset files the reader holds open at the same time, whatever the number of
+/// loads in flight. Each open file is read to the end and closed before its
+/// permit is released.
+pub const MAX_OPEN_FILES: usize = 64;
 
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -151,6 +161,7 @@ pub type Slot = Arc<RwLock<Option<Arc<Table>>>>;
 pub struct ResidencyReader {
     inner: FileAssetReader,
     slot: Slot,
+    open_files: Arc<async_lock::Semaphore>,
 }
 
 impl ResidencyReader {
@@ -158,7 +169,25 @@ impl ResidencyReader {
         Self {
             inner: FileAssetReader::new(root),
             slot,
+            open_files: Arc::new(async_lock::Semaphore::new(MAX_OPEN_FILES)),
         }
+    }
+
+    /// The whole file, read while holding one of [`MAX_OPEN_FILES`] permits;
+    /// the file is closed before the permit is released.
+    async fn read_bytes(&self, path: &Path, meta: bool) -> Result<Vec<u8>, AssetReaderError> {
+        let _permit = self.open_files.acquire().await;
+        let mut bytes = Vec::new();
+        if meta {
+            self.inner
+                .read_meta(path)
+                .await?
+                .read_to_end(&mut bytes)
+                .await?;
+        } else {
+            self.inner.read(path).await?.read_to_end(&mut bytes).await?;
+        }
+        Ok(bytes)
     }
 }
 
@@ -166,12 +195,11 @@ impl AssetReader for ResidencyReader {
     async fn read<'a>(&'a self, path: &'a Path) -> Result<Box<dyn Reader + 'a>, AssetReaderError> {
         let table = self.slot.read().expect("residency slot").clone();
         let key = normalize(path);
+        let bytes = self.read_bytes(path, false).await?;
         let Some((table, drop)) = table.and_then(|t| t.drops.get(&key).copied().map(|d| (t, d)))
         else {
-            return Ok(Box::new(self.inner.read(path).await?));
+            return Ok(Box::new(VecReader::new(bytes)));
         };
-        let mut bytes = Vec::new();
-        self.inner.read(path).await?.read_to_end(&mut bytes).await?;
         let full_bytes = level_payload_bytes(&bytes).map_err(|error| invalid(path, error))?;
         let trimmed = drop_levels(&bytes, drop).map_err(|error| invalid(path, error))?;
         let resident_bytes = level_payload_bytes(&trimmed).map_err(|error| invalid(path, error))?;
@@ -190,7 +218,7 @@ impl AssetReader for ResidencyReader {
         &'a self,
         path: &'a Path,
     ) -> Result<Box<dyn Reader + 'a>, AssetReaderError> {
-        Ok(Box::new(self.inner.read_meta(path).await?))
+        Ok(Box::new(VecReader::new(self.read_bytes(path, true).await?)))
     }
 
     async fn read_directory<'a>(
