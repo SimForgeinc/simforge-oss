@@ -5626,6 +5626,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ash",
+ "async-lock",
  "bevy",
  "clap",
  "crossbeam-channel",

@@ -598,6 +598,7 @@ pub fn run(args: RenderArgs, _ctx: &Ctx) -> CmdResult {
         "textures": tier.as_str(),
         "renderConfig": output.results["renderConfig"],
         "softwareAdapter": std::env::var("SIMFORGE_NATIVE_ALLOW_SOFTWARE_ADAPTER").as_deref() == Ok("1"),
+        "limits": crate::limits::report(),
         "sky": { "dir": sky.dir, "fetched": sky_fetch.as_ref().map(|f| json!({ "closure": f["sky"]["closure"], "downloaded": f["sky"]["downloaded"] })) },
         "timeline": {
             "timelineSha256": built.sha256,

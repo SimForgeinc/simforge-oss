@@ -15,6 +15,7 @@ pub mod contract;
 pub mod env_serve;
 pub mod help;
 pub mod installed_maps;
+pub mod limits;
 pub mod net;
 pub mod paths;
 pub mod registry;
@@ -181,6 +182,8 @@ where
     I: IntoIterator<Item = T>,
     T: Into<OsString> + Clone,
 {
+    // Before anything opens files: soft RLIMIT_NOFILE -> hard (limits.rs).
+    limits::raise_open_files();
     let argv: Vec<OsString> = argv.into_iter().map(Into::into).collect();
     let rest: Vec<String> = argv
         .iter()
