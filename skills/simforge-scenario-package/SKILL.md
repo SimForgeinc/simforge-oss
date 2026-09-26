@@ -50,7 +50,7 @@ them all.
 ## Reference
 
 <!-- simforge:reference package inspect, package verify, package import -->
-_Generated from `simforge --help` (CLI 0.2.0) by scripts/skills/skills.py; do not edit._
+_Generated from `simforge --help` (CLI 0.2.0-rc.0) by scripts/skills/skills.py; do not edit._
 
 #### `simforge package inspect`
 

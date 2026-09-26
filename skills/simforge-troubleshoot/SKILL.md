@@ -56,7 +56,7 @@ the sky assets, the cache roots (free disk), and the registry.
 ## Reference
 
 <!-- simforge:reference doctor -->
-_Generated from `simforge --help` (CLI 0.2.0) by scripts/skills/skills.py; do not edit._
+_Generated from `simforge --help` (CLI 0.2.0-rc.0) by scripts/skills/skills.py; do not edit._
 
 #### `simforge doctor`
 
