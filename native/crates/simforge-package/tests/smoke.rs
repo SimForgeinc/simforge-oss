@@ -2,14 +2,16 @@
 //!
 //! A thin package whose closures resolve from the PUBLIC stores: its
 //! `map/closure.json` and `map/web-closure.json` are the public registry's
-//! Richmond Field Station release (`richmond-field-station@v2`) canonical and
+//! Richmond Field Station release (`richmond-field-station@v5`) canonical and
 //! web closures, byte for byte as the registry serves them (every member is
 //! served by digest from the public blob origin), and its actor closure is the
-//! pinned public, attributed `793ec86c…`. The motion is a real archived trace
-//! (`rc72-engine070-richmond-commit`: one ambulance, 20 s) with a timeline
-//! derived under the current sampler from the release's OpenDRIVE and
-//! topology. The document and resolution record are fixture placeholders: the
-//! smoke covers import, timeline and render, not re-simulation.
+//! pinned public, attributed `793ec86c…`. The scenario is the SDK's own
+//! edge case 06 (wrong-way vehicle, blind approach), instantiated with the `simforge`
+//! CLI on that release (site and draw in `smoke.json`) and simulated there
+//! (trace format 5, on the release's ground surface); the resolution record
+//! carries the engine-resolved input, so the package re-simulates to its own trace.
+//! The timeline is derived from the trace on the release's ground under the
+//! current sampler, keyed by the actor closure.
 //!
 //! The render expectation is the golden-harness scene `package-smoke-richmond`
 //! (its frames are recorded on lavapipe like every golden; until recorded the
@@ -23,24 +25,32 @@ mod support;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use serde_json::{json, Value};
+use simforge_core::engine::GroundContext;
+use simforge_core::map::TopologyIndex;
 use simforge_core::trace::timeline::{build_render_timeline, HeightField, SAMPLER_VERSION};
 use simforge_core::trace::SimTrace;
-use simforge_package::closure::{pin_closure_sha256, ActorClosure, MapClosure};
+use simforge_package::closure::{pin_closure_sha256, ActorClosure, MapClosure, GROUND_MEMBER};
 use simforge_package::{verify_bytes, Form, PackageBuilder, ReceiptInput, VerifyOptions};
 use support::*;
 
-const TRACE_ID: &str = "rc72-engine070-richmond-commit";
-const DOCUMENT_ID: &str = "rc73-doc-child-reveal";
+const TEMPLATE: &str =
+    "examples/edge-cases/06-wrong-way-vehicle-blind-approach/scenario.template.json";
 const REGISTRY: &str = "https://da3tufozhdsvl.cloudfront.net";
-const RELEASE: &str = "richmond-field-station@v2";
+const RELEASE: &str = "richmond-field-station@v5";
 const PUBLIC_ACTOR_CLOSURE: &str =
     "793ec86ceda7734f1f5f7c0b260a396c11c970a471ab4418987e4d531f33daa4";
 const GOLDEN_SCENE: &str = "package-smoke-richmond";
 
 fn smoke_dir() -> PathBuf {
     fixtures_root().join("scenario-package/smoke")
+}
+
+fn repo_file(rel: &str) -> Vec<u8> {
+    let path = fixtures_root().parent().unwrap().join(rel);
+    std::fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
 }
 
 #[test]
@@ -51,19 +61,19 @@ fn generate_smoke_package() {
     let input = |p: &str| std::fs::read(inputs.join(p)).unwrap_or_else(|e| panic!("{p}: {e}"));
     let release_bytes = input("release.json");
     let release: Value = serde_json::from_slice(&release_bytes).unwrap();
-    let canonical_bytes_ = input("canonical-closure.json");
-    let web_bytes = input("web-closure.json");
+    let canonical_doc = input("canonical-closure.json");
+    let web_doc = input("web-closure.json");
     // Exactly the registry's documents: canonical JSON with the release's digests.
-    assert_eq!(canonicalize(&canonical_bytes_), canonical_bytes_);
-    assert_eq!(canonicalize(&web_bytes), web_bytes);
+    assert_eq!(canonicalize(&canonical_doc), canonical_doc);
+    assert_eq!(canonicalize(&web_doc), web_doc);
     assert_eq!(
-        sha(&canonical_bytes_),
+        sha(&canonical_doc),
         release["canonical"]["digest"].as_str().unwrap()
     );
-    assert_eq!(sha(&web_bytes), release["web"]["digest"].as_str().unwrap());
+    assert_eq!(sha(&web_doc), release["web"]["digest"].as_str().unwrap());
     let release_digest = sha(&canonicalize(&release_bytes));
-    let canonical = MapClosure::parse(&canonical_bytes_, "canonical", "map/closure.json").unwrap();
-    let web = MapClosure::parse(&web_bytes, "web", "map/web-closure.json").unwrap();
+    let canonical = MapClosure::parse(&canonical_doc, "canonical", "map/closure.json").unwrap();
+    let web = MapClosure::parse(&web_doc, "web", "map/web-closure.json").unwrap();
     let member = |p: &str| {
         let bytes = input(&format!("map/{p}"));
         let listed = canonical.member(p).or_else(|| web.member(p)).unwrap();
@@ -75,29 +85,46 @@ fn generate_smoke_package() {
         bytes
     };
     let xodr = member("map.xodr");
-    let topology = member("topology-index.json.gz");
+    let topology_bytes = gunzip(&member("topology-index.json.gz"));
+    let mesh = member(GROUND_MEMBER);
     let actors_closure = input("actor-closure.json");
     assert_eq!(sha(&actors_closure), PUBLIC_ACTOR_CLOSURE);
     let catalog_models = input("catalog-models.json");
 
-    // The archived trace and a current-sampler timeline on the release's height source.
-    let corpus: Value = serde_json::from_slice(&read("archive-corpus/corpus.json")).unwrap();
-    let entry = corpus["entries"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|e| e["id"] == TRACE_ID)
-        .unwrap()
-        .clone();
-    let trace_gz = read(&format!(
-        "archive-corpus/{}",
-        entry["path"].as_str().unwrap()
+    // The trace the CLI simulated on this release, and the instance it ran.
+    let trace_gz = input("trace.json.gz");
+    let trace = SimTrace::from_json_slice(&gunzip(&trace_gz)).unwrap();
+    assert!(trace.upgrade.is_none(), "the smoke trace is current-format");
+    let header = &trace.header;
+    assert_eq!(header.engine_graph_digest, sha(&xodr));
+    assert_eq!(header.ground_digest.as_deref(), Some(sha(&mesh).as_str()));
+    let trace_sha = trace.digest().unwrap();
+    let instance: Value = serde_json::from_slice(&input("instance.json")).unwrap();
+    // The input the engine ran (and hashed into the trace header): normalized,
+    // control lanes resolved on the release's lane graph, arrival triggers solved.
+    let graph = Arc::new(simforge_core::map::LaneGraph::new(
+        TopologyIndex::decode(&topology_bytes).unwrap(),
     ));
-    let identity = entry["expect"]["identity"].as_str().unwrap().to_owned();
-    let mut trace = SimTrace::from_json_slice(&gunzip(&trace_gz)).unwrap();
-    trace.bind_recorded_identity(&identity).unwrap();
-    let height = HeightField::from_xodr(&xodr, &gunzip(&topology)).unwrap();
-    let tl = build_render_timeline(&trace, &height, None).unwrap();
+    let normalized =
+        simforge_core::parse_scenario_input_bytes(&serde_json::to_vec(&instance["input"]).unwrap())
+            .unwrap()
+            .normalized();
+    let (controlled, _) =
+        simforge_core::engine::signals::resolve_overlapping_control_lanes(normalized, &graph);
+    let arrived =
+        simforge_core::solve::arrival::resolve_arrival_triggers(&controlled, &graph).input;
+    let resolved = serde_json::to_value(&arrived).unwrap();
+    assert_eq!(
+        simforge_core::hash::content_hash(&resolved).unwrap(),
+        header.input_hash,
+        "the engine-resolved instance input is the trace's input"
+    );
+
+    // Timeline on the release's ground, keyed by the actor closure.
+    let topology = TopologyIndex::decode(&topology_bytes).unwrap();
+    let ground = GroundContext::from_bytes(&mesh, Some((&xodr, &topology))).unwrap();
+    let height = HeightField::ground(Arc::new(ground));
+    let tl = build_render_timeline(&trace, &height, Some(PUBLIC_ACTOR_CLOSURE)).unwrap();
     assert_eq!(tl.identity.sampler_version, SAMPLER_VERSION);
     let timeline = tl.to_canonical_json().unwrap().into_bytes();
     let catalog_ids: Vec<String> = {
@@ -122,25 +149,18 @@ fn generate_smoke_package() {
         .map(|p| (closure.members[p].sha256.as_str(), closure.members[p].bytes))
         .collect();
     assert!(
-        reach.len() > 1,
-        "catalogIds {catalog_ids:?} reach no public model"
+        reach.len() > catalog_ids.len(),
+        "catalogIds {catalog_ids:?} must each reach a public model"
     );
 
-    let document = canonicalize(&read(&format!(
-        "archive-corpus/documents/{DOCUMENT_ID}.json"
-    )));
-    let header = &trace.header;
-    let stored_format = trace
-        .upgrade
-        .as_ref()
-        .map_or(header.trace_version, |u| u.source_trace_version);
-    let sim_key = sha(format!("smoke fixture sim key {identity}").as_bytes());
+    let document = canonicalize(&repo_file(TEMPLATE));
+    let sim_key = sha(format!("smoke fixture sim key {trace_sha}").as_bytes());
     let resolution = gzip(&canonical_bytes(&json!({
         "contract": "simforge.sim-resolution/v1",
         "simKey": sim_key,
         "resolvedInputDigest": header.input_hash,
+        "resolvedInput": resolved,
         "trafficProvider": "native",
-        "fixture": "placeholder: the smoke package is not a re-simulation target"
     })));
     let catalog_entries = canonical_bytes(&json!(catalog_ids
         .iter()
@@ -151,35 +171,35 @@ fn generate_smoke_package() {
         "schema": "simforge.scenario-package/v1",
         "producer": { "app": "simforge-fixtures", "appVersion": "0.2.0", "minCli": "0.2.0" },
         "scenario": {
-            "title": "Smoke: ambulance on Richmond Field Station (public registry v2)",
+            "title": "Smoke: wrong-way vehicle, blind approach, Richmond Field Station (public registry v5)",
             "documentSchema": "simforge.scenario.v2",
             "scenarioVersion": 2,
             "contentSha256": sha(&document),
-            "simContentSha256": sha(format!("smoke fixture sim content {identity}").as_bytes())
+            "simContentSha256": sha(format!("smoke fixture sim content {trace_sha}").as_bytes())
         },
         "engine": {
             "engineSemVer": header.engine_version,
             "solverVersion": header.engine_version,
             "pipelineRevision": 2,
             "build": { "engineVersion": header.engine_version },
-            "release": entry["release"].as_str().unwrap().trim_start_matches('v')
+            "release": "0.2.0"
         },
         "simulation": {
             "simKey": sim_key,
-            "traceFormat": stored_format,
-            "traceSchema": format!("simforge.trace/v{stored_format}"),
-            "traceSha256": identity,
+            "traceFormat": header.trace_version,
+            "traceSchema": format!("simforge.trace/v{}", header.trace_version),
+            "traceSha256": trace_sha,
             "traceGzipSha256": sha(&trace_gz),
-            "authoredTraceSha256": identity,
+            "authoredTraceSha256": trace_sha,
             "resolvedInputDigest": header.input_hash,
             "resolutionSha256": sha(&resolution),
             "trafficProvider": "native",
             "trafficStepKey": null,
             "trafficSha256": null,
             "sumo": null,
-            "groundDigest": null,
-            "producerKind": "runner",
-            "simulatedAt": format!("{}T00:00:00Z", entry["recorded"].as_str().unwrap())
+            "groundDigest": header.ground_digest,
+            "producerKind": "cli",
+            "simulatedAt": "2026-09-25T00:00:00Z"
         },
         "timelines": [{
             "version": tl.version,
@@ -187,7 +207,7 @@ fn generate_smoke_package() {
             "timelineKey": tl.identity.timeline_key,
             "timelineSha256": sha(&timeline),
             "heightFieldDigest": tl.identity.height_field_digest,
-            "catalogDigest": null
+            "catalogDigest": PUBLIC_ACTOR_CLOSURE
         }],
         "executionPackage": null,
         "map": {
@@ -198,11 +218,11 @@ fn generate_smoke_package() {
             "coordinateSystemSha256": String::from_utf8(input("coordinate-system-sha256.txt")).unwrap().trim(),
             "mapClosureDigest": String::from_utf8(input("map-closure-digest.txt")).unwrap().trim(),
             "pinClosureSha256": pin_closure_sha256(&canonical, Some(&web)),
-            "canonicalClosureSha256": sha(&canonical_bytes_),
-            "webClosureSha256": sha(&web_bytes),
+            "canonicalClosureSha256": sha(&canonical_doc),
+            "webClosureSha256": sha(&web_doc),
             "registryReleaseDigest": release_digest,
             "heightSourceDigest": tl.identity.height_field_digest,
-            "groundDigest": null,
+            "groundDigest": header.ground_digest,
             "closure": { "memberCount": canonical.members.len(), "bytes": canonical.total_bytes() }
         },
         "catalog": {
@@ -227,9 +247,8 @@ fn generate_smoke_package() {
         timeline.clone(),
     )
     .unwrap();
-    b.member("map/closure.json", canonical_bytes_.clone())
-        .unwrap();
-    b.member("map/web-closure.json", web_bytes.clone()).unwrap();
+    b.member("map/closure.json", canonical_doc.clone()).unwrap();
+    b.member("map/web-closure.json", web_doc.clone()).unwrap();
     b.member("actors/closure.json", actors_closure).unwrap();
     b.member("catalog/entries.json", catalog_entries).unwrap();
     b.receipt(ReceiptInput {
@@ -241,18 +260,22 @@ fn generate_smoke_package() {
     let dir = smoke_dir();
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("richmond-public.scenario.zip"), &bytes).unwrap();
+    let authoring: Value = serde_json::from_slice(&input("authoring.json")).unwrap();
     let meta = json!({
         "schema": "simforge.scenario-package-smoke/v1",
         "package": "richmond-public.scenario.zip",
         "packageId": outcome.package_id,
+        "packageSha256": sha(&bytes),
         "form": "thin",
         "readerCli": CLI,
         "map": {
             "release": RELEASE,
             "registry": REGISTRY,
             "registryReleaseDigest": release_digest,
-            "canonicalClosureSha256": sha(&canonical_bytes_),
-            "webClosureSha256": sha(&web_bytes),
+            "canonicalClosureSha256": sha(&canonical_doc),
+            "webClosureSha256": sha(&web_doc),
+            "xodrSha256": sha(&xodr),
+            "groundDigest": header.ground_digest,
             "blobOrigin": format!("{REGISTRY}/blobs/sha256/<aa>/<sha256>")
         },
         "actors": {
@@ -260,6 +283,8 @@ fn generate_smoke_package() {
             "closureUrl": format!("{REGISTRY}/actor-assets/closures/{PUBLIC_ACTOR_CLOSURE}.json"),
             "catalogIds": outcome.manifest.catalog.catalog_ids,
         },
+        "scenario": { "template": TEMPLATE, "authoring": authoring },
+        "trace": { "traceSha256": trace_sha, "engineSemVer": header.engine_version, "traceFormat": header.trace_version },
         "timeline": {
             "timelineSha256": tl.sha256().unwrap(),
             "timelineKey": tl.identity.timeline_key,
@@ -270,8 +295,7 @@ fn generate_smoke_package() {
             "goldenScene": GOLDEN_SCENE,
             "note": "Frame hashes live in the golden store (qualification/golden-harness/goldens/<fingerprint>/package-smoke-richmond.json), keyed by renderer sha. Until recorded the scene declares recording: unrecorded and golden.mjs verify fails with exit 10."
         },
-        "trace": { "archiveCorpusId": TRACE_ID, "traceSha256": identity },
-        "placeholders": ["document.json (archive-corpus rc73-doc-child-reveal, not this trace's scenario)", "simulation/resolution.json.gz", "scenario.simContentSha256", "simulation.simKey"],
+        "placeholders": ["scenario.simContentSha256", "simulation.simKey"],
     });
     let mut text = serde_json::to_string_pretty(&meta).unwrap();
     text.push('\n');
