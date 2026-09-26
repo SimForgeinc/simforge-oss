@@ -1,0 +1,14 @@
+{
+  "schema": "simforge.golden-corpora/v1",
+  "description": "Map corpora the golden scenes render, pinned by digest. ci-local.sh provisions each one the environment does not already point at: `simforge maps pull <map>@<version>` from the public registry into a cache keyed by the release digest (every blob verified against the release's canonical closure), then requires the installed receipt to carry exactly these digests and exports <env> = <cache>/.corpus/<map>. A missing, unreachable or drifted corpus fails the goldens step; nothing is skipped. An <env> set by the caller must hold the same receipt.",
+  "registry": "https://da3tufozhdsvl.cloudfront.net",
+  "corpora": [
+    {
+      "env": "SIMFORGE_CORPUS_RICHMOND_V5",
+      "map": "richmond-field-station",
+      "version": "v5",
+      "releaseDigest": "b3a37eaf56a7e10dceb4f1815205c1d01d9c538787824ff2150876c1d217a430",
+      "canonicalDigest": "5d94b1db4f96319399d7a17f64a4632c2b8193692c78cd2552055b22cf880791"
+    }
+  ]
+}
